@@ -31,16 +31,16 @@ class RecommendationEngineTest {
         )
 
         assertNotNull(recommendation)
-        assertEquals(2125, recommendation!!.calories)
+        assertEquals(1900, recommendation!!.calories)
         assertEquals(158, recommendation.proteinGrams)
-        assertEquals(241, recommendation.carbohydrateGrams)
-        assertEquals(59, recommendation.fatGrams)
+        assertEquals(198, recommendation.carbohydrateGrams)
+        assertEquals(53, recommendation.fatGrams)
         assertNotNull(recommendation.calculation)
         val calculation = recommendation.calculation
         assertEquals(1707.25, calculation!!.restingCalories, 0.01)
         assertEquals(2347.47, calculation.maintenanceCalories, 0.01)
-        assertEquals(-0.20775, calculation.appliedWeeklyRateKg, 0.00001)
-        assertEquals(-228.53, calculation.goalAdjustmentCalories, 0.01)
+        assertEquals(-0.4155, calculation.appliedWeeklyRateKg, 0.00001)
+        assertEquals(-457.05, calculation.goalAdjustmentCalories, 0.01)
         assertTrue(recommendation.reason.startsWith("Estimación inicial"))
         assertTrue(!recommendation.reason.startsWith("2125"))
     }
@@ -229,7 +229,7 @@ class RecommendationEngineTest {
 
     @Test
     fun publicWeeklyRateMatchesTheGoalLimits() {
-        assertEquals(-0.2075, RecommendationEngine.weeklyRateFor(WeightGoal.LOSE_SLOWLY, 83.0)!!, 0.001)
+        assertEquals(-0.415, RecommendationEngine.weeklyRateFor(WeightGoal.LOSE_SLOWLY, 83.0)!!, 0.001)
         assertEquals(0.0, RecommendationEngine.weeklyRateFor(WeightGoal.MAINTAIN, 83.0)!!, 0.001)
         assertNull(RecommendationEngine.weeklyRateFor(WeightGoal.AUTOMATIC, 83.0))
         assertNull(RecommendationEngine.weeklyRateFor(WeightGoal.GAIN_SLOWLY, null))
@@ -251,7 +251,7 @@ class RecommendationEngineTest {
         )
 
         assertNotNull(recommendation)
-        assertEquals(2125, recommendation!!.calories)
-        assertEquals(-0.20775, recommendation.calculation!!.appliedWeeklyRateKg, 0.00001)
+        assertEquals(1900, recommendation!!.calories)
+        assertEquals(-0.4155, recommendation.calculation!!.appliedWeeklyRateKg, 0.00001)
     }
 }
