@@ -187,6 +187,34 @@ class RecommendationEngineTest {
     }
 
     @Test
+    fun manualWeeklyRateIsPreservedButEnergySafetyLimitIsReported() {
+        val recommendation = RecommendationEngine.recommend(
+            profile,
+            emptyList(),
+            Measurement(
+                id = 1,
+                date = LocalDate.of(2026, 8, 9),
+                weightKg = 83.0,
+                waistCm = 91.0,
+                activity = ActivityLevel.LIGHT,
+                goal = WeightGoal.LOSE_SLOWLY,
+                weeklyRateKg = -2.0
+            )
+        )
+
+        assertNotNull(recommendation)
+        assertTrue(recommendation!!.isSafetyLimited)
+        assertTrue(recommendation.calculation!!.appliedWeeklyRateKg > -2.0)
+        assertEquals(
+            -2.0,
+            RecommendationEngine.effectiveValues(
+                listOf(Measurement(id = 1, date = LocalDate.of(2026, 8, 9), goal = WeightGoal.LOSE_SLOWLY, weeklyRateKg = -2.0))
+            ).weeklyRateKg!!,
+            0.0
+        )
+    }
+
+    @Test
     fun regressionUsesActualMeasurementDates() {
         val points = listOf(
             LocalDate.of(2026, 7, 1) to 83.0,
