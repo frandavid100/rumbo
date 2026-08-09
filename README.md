@@ -23,9 +23,11 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Permite alternar entre el plan semanal, el de hoy y el de cualquier día concreto.
 - Permite crear directamente cualquier comida ausente con su tipo y día ya seleccionados.
 - Guarda ingredientes y cantidades, calcula los macros de cada comida e impide solapamientos del mismo tipo y día.
-- Añade una pestaña «Platos» con combinaciones de ingredientes por ración, compartidas por todos los perfiles.
-- Cada perfil puede incorporar un plato al plan con un número de raciones distinto; el plan lo muestra como un único elemento.
+- Añade una pestaña «Platos» con combinaciones de ingredientes compartidas por todos los perfiles.
+- Cada plato tiene una ficha con su composición nutricional total y por 100 g, y un icono según el macro que aporta más energía.
+- Los platos se incorporan al plan y se reparten por gramos, no mediante raciones abstractas.
 - Unifica la búsqueda de platos y alimentos al editar una comida.
+- En los selectores aparecen primero los platos y alimentos que ya se utilizan en alguna comida o receta.
 - Permite seleccionar varios alimentos de una comida y convertirlos inmediatamente en un plato reutilizable.
 - Descompone los platos en sus ingredientes al calcular calorías, macros y lista de la compra.
 - Compara calorías y macros de cada toma con el 20 % de la recomendación diaria y los totales de cada día con el 100 %.
