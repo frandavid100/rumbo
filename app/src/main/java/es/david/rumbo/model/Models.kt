@@ -121,9 +121,14 @@ enum class WeekDay(val label: String, val shortLabel: String) {
 
 data class PlannedFood(
     val foodId: Long,
-    val grams: Double
+    val grams: Double,
+    val adjustable: Boolean = false,
+    val minimumGrams: Double = grams * 0.5,
+    val maximumGrams: Double = grams * 1.5
 ) {
-    fun isValid(): Boolean = foodId > 0 && grams in 0.1..5000.0
+    fun isValid(): Boolean = foodId > 0 && grams in 0.1..5000.0 &&
+        (!adjustable || minimumGrams in 0.1..5000.0 && maximumGrams in 0.1..5000.0 &&
+            minimumGrams <= grams && grams <= maximumGrams)
 }
 
 data class DishIngredient(
@@ -145,22 +150,48 @@ data class Dish(
 
 data class PlannedDish(
     val dishId: Long,
-    val grams: Double
+    val grams: Double,
+    val adjustable: Boolean = false,
+    val minimumGrams: Double = grams * 0.5,
+    val maximumGrams: Double = grams * 1.5
 ) {
-    fun isValid(): Boolean = dishId > 0 && grams in 0.1..5000.0
+    fun isValid(): Boolean = dishId > 0 && grams in 0.1..5000.0 &&
+        (!adjustable || minimumGrams in 0.1..5000.0 && maximumGrams in 0.1..5000.0 &&
+            minimumGrams <= grams && grams <= maximumGrams)
 }
+
+data class MealDayAmounts(
+    val day: WeekDay,
+    val foodGrams: Map<Long, Double> = emptyMap(),
+    val dishGrams: Map<Long, Double> = emptyMap()
+)
 
 data class PlannedMeal(
     val id: Long,
     val type: MealType,
     val days: Set<WeekDay>,
     val items: List<PlannedFood> = emptyList(),
-    val dishes: List<PlannedDish> = emptyList()
+    val dishes: List<PlannedDish> = emptyList(),
+    val dayAmounts: List<MealDayAmounts> = emptyList()
 ) {
-    fun isValid(): Boolean = id > 0 && days.isNotEmpty() && (items.isNotEmpty() || dishes.isNotEmpty()) &&
-        items.all { it.isValid() } && dishes.all { it.isValid() } &&
-        items.map { it.foodId }.distinct().size == items.size &&
-        dishes.map { it.dishId }.distinct().size == dishes.size
+    fun isValid(): Boolean {
+        val adjustableFoods = items.filter { it.adjustable }.associateBy { it.foodId }
+        val adjustableDishes = dishes.filter { it.adjustable }.associateBy { it.dishId }
+        return id > 0 && days.isNotEmpty() && (items.isNotEmpty() || dishes.isNotEmpty()) &&
+            items.all { it.isValid() } && dishes.all { it.isValid() } &&
+            items.map { it.foodId }.distinct().size == items.size &&
+            dishes.map { it.dishId }.distinct().size == dishes.size &&
+            dayAmounts.map { it.day }.distinct().size == dayAmounts.size &&
+            dayAmounts.all { amounts ->
+                amounts.day in days &&
+                    amounts.foodGrams.all { (id, grams) ->
+                        adjustableFoods[id]?.let { grams in it.minimumGrams..it.maximumGrams } == true
+                    } &&
+                    amounts.dishGrams.all { (id, grams) ->
+                        adjustableDishes[id]?.let { grams in it.minimumGrams..it.maximumGrams } == true
+                    }
+            }
+    }
 }
 
 data class NutritionTotals(
@@ -198,21 +229,46 @@ fun Dish.dominantCategory(foodsById: Map<Long, Food>): FoodCategory {
 
 fun PlannedMeal.nutrition(
     foodsById: Map<Long, Food>,
-    dishesById: Map<Long, Dish> = emptyMap()
+    dishesById: Map<Long, Dish> = emptyMap(),
+    day: WeekDay? = null
 ): NutritionTotals {
     val foodTotals = items.fold(NutritionTotals()) { total, planned ->
-        total + planned.nutrition(foodsById)
+        total + planned.nutrition(foodsById, resolvedGrams(planned, day))
     }
     return dishes.fold(foodTotals) { total, plannedDish ->
         val dish = dishesById[plannedDish.dishId]
         if (dish == null) total.copy(isComplete = false)
-        else total + dish.nutritionForGrams(foodsById, plannedDish.grams)
+        else total + dish.nutritionForGrams(foodsById, resolvedGrams(plannedDish, day))
     }
 }
 
-private fun PlannedFood.nutrition(foodsById: Map<Long, Food>): NutritionTotals {
+fun PlannedMeal.resolvedGrams(item: PlannedFood, day: WeekDay?): Double =
+    if (!item.adjustable || day == null) item.grams
+    else dayAmounts.firstOrNull { it.day == day }?.foodGrams?.get(item.foodId) ?: item.grams
+
+fun PlannedMeal.resolvedGrams(item: PlannedDish, day: WeekDay?): Double =
+    if (!item.adjustable || day == null) item.grams
+    else dayAmounts.firstOrNull { it.day == day }?.dishGrams?.get(item.dishId) ?: item.grams
+
+fun PlannedMeal.sanitizedDayAmounts(): PlannedMeal {
+    val foods = items.filter { it.adjustable }.associateBy { it.foodId }
+    val plannedDishes = dishes.filter { it.adjustable }.associateBy { it.dishId }
+    val cleaned = dayAmounts.filter { it.day in days }.distinctBy { it.day }.mapNotNull { amounts ->
+        val foodAmounts = amounts.foodGrams.mapNotNull { (id, grams) ->
+            foods[id]?.let { id to grams.coerceIn(it.minimumGrams, it.maximumGrams) }
+        }.toMap()
+        val dishAmounts = amounts.dishGrams.mapNotNull { (id, grams) ->
+            plannedDishes[id]?.let { id to grams.coerceIn(it.minimumGrams, it.maximumGrams) }
+        }.toMap()
+        MealDayAmounts(amounts.day, foodAmounts, dishAmounts)
+            .takeIf { foodAmounts.isNotEmpty() || dishAmounts.isNotEmpty() }
+    }
+    return copy(dayAmounts = cleaned)
+}
+
+private fun PlannedFood.nutrition(foodsById: Map<Long, Food>, resolvedGrams: Double): NutritionTotals {
     val food = foodsById[foodId]
-    val factor = grams / 100.0
+    val factor = resolvedGrams / 100.0
     return food.nutrition(factor)
 }
 
