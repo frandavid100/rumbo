@@ -1514,6 +1514,48 @@ private fun PlainNarrativeSection(title: String, body: String) {
     }
 }
 
+private const val NICE_BODY_ASSESSMENT_URL =
+    "https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-overweight-obesity-and-central-adiposity"
+
+private fun bmiExplanation(bmi: Double): String {
+    val interpretation = when {
+        bmi < 18.5 ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, por debajo del intervalo habitual. Esto puede indicar que tu peso es bajo para tu altura."
+        bmi < 25.0 ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, dentro del intervalo habitual. Tu peso y tu altura guardan una proporción adecuada según este indicador."
+        bmi < 30.0 ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, un poco por encima del intervalo habitual."
+        bmi < 35.0 ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, claramente por encima del intervalo habitual."
+        else ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, bastante por encima del intervalo habitual."
+    }
+    return "El IMC relaciona tu peso con tu altura y sirve para estimar si ambos están proporcionados. " +
+        interpretation +
+        " Es solo una referencia, porque no distingue entre grasa y músculo, así que conviene interpretarlo junto con tu cintura."
+}
+
+private fun waistToHeightExplanation(ratio: Double, heightCm: Double?): String {
+    val percentage = formatDecimal(ratio * 100.0)
+    val interpretation = when {
+        ratio < 0.40 ->
+            "Tu cintura equivale al $percentage % de tu altura, por debajo del intervalo habitual. Este resultado debe interpretarse junto con tu peso y tu IMC."
+        ratio < 0.50 ->
+            "Tu cintura equivale al $percentage % de tu altura y se encuentra dentro de la referencia recomendada."
+        ratio < 0.60 ->
+            "Tu cintura equivale al $percentage % de tu altura, ligeramente por encima de la referencia recomendada."
+        else ->
+            "Tu cintura equivale al $percentage % de tu altura, claramente por encima de la referencia recomendada."
+    }
+    val target = if (ratio >= 0.50 && heightCm != null) {
+        " Lo ideal es que mida menos de la mitad de tu altura; en tu caso, menos de ${formatOneDecimal(heightCm / 2.0)} cm."
+    } else {
+        ""
+    }
+    return "Este índice compara el tamaño de tu cintura con tu altura y ayuda a estimar la grasa acumulada alrededor del abdomen. " +
+        interpretation + target
+}
+
 @Composable
 private fun BodyExplanationScreen(
     data: AppData,
@@ -1561,8 +1603,13 @@ private fun BodyExplanationScreen(
                 )
                 PlainNarrativeSection(
                     title = "Qué significa el IMC",
-                    body = "El IMC relaciona peso y altura y sirve para estimar riesgo en población adulta. Es útil como primera señal, pero no distingue grasa de músculo ni describe por completo la composición corporal."
+                    body = bmiExplanation(bmi)
                 )
+                TextButton(
+                    onClick = {
+                        uriHandler.openUri(NICE_BODY_ASSESSMENT_URL)
+                    }
+                ) { Text("Fuente: criterios de NICE sobre el IMC") }
             }
         }
         assessment?.waistToHeightRatio?.let { ratio ->
@@ -1586,8 +1633,13 @@ private fun BodyExplanationScreen(
                 )
                 PlainNarrativeSection(
                     title = "Qué significa cintura/altura",
-                    body = "La relación cintura/altura añade información sobre la grasa abdominal. Entre 0,40 y 0,49 suele considerarse saludable; entre 0,50 y 0,59 indica riesgo aumentado; y desde 0,60, riesgo alto. Por debajo de 0,40 también conviene interpretar el resultado con cautela."
+                    body = waistToHeightExplanation(ratio, profile?.heightCm)
                 )
+                TextButton(
+                    onClick = {
+                        uriHandler.openUri(NICE_BODY_ASSESSMENT_URL)
+                    }
+                ) { Text("Fuente: criterios de NICE sobre cintura y altura") }
             }
         }
         item {
@@ -1608,13 +1660,6 @@ private fun BodyExplanationScreen(
             TextButton(onClick = onExplainRecommendation) {
                 Text("Entender cómo se calculan las calorías y los macros")
             }
-        }
-        item {
-            TextButton(
-                onClick = {
-                    uriHandler.openUri("https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-overweight-obesity-and-central-adiposity")
-                }
-            ) { Text("Consultar los criterios médicos de NICE") }
         }
         item { HorizontalDivider() }
         item { Text("Historial", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
