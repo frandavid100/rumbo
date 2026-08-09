@@ -364,7 +364,7 @@ object RecommendationEngine {
                 restingCalories = bmr,
                 activity = values.activity,
                 maintenanceCalories = maintenance,
-                appliedWeeklyRateKg = desiredRate,
+                appliedWeeklyRateKg = (target - maintenance) * 7.0 / KCAL_PER_KG,
                 goalAdjustmentCalories = goalAdjustment,
                 goalSafetyExplanation = safetyReason,
                 energyLimitAdjustmentCalories = energyLimitAdjustment,
