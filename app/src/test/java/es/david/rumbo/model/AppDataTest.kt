@@ -85,4 +85,17 @@ class AppDataTest {
         assertTrue(data.activeProfileData?.plannedMeals.isNullOrEmpty())
         assertEquals(listOf(davidMeal), data.profiles.first().plannedMeals)
     }
+
+    @Test
+    fun dishesAreSharedBetweenProfiles() {
+        val dish = Dish(30, "Batido", listOf(DishIngredient(1, 250.0)))
+        val data = AppData(
+            profiles = listOf(ProfileData(david), ProfileData(araceli)),
+            activeProfileId = david.id,
+            dishes = listOf(dish)
+        )
+
+        assertEquals(listOf(dish), data.dishes)
+        assertEquals(2, data.profiles.size)
+    }
 }
