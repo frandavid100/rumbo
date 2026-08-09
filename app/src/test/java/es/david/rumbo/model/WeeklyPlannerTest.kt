@@ -127,4 +127,43 @@ class WeeklyPlannerTest {
             shake.dominantCategory(listOf(chicken, rice).associateBy { it.id })
         )
     }
+
+    @Test
+    fun adjustableAmountCanDifferByDayWhileFixedAmountCannot() {
+        val adjustableRice = PlannedFood(rice.id, 60.0, true, 40.0, 100.0)
+        val fixedChicken = PlannedFood(chicken.id, 150.0)
+        val meal = PlannedMeal(
+            id = 30,
+            type = MealType.LUNCH,
+            days = setOf(WeekDay.MONDAY, WeekDay.TUESDAY),
+            items = listOf(adjustableRice, fixedChicken),
+            dayAmounts = listOf(
+                MealDayAmounts(WeekDay.MONDAY, foodGrams = mapOf(rice.id to 45.0)),
+                MealDayAmounts(WeekDay.TUESDAY, foodGrams = mapOf(rice.id to 85.0))
+            )
+        )
+
+        assertTrue(meal.isValid())
+        assertEquals(45.0, meal.resolvedGrams(adjustableRice, WeekDay.MONDAY), 0.001)
+        assertEquals(85.0, meal.resolvedGrams(adjustableRice, WeekDay.TUESDAY), 0.001)
+        assertEquals(150.0, meal.resolvedGrams(fixedChicken, WeekDay.MONDAY), 0.001)
+        assertEquals(150.0, meal.resolvedGrams(fixedChicken, WeekDay.TUESDAY), 0.001)
+    }
+
+    @Test
+    fun anOverrideForAFixedItemIsInvalidAndIsRemovedWhenSanitized() {
+        val fixed = PlannedFood(chicken.id, 150.0)
+        val meal = PlannedMeal(
+            id = 31,
+            type = MealType.DINNER,
+            days = setOf(WeekDay.MONDAY),
+            items = listOf(fixed),
+            dayAmounts = listOf(
+                MealDayAmounts(WeekDay.MONDAY, foodGrams = mapOf(chicken.id to 100.0))
+            )
+        )
+
+        assertFalse(meal.isValid())
+        assertTrue(meal.sanitizedDayAmounts().dayAmounts.isEmpty())
+    }
 }
