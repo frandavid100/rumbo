@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.12.0
+
+- Botón para añadir directamente las comidas ausentes de un día.
+- Biblioteca común de platos con ingredientes y cantidades por ración.
+- Platos reutilizables en cualquier perfil y visibles como un solo elemento del plan.
+- Raciones configurables por persona y expansión automática en nutrición y lista de la compra.
+
 ## 0.11.0
 
 - Vistas del plan semanal, de hoy y de un día elegido.
