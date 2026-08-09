@@ -84,8 +84,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.nativeCanvas
@@ -768,7 +770,7 @@ private fun BodyGoalNutritionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                Text("Para ello debes consumir cada día:", style = MaterialTheme.typography.bodyLarge)
+                Text("Para ello, cada día debes consumir:", style = MaterialTheme.typography.bodyLarge)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     NutritionGoalMetric(
                         "Calorías", "${recommendation.calories} kcal",
@@ -824,38 +826,57 @@ private fun HomeCardHeader(title: String) {
 private fun CombinedBodyScale(assessment: BodyAssessment) {
     val labelColor = MaterialTheme.colorScheme.onSurface
     val labelSize = with(LocalDensity.current) { 12.sp.toPx() }
-    Canvas(Modifier.fillMaxWidth().height(92.dp)) {
-        val barTop = 38.dp.toPx()
-        val barHeight = 16.dp.toPx()
-        val segmentEnds = listOf(0f, 0.20f, 0.40f, 0.60f, 0.80f, 1f)
-        val colors = listOf(
-            Color(0xFFE57373), Color(0xFFFFCA4B), Color(0xFF66BB6A),
-            Color(0xFFFFCA4B), Color(0xFFE57373)
+    val markerLabel = buildList {
+        assessment.bmi?.let { add("IMC ${formatOneDecimal(it)}") }
+        assessment.waistToHeightRatio?.let { add("C/A ${formatTwoDecimals(it)}") }
+    }.joinToString("  ·  ")
+    Canvas(Modifier.fillMaxWidth().height(52.dp)) {
+        val barTop = 34.dp.toPx()
+        val barHeight = 8.dp.toPx()
+        val gradient = Brush.horizontalGradient(
+            0.00f to Color(0xFFE57373),
+            0.25f to Color(0xFFFFCA4B),
+            0.50f to Color(0xFF66BB6A),
+            0.75f to Color(0xFFFFCA4B),
+            1.00f to Color(0xFFE57373),
+            startX = 0f,
+            endX = size.width
         )
-        colors.indices.forEach { index ->
-            val start = segmentEnds[index] * size.width
-            val end = segmentEnds[index + 1] * size.width
-            drawRect(colors[index], Offset(start, barTop), Size(end - start, barHeight))
-        }
+        drawRoundRect(
+            brush = gradient,
+            topLeft = Offset(0f, barTop),
+            size = Size(size.width, barHeight),
+            cornerRadius = CornerRadius(barHeight / 2f, barHeight / 2f)
+        )
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             color = labelColor.toArgb()
             textSize = labelSize
             textAlign = android.graphics.Paint.Align.CENTER
-            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            typeface = android.graphics.Typeface.create(
+                android.graphics.Typeface.DEFAULT,
+                android.graphics.Typeface.BOLD
+            )
         }
-        fun marker(position: Double, label: String, above: Boolean) {
-            val x = (position.coerceIn(0.04, 0.96) * size.width).toFloat()
-            val lineStart = if (above) barTop - 8.dp.toPx() else barTop + barHeight
-            val lineEnd = if (above) barTop else barTop + barHeight + 8.dp.toPx()
-            drawLine(labelColor, Offset(x, lineStart), Offset(x, lineEnd), strokeWidth = 2.dp.toPx())
-            drawCircle(Color.White, 5.dp.toPx(), Offset(x, barTop + barHeight / 2f))
-            drawCircle(labelColor, 3.5.dp.toPx(), Offset(x, barTop + barHeight / 2f))
-            val textY = if (above) barTop - 13.dp.toPx() else barTop + barHeight + 23.dp.toPx()
-            drawContext.canvas.nativeCanvas.drawText(label, x, textY, paint)
+        drawContext.canvas.nativeCanvas.drawText(
+            markerLabel,
+            size.width / 2f,
+            18.dp.toPx(),
+            paint
+        )
+        fun marker(position: Double) {
+            val x = (position.coerceIn(0.02, 0.98) * size.width).toFloat()
+            drawLine(
+                labelColor,
+                Offset(x, barTop),
+                Offset(x, barTop + barHeight),
+                strokeWidth = 2.dp.toPx()
+            )
         }
-        assessment.bmi?.let { marker(mapRiskValue(it, listOf(14.0, 16.0, 18.5, 25.0, 30.0, 40.0)), "IMC ${formatOneDecimal(it)}", true) }
+        assessment.bmi?.let {
+            marker(mapRiskValue(it, listOf(14.0, 16.0, 18.5, 25.0, 30.0, 40.0)))
+        }
         assessment.waistToHeightRatio?.let {
-            marker(mapRiskValue(it, listOf(0.30, 0.35, 0.40, 0.50, 0.60, 0.70)), "C/A ${formatTwoDecimals(it)}", false)
+            marker(mapRiskValue(it, listOf(0.30, 0.35, 0.40, 0.50, 0.60, 0.70)))
         }
     }
 }
@@ -872,15 +893,15 @@ private fun mapRiskValue(value: Double, thresholds: List<Double>): Double {
 private fun recommendedGoalSentence(goal: WeightGoal, weeklyRate: Double?): String = when {
     goal == WeightGoal.MAINTAIN -> "Te recomendamos mantener el peso."
     weeklyRate == null -> "Te recomendamos ${goal.label.lowercase()}."
-    else -> "Te recomendamos ${goal.label.lowercase()} " +
-        "(alrededor de ${formatOneDecimal(abs(weeklyRate))} kg por semana)."
+    else -> "Te recomendamos ${goal.label.lowercase()} · " +
+        "${formatOneDecimal(abs(weeklyRate))} kg/semana."
 }
 
 private fun selectedGoalSentence(goal: WeightGoal, weeklyRate: Double?): String = when {
     goal == WeightGoal.MAINTAIN -> "Has elegido mantener el peso."
     weeklyRate == null -> "Has elegido ${goal.label.lowercase()}."
-    else -> "Has elegido ${goal.label.lowercase()} " +
-        "(alrededor de ${formatOneDecimal(abs(weeklyRate))} kg por semana)."
+    else -> "Has elegido ${goal.label.lowercase()} · " +
+        "${formatOneDecimal(abs(weeklyRate))} kg/semana."
 }
 
 @Composable
