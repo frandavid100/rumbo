@@ -98,7 +98,7 @@ class WeeklyPlannerTest {
             id = 10,
             type = MealType.BREAKFAST,
             days = setOf(WeekDay.MONDAY),
-            dishes = listOf(PlannedDish(shake.id, 1.5))
+            dishes = listOf(PlannedDish(shake.id, 180.0))
         )
 
         val total = meal.nutrition(
@@ -109,5 +109,22 @@ class WeeklyPlannerTest {
         assertTrue(meal.isValid())
         assertEquals(255.0, total.calories, 0.001)
         assertEquals(32.4, total.proteinGrams, 0.001)
+    }
+
+    @Test
+    fun dishCategoryUsesTheMacroWithMostEnergy() {
+        val shake = Dish(
+            id = 20,
+            name = "Batido",
+            ingredients = listOf(
+                DishIngredient(chicken.id, 100.0),
+                DishIngredient(rice.id, 20.0)
+            )
+        )
+
+        assertEquals(
+            FoodCategory.PROTEIN,
+            shake.dominantCategory(listOf(chicken, rice).associateBy { it.id })
+        )
     }
 }
