@@ -590,15 +590,14 @@ fun RumboApp(repository: AppRepository) {
                     onImport = { importLauncher.launch(arrayOf("application/json", "text/plain")) }
                 )
                 screen == Screen.GOAL_EXPLANATION -> GoalExplanationScreen(data)
-                screen == Screen.BODY_EXPLANATION -> BodyExplanationScreen(
-                    data = data,
-                    onOpenMeasurement = {
-                        selectedMeasurementId = it
-                        screenName = Screen.MEASUREMENT_DETAIL.name
-                    },
-                    onExplainRecommendation = { screenName = Screen.RECOMMENDATION_EXPLANATION.name }
-                )
-                screen == Screen.RECOMMENDATION_EXPLANATION -> RecommendationExplanationScreen(data)
+                screen in setOf(Screen.BODY_EXPLANATION, Screen.RECOMMENDATION_EXPLANATION) ->
+                    BodyExplanationScreen(
+                        data = data,
+                        onOpenMeasurement = {
+                            selectedMeasurementId = it
+                            screenName = Screen.MEASUREMENT_DETAIL.name
+                        }
+                    )
             }
         }
     }
@@ -1274,8 +1273,12 @@ private fun BodyIndicator(
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(interpretation, style = MaterialTheme.typography.bodySmall)
+            Text(
+                label,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(interpretation, style = MaterialTheme.typography.bodyLarge)
         }
         Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
     }
@@ -1602,12 +1605,14 @@ private fun combinedBodyExplanation(bmi: Double, ratio: Double): String = when {
 @Composable
 private fun BodyExplanationScreen(
     data: AppData,
-    onOpenMeasurement: (Long) -> Unit,
-    onExplainRecommendation: () -> Unit
+    onOpenMeasurement: (Long) -> Unit
 ) {
     val profile = data.profile
     val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
     val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
+    val latest = data.measurements.maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })
+    val recommendation = latest?.recommendation
+    val calculation = recommendation?.calculation
     val uriHandler = LocalUriHandler.current
     val ordered = data.measurements.sortedWith(compareBy<Measurement> { it.date }.thenBy { it.id })
     val heightM = profile?.heightCm?.div(100.0)
@@ -1620,11 +1625,8 @@ private fun BodyExplanationScreen(
 
     LazyColumn(
         contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        item {
-            Text("Entender la situación y el objetivo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        }
         assessment?.bmi?.let { bmi ->
             item {
                 BodyIndicator(
@@ -1644,14 +1646,13 @@ private fun BodyExplanationScreen(
                     ),
                     thresholds = listOf(18.5 to "18,5", 25.0 to "25", 30.0 to "30")
                 )
-                PlainNarrativeSection(
-                    title = "Qué significa el IMC",
-                    body = bmiExplanation(bmi)
+                Text(
+                    bmiExplanation(bmi),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 TextButton(
-                    onClick = {
-                        uriHandler.openUri(NICE_BODY_ASSESSMENT_URL)
-                    },
+                    onClick = { uriHandler.openUri(NICE_BODY_ASSESSMENT_URL) },
                     contentPadding = PaddingValues(0.dp)
                 ) { Text("Fuente: criterios de NICE sobre el IMC") }
             }
@@ -1659,7 +1660,7 @@ private fun BodyExplanationScreen(
         assessment?.waistToHeightRatio?.let { ratio ->
             item {
                 BodyIndicator(
-                    label = "Cintura/altura",
+                    label = "Cintura / altura",
                     value = formatTwoDecimals(ratio),
                     interpretation = assessment.waistInterpretation.orEmpty()
                 )
@@ -1675,60 +1676,170 @@ private fun BodyExplanationScreen(
                     ),
                     thresholds = listOf(0.40 to "0,40", 0.50 to "0,50", 0.60 to "0,60")
                 )
-                PlainNarrativeSection(
-                    title = "Qué significa cintura/altura",
-                    body = waistToHeightExplanation(ratio, profile.heightCm)
+                Text(
+                    waistToHeightExplanation(ratio, profile.heightCm),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 TextButton(
-                    onClick = {
-                        uriHandler.openUri(NICE_BODY_ASSESSMENT_URL)
-                    },
+                    onClick = { uriHandler.openUri(NICE_BODY_ASSESSMENT_URL) },
                     contentPadding = PaddingValues(0.dp)
                 ) { Text("Fuente: criterios de NICE sobre cintura y altura") }
             }
         }
         if (assessment?.bmi != null && assessment.waistToHeightRatio != null) {
             item {
-                PlainNarrativeSection(
-                    title = "Nuestra recomendación",
-                    body = combinedBodyExplanation(
-                        bmi = assessment.bmi,
-                        ratio = assessment.waistToHeightRatio
-                    )
+                Text(
+                    "Nuestra recomendación",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
-            }
-        }
-        recommendedGoal?.let { result ->
-            item {
-                val weight = RecommendationEngine.effectiveValues(data.measurements).weightKg
-                val rate = RecommendationEngine.weeklyRateFor(result.goal, weight)
-                val title = when {
-                    rate == null || rate == 0.0 -> "Por qué recomendamos mantener el peso"
-                    rate < 0.0 -> "Por qué recomendamos perder ${formatOneDecimal(abs(rate))} kg por semana"
-                    else -> "Por qué recomendamos ganar ${formatOneDecimal(rate)} kg por semana"
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    combinedBodyExplanation(assessment.bmi, assessment.waistToHeightRatio),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                recommendedGoal?.let { result ->
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        result.explanation,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (result.goal in setOf(WeightGoal.LOSE_SLOWLY, WeightGoal.LOSE_FASTER)) {
+                        TextButton(
+                            onClick = { uriHandler.openUri(NHS_WEIGHT_LOSS_RATE_URL) },
+                            contentPadding = PaddingValues(0.dp)
+                        ) { Text("Referencia: ritmo gradual recomendado por el NHS") }
+                        TextButton(
+                            onClick = { uriHandler.openUri(WEIGHT_LOSS_RATE_STUDY_URL) },
+                            contentPadding = PaddingValues(0.dp)
+                        ) { Text("Estudio: ritmo de pérdida y conservación muscular") }
+                    }
                 }
-                PlainNarrativeSection(title = title, body = result.explanation)
-                if (result.goal in setOf(WeightGoal.LOSE_SLOWLY, WeightGoal.LOSE_FASTER)) {
+
+                if (recommendation != null && calculation != null) {
+                    val requestedRate = calculation.goalAdjustmentCalories * 7.0 / 7700.0
+                    val goalBasedCalories =
+                        calculation.maintenanceCalories + calculation.goalAdjustmentCalories
+                    val goalCalculation = when {
+                        abs(requestedRate) < 0.0001 ->
+                            "Como el objetivo es mantener el peso, no aplicamos déficit ni superávit y tomamos como referencia las ${formatOneDecimal(calculation.maintenanceCalories)} kcal con las que estimamos que mantendrías el peso."
+                        requestedRate < 0.0 ->
+                            "Para perder ${formatOneDecimal(abs(requestedRate))} kg por semana necesitas un déficit aproximado de ${formatOneDecimal(abs(calculation.goalAdjustmentCalories))} kcal diarias. Lo restamos a las ${formatOneDecimal(calculation.maintenanceCalories)} kcal de mantenimiento y obtenemos ${formatOneDecimal(goalBasedCalories)} kcal."
+                        else ->
+                            "Para ganar ${formatOneDecimal(requestedRate)} kg por semana necesitas un superávit aproximado de ${formatOneDecimal(calculation.goalAdjustmentCalories)} kcal diarias. Lo añadimos a las ${formatOneDecimal(calculation.maintenanceCalories)} kcal de mantenimiento y obtenemos ${formatOneDecimal(goalBasedCalories)} kcal."
+                    }
+                    val adjustments = buildList {
+                        calculation.goalSafetyExplanation?.let {
+                            add(it.replaceFirstChar(Char::uppercaseChar) + ".")
+                        }
+                        calculation.energyLimitExplanation?.let {
+                            add(
+                                it.replaceFirstChar(Char::uppercaseChar) +
+                                    " y modifica el cálculo en ${formatSignedKcal(calculation.energyLimitAdjustmentCalories)} kcal."
+                            )
+                        }
+                        if (abs(calculation.historyAdjustmentCalories) >= 0.05) {
+                            add(
+                                calculation.historyExplanation.replaceFirstChar(Char::uppercaseChar) +
+                                    "; por eso aplica ${formatSignedKcal(calculation.historyAdjustmentCalories)} kcal."
+                            )
+                        } else {
+                            add(calculation.historyExplanation.replaceFirstChar(Char::uppercaseChar) + ".")
+                        }
+                        calculation.previousLimitExplanation?.let {
+                            add(it.replaceFirstChar(Char::uppercaseChar) + ".")
+                        }
+                    }.joinToString(" ")
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Según tu peso, altura, edad y sexo, Mifflin–St Jeor estima un gasto de ${formatOneDecimal(calculation.restingCalories)} kcal al día en reposo. Al incorporar tu actividad «${calculation.activity.label.lowercase()}», estimamos un mantenimiento de ${formatOneDecimal(calculation.maintenanceCalories)} kcal. $goalCalculation $adjustments Tras los ajustes obtenemos ${formatOneDecimal(calculation.beforeRoundingCalories)} kcal y redondeamos al múltiplo de 25 más cercano: ${recommendation.calories} kcal al día.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     TextButton(
-                        onClick = { uriHandler.openUri(NHS_WEIGHT_LOSS_RATE_URL) },
+                        onClick = { uriHandler.openUri(MIFFLIN_ST_JEOR_URL) },
                         contentPadding = PaddingValues(0.dp)
-                    ) { Text("Referencia: ritmo gradual recomendado por el NHS") }
+                    ) { Text("Referencia: fórmula de Mifflin–St Jeor") }
                     TextButton(
-                        onClick = { uriHandler.openUri(WEIGHT_LOSS_RATE_STUDY_URL) },
+                        onClick = { uriHandler.openUri(ENERGY_BALANCE_MODEL_URL) },
                         contentPadding = PaddingValues(0.dp)
-                    ) { Text("Estudio: ritmo de pérdida y conservación muscular") }
+                    ) { Text("Referencia: déficit energético y cambio de peso") }
+
+                    val calculationHeightM = calculation.heightCm / 100.0
+                    val proteinReferenceWeight =
+                        minOf(calculation.weightKg, 30.0 * calculationHeightM.pow(2))
+                    val proteinContext = when {
+                        calculation.goalAdjustmentCalories < 0.0 ->
+                            "Priorizamos ${recommendation.proteinGrams} g de proteína para ayudar a conservar músculo durante la pérdida de grasa."
+                        calculation.goalAdjustmentCalories > 0.0 ->
+                            "Priorizamos ${recommendation.proteinGrams} g de proteína para favorecer que parte del peso ganado sea músculo, especialmente si entrenas fuerza."
+                        else ->
+                            "Priorizamos ${recommendation.proteinGrams} g de proteína para facilitar el mantenimiento y desarrollo muscular."
+                    }
+                    val referenceWeightText =
+                        if (proteinReferenceWeight < calculation.weightKg - 0.05) {
+                            " Para calcularla usamos un peso de referencia de ${formatOneDecimal(proteinReferenceWeight)} kg, porque hacerlo sobre todo tu peso actual produciría una cifra innecesariamente alta."
+                        } else {
+                            ""
+                        }
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        MacroValue(
+                            "Proteína",
+                            recommendation.proteinGrams,
+                            foodCategoryColor(FoodCategory.PROTEIN)
+                        )
+                        MacroValue(
+                            "Hidratos",
+                            recommendation.carbohydrateGrams,
+                            foodCategoryColor(FoodCategory.CARBOHYDRATE)
+                        )
+                        MacroValue(
+                            "Grasa",
+                            recommendation.fatGrams,
+                            foodCategoryColor(FoodCategory.FAT)
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        proteinContext + referenceWeightText +
+                            " Reservamos aproximadamente el 25 % de las calorías para ${recommendation.fatGrams} g de grasa, dentro del intervalo recomendado, y completamos las calorías restantes con ${recommendation.carbohydrateGrams} g de hidratos para aportar energía. Este no es el único reparto saludable posible, pero ofrece un equilibrio razonable entre composición corporal, energía y facilidad para mantener la dieta.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    TextButton(
+                        onClick = { uriHandler.openUri(PROTEIN_META_ANALYSIS_URL) },
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("Referencia: proteína y conservación muscular") }
+                    TextButton(
+                        onClick = { uriHandler.openUri(EFSA_FAT_REFERENCE_URL) },
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("Referencia: intervalo de grasas de la EFSA") }
                 }
-            }
-        }
-        item {
-            TextButton(onClick = onExplainRecommendation) {
-                Text("Entender cómo se calculan las calorías y los macros")
             }
         }
         item { HorizontalDivider() }
-        item { Text("Historial", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        item {
+            Text(
+                "Historial",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
         if (data.measurements.isEmpty()) {
-            item { Text("Todavía no hay mediciones", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            item {
+                Text(
+                    "Todavía no hay mediciones",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         } else {
             items(
                 data.measurements.sortedWith(
@@ -1739,149 +1850,6 @@ private fun BodyExplanationScreen(
                 HistoryEntry(measurement = measurement, onClick = { onOpenMeasurement(measurement.id) })
                 HorizontalDivider()
             }
-        }
-    }
-}
-
-@Composable
-private fun RecommendationExplanationScreen(data: AppData) {
-    val latest = data.measurements.maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })
-    val recommendation = latest?.recommendation
-    val calculation = recommendation?.calculation
-    val profile = data.profile
-    val uriHandler = LocalUriHandler.current
-
-    if (recommendation == null || calculation == null || profile == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Todavía no hay una recomendación que explicar")
-        }
-        return
-    }
-
-    val requestedRate = calculation.goalAdjustmentCalories * 7.0 / 7700.0
-    val goalBasedCalories = calculation.maintenanceCalories + calculation.goalAdjustmentCalories
-    val goalText = when {
-        abs(requestedRate) < 0.0001 ->
-            "Como el objetivo es mantener el peso, no aplicamos déficit ni superávit: tomamos como referencia las ${formatOneDecimal(calculation.maintenanceCalories)} kcal con las que estimamos que mantendrías el peso."
-        requestedRate < 0.0 ->
-            "Para perder ${formatOneDecimal(abs(requestedRate))} kg por semana necesitas un déficit aproximado de ${formatOneDecimal(abs(calculation.goalAdjustmentCalories))} kcal diarias. Lo restamos a las ${formatOneDecimal(calculation.maintenanceCalories)} kcal de mantenimiento: el primer resultado es ${formatOneDecimal(goalBasedCalories)} kcal."
-        else ->
-            "Para ganar ${formatOneDecimal(requestedRate)} kg por semana necesitas un superávit aproximado de ${formatOneDecimal(calculation.goalAdjustmentCalories)} kcal diarias. Lo añadimos a las ${formatOneDecimal(calculation.maintenanceCalories)} kcal de mantenimiento: el primer resultado es ${formatOneDecimal(goalBasedCalories)} kcal."
-    }
-
-    val adjustments = buildList {
-        calculation.goalSafetyExplanation?.let {
-            add(it.replaceFirstChar(Char::uppercaseChar) + ".")
-        }
-        calculation.energyLimitExplanation?.let {
-            add(
-                it.replaceFirstChar(Char::uppercaseChar) +
-                    " y modifica el cálculo en ${formatSignedKcal(calculation.energyLimitAdjustmentCalories)} kcal."
-            )
-        }
-        if (abs(calculation.historyAdjustmentCalories) >= 0.05) {
-            add(
-                calculation.historyExplanation.replaceFirstChar(Char::uppercaseChar) +
-                    "; por eso aplica ${formatSignedKcal(calculation.historyAdjustmentCalories)} kcal."
-            )
-        } else {
-            add(calculation.historyExplanation.replaceFirstChar(Char::uppercaseChar) + ".")
-        }
-        calculation.previousLimitExplanation?.let {
-            add(it.replaceFirstChar(Char::uppercaseChar) + ".")
-        }
-    }.joinToString(" ")
-
-    val heightM = calculation.heightCm / 100.0
-    val proteinReferenceWeight = minOf(calculation.weightKg, 30.0 * heightM.pow(2))
-    val proteinContext = when {
-        calculation.goalAdjustmentCalories < 0.0 ->
-            "Priorizamos ${recommendation.proteinGrams} g de proteína para ayudar a conservar músculo durante la pérdida de grasa."
-        calculation.goalAdjustmentCalories > 0.0 ->
-            "Priorizamos ${recommendation.proteinGrams} g de proteína para favorecer que parte del peso ganado sea músculo, especialmente si entrenas fuerza."
-        else ->
-            "Priorizamos ${recommendation.proteinGrams} g de proteína para facilitar el mantenimiento y desarrollo muscular."
-    }
-    val referenceWeightText = if (proteinReferenceWeight < calculation.weightKg - 0.05) {
-        " Para calcularla usamos un peso de referencia de ${formatOneDecimal(proteinReferenceWeight)} kg, porque hacerlo sobre todo tu peso actual produciría una cifra innecesariamente alta."
-    } else {
-        ""
-    }
-    val macroText = proteinContext + referenceWeightText +
-        " Reservamos aproximadamente el 25 % de las calorías para ${recommendation.fatGrams} g de grasa, dentro del intervalo recomendado, y completamos las calorías restantes con ${recommendation.carbohydrateGrams} g de hidratos para aportar energía. Este no es el único reparto saludable posible, pero ofrece un equilibrio razonable entre composición corporal, energía y facilidad para mantener la dieta."
-
-    LazyColumn(
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        item {
-            Text(
-                "¿Por qué ${recommendation.calories} kcal?",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        item {
-            PlainNarrativeSection(
-                title = "Tu punto de partida",
-                body = "Según tu peso, altura, edad y sexo, Mifflin–St Jeor estima que tu cuerpo gastaría ${formatOneDecimal(calculation.restingCalories)} kcal al día en reposo. Al incorporar tu actividad «${calculation.activity.label.lowercase()}», estimamos que necesitas unas ${formatOneDecimal(calculation.maintenanceCalories)} kcal para mantener el peso."
-            )
-            TextButton(
-                onClick = { uriHandler.openUri(MIFFLIN_ST_JEOR_URL) },
-                contentPadding = PaddingValues(0.dp)
-            ) { Text("Referencia: fórmula de Mifflin–St Jeor") }
-        }
-        item {
-            PlainNarrativeSection(title = "El ajuste por tu objetivo", body = goalText)
-            TextButton(
-                onClick = { uriHandler.openUri(ENERGY_BALANCE_MODEL_URL) },
-                contentPadding = PaddingValues(0.dp)
-            ) { Text("Referencia: déficit energético y cambio de peso") }
-        }
-        item {
-            PlainNarrativeSection(
-                title = "Ajustes y resultado final",
-                body = "$adjustments Tras aplicar estos ajustes obtenemos ${formatOneDecimal(calculation.beforeRoundingCalories)} kcal y redondeamos al múltiplo de 25 más cercano: ${recommendation.calories} kcal al día."
-            )
-        }
-        item {
-            PlainNarrativeSection(
-                title = "¿Por qué estos macronutrientes?",
-                body = "Las calorías determinan principalmente el ritmo de cambio de peso; su reparto influye en la conservación del músculo, la saciedad y la energía disponible."
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MacroValue(
-                    "Proteína",
-                    recommendation.proteinGrams,
-                    foodCategoryColor(FoodCategory.PROTEIN)
-                )
-                MacroValue(
-                    "Hidratos",
-                    recommendation.carbohydrateGrams,
-                    foodCategoryColor(FoodCategory.CARBOHYDRATE)
-                )
-                MacroValue(
-                    "Grasa",
-                    recommendation.fatGrams,
-                    foodCategoryColor(FoodCategory.FAT)
-                )
-            }
-            Text(macroText, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(
-                onClick = { uriHandler.openUri(PROTEIN_META_ANALYSIS_URL) },
-                contentPadding = PaddingValues(0.dp)
-            ) { Text("Referencia: proteína y conservación muscular") }
-            TextButton(
-                onClick = { uriHandler.openUri(EFSA_FAT_REFERENCE_URL) },
-                contentPadding = PaddingValues(0.dp)
-            ) { Text("Referencia: intervalo de grasas de la EFSA") }
-        }
-        item {
-            Text(
-                "Es una estimación que se irá contrastando con la evolución real. No sustituye una valoración sanitaria individual.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
