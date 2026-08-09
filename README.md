@@ -16,7 +16,8 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Organiza Inicio en cuatro tarjetas pulsables: situación corporal, objetivo y nutrición, menú de hoy y lista de la compra.
 - Resume IMC y cintura/altura en una única escala de cinco franjas iguales; las gráficas y el historial quedan en la explicación detallada.
 - Permite elegir «Automático» para que el objetivo aplicado siga siempre la recomendación corporal vigente.
-- Muestra el cumplimiento diario de calorías y macros mediante barras con iconos y colores propios.
+- Muestra el cumplimiento diario de calorías y macros en una cuadrícula compacta de porcentajes con iconos y colores propios.
+- Permite completar comidas ausentes y ajustar las cantidades del día directamente desde Inicio.
 - Evita tarjetas y encabezados redundantes en Inicio; usa espacio y divisores para separar la información.
 - Muestra un historial compacto; al tocar una entrada abre todos sus detalles y permite editarla o eliminarla.
 - Añade una pestaña «Alimentos» con búsqueda por nombre, categoría, marca, comercio o EAN.
