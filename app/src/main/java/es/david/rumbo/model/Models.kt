@@ -357,6 +357,7 @@ data class Measurement(
     val activity: ActivityLevel? = null,
     val compliance: DietCompliance? = null,
     val goal: WeightGoal? = null,
+    val weeklyRateKg: Double? = null,
     val recommendation: Recommendation? = null
 )
 
@@ -390,5 +391,6 @@ data class EffectiveValues(
     val weightKg: Double?,
     val waistCm: Double?,
     val activity: ActivityLevel,
-    val goal: WeightGoal
+    val goal: WeightGoal,
+    val weeklyRateKg: Double?
 )
