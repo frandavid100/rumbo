@@ -8,6 +8,7 @@ import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.nutrition
+import es.david.rumbo.model.resolvedGrams
 import es.david.rumbo.model.totalWeightGrams
 import kotlin.math.abs
 
@@ -57,8 +58,9 @@ object MealPlanEvaluator {
         meal: PlannedMeal,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
-        recommendation: Recommendation
-    ): PlanNutritionAssessment = assess(meal.nutrition(foodsById, dishesById), mealTarget(recommendation))
+        recommendation: Recommendation,
+        day: WeekDay? = null
+    ): PlanNutritionAssessment = assess(meal.nutrition(foodsById, dishesById, day), mealTarget(recommendation))
 
     fun assessDay(
         day: WeekDay,
@@ -69,7 +71,7 @@ object MealPlanEvaluator {
     ): PlanNutritionAssessment {
         val dayMeals = meals.filter { day in it.days }
         val actual = dayMeals.fold(NutritionTotals()) { total, meal ->
-            total + meal.nutrition(foodsById, dishesById)
+            total + meal.nutrition(foodsById, dishesById, day)
         }
         val presentTypes = dayMeals.mapTo(mutableSetOf()) { it.type }
         val missing = MealType.entries.filterNot(presentTypes::contains)
@@ -82,16 +84,18 @@ object MealPlanEvaluator {
     ): Map<Long, Double> {
         val totals = mutableMapOf<Long, Double>()
         meals.forEach { meal ->
-            meal.items.forEach { item ->
-                totals[item.foodId] = totals.getOrDefault(item.foodId, 0.0) +
-                    item.grams * meal.days.size
-            }
-            meal.dishes.forEach { plannedDish ->
-                dishesById[plannedDish.dishId]?.let { dish ->
-                    val recipeWeight = dish.totalWeightGrams()
-                    if (recipeWeight > 0.0) dish.ingredients.forEach { ingredient ->
-                        totals[ingredient.foodId] = totals.getOrDefault(ingredient.foodId, 0.0) +
-                            ingredient.grams * (plannedDish.grams / recipeWeight) * meal.days.size
+            meal.days.forEach { day ->
+                meal.items.forEach { item ->
+                    totals[item.foodId] = totals.getOrDefault(item.foodId, 0.0) +
+                        meal.resolvedGrams(item, day)
+                }
+                meal.dishes.forEach { plannedDish ->
+                    dishesById[plannedDish.dishId]?.let { dish ->
+                        val recipeWeight = dish.totalWeightGrams()
+                        if (recipeWeight > 0.0) dish.ingredients.forEach { ingredient ->
+                            totals[ingredient.foodId] = totals.getOrDefault(ingredient.foodId, 0.0) +
+                                ingredient.grams * (meal.resolvedGrams(plannedDish, day) / recipeWeight)
+                        }
                     }
                 }
             }
