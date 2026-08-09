@@ -27,7 +27,7 @@ object RecommendationEngine {
     private const val MAX_STEP_KCAL = 150
 
     fun weeklyRateFor(goal: WeightGoal, weightKg: Double?): Double? =
-        weightKg?.let { desiredWeeklyRate(goal, it) }
+        weightKg?.takeIf { goal != WeightGoal.AUTOMATIC }?.let { desiredWeeklyRate(goal, it) }
 
     fun effectiveValues(
         history: List<Measurement>,
@@ -44,7 +44,7 @@ object RecommendationEngine {
                 ?: ActivityLevel.LIGHT,
             goal = candidate?.goal
                 ?: ordered.asReversed().firstOrNull { it.goal != null }?.goal
-                ?: WeightGoal.MAINTAIN
+                ?: WeightGoal.AUTOMATIC
         )
     }
 
@@ -97,7 +97,10 @@ object RecommendationEngine {
         val relevantHistory = candidate?.let { item ->
             history.filter { !it.date.isAfter(item.date) }
         } ?: history
-        val values = effectiveValues(relevantHistory, candidate)
+        val selectedValues = effectiveValues(relevantHistory, candidate)
+        val values = if (selectedValues.goal == WeightGoal.AUTOMATIC) {
+            selectedValues.copy(goal = recommendGoal(profile, relevantHistory, candidate).goal)
+        } else selectedValues
         val weight = values.weightKg
         val heightM = profile.heightCm / 100.0
         val bmi = weight?.div(heightM.pow(2))
@@ -252,7 +255,11 @@ object RecommendationEngine {
         history: List<Measurement>,
         candidate: Measurement
     ): Recommendation? {
-        val values = effectiveValues(history.filter { !it.date.isAfter(candidate.date) }, candidate)
+        val relevantHistory = history.filter { !it.date.isAfter(candidate.date) }
+        val selectedValues = effectiveValues(relevantHistory, candidate)
+        val values = if (selectedValues.goal == WeightGoal.AUTOMATIC) {
+            selectedValues.copy(goal = recommendGoal(profile, relevantHistory, candidate).goal)
+        } else selectedValues
         val weight = values.weightKg ?: return null
         if (weight !in 30.0..350.0 || !profile.isValid(candidate.date.year)) return null
 
@@ -375,7 +382,7 @@ object RecommendationEngine {
             (bmi?.let { it >= 30.0 } == true && waistRatio == null)
 
     private fun desiredWeeklyRate(goal: WeightGoal, weight: Double): Double {
-        if (goal == WeightGoal.MAINTAIN) return 0.0
+        if (goal == WeightGoal.MAINTAIN || goal == WeightGoal.AUTOMATIC) return 0.0
         val magnitude = min(abs(weight * goal.weeklyRateFactor), goal.maximumRate)
         return if (goal.weeklyRateFactor < 0) -magnitude else magnitude
     }
