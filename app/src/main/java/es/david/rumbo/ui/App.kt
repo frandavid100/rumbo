@@ -121,7 +121,9 @@ import es.david.rumbo.model.Sex
 import es.david.rumbo.model.UserProfile
 import es.david.rumbo.model.WeightGoal
 import es.david.rumbo.model.WeekDay
+import es.david.rumbo.model.dominantCategory
 import es.david.rumbo.model.nutrition
+import es.david.rumbo.model.totalWeightGrams
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -142,6 +144,7 @@ private enum class Screen(val label: String, val icon: ImageVector, val inNaviga
     EDIT_PLANNED_MEAL("Editar comida", Icons.Default.CalendarMonth, false),
     DISHES("Platos", Icons.Default.Restaurant),
     ADD_DISH("Añadir plato", Icons.Default.Restaurant, false),
+    DISH_DETAIL("Plato", Icons.Default.Restaurant, false),
     EDIT_DISH("Editar plato", Icons.Default.Restaurant, false),
     FOODS("Alimentos", Icons.Default.Restaurant),
     ADD_FOOD("Añadir alimento", Icons.Default.Restaurant, false),
@@ -176,6 +179,16 @@ fun RumboApp(repository: AppRepository) {
     val currentRecommendation = data.measurements
         .maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })
         ?.recommendation
+    val allPlannedMeals = data.profiles.flatMap { it.plannedMeals }
+    val preferredFoodIds = remember(data.dishes, allPlannedMeals) {
+        buildSet {
+            data.dishes.flatMapTo(this) { dish -> dish.ingredients.map { it.foodId } }
+            allPlannedMeals.flatMapTo(this) { meal -> meal.items.map { it.foodId } }
+        }
+    }
+    val preferredDishIds = remember(allPlannedMeals) {
+        allPlannedMeals.flatMap { meal -> meal.dishes.map { it.dishId } }.toSet()
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -187,7 +200,8 @@ fun RumboApp(repository: AppRepository) {
                 Screen.FOOD_DETAIL.name
             screen in setOf(Screen.ADD_PLANNED_MEAL, Screen.EDIT_PLANNED_MEAL) ->
                 Screen.PLANNER.name
-            screen in setOf(Screen.ADD_DISH, Screen.EDIT_DISH) -> Screen.DISHES.name
+            screen == Screen.EDIT_DISH && selectedDishId != null -> Screen.DISH_DETAIL.name
+            screen in setOf(Screen.ADD_DISH, Screen.DISH_DETAIL) -> Screen.DISHES.name
             screen in setOf(Screen.ADD_FOOD, Screen.FOOD_DETAIL) -> Screen.FOODS.name
             else -> Screen.HOME.name
         }
@@ -393,6 +407,8 @@ fun RumboApp(repository: AppRepository) {
                     recommendation = currentRecommendation,
                     initialType = draftMealTypeName?.let { MealType.valueOf(it) },
                     initialDays = draftMealDayName?.let { setOf(WeekDay.valueOf(it)) }.orEmpty(),
+                    preferredFoodIds = preferredFoodIds,
+                    preferredDishIds = preferredDishIds,
                     onCreateDish = { data = repository.saveDish(it) },
                     onSave = {
                         data = repository.savePlannedMeal(it)
@@ -413,6 +429,8 @@ fun RumboApp(repository: AppRepository) {
                             existingMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                             recommendation = currentRecommendation,
                             initial = meal,
+                            preferredFoodIds = preferredFoodIds,
+                            preferredDishIds = preferredDishIds,
                             onCreateDish = { data = repository.saveDish(it) },
                             onSave = {
                                 data = repository.savePlannedMeal(it)
@@ -431,17 +449,35 @@ fun RumboApp(repository: AppRepository) {
                     foods = data.foods,
                     onOpenDish = {
                         selectedDishId = it
-                        screenName = Screen.EDIT_DISH.name
+                        screenName = Screen.DISH_DETAIL.name
                     }
                 )
                 screen == Screen.ADD_DISH -> DishEditorScreen(
                     foods = data.foods,
+                    preferredFoodIds = preferredFoodIds,
                     onSave = {
                         data = repository.saveDish(it)
                         selectedDishId = it.id
-                        screenName = Screen.DISHES.name
+                        screenName = Screen.DISH_DETAIL.name
                     }
                 )
+                screen == Screen.DISH_DETAIL -> {
+                    val dish = data.dishes.firstOrNull { it.id == selectedDishId }
+                    if (dish == null) {
+                        screenName = Screen.DISHES.name
+                    } else {
+                        DishDetailScreen(
+                            dish = dish,
+                            foods = data.foods,
+                            onEdit = { screenName = Screen.EDIT_DISH.name },
+                            onDelete = {
+                                data = repository.deleteDish(dish.id)
+                                selectedDishId = null
+                                screenName = Screen.DISHES.name
+                            }
+                        )
+                    }
+                }
                 screen == Screen.EDIT_DISH -> {
                     val dish = data.dishes.firstOrNull { it.id == selectedDishId }
                     if (dish == null) {
@@ -450,9 +486,10 @@ fun RumboApp(repository: AppRepository) {
                         DishEditorScreen(
                             foods = data.foods,
                             initial = dish,
+                            preferredFoodIds = preferredFoodIds,
                             onSave = {
                                 data = repository.saveDish(it)
-                                screenName = Screen.DISHES.name
+                                screenName = Screen.DISH_DETAIL.name
                             },
                             onDelete = {
                                 data = repository.deleteDish(dish.id)
@@ -1934,7 +1971,11 @@ private fun PlannedMealListEntry(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SmallDishBadge()
+                    if (dish != null) {
+                        SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
+                    } else {
+                        Spacer(Modifier.size(24.dp))
+                    }
                     Text(
                         dish?.name ?: "Plato eliminado",
                         modifier = Modifier.weight(1f),
@@ -1942,7 +1983,7 @@ private fun PlannedMealListEntry(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        formatServings(plannedDish.servings),
+                        "${formatDecimal(plannedDish.grams)} g",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1985,6 +2026,8 @@ private fun PlannedMealEditorScreen(
     initial: PlannedMeal? = null,
     initialType: MealType? = null,
     initialDays: Set<WeekDay> = emptySet(),
+    preferredFoodIds: Set<Long>,
+    preferredDishIds: Set<Long>,
     onCreateDish: (Dish) -> Unit,
     onSave: (PlannedMeal) -> Unit,
     onDelete: (() -> Unit)? = null
@@ -1998,8 +2041,8 @@ private fun PlannedMealEditorScreen(
     var itemAmounts by remember(initial?.id) {
         mutableStateOf(initial?.items?.associate { it.foodId to formatDecimal(it.grams) }.orEmpty())
     }
-    var dishServings by remember(initial?.id) {
-        mutableStateOf(initial?.dishes?.associate { it.dishId to formatDecimal(it.servings) }.orEmpty())
+    var dishAmounts by remember(initial?.id) {
+        mutableStateOf(initial?.dishes?.associate { it.dishId to formatDecimal(it.grams) }.orEmpty())
     }
     var choosingElement by remember { mutableStateOf(false) }
     var selectedForDish by remember { mutableStateOf(emptySet<Long>()) }
@@ -2016,12 +2059,12 @@ private fun PlannedMealEditorScreen(
     val previewItems = itemAmounts.mapNotNull { (foodId, amount) ->
         parseDecimal(amount)?.takeIf { it in 0.1..5000.0 }?.let { PlannedFood(foodId, it) }
     }
-    val previewDishes = dishServings.mapNotNull { (dishId, servings) ->
-        parseDecimal(servings)?.takeIf { it in 0.1..20.0 }?.let { PlannedDish(dishId, it) }
+    val previewDishes = dishAmounts.mapNotNull { (dishId, grams) ->
+        parseDecimal(grams)?.takeIf { it in 0.1..5000.0 }?.let { PlannedDish(dishId, it) }
     }
     val previewAssessment = if (
         recommendation != null && (previewItems.isNotEmpty() || previewDishes.isNotEmpty()) &&
-        previewItems.size == itemAmounts.size && previewDishes.size == dishServings.size
+        previewItems.size == itemAmounts.size && previewDishes.size == dishAmounts.size
     ) {
         MealPlanEvaluator.assessMeal(
             PlannedMeal(
@@ -2044,13 +2087,16 @@ private fun PlannedMealEditorScreen(
             foods = foods,
             dishes = dishes,
             excludedFoodIds = itemAmounts.keys,
-            excludedDishIds = dishServings.keys,
+            excludedDishIds = dishAmounts.keys,
+            preferredFoodIds = preferredFoodIds,
+            preferredDishIds = preferredDishIds,
             onChooseFood = {
                 itemAmounts = itemAmounts + (it to "100")
                 choosingElement = false
             },
             onChooseDish = {
-                dishServings = dishServings + (it to "1")
+                val recipeWeight = dishesById[it]?.totalWeightGrams() ?: 100.0
+                dishAmounts = dishAmounts + (it to formatDecimal(recipeWeight))
                 choosingElement = false
             },
             onDismiss = { choosingElement = false }
@@ -2062,7 +2108,7 @@ private fun PlannedMealEditorScreen(
             title = { Text("Crear plato") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Los alimentos seleccionados se sustituirán por una ración de este plato.")
+                    Text("Los alimentos seleccionados se sustituirán por un único plato con el mismo peso total.")
                     OutlinedTextField(
                         value = newDishName,
                         onValueChange = { newDishName = it.take(80) },
@@ -2087,7 +2133,7 @@ private fun PlannedMealEditorScreen(
                         if (ingredients.size == selectedForDish.size && ingredients.size >= 2) {
                             val dish = Dish(System.currentTimeMillis(), newDishName.trim(), ingredients)
                             itemAmounts = itemAmounts - selectedForDish
-                            dishServings = dishServings + (dish.id to "1")
+                            dishAmounts = dishAmounts + (dish.id to formatDecimal(dish.totalWeightGrams()))
                             selectedForDish = emptySet()
                             newDishName = ""
                             namingDish = false
@@ -2161,7 +2207,7 @@ private fun PlannedMealEditorScreen(
         }
         HorizontalDivider()
         Text("Elementos de la comida", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        dishServings.forEach { (dishId, servings) ->
+        dishAmounts.forEach { (dishId, grams) ->
             val dish = dishesById[dishId]
             if (dish != null) {
                 Row(
@@ -2169,15 +2215,15 @@ private fun PlannedMealEditorScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    SmallDishBadge()
+                    SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
                     Text(dish.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                     NumericField(
-                        "Raciones",
-                        servings,
-                        { dishServings = dishServings + (dishId to it) },
+                        "Gramos",
+                        grams,
+                        { dishAmounts = dishAmounts + (dishId to it) },
                         Modifier.width(105.dp)
                     )
-                    TextButton(onClick = { dishServings = dishServings - dishId }) { Text("Quitar") }
+                    TextButton(onClick = { dishAmounts = dishAmounts - dishId }) { Text("Quitar") }
                 }
             }
         }
@@ -2252,18 +2298,18 @@ private fun PlannedMealEditorScreen(
                 val parsedItems = itemAmounts.mapNotNull { (foodId, amount) ->
                     parseDecimal(amount)?.let { PlannedFood(foodId, it) }
                 }
-                val parsedDishes = dishServings.mapNotNull { (dishId, servings) ->
-                    parseDecimal(servings)?.let { PlannedDish(dishId, it) }
+                val parsedDishes = dishAmounts.mapNotNull { (dishId, grams) ->
+                    parseDecimal(grams)?.let { PlannedDish(dishId, it) }
                 }
                 error = when {
                     selectedDays.isEmpty() -> "Selecciona al menos un día."
-                    itemAmounts.isEmpty() && dishServings.isEmpty() -> "Añade al menos un alimento o un plato."
+                    itemAmounts.isEmpty() && dishAmounts.isEmpty() -> "Añade al menos un alimento o un plato."
                     parsedItems.size != itemAmounts.size -> "Revisa las cantidades de los ingredientes."
-                    parsedDishes.size != dishServings.size -> "Revisa el número de raciones."
+                    parsedDishes.size != dishAmounts.size -> "Revisa las cantidades de los platos."
                     parsedItems.any { it.grams !in 0.1..5000.0 } ->
                         "Cada cantidad debe estar entre 0,1 y 5000 g."
-                    parsedDishes.any { it.servings !in 0.1..20.0 } ->
-                        "Cada plato debe tener entre 0,1 y 20 raciones."
+                    parsedDishes.any { it.grams !in 0.1..5000.0 } ->
+                        "Cada cantidad debe estar entre 0,1 y 5000 g."
                     selectedDays.any(occupiedDays::contains) ->
                         "Ya existe otra comida del mismo tipo en alguno de esos días."
                     else -> null
@@ -2294,16 +2340,30 @@ private fun PlannedMealEditorScreen(
 private fun FoodPickerDialog(
     foods: List<Food>,
     excludedFoodIds: Set<Long>,
+    preferredFoodIds: Set<Long>,
     onChoose: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     val normalized = normalizeSearch(query)
-    val results = remember(foods, excludedFoodIds, normalized) {
-        if (normalized.length < 2) emptyList() else foods.asSequence()
-            .filterNot { it.id in excludedFoodIds }
-            .filter { normalizeSearch(it.name).contains(normalized) }
-            .take(30)
+    val index = remember(foods) { foods.map { IndexedFood(it, normalizeSearch(it.name)) } }
+    val results = remember(index, excludedFoodIds, preferredFoodIds, normalized) {
+        index.asSequence()
+            .filterNot { it.food.id in excludedFoodIds }
+            .filter { indexed ->
+                when {
+                    normalized.isBlank() -> indexed.food.id in preferredFoodIds
+                    normalized.length < 2 -> indexed.food.id in preferredFoodIds &&
+                        indexed.searchText.contains(normalized)
+                    else -> indexed.searchText.contains(normalized)
+                }
+            }
+            .sortedWith(
+                compareBy<IndexedFood> { it.food.id !in preferredFoodIds }
+                    .thenBy { it.food.name.lowercase() }
+            )
+            .map { it.food }
+            .take(50)
             .toList()
     }
     AlertDialog(
@@ -2321,23 +2381,26 @@ private fun FoodPickerDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 if (normalized.length < 2) {
-                    Text("Escribe al menos dos caracteres.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    LazyColumn(Modifier.heightIn(max = 400.dp)) {
-                        items(results, key = { it.id }) { food ->
-                            Row(
-                                Modifier.fillMaxWidth().clickable { onChoose(food.id) }.padding(vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                FoodCategoryBadge(food.category)
-                                Text(food.name, modifier = Modifier.weight(1f))
-                            }
-                            HorizontalDivider()
+                    Text(
+                        "Usados anteriormente; escribe dos caracteres para buscar en todo el catálogo.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                    items(results, key = { it.id }) { food ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onChoose(food.id) }.padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            FoodCategoryBadge(food.category)
+                            Text(food.name, modifier = Modifier.weight(1f))
                         }
-                        if (results.isEmpty()) {
-                            item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }
-                        }
+                        HorizontalDivider()
+                    }
+                    if (results.isEmpty() && normalized.length >= 2) {
+                        item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }
                     }
                 }
             }
@@ -2350,7 +2413,8 @@ private data class MealPickerResult(
     val id: Long,
     val name: String,
     val category: FoodCategory? = null,
-    val isDish: Boolean = false
+    val isDish: Boolean = false,
+    val preferred: Boolean = false
 )
 
 @Composable
@@ -2359,22 +2423,48 @@ private fun MealItemPickerDialog(
     dishes: List<Dish>,
     excludedFoodIds: Set<Long>,
     excludedDishIds: Set<Long>,
+    preferredFoodIds: Set<Long>,
+    preferredDishIds: Set<Long>,
     onChooseFood: (Long) -> Unit,
     onChooseDish: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     val normalized = normalizeSearch(query)
-    val results = remember(foods, dishes, excludedFoodIds, excludedDishIds, normalized) {
+    val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val foodIndex = remember(foods) { foods.map { IndexedFood(it, normalizeSearch(it.name)) } }
+    val results = remember(
+        foodIndex, dishes, excludedFoodIds, excludedDishIds,
+        preferredFoodIds, preferredDishIds, normalized, foodsById
+    ) {
         val dishResults = dishes.asSequence()
             .filterNot { it.id in excludedDishIds }
             .filter { normalized.isBlank() || normalizeSearch(it.name).contains(normalized) }
-            .map { MealPickerResult(it.id, it.name, isDish = true) }
-        val foodResults = if (normalized.length < 2) emptySequence() else foods.asSequence()
-            .filterNot { it.id in excludedFoodIds }
-            .filter { normalizeSearch(it.name).contains(normalized) }
-            .map { MealPickerResult(it.id, it.name, category = it.category) }
-        (dishResults + foodResults).sortedBy { it.name.lowercase() }.take(50).toList()
+            .map {
+                MealPickerResult(
+                    it.id, it.name, category = it.dominantCategory(foodsById),
+                    isDish = true, preferred = it.id in preferredDishIds
+                )
+            }
+        val foodResults = foodIndex.asSequence()
+            .filterNot { it.food.id in excludedFoodIds }
+            .filter {
+                when {
+                    normalized.isBlank() -> it.food.id in preferredFoodIds
+                    normalized.length < 2 -> it.food.id in preferredFoodIds &&
+                        it.searchText.contains(normalized)
+                    else -> it.searchText.contains(normalized)
+                }
+            }
+            .map {
+                MealPickerResult(
+                    it.food.id, it.food.name, category = it.food.category,
+                    preferred = it.food.id in preferredFoodIds
+                )
+            }
+        (dishResults + foodResults)
+            .sortedWith(compareBy<MealPickerResult> { !it.preferred }.thenBy { it.name.lowercase() })
+            .take(50).toList()
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2390,10 +2480,14 @@ private fun MealItemPickerDialog(
                     singleLine = true
                 )
                 Spacer(Modifier.height(8.dp))
-                if (normalized.length < 2 && dishes.isEmpty()) {
-                    Text("Escribe al menos dos caracteres.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                if (normalized.length < 2) {
+                    Text(
+                        "Usados anteriormente primero; escribe dos caracteres para buscar en todo el catálogo.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
                         items(results, key = { "meal_picker_${it.isDish}_${it.id}" }) { result ->
                             Row(
                                 Modifier.fillMaxWidth().clickable {
@@ -2402,8 +2496,7 @@ private fun MealItemPickerDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                if (result.isDish) SmallDishBadge()
-                                else result.category?.let { SmallFoodCategoryBadge(it) }
+                                result.category?.let { SmallFoodCategoryBadge(it) }
                                 Column(Modifier.weight(1f)) {
                                     Text(result.name)
                                     Text(
@@ -2415,70 +2508,9 @@ private fun MealItemPickerDialog(
                             }
                             HorizontalDivider()
                         }
-                        if (results.isEmpty()) {
+                        if (results.isEmpty() && normalized.length >= 2) {
                             item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }
                         }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
-    )
-}
-
-@Composable
-private fun DishPickerDialog(
-    dishes: List<Dish>,
-    excludedDishIds: Set<Long>,
-    onChoose: (Long) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var query by remember { mutableStateOf("") }
-    val normalized = normalizeSearch(query)
-    val results = remember(dishes, excludedDishIds, normalized) {
-        dishes.asSequence()
-            .filterNot { it.id in excludedDishIds }
-            .filter { normalized.isBlank() || normalizeSearch(it.name).contains(normalized) }
-            .sortedBy { it.name.lowercase() }
-            .toList()
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Añadir plato") },
-        text = {
-            Column(Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Buscar plato") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    singleLine = true
-                )
-                Spacer(Modifier.height(8.dp))
-                LazyColumn(Modifier.heightIn(max = 400.dp)) {
-                    items(results, key = { it.id }) { dish ->
-                        Row(
-                            Modifier.fillMaxWidth().clickable { onChoose(dish.id) }.padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            SmallDishBadge()
-                            Text(dish.name, modifier = Modifier.weight(1f))
-                            Text("${dish.ingredients.size} ing.", style = MaterialTheme.typography.bodySmall)
-                        }
-                        HorizontalDivider()
-                    }
-                    if (results.isEmpty()) {
-                        item {
-                            Text(
-                                if (dishes.isEmpty()) "Crea primero un plato en la pestaña Platos."
-                                else "No hay platos disponibles.",
-                                modifier = Modifier.padding(vertical = 16.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
                 }
             }
         },
@@ -2500,7 +2532,7 @@ private fun DishesScreen(
             Text("Platos", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             Text(
-                "Combinaciones reutilizables por ración, disponibles para todos los perfiles.",
+                "Combinaciones reutilizables por gramos, disponibles para todos los perfiles.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -2513,7 +2545,7 @@ private fun DishesScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SmallDishBadge()
+                SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(dish.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge)
                     Text(
@@ -2544,9 +2576,105 @@ private fun DishesScreen(
 }
 
 @Composable
+private fun DishDetailScreen(
+    dish: Dish,
+    foods: List<Food>,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var confirmDelete by remember { mutableStateOf(false) }
+    val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val totals = dish.nutrition(foodsById)
+    val totalWeight = dish.totalWeightGrams()
+    val per100Factor = if (totalWeight > 0.0) 100.0 / totalWeight else 0.0
+    val category = dish.dominantCategory(foodsById)
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("¿Eliminar ${dish.name}?") },
+            text = { Text("También se quitará de las comidas planificadas que lo utilicen.") },
+            confirmButton = {
+                TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            FoodCategoryBadge(category)
+            Column(Modifier.weight(1f)) {
+                Text(dish.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    "Predomina ${category.label.lowercase()} · ${formatDecimal(totalWeight)} g en total",
+                    color = foodCategoryColor(category),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+        HorizontalDivider()
+        Text("Plato completo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(
+            "${formatDecimal(totals.calories)} kcal",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+        )
+        NutritionLine("Grasas", totals.fatGrams)
+        NutritionLine("Carbohidratos", totals.carbohydrateGrams)
+        NutritionLine("Proteínas", totals.proteinGrams)
+        NutritionLine("Fibra", totals.fiberGrams)
+        if (!totals.isComplete) {
+            Text(
+                "El resultado es parcial porque algún ingrediente no tiene todos sus datos nutricionales.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        HorizontalDivider()
+        Text("Valores por 100 g", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(
+            "${formatDecimal(totals.calories * per100Factor)} kcal",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+        )
+        NutritionLine("Grasas", totals.fatGrams * per100Factor)
+        NutritionLine("Carbohidratos", totals.carbohydrateGrams * per100Factor)
+        NutritionLine("Proteínas", totals.proteinGrams * per100Factor)
+        NutritionLine("Fibra", totals.fiberGrams * per100Factor)
+        HorizontalDivider()
+        Text("Ingredientes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        dish.ingredients.forEach { ingredient ->
+            val food = foodsById[ingredient.foodId]
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (food != null) SmallFoodCategoryBadge(food.category) else Spacer(Modifier.size(24.dp))
+                Text(food?.name ?: "Alimento eliminado", modifier = Modifier.weight(1f))
+                Text("${formatDecimal(ingredient.grams)} g", fontWeight = FontWeight.SemiBold)
+            }
+        }
+        Button(onClick = onEdit, modifier = Modifier.fillMaxWidth()) { Text("Editar plato") }
+        TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
+            Text("Eliminar plato", color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
 private fun DishEditorScreen(
     foods: List<Food>,
     initial: Dish? = null,
+    preferredFoodIds: Set<Long>,
     onSave: (Dish) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
@@ -2569,6 +2697,7 @@ private fun DishEditorScreen(
         FoodPickerDialog(
             foods = foods,
             excludedFoodIds = ingredientAmounts.keys,
+            preferredFoodIds = preferredFoodIds,
             onChoose = {
                 ingredientAmounts = ingredientAmounts + (it to "100")
                 choosingFood = false
@@ -2604,7 +2733,7 @@ private fun DishEditorScreen(
             label = { Text("Nombre del plato") },
             singleLine = true
         )
-        Text("Ingredientes por ración", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text("Ingredientes del plato", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         ingredientAmounts.forEach { (foodId, amount) ->
             val food = foodsById[foodId]
             if (food != null) {
@@ -2632,7 +2761,8 @@ private fun DishEditorScreen(
         }
         preview?.let { totals ->
             Text(
-                "Por ración · ${formatDecimal(totals.calories)} kcal · " +
+                "Plato completo · ${formatDecimal(parsedIngredients.sumOf { it.grams })} g · " +
+                    "${formatDecimal(totals.calories)} kcal · " +
                     "P ${formatDecimal(totals.proteinGrams)} · H ${formatDecimal(totals.carbohydrateGrams)} · " +
                     "G ${formatDecimal(totals.fatGrams)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -2959,27 +3089,6 @@ private fun SmallFoodCategoryBadge(category: FoodCategory) {
             modifier = Modifier.size(16.dp)
         )
     }
-}
-
-@Composable
-private fun SmallDishBadge() {
-    val color = MaterialTheme.colorScheme.primary
-    Box(
-        Modifier.size(24.dp).background(color.copy(alpha = 0.16f), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            Icons.Default.Restaurant,
-            contentDescription = "Plato",
-            tint = color,
-            modifier = Modifier.size(16.dp)
-        )
-    }
-}
-
-private fun formatServings(servings: Double): String {
-    val amount = formatDecimal(servings)
-    return if (servings == 1.0) "$amount ración" else "$amount raciones"
 }
 
 private fun foodCategoryColor(category: FoodCategory): Color = when (category) {
