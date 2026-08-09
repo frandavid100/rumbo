@@ -18,7 +18,11 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Añade una pestaña «Alimentos» con búsqueda por nombre, categoría, marca, comercio o EAN.
 - Permite filtrar el catálogo por tipo nutricional y por comercio identificado.
 - Añade un planificador semanal por perfil: cada comida se crea una vez y se asigna a varios días.
+- Permite alternar entre el plan semanal, el de hoy y el de cualquier día concreto.
 - Guarda ingredientes y cantidades, calcula los macros de cada comida e impide solapamientos del mismo tipo y día.
+- Compara calorías y macros de cada toma con el 20 % de la recomendación diaria y los totales de cada día con el 100 %.
+- Distingue entre objetivo alcanzado, próximo, fuera de rango y plan incompleto, mostrando cada nutriente por separado.
+- Calcula una lista de la compra semanal con los gramos acumulados de cada alimento planificado.
 - Incluye los 52 alimentos de la hoja «Dieta» y 29.113 productos con EAN únicos de la base abierta de AESAN de 2022.
 - Conserva también los registros incompletos y muestra claramente los nutrientes que AESAN no proporciona.
 - Muestra marca, familia, subcategoría, denominación legal, ingredientes, grasas saturadas, azúcares, sal, EAN y procedencia cuando figuran en la fuente.
@@ -67,6 +71,8 @@ La estimación base usa Mifflin–St Jeor y el nivel de actividad. Los objetivos
 El ajuste histórico requiere cuatro pesos, 21 días de intervalo y al menos tres valoraciones de cumplimiento cercanas a «aproximadamente lo previsto». La pendiente se obtiene mediante regresión lineal usando las fechas reales. Si peso y cintura dan señales relevantes en sentidos opuestos, no cambia la recomendación.
 
 Esta aplicación ofrece una estimación orientativa, no sustituye una valoración sanitaria individual.
+
+En el planificador, el ajuste por comida es un objetivo práctico: cada una de las cinco tomas recibe el 20 % de la recomendación diaria. Verde significa una desviación máxima del 10 %, amarillo hasta el 20 % y rojo una desviación superior. Esta comparación solo evalúa energía y macronutrientes; no certifica por sí sola la calidad nutricional completa de una comida.
 
 ## Licencia
 
