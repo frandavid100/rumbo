@@ -83,4 +83,31 @@ class WeeklyPlannerTest {
         assertFalse(duplicated.isValid())
         assertFalse(noDays.isValid())
     }
+
+    @Test
+    fun aDishAppearsAsOneItemButAddsAllItsIngredients() {
+        val shake = Dish(
+            id = 20,
+            name = "Batido",
+            ingredients = listOf(
+                DishIngredient(chicken.id, 100.0),
+                DishIngredient(rice.id, 20.0)
+            )
+        )
+        val meal = PlannedMeal(
+            id = 10,
+            type = MealType.BREAKFAST,
+            days = setOf(WeekDay.MONDAY),
+            dishes = listOf(PlannedDish(shake.id, 1.5))
+        )
+
+        val total = meal.nutrition(
+            listOf(chicken, rice).associateBy { it.id },
+            mapOf(shake.id to shake)
+        )
+
+        assertTrue(meal.isValid())
+        assertEquals(255.0, total.calories, 0.001)
+        assertEquals(32.4, total.proteinGrams, 0.001)
+    }
 }
