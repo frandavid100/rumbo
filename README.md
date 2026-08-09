@@ -16,6 +16,9 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Evita tarjetas y encabezados redundantes en Inicio; usa espacio y divisores para separar la información.
 - Muestra un historial compacto; al tocar una entrada abre todos sus detalles y permite editarla o eliminarla.
 - Añade una pestaña «Alimentos» con búsqueda por nombre, categoría, marca, comercio o EAN.
+- Permite filtrar el catálogo por tipo nutricional y por comercio identificado.
+- Añade un planificador semanal por perfil: cada comida se crea una vez y se asigna a varios días.
+- Guarda ingredientes y cantidades, calcula los macros de cada comida e impide solapamientos del mismo tipo y día.
 - Incluye los 52 alimentos de la hoja «Dieta» y 29.113 productos con EAN únicos de la base abierta de AESAN de 2022.
 - Conserva también los registros incompletos y muestra claramente los nutrientes que AESAN no proporciona.
 - Muestra marca, familia, subcategoría, denominación legal, ingredientes, grasas saturadas, azúcares, sal, EAN y procedencia cuando figuran en la fuente.

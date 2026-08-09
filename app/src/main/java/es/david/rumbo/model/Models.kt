@@ -100,6 +100,64 @@ enum class FoodCategory(val label: String) {
     OTHER("Otros")
 }
 
+enum class MealType(val label: String) {
+    BREAKFAST("Desayuno"),
+    MORNING_SNACK("Almuerzo"),
+    LUNCH("Comida"),
+    AFTERNOON_SNACK("Merienda"),
+    DINNER("Cena")
+}
+
+enum class WeekDay(val label: String, val shortLabel: String) {
+    MONDAY("Lunes", "L"),
+    TUESDAY("Martes", "M"),
+    WEDNESDAY("Miércoles", "X"),
+    THURSDAY("Jueves", "J"),
+    FRIDAY("Viernes", "V"),
+    SATURDAY("Sábado", "S"),
+    SUNDAY("Domingo", "D")
+}
+
+data class PlannedFood(
+    val foodId: Long,
+    val grams: Double
+) {
+    fun isValid(): Boolean = foodId > 0 && grams in 0.1..5000.0
+}
+
+data class PlannedMeal(
+    val id: Long,
+    val type: MealType,
+    val days: Set<WeekDay>,
+    val items: List<PlannedFood>
+) {
+    fun isValid(): Boolean = id > 0 && days.isNotEmpty() && items.isNotEmpty() &&
+        items.all { it.isValid() } && items.map { it.foodId }.distinct().size == items.size
+}
+
+data class NutritionTotals(
+    val calories: Double = 0.0,
+    val proteinGrams: Double = 0.0,
+    val carbohydrateGrams: Double = 0.0,
+    val fatGrams: Double = 0.0,
+    val fiberGrams: Double = 0.0,
+    val isComplete: Boolean = true
+)
+
+fun PlannedMeal.nutrition(foodsById: Map<Long, Food>): NutritionTotals = items.fold(NutritionTotals()) {
+        total, planned ->
+    val food = foodsById[planned.foodId]
+    val factor = planned.grams / 100.0
+    NutritionTotals(
+        calories = total.calories + (food?.calories ?: 0.0) * factor,
+        proteinGrams = total.proteinGrams + (food?.proteinGrams ?: 0.0) * factor,
+        carbohydrateGrams = total.carbohydrateGrams + (food?.carbohydrateGrams ?: 0.0) * factor,
+        fatGrams = total.fatGrams + (food?.fatGrams ?: 0.0) * factor,
+        fiberGrams = total.fiberGrams + (food?.fiberGrams ?: 0.0) * factor,
+        isComplete = total.isComplete && food?.hasComparableNutrition() == true
+    )
+}
+
 data class Food(
     val id: Long,
     val name: String,
@@ -156,7 +214,8 @@ data class Measurement(
 
 data class ProfileData(
     val profile: UserProfile,
-    val measurements: List<Measurement> = emptyList()
+    val measurements: List<Measurement> = emptyList(),
+    val plannedMeals: List<PlannedMeal> = emptyList()
 )
 
 data class AppData(

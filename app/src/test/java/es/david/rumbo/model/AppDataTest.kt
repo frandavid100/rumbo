@@ -65,4 +65,24 @@ class AppDataTest {
         assertFalse(incomplete.isActiveProfileReady)
         assertTrue(complete.isActiveProfileReady)
     }
+
+    @Test
+    fun weeklyPlansBelongToTheirProfile() {
+        val davidMeal = PlannedMeal(
+            id = 100,
+            type = MealType.BREAKFAST,
+            days = WeekDay.entries.toSet(),
+            items = listOf(PlannedFood(1, 100.0))
+        )
+        val data = AppData(
+            profiles = listOf(
+                ProfileData(david, plannedMeals = listOf(davidMeal)),
+                ProfileData(araceli)
+            ),
+            activeProfileId = araceli.id
+        )
+
+        assertTrue(data.activeProfileData?.plannedMeals.isNullOrEmpty())
+        assertEquals(listOf(davidMeal), data.profiles.first().plannedMeals)
+    }
 }
