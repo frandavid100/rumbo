@@ -795,7 +795,7 @@ private fun BodyGoalNutritionCard(
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = onAddMeasurement, modifier = Modifier.weight(1f)) {
+                OutlinedButton(onClick = onAddMeasurement, modifier = Modifier.weight(1f)) {
                     Text("Añadir medición")
                 }
                 OutlinedButton(onClick = { choosingGoal = true }, modifier = Modifier.weight(1f)) {
@@ -893,11 +893,12 @@ private fun NutritionGoalMetric(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.width(10.dp))
         Column {
-            Text(value, color = color, style = MaterialTheme.typography.titleMedium)
-            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, color = color, style = MaterialTheme.typography.titleLarge)
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -1026,7 +1027,7 @@ private fun TodayPlanSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Button(
+            OutlinedButton(
                 onClick = {
                     if (recommendation == null) {
                         optimizationMessage = "Necesitas una recomendación nutricional antes de ajustar el menú."
@@ -1051,7 +1052,7 @@ private fun TodayPlanSection(
 @Composable
 private fun TodayNutritionSummary(assessment: PlanNutritionAssessment) {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1088,11 +1089,11 @@ private fun NutritionPercentMetric(
 ) {
     val ratio = if (target > 0.0) actual / target else 0.0
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(8.dp))
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.width(10.dp))
         Column {
-            Text("${(ratio * 100).roundToInt()} %", color = color, style = MaterialTheme.typography.titleMedium)
-            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${(ratio * 100).roundToInt()} %", color = color, style = MaterialTheme.typography.titleLarge)
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
