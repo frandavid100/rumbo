@@ -1314,7 +1314,7 @@ private fun ProgressChart(
             bottomBand?.let { add(1f to it.color.copy(alpha = 0.38f)) }
         }.distinctBy { it.first }.sortedBy { it.first }
         val gradient = Brush.verticalGradient(
-            colorStops = gradientStops.toTypedArray(),
+            *gradientStops.toTypedArray(),
             startY = top,
             endY = bottom
         )
@@ -1499,6 +1499,21 @@ private fun GoalExplanationScreen(data: AppData) {
 }
 
 @Composable
+private fun PlainNarrativeSection(title: String, body: String) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
 private fun BodyExplanationScreen(
     data: AppData,
     onOpenMeasurement: (Long) -> Unit,
@@ -1543,6 +1558,10 @@ private fun BodyExplanationScreen(
                     ),
                     thresholds = listOf(18.5 to "18,5", 25.0 to "25", 30.0 to "30")
                 )
+                PlainNarrativeSection(
+                    title = "Qué significa el IMC",
+                    body = "El IMC relaciona peso y altura y sirve para estimar riesgo en población adulta. Es útil como primera señal, pero no distingue grasa de músculo ni describe por completo la composición corporal."
+                )
             }
         }
         assessment?.waistToHeightRatio?.let { ratio ->
@@ -1563,6 +1582,24 @@ private fun BodyExplanationScreen(
                         RiskBand(0.60, 0.70, Color(0xFFE57373))
                     ),
                     thresholds = listOf(0.40 to "0,40", 0.50 to "0,50", 0.60 to "0,60")
+                )
+                PlainNarrativeSection(
+                    title = "Qué significa cintura/altura",
+                    body = "La relación cintura/altura añade información sobre la grasa abdominal. Entre 0,40 y 0,49 suele considerarse saludable; entre 0,50 y 0,59 indica riesgo aumentado; y desde 0,60, riesgo alto. Por debajo de 0,40 también conviene interpretar el resultado con cautela."
+                )
+            }
+        }
+        item {
+            PlainNarrativeSection(
+                title = "Cómo se usan juntos",
+                body = "Rumbo no decide a partir de una sola cifra. Usa el IMC como contexto general y la cintura/altura como señal abdominal. Si ambos evolucionan de forma distinta, evita atribuir automáticamente cualquier cambio de peso a grasa o músculo y prefiere mantener la recomendación hasta disponer de más datos."
+            )
+        }
+        recommendedGoal?.let { result ->
+            item {
+                PlainNarrativeSection(
+                    title = "Por qué se recomienda «${result.goal.label}»",
+                    body = result.explanation
                 )
             }
         }
