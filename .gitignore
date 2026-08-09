@@ -1,0 +1,11 @@
+.gradle/
+.kotlin/
+**/build/
+local.properties
+local-maven/
+*.iml
+.idea/
+
+# Catálogo generado desde la fuente pública de AESAN
+app/src/main/assets/aesan_foods.dat
+
