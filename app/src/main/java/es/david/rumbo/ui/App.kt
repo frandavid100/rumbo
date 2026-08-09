@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Grain
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalFlorist
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
@@ -61,6 +62,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -133,6 +135,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 private enum class Screen(val label: String, val icon: ImageVector, val inNavigation: Boolean = true) {
     HOME("Inicio", Icons.Default.Home),
@@ -340,7 +343,6 @@ fun RumboApp(repository: AppRepository) {
                 )
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
-                    onAdd = { screenName = Screen.ADD.name },
                     onGoalChange = { data = repository.setGoal(it) },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
                     onExplainRecommendation = { screenName = Screen.RECOMMENDATION_EXPLANATION.name },
@@ -630,7 +632,6 @@ private fun ProfileSwitcher(
 @Composable
 private fun HomeScreen(
     data: AppData,
-    onAdd: () -> Unit,
     onGoalChange: (WeightGoal) -> Unit,
     onExplainBody: () -> Unit,
     onExplainRecommendation: () -> Unit,
@@ -648,8 +649,8 @@ private fun HomeScreen(
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
 
     LazyColumn(
-        contentPadding = PaddingValues(start = 24.dp, top = 12.dp, end = 24.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (assessment != null && recommendedGoal != null) {
             item {
@@ -661,25 +662,14 @@ private fun HomeScreen(
                 )
             }
         }
-        item { HorizontalDivider() }
         item {
-            SelectorField(
-                label = "Objetivo",
-                selectedLabel = goal.label,
-                options = WeightGoal.entries,
-                optionLabel = { it.label },
-                onSelect = onGoalChange,
-                onClear = null
+            GoalNutritionCard(
+                goal = goal,
+                recommendation = recommendation,
+                onGoalChange = onGoalChange,
+                onExplain = onExplainRecommendation
             )
         }
-        item {
-            if (recommendation == null) {
-                EmptyRecommendationSection(hasMeasurements = data.measurements.isNotEmpty(), onAdd = onAdd)
-            } else {
-                RecommendationSection(recommendation, onExplainRecommendation)
-            }
-        }
-        item { HorizontalDivider() }
         item {
             TodayPlanSection(
                 meals = meals,
@@ -689,7 +679,6 @@ private fun HomeScreen(
                 onOpenPlanner = onOpenPlanner
             )
         }
-        item { HorizontalDivider() }
         item {
             HomeShoppingSection(
                 meals = meals,
@@ -709,22 +698,15 @@ private fun BodySummarySection(
     onExplain: () -> Unit
 ) {
     val weeklyRate = RecommendationEngine.weeklyRateFor(recommendedGoal.goal, weightKg)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        CombinedBodyScale(assessment)
-        Text("Objetivo recomendado", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            recommendedGoal.goal.label,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            weeklyRate?.let(::formatWeeklyRate) ?: "Ritmo pendiente del peso",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        TextButton(onClick = onExplain) {
-            Text("Entender esta información")
+    Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Situación corporal", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            CombinedBodyScale(assessment)
+            Text(
+                recommendedGoalSentence(recommendedGoal.goal, weeklyRate),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -736,7 +718,7 @@ private fun CombinedBodyScale(assessment: BodyAssessment) {
     Canvas(Modifier.fillMaxWidth().height(92.dp)) {
         val barTop = 38.dp.toPx()
         val barHeight = 16.dp.toPx()
-        val segmentEnds = listOf(0f, 0.15f, 0.30f, 0.70f, 0.85f, 1f)
+        val segmentEnds = listOf(0f, 0.20f, 0.40f, 0.60f, 0.80f, 1f)
         val colors = listOf(
             Color(0xFFE57373), Color(0xFFFFCA4B), Color(0xFF66BB6A),
             Color(0xFFFFCA4B), Color(0xFFE57373)
@@ -770,7 +752,7 @@ private fun CombinedBodyScale(assessment: BodyAssessment) {
 }
 
 private fun mapRiskValue(value: Double, thresholds: List<Double>): Double {
-    val positions = listOf(0.0, 0.15, 0.30, 0.70, 0.85, 1.0)
+    val positions = listOf(0.0, 0.20, 0.40, 0.60, 0.80, 1.0)
     if (value <= thresholds.first()) return positions.first()
     if (value >= thresholds.last()) return positions.last()
     val index = thresholds.zipWithNext().indexOfFirst { (start, end) -> value in start..end }
@@ -778,10 +760,51 @@ private fun mapRiskValue(value: Double, thresholds: List<Double>): Double {
     return positions[index] + fraction * (positions[index + 1] - positions[index])
 }
 
-private fun formatWeeklyRate(rate: Double): String = when {
-    abs(rate) < 0.005 -> "Mantener el peso (0 kg por semana)"
-    rate < 0.0 -> "Aproximadamente ${formatTwoDecimals(abs(rate))} kg menos por semana"
-    else -> "Aproximadamente ${formatTwoDecimals(rate)} kg más por semana"
+private fun recommendedGoalSentence(goal: WeightGoal, weeklyRate: Double?): String = when {
+    goal == WeightGoal.MAINTAIN -> "Te recomendamos mantener el peso."
+    weeklyRate == null -> "Te recomendamos ${goal.label.lowercase()}."
+    else -> "Te recomendamos ${goal.label.lowercase()} " +
+        "(alrededor de ${formatOneDecimal(abs(weeklyRate))} kg por semana)."
+}
+
+@Composable
+private fun GoalNutritionCard(
+    goal: WeightGoal,
+    recommendation: es.david.rumbo.model.Recommendation?,
+    onGoalChange: (WeightGoal) -> Unit,
+    onExplain: () -> Unit
+) {
+    Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Objetivo y nutrición diaria", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            SelectorField(
+                label = "Objetivo",
+                selectedLabel = goal.label,
+                options = WeightGoal.entries,
+                optionLabel = { it.label },
+                onSelect = onGoalChange,
+                onClear = null
+            )
+            if (recommendation == null) {
+                Text(
+                    "Añade una medición con peso para calcular los objetivos nutricionales.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    "${recommendation.calories} kcal al día",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    MacroValue("Proteína", recommendation.proteinGrams)
+                    MacroValue("Hidratos", recommendation.carbohydrateGrams)
+                    MacroValue("Grasa", recommendation.fatGrams)
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -794,33 +817,82 @@ private fun TodayPlanSection(
 ) {
     val today = WeekDay.entries[LocalDate.now().dayOfWeek.value - 1]
     val todayMeals = meals.filter { today in it.days }.associateBy { it.type }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Plan para hoy · ${today.label}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        DayNutritionEntry(
-            day = today,
-            meals = meals,
-            foodsById = foodsById,
-            dishesById = dishesById,
-            recommendation = recommendation,
-            onClick = null
-        )
-        MealType.entries.forEach { type ->
-            val meal = todayMeals[type]
-            val labels = meal?.let {
-                it.dishes.mapNotNull { planned -> dishesById[planned.dishId]?.name } +
-                    it.items.mapNotNull { planned -> foodsById[planned.foodId]?.name }
-            }.orEmpty()
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(type.label, modifier = Modifier.weight(0.34f), fontWeight = FontWeight.SemiBold)
-                Text(
-                    if (labels.isEmpty()) "Sin planificar" else labels.joinToString(" · "),
-                    modifier = Modifier.weight(0.66f),
-                    color = if (labels.isEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+    val assessment = recommendation?.let {
+        MealPlanEvaluator.assessDay(today, meals, foodsById, dishesById, it)
+    }
+    Card(Modifier.fillMaxWidth().clickable(onClick = onOpenPlanner)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Menú de hoy · ${today.label}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            assessment?.let { TodayNutritionProgress(it) }
+            MealType.entries.forEach { type ->
+                val meal = todayMeals[type]
+                val labels = meal?.let {
+                    it.dishes.mapNotNull { planned -> dishesById[planned.dishId]?.name } +
+                        it.items.mapNotNull { planned -> foodsById[planned.foodId]?.name }
+                }.orEmpty()
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(type.label, modifier = Modifier.weight(0.34f), fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (labels.isEmpty()) "Sin planificar" else labels.joinToString(" · "),
+                        modifier = Modifier.weight(0.66f),
+                        color = if (labels.isEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
-        TextButton(onClick = onOpenPlanner) { Text("Abrir el planificador") }
+    }
+}
+
+@Composable
+private fun TodayNutritionProgress(assessment: PlanNutritionAssessment) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        NutritionProgressLine(
+            label = "Calorías", actual = assessment.actual.calories, target = assessment.target.calories,
+            unit = "kcal", icon = Icons.Default.LocalFireDepartment, color = MaterialTheme.colorScheme.primary
+        )
+        NutritionProgressLine(
+            label = "Proteína", actual = assessment.actual.proteinGrams, target = assessment.target.proteinGrams,
+            unit = "g", icon = foodCategoryIcon(FoodCategory.PROTEIN), color = foodCategoryColor(FoodCategory.PROTEIN)
+        )
+        NutritionProgressLine(
+            label = "Hidratos", actual = assessment.actual.carbohydrateGrams,
+            target = assessment.target.carbohydrateGrams, unit = "g",
+            icon = foodCategoryIcon(FoodCategory.CARBOHYDRATE), color = foodCategoryColor(FoodCategory.CARBOHYDRATE)
+        )
+        NutritionProgressLine(
+            label = "Grasa", actual = assessment.actual.fatGrams, target = assessment.target.fatGrams,
+            unit = "g", icon = foodCategoryIcon(FoodCategory.FAT), color = foodCategoryColor(FoodCategory.FAT)
+        )
+    }
+}
+
+@Composable
+private fun NutritionProgressLine(
+    label: String,
+    actual: Double,
+    target: Double,
+    unit: String,
+    icon: ImageVector,
+    color: Color
+) {
+    val ratio = if (target > 0.0) actual / target else 0.0
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+            Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+            Text(
+                "${formatDecimal(actual)}/${formatDecimal(target)} $unit · ${(ratio * 100).roundToInt()} %",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        LinearProgressIndicator(
+            progress = { ratio.toFloat().coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth(),
+            color = color,
+            trackColor = color.copy(alpha = 0.16f)
+        )
     }
 }
 
@@ -838,24 +910,25 @@ private fun HomeShoppingSection(
         amounts.mapNotNull { (foodId, grams) -> foodsById[foodId]?.let { it to grams } }
             .sortedBy { it.first.name.lowercase() }
     }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Lista de la compra", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        if (entries.isEmpty()) {
-            Text("El plan todavía no contiene alimentos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            entries.forEach { (food, grams) ->
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    SmallFoodCategoryBadge(food.category)
-                    Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    Text("${formatDecimal(grams)} g", fontWeight = FontWeight.SemiBold)
+    Card(Modifier.fillMaxWidth().clickable(onClick = onOpenFoods)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Lista de la compra", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            if (entries.isEmpty()) {
+                Text("El plan todavía no contiene alimentos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                entries.forEach { (food, grams) ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SmallFoodCategoryBadge(food.category)
+                        Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        Text("${formatDecimal(grams)} g", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
-        TextButton(onClick = onOpenFoods) { Text("Abrir Alimentos") }
     }
 }
 
