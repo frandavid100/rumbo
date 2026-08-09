@@ -25,6 +25,9 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Permite alternar entre el plan semanal, el de hoy y el de cualquier día concreto.
 - Permite crear directamente cualquier comida ausente con su tipo y día ya seleccionados.
 - Guarda ingredientes y cantidades, calcula los macros de cada comida e impide solapamientos del mismo tipo y día.
+- Permite marcar cada alimento o plato como fijo o ajustable y definir para estos últimos un intervalo de gramos.
+- Ajusta de forma explícita las cantidades variables para aproximar calorías y macros del día completo, mostrando una vista previa antes de guardar.
+- Una comida puede reutilizarse durante la semana sin bloquear el ajuste: los elementos fijos conservan exactamente sus gramos y los ajustables se resuelven por día.
 - Añade una pestaña «Platos» con combinaciones de ingredientes compartidas por todos los perfiles.
 - Cada plato tiene una ficha con su composición nutricional total y por 100 g, y un icono según el macro que aporta más energía.
 - Los platos se incorporan al plan y se reparten por gramos, no mediante raciones abstractas.
@@ -45,7 +48,7 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Admite hasta diez enlaces por alimento; todos los alimentos iniciales incluyen al menos un acceso a Mercadona.
 - Propone hasta cinco sustitutos de la misma subcategoría culinaria cuando calorías y macros por 100 g son suficientemente próximos.
 - Mantiene las explicaciones detalladas en pantallas separadas para simplificar la vista principal.
-- Usa un botón flotante para añadir mediciones y registra con fecha los cambios de objetivo.
+- Incluye un botón «Añadir medición» inequívoco en la tarjeta corporal y registra con fecha los cambios de objetivo.
 - Explica el cálculo energético en lenguaje natural y con los límites realmente aplicados.
 - Ajusta gradualmente la estimación cuando existen al menos 21 días de historial fiable.
 - Usa peso y cintura como señales distintas; si se contradicen, mantiene y observa.
@@ -86,6 +89,8 @@ El ajuste histórico requiere cuatro pesos, 21 días de intervalo y al menos tre
 Esta aplicación ofrece una estimación orientativa, no sustituye una valoración sanitaria individual.
 
 En el planificador, el ajuste por comida es un objetivo práctico: cada una de las cinco tomas recibe el 20 % de la recomendación diaria. Verde significa una desviación máxima del 10 %, amarillo hasta el 20 % y rojo una desviación superior. Esta comparación solo evalúa energía y macronutrientes; no certifica por sí sola la calidad nutricional completa de una comida.
+
+El ajuste automático de gramos se inicia únicamente al pulsar «Ajustar cantidades». Optimiza cada día completo dando prioridad a energía y proteína, mantiene la grasa dentro de un margen razonable y utiliza los hidratos como componente más flexible. Nunca modifica elementos fijos ni rebasa los mínimos y máximos indicados; si no existe una solución exacta, presenta la combinación más próxima para que el usuario decida si la aplica.
 
 ## Licencia
 
