@@ -13,6 +13,8 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Propone automáticamente un objetivo coherente con los últimos indicadores y explica el criterio aplicado.
 - Permite varios perfiles con historiales completamente separados.
 - Ordena Inicio como una secuencia: evolución corporal, objetivo recomendado, objetivo elegido, calorías/macros e historial.
+- Resume IMC y cintura/altura en una única escala de riesgo en Inicio; las gráficas y el historial quedan en la explicación detallada.
+- Muestra también en Inicio el plan de hoy y la lista de la compra semanal.
 - Evita tarjetas y encabezados redundantes en Inicio; usa espacio y divisores para separar la información.
 - Muestra un historial compacto; al tocar una entrada abre todos sus detalles y permite editarla o eliminarla.
 - Añade una pestaña «Alimentos» con búsqueda por nombre, categoría, marca, comercio o EAN.
@@ -23,6 +25,8 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Guarda ingredientes y cantidades, calcula los macros de cada comida e impide solapamientos del mismo tipo y día.
 - Añade una pestaña «Platos» con combinaciones de ingredientes por ración, compartidas por todos los perfiles.
 - Cada perfil puede incorporar un plato al plan con un número de raciones distinto; el plan lo muestra como un único elemento.
+- Unifica la búsqueda de platos y alimentos al editar una comida.
+- Permite seleccionar varios alimentos de una comida y convertirlos inmediatamente en un plato reutilizable.
 - Descompone los platos en sus ingredientes al calcular calorías, macros y lista de la compra.
 - Compara calorías y macros de cada toma con el 20 % de la recomendación diaria y los totales de cada día con el 100 %.
 - Distingue entre objetivo alcanzado, próximo, fuera de rango y plan incompleto, mostrando cada nutriente por separado.
@@ -45,6 +49,7 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Calcula proteína, hidratos y grasa a partir de la recomendación actual.
 - Exporta e importa todos los datos en JSON.
 - No usa Internet, cuentas, anuncios ni analítica.
+- Respeta el gesto Atrás en las pantallas secundarias y mantiene fluida la búsqueda del catálogo mediante un índice precalculado y consulta diferida.
 
 ## Compilar
 
