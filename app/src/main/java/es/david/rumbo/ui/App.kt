@@ -756,11 +756,16 @@ private fun BodyGoalNutritionCard(
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             HomeCardHeader("Situación y objetivo")
             CombinedBodyScale(assessment)
+            val goalSentence = if (goal == WeightGoal.AUTOMATIC) {
+                recommendedGoalSentence(displayedGoal, weeklyRate)
+            } else {
+                selectedGoalSentence(displayedGoal, weeklyRate)
+            }
             Text(
-                if (goal == WeightGoal.AUTOMATIC) {
-                    recommendedGoalSentence(displayedGoal, weeklyRate)
+                if (recommendation == null) {
+                    goalSentence
                 } else {
-                    selectedGoalSentence(displayedGoal, weeklyRate)
+                    "$goalSentence Para ello, cada día debes consumir:"
                 },
                 style = MaterialTheme.typography.bodyLarge
             )
@@ -770,7 +775,6 @@ private fun BodyGoalNutritionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                Text("Para ello, cada día debes consumir:", style = MaterialTheme.typography.bodyLarge)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     NutritionGoalMetric(
                         "Calorías", "${recommendation.calories} kcal",
@@ -826,12 +830,8 @@ private fun HomeCardHeader(title: String) {
 private fun CombinedBodyScale(assessment: BodyAssessment) {
     val labelColor = MaterialTheme.colorScheme.onSurface
     val labelSize = with(LocalDensity.current) { 12.sp.toPx() }
-    val markerLabel = buildList {
-        assessment.bmi?.let { add("IMC ${formatOneDecimal(it)}") }
-        assessment.waistToHeightRatio?.let { add("C/A ${formatTwoDecimals(it)}") }
-    }.joinToString("  ·  ")
-    Canvas(Modifier.fillMaxWidth().height(52.dp)) {
-        val barTop = 34.dp.toPx()
+    Canvas(Modifier.fillMaxWidth().height(72.dp)) {
+        val barTop = 32.dp.toPx()
         val barHeight = 8.dp.toPx()
         val gradient = Brush.horizontalGradient(
             0.00f to Color(0xFFE57373),
@@ -857,26 +857,32 @@ private fun CombinedBodyScale(assessment: BodyAssessment) {
                 android.graphics.Typeface.BOLD
             )
         }
-        drawContext.canvas.nativeCanvas.drawText(
-            markerLabel,
-            size.width / 2f,
-            18.dp.toPx(),
-            paint
-        )
-        fun marker(position: Double) {
-            val x = (position.coerceIn(0.02, 0.98) * size.width).toFloat()
+        fun marker(position: Double, label: String, above: Boolean) {
+            val x = (position.coerceIn(0.04, 0.96) * size.width).toFloat()
+            val lineStart = if (above) 17.dp.toPx() else barTop
+            val lineEnd = if (above) barTop + barHeight else 55.dp.toPx()
             drawLine(
                 labelColor,
-                Offset(x, barTop),
-                Offset(x, barTop + barHeight),
+                Offset(x, lineStart),
+                Offset(x, lineEnd),
                 strokeWidth = 2.dp.toPx()
             )
+            val textY = if (above) 13.dp.toPx() else 69.dp.toPx()
+            drawContext.canvas.nativeCanvas.drawText(label, x, textY, paint)
         }
         assessment.bmi?.let {
-            marker(mapRiskValue(it, listOf(14.0, 16.0, 18.5, 25.0, 30.0, 40.0)))
+            marker(
+                mapRiskValue(it, listOf(14.0, 16.0, 18.5, 25.0, 30.0, 40.0)),
+                "IMC ${formatOneDecimal(it)}",
+                true
+            )
         }
         assessment.waistToHeightRatio?.let {
-            marker(mapRiskValue(it, listOf(0.30, 0.35, 0.40, 0.50, 0.60, 0.70)))
+            marker(
+                mapRiskValue(it, listOf(0.30, 0.35, 0.40, 0.50, 0.60, 0.70)),
+                "C/A ${formatTwoDecimals(it)}",
+                false
+            )
         }
     }
 }
