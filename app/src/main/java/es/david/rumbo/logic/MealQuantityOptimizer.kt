@@ -59,13 +59,14 @@ object MealQuantityOptimizer {
         meals: List<PlannedMeal>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
-        recommendation: Recommendation
+        recommendation: Recommendation,
+        days: Set<WeekDay> = WeekDay.entries.toSet()
     ): QuantityOptimizationResult {
         var optimizedMeals = meals
         val changes = mutableListOf<QuantityChange>()
         val summaries = mutableListOf<DayOptimizationSummary>()
 
-        WeekDay.entries.forEach { day ->
+        WeekDay.entries.filter(days::contains).forEach { day ->
             val before = MealPlanEvaluator.assessDay(
                 day, optimizedMeals, foodsById, dishesById, recommendation
             )
