@@ -125,14 +125,41 @@ data class PlannedFood(
     fun isValid(): Boolean = foodId > 0 && grams in 0.1..5000.0
 }
 
+data class DishIngredient(
+    val foodId: Long,
+    val grams: Double
+) {
+    fun isValid(): Boolean = foodId > 0 && grams in 0.1..5000.0
+}
+
+data class Dish(
+    val id: Long,
+    val name: String,
+    val ingredients: List<DishIngredient>
+) {
+    fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 80 &&
+        ingredients.isNotEmpty() && ingredients.all { it.isValid() } &&
+        ingredients.map { it.foodId }.distinct().size == ingredients.size
+}
+
+data class PlannedDish(
+    val dishId: Long,
+    val servings: Double
+) {
+    fun isValid(): Boolean = dishId > 0 && servings in 0.1..20.0
+}
+
 data class PlannedMeal(
     val id: Long,
     val type: MealType,
     val days: Set<WeekDay>,
-    val items: List<PlannedFood>
+    val items: List<PlannedFood> = emptyList(),
+    val dishes: List<PlannedDish> = emptyList()
 ) {
-    fun isValid(): Boolean = id > 0 && days.isNotEmpty() && items.isNotEmpty() &&
-        items.all { it.isValid() } && items.map { it.foodId }.distinct().size == items.size
+    fun isValid(): Boolean = id > 0 && days.isNotEmpty() && (items.isNotEmpty() || dishes.isNotEmpty()) &&
+        items.all { it.isValid() } && dishes.all { it.isValid() } &&
+        items.map { it.foodId }.distinct().size == items.size &&
+        dishes.map { it.dishId }.distinct().size == dishes.size
 }
 
 data class NutritionTotals(
@@ -144,19 +171,58 @@ data class NutritionTotals(
     val isComplete: Boolean = true
 )
 
-fun PlannedMeal.nutrition(foodsById: Map<Long, Food>): NutritionTotals = items.fold(NutritionTotals()) {
-        total, planned ->
-    val food = foodsById[planned.foodId]
-    val factor = planned.grams / 100.0
-    NutritionTotals(
-        calories = total.calories + (food?.calories ?: 0.0) * factor,
-        proteinGrams = total.proteinGrams + (food?.proteinGrams ?: 0.0) * factor,
-        carbohydrateGrams = total.carbohydrateGrams + (food?.carbohydrateGrams ?: 0.0) * factor,
-        fatGrams = total.fatGrams + (food?.fatGrams ?: 0.0) * factor,
-        fiberGrams = total.fiberGrams + (food?.fiberGrams ?: 0.0) * factor,
-        isComplete = total.isComplete && food?.hasComparableNutrition() == true
-    )
+fun Dish.nutrition(foodsById: Map<Long, Food>, servings: Double = 1.0): NutritionTotals =
+    ingredients.fold(NutritionTotals()) { total, ingredient ->
+        total + ingredient.nutrition(foodsById, servings)
+    }
+
+fun PlannedMeal.nutrition(
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish> = emptyMap()
+): NutritionTotals {
+    val foodTotals = items.fold(NutritionTotals()) { total, planned ->
+        total + planned.nutrition(foodsById)
+    }
+    return dishes.fold(foodTotals) { total, plannedDish ->
+        val dish = dishesById[plannedDish.dishId]
+        if (dish == null) total.copy(isComplete = false)
+        else total + dish.nutrition(foodsById, plannedDish.servings)
+    }
 }
+
+private fun PlannedFood.nutrition(foodsById: Map<Long, Food>): NutritionTotals {
+    val food = foodsById[foodId]
+    val factor = grams / 100.0
+    return food.nutrition(factor)
+}
+
+private fun DishIngredient.nutrition(
+    foodsById: Map<Long, Food>,
+    servings: Double
+): NutritionTotals {
+    val food = foodsById[foodId]
+    val factor = grams * servings / 100.0
+    return food.nutrition(factor)
+}
+
+private fun Food?.nutrition(factor: Double): NutritionTotals = NutritionTotals(
+    calories = (this?.calories ?: 0.0) * factor,
+    proteinGrams = (this?.proteinGrams ?: 0.0) * factor,
+    carbohydrateGrams = (this?.carbohydrateGrams ?: 0.0) * factor,
+    fatGrams = (this?.fatGrams ?: 0.0) * factor,
+    fiberGrams = (this?.fiberGrams ?: 0.0) * factor,
+    isComplete = this?.hasComparableNutrition() == true
+)
+
+private operator fun NutritionTotals.plus(other: NutritionTotals): NutritionTotals =
+    NutritionTotals(
+        calories = calories + other.calories,
+        proteinGrams = proteinGrams + other.proteinGrams,
+        carbohydrateGrams = carbohydrateGrams + other.carbohydrateGrams,
+        fatGrams = fatGrams + other.fatGrams,
+        fiberGrams = fiberGrams + other.fiberGrams,
+        isComplete = isComplete && other.isComplete
+    )
 
 data class Food(
     val id: Long,
@@ -221,7 +287,8 @@ data class ProfileData(
 data class AppData(
     val profiles: List<ProfileData> = emptyList(),
     val activeProfileId: Long? = null,
-    val foods: List<Food> = emptyList()
+    val foods: List<Food> = emptyList(),
+    val dishes: List<Dish> = emptyList()
 ) {
     val activeProfileData: ProfileData?
         get() = profiles.firstOrNull { it.profile.id == activeProfileId } ?: profiles.firstOrNull()
