@@ -1659,7 +1659,7 @@ private fun BodyExplanationScreen(
                 )
                 PlainNarrativeSection(
                     title = "Qué significa cintura/altura",
-                    body = waistToHeightExplanation(ratio, profile?.heightCm)
+                    body = waistToHeightExplanation(ratio, profile.heightCm)
                 )
                 TextButton(
                     onClick = {
