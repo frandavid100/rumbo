@@ -26,6 +26,9 @@ object RecommendationEngine {
     private const val MINIMUM_HISTORY_DAYS = 21L
     private const val MAX_STEP_KCAL = 150
 
+    fun weeklyRateFor(goal: WeightGoal, weightKg: Double?): Double? =
+        weightKg?.let { desiredWeeklyRate(goal, it) }
+
     fun effectiveValues(
         history: List<Measurement>,
         candidate: Measurement? = null
