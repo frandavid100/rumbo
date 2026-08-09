@@ -198,4 +198,11 @@ class RecommendationEngineTest {
         val weeklyRate = RecommendationEngine.regressionWeeklyRate(points)
         assertEquals(-0.2, weeklyRate, 0.04)
     }
+
+    @Test
+    fun publicWeeklyRateMatchesTheGoalLimits() {
+        assertEquals(-0.2075, RecommendationEngine.weeklyRateFor(WeightGoal.LOSE_SLOWLY, 83.0)!!, 0.001)
+        assertEquals(0.0, RecommendationEngine.weeklyRateFor(WeightGoal.MAINTAIN, 83.0)!!, 0.001)
+        assertNull(RecommendationEngine.weeklyRateFor(WeightGoal.GAIN_SLOWLY, null))
+    }
 }
