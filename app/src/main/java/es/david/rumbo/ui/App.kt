@@ -893,9 +893,13 @@ private fun NutritionGoalMetric(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(26.dp))
-        Spacer(Modifier.width(10.dp))
+    Row(
+        modifier.padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
+        Spacer(Modifier.width(12.dp))
         Column {
             Text(value, color = color, style = MaterialTheme.typography.titleLarge)
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1088,9 +1092,13 @@ private fun NutritionPercentMetric(
     modifier: Modifier = Modifier
 ) {
     val ratio = if (target > 0.0) actual / target else 0.0
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(26.dp))
-        Spacer(Modifier.width(10.dp))
+    Row(
+        modifier.padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
+        Spacer(Modifier.width(12.dp))
         Column {
             Text("${(ratio * 100).roundToInt()} %", color = color, style = MaterialTheme.typography.titleLarge)
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
