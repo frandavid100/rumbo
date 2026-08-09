@@ -203,6 +203,27 @@ class RecommendationEngineTest {
     fun publicWeeklyRateMatchesTheGoalLimits() {
         assertEquals(-0.2075, RecommendationEngine.weeklyRateFor(WeightGoal.LOSE_SLOWLY, 83.0)!!, 0.001)
         assertEquals(0.0, RecommendationEngine.weeklyRateFor(WeightGoal.MAINTAIN, 83.0)!!, 0.001)
+        assertNull(RecommendationEngine.weeklyRateFor(WeightGoal.AUTOMATIC, 83.0))
         assertNull(RecommendationEngine.weeklyRateFor(WeightGoal.GAIN_SLOWLY, null))
+    }
+
+    @Test
+    fun automaticGoalAppliesTheCurrentRecommendedGoal() {
+        val recommendation = RecommendationEngine.recommend(
+            profile,
+            emptyList(),
+            Measurement(
+                id = 1,
+                date = LocalDate.of(2026, 8, 7),
+                weightKg = 83.1,
+                waistCm = 91.0,
+                activity = ActivityLevel.LIGHT,
+                goal = WeightGoal.AUTOMATIC
+            )
+        )
+
+        assertNotNull(recommendation)
+        assertEquals(2125, recommendation!!.calories)
+        assertEquals(-0.20775, recommendation.calculation!!.appliedWeeklyRateKg, 0.00001)
     }
 }
