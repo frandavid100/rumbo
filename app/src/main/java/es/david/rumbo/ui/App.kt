@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
@@ -102,7 +103,9 @@ import androidx.compose.ui.unit.sp
 import es.david.rumbo.data.AppRepository
 import es.david.rumbo.logic.FoodSimilarityEngine
 import es.david.rumbo.logic.MealPlanEvaluator
+import es.david.rumbo.logic.MealQuantityOptimizer
 import es.david.rumbo.logic.PlanNutritionAssessment
+import es.david.rumbo.logic.QuantityOptimizationResult
 import es.david.rumbo.logic.RecommendationEngine
 import es.david.rumbo.logic.TargetFit
 import es.david.rumbo.model.ActivityLevel
@@ -125,6 +128,8 @@ import es.david.rumbo.model.WeightGoal
 import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.dominantCategory
 import es.david.rumbo.model.nutrition
+import es.david.rumbo.model.resolvedGrams
+import es.david.rumbo.model.sanitizedDayAmounts
 import es.david.rumbo.model.totalWeightGrams
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -294,7 +299,7 @@ fun RumboApp(repository: AppRepository) {
             }
         },
         floatingActionButton = {
-            if (profileReady && screen in setOf(Screen.HOME, Screen.PLANNER, Screen.DISHES, Screen.FOODS)) {
+            if (profileReady && screen in setOf(Screen.PLANNER, Screen.DISHES, Screen.FOODS)) {
                 FloatingActionButton(onClick = {
                     if (screen == Screen.PLANNER) {
                         draftMealTypeName = null
@@ -344,6 +349,7 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
                     onGoalChange = { data = repository.setGoal(it) },
+                    onAddMeasurement = { screenName = Screen.ADD.name },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
                     onExplainRecommendation = { screenName = Screen.RECOMMENDATION_EXPLANATION.name },
                     onOpenPlanner = { screenName = Screen.PLANNER.name },
@@ -400,7 +406,8 @@ fun RumboApp(repository: AppRepository) {
                         draftMealTypeName = type.name
                         draftMealDayName = day.name
                         screenName = Screen.ADD_PLANNED_MEAL.name
-                    }
+                    },
+                    onApplyAdjustedMeals = { data = repository.savePlannedMeals(it) }
                 )
                 screen == Screen.ADD_PLANNED_MEAL -> PlannedMealEditorScreen(
                     foods = data.foods,
@@ -633,6 +640,7 @@ private fun ProfileSwitcher(
 private fun HomeScreen(
     data: AppData,
     onGoalChange: (WeightGoal) -> Unit,
+    onAddMeasurement: () -> Unit,
     onExplainBody: () -> Unit,
     onExplainRecommendation: () -> Unit,
     onOpenPlanner: () -> Unit,
@@ -658,7 +666,8 @@ private fun HomeScreen(
                     assessment = assessment,
                     recommendedGoal = recommendedGoal,
                     weightKg = RecommendationEngine.effectiveValues(data.measurements).weightKg,
-                    onExplain = onExplainBody
+                    onExplain = onExplainBody,
+                    onAddMeasurement = onAddMeasurement
                 )
             }
         }
@@ -695,19 +704,38 @@ private fun BodySummarySection(
     assessment: BodyAssessment,
     recommendedGoal: RecommendedGoal,
     weightKg: Double?,
-    onExplain: () -> Unit
+    onExplain: () -> Unit,
+    onAddMeasurement: () -> Unit
 ) {
     val weeklyRate = RecommendationEngine.weeklyRateFor(recommendedGoal.goal, weightKg)
     Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Situación corporal", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            HomeCardTitle("Situación corporal")
             CombinedBodyScale(assessment)
             Text(
                 recommendedGoalSentence(recommendedGoal.goal, weeklyRate),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold
             )
+            Button(onClick = onAddMeasurement, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Añadir medición")
+            }
         }
+    }
+}
+
+@Composable
+private fun HomeCardTitle(title: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
@@ -776,7 +804,7 @@ private fun GoalNutritionCard(
 ) {
     Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Objetivo y nutrición diaria", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            HomeCardTitle("Objetivo y nutrición diaria")
             SelectorField(
                 label = "Objetivo",
                 selectedLabel = goal.label,
@@ -822,7 +850,7 @@ private fun TodayPlanSection(
     }
     Card(Modifier.fillMaxWidth().clickable(onClick = onOpenPlanner)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Menú de hoy · ${today.label}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            HomeCardTitle("Menú de hoy · ${today.label}")
             assessment?.let { TodayNutritionProgress(it) }
             MealType.entries.forEach { type ->
                 val meal = todayMeals[type]
@@ -882,17 +910,24 @@ private fun NutritionProgressLine(
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
             Text(
-                "${formatDecimal(actual)}/${formatDecimal(target)} $unit · ${(ratio * 100).roundToInt()} %",
+                "${(ratio * 100).roundToInt()} %",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold
             )
         }
-        LinearProgressIndicator(
-            progress = { ratio.toFloat().coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth(),
-            color = color,
-            trackColor = color.copy(alpha = 0.16f)
+        Text(
+            "${formatDecimal(actual)}/${formatDecimal(target)} $unit",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Box(
+            Modifier.fillMaxWidth().height(6.dp).background(color.copy(alpha = 0.16f), CircleShape)
+        ) {
+            Box(
+                Modifier.fillMaxWidth(ratio.toFloat().coerceIn(0f, 1f))
+                    .height(6.dp).background(color, CircleShape)
+            )
+        }
     }
 }
 
@@ -912,11 +947,11 @@ private fun HomeShoppingSection(
     }
     Card(Modifier.fillMaxWidth().clickable(onClick = onOpenFoods)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Lista de la compra", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            HomeCardTitle("Lista de la compra")
             if (entries.isEmpty()) {
                 Text("El plan todavía no contiene alimentos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                entries.forEach { (food, grams) ->
+                entries.take(6).forEach { (food, grams) ->
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -927,6 +962,11 @@ private fun HomeShoppingSection(
                         Text("${formatDecimal(grams)} g", fontWeight = FontWeight.SemiBold)
                     }
                 }
+                if (entries.size > 6) Text(
+                    "Y ${entries.size - 6} productos más",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -1678,7 +1718,8 @@ private fun WeeklyPlannerScreen(
     dishes: List<Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
     onOpenMeal: (Long) -> Unit,
-    onAddMissing: (MealType, WeekDay) -> Unit
+    onAddMissing: (MealType, WeekDay) -> Unit,
+    onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
 ) {
     var viewName by rememberSaveable { mutableStateOf(PlannerView.WEEK.name) }
     var selectedDayName by rememberSaveable { mutableStateOf(WeekDay.MONDAY.name) }
@@ -1688,6 +1729,27 @@ private fun WeeklyPlannerScreen(
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val dishesById = remember(dishes) { dishes.associateBy { it.id } }
     val grouped = remember(meals) { meals.groupBy { it.type } }
+    var optimizationPreview by remember { mutableStateOf<QuantityOptimizationResult?>(null) }
+    var optimizationMessage by remember { mutableStateOf<String?>(null) }
+
+    optimizationPreview?.let { result ->
+        QuantityOptimizationPreviewDialog(
+            result = result,
+            onApply = {
+                onApplyAdjustedMeals(result.meals)
+                optimizationPreview = null
+            },
+            onDismiss = { optimizationPreview = null }
+        )
+    }
+    optimizationMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { optimizationMessage = null },
+            title = { Text("Ajustar cantidades") },
+            text = { Text(message) },
+            confirmButton = { TextButton(onClick = { optimizationMessage = null }) { Text("Entendido") } }
+        )
+    }
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)
     ) {
@@ -1730,6 +1792,27 @@ private fun WeeklyPlannerScreen(
                         repeat(4 - rowDays.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
+            }
+            Spacer(Modifier.height(10.dp))
+            FilledTonalButton(
+                onClick = {
+                    if (recommendation == null) {
+                        optimizationMessage = "Necesitas una recomendación nutricional antes de ajustar el plan."
+                    } else {
+                        val result = MealQuantityOptimizer.optimize(
+                            meals, foodsById, dishesById, recommendation
+                        )
+                        if (result.changes.isNotEmpty()) optimizationPreview = result
+                        else optimizationMessage = if (result.days.isEmpty()) {
+                            "Completa al menos un día y marca uno o varios elementos como ajustables. Los elementos fijos nunca se modifican."
+                        } else {
+                            "Las cantidades actuales ya son la mejor combinación encontrada dentro de los límites indicados."
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Ajustar cantidades")
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -1784,6 +1867,7 @@ private fun WeeklyPlannerScreen(
                             dishesById = dishesById,
                             recommendation = recommendation,
                             showDays = true,
+                            day = null,
                             onClick = { onOpenMeal(meal.id) }
                         )
                         HorizontalDivider()
@@ -1842,6 +1926,7 @@ private fun WeeklyPlannerScreen(
                             dishesById = dishesById,
                             recommendation = recommendation,
                             showDays = false,
+                            day = selectedDay,
                             onClick = { onOpenMeal(meal.id) }
                         )
                     }
@@ -1860,6 +1945,73 @@ private fun WeeklyPlannerScreen(
             }
         }
     }
+}
+
+@Composable
+private fun QuantityOptimizationPreviewDialog(
+    result: QuantityOptimizationResult,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Revisar ajuste") },
+        text = {
+            LazyColumn(
+                Modifier.fillMaxWidth().heightIn(max = 520.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Text(
+                        "Se mantienen intactas todas las cantidades fijas. Las ajustables se resuelven por separado para cada día.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                result.days.forEach { summary ->
+                    item(key = "summary_${summary.day.name}") {
+                        Text(summary.day.label, fontWeight = FontWeight.Bold)
+                        Text(
+                            "${formatDecimal(summary.before.actual.calories)} → ${formatDecimal(summary.after.actual.calories)} kcal · " +
+                                "P ${formatDecimal(summary.before.actual.proteinGrams)} → ${formatDecimal(summary.after.actual.proteinGrams)} g",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "H ${formatDecimal(summary.before.actual.carbohydrateGrams)} → ${formatDecimal(summary.after.actual.carbohydrateGrams)} g · " +
+                                "G ${formatDecimal(summary.before.actual.fatGrams)} → ${formatDecimal(summary.after.actual.fatGrams)} g",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    val dayChanges = result.changes.filter { it.day == summary.day }
+                    items(dayChanges, key = { "${it.day.name}_${it.mealId}_${it.label}" }) { change ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                "${change.mealType.label}: ${change.label}",
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                "${formatDecimal(change.beforeGrams)} → ${formatDecimal(change.afterGrams)} g",
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    item(key = "divider_${summary.day.name}") { HorizontalDivider() }
+                }
+                item {
+                    Text(
+                        "Si no existe una combinación exacta, esta es la más próxima encontrada respetando los límites.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = { Button(onClick = onApply) { Text("Aplicar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }
 
 @Composable
@@ -1997,11 +2149,12 @@ private fun PlannedMealListEntry(
     dishesById: Map<Long, Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
     showDays: Boolean,
+    day: WeekDay?,
     onClick: () -> Unit
 ) {
-    val totals = meal.nutrition(foodsById, dishesById)
+    val totals = meal.nutrition(foodsById, dishesById, day)
     val assessment = recommendation?.let {
-        MealPlanEvaluator.assessMeal(meal, foodsById, dishesById, it)
+        MealPlanEvaluator.assessMeal(meal, foodsById, dishesById, it, day)
     }
     val days = WeekDay.entries.filter(meal.days::contains).joinToString(" · ") { it.shortLabel }
     Row(
@@ -2031,7 +2184,7 @@ private fun PlannedMealListEntry(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        "${formatDecimal(item.grams)} g",
+                        plannedAmountLabel(meal, item, day),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -2056,7 +2209,7 @@ private fun PlannedMealListEntry(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "${formatDecimal(plannedDish.grams)} g",
+                        plannedAmountLabel(meal, plannedDish, day),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -2090,6 +2243,58 @@ private fun PlannedMealListEntry(
     }
 }
 
+private fun plannedAmountLabel(meal: PlannedMeal, item: PlannedFood, day: WeekDay?): String {
+    if (day != null || !item.adjustable) return "${formatDecimal(meal.resolvedGrams(item, day))} g"
+    val values = meal.days.map { meal.resolvedGrams(item, it) }
+    return amountRangeLabel(values)
+}
+
+private fun plannedAmountLabel(meal: PlannedMeal, item: PlannedDish, day: WeekDay?): String {
+    if (day != null || !item.adjustable) return "${formatDecimal(meal.resolvedGrams(item, day))} g"
+    val values = meal.days.map { meal.resolvedGrams(item, it) }
+    return amountRangeLabel(values)
+}
+
+private fun amountRangeLabel(values: List<Double>): String {
+    val minimum = values.minOrNull() ?: 0.0
+    val maximum = values.maxOrNull() ?: minimum
+    return if (abs(maximum - minimum) < 0.5) "${formatDecimal(minimum)} g"
+    else "${formatDecimal(minimum)}–${formatDecimal(maximum)} g"
+}
+
+private data class AmountDraft(
+    val grams: String,
+    val adjustable: Boolean = false,
+    val minimum: String = "",
+    val maximum: String = ""
+)
+
+private fun AmountDraft.toPlannedFood(foodId: Long): PlannedFood? {
+    val amount = parseDecimal(grams) ?: return null
+    val minimumAmount = if (adjustable) parseDecimal(minimum) ?: return null else amount * 0.5
+    val maximumAmount = if (adjustable) parseDecimal(maximum) ?: return null else amount * 1.5
+    return PlannedFood(foodId, amount, adjustable, minimumAmount, maximumAmount)
+        .takeIf { it.isValid() }
+}
+
+private fun AmountDraft.toPlannedDish(dishId: Long): PlannedDish? {
+    val amount = parseDecimal(grams) ?: return null
+    val minimumAmount = if (adjustable) parseDecimal(minimum) ?: return null else amount * 0.5
+    val maximumAmount = if (adjustable) parseDecimal(maximum) ?: return null else amount * 1.5
+    return PlannedDish(dishId, amount, adjustable, minimumAmount, maximumAmount)
+        .takeIf { it.isValid() }
+}
+
+private fun AmountDraft.withAdjustable(enabled: Boolean): AmountDraft {
+    if (!enabled) return copy(adjustable = false)
+    val amount = parseDecimal(grams) ?: 100.0
+    return copy(
+        adjustable = true,
+        minimum = minimum.ifBlank { formatDecimal((amount * 0.5).coerceAtLeast(0.1)) },
+        maximum = maximum.ifBlank { formatDecimal((amount * 1.5).coerceAtMost(5000.0)) }
+    )
+}
+
 @Composable
 private fun PlannedMealEditorScreen(
     foods: List<Food>,
@@ -2112,10 +2317,20 @@ private fun PlannedMealEditorScreen(
         mutableStateOf(initial?.days ?: initialDays)
     }
     var itemAmounts by remember(initial?.id) {
-        mutableStateOf(initial?.items?.associate { it.foodId to formatDecimal(it.grams) }.orEmpty())
+        mutableStateOf(initial?.items?.associate {
+            it.foodId to AmountDraft(
+                formatDecimal(it.grams), it.adjustable,
+                formatDecimal(it.minimumGrams), formatDecimal(it.maximumGrams)
+            )
+        }.orEmpty())
     }
     var dishAmounts by remember(initial?.id) {
-        mutableStateOf(initial?.dishes?.associate { it.dishId to formatDecimal(it.grams) }.orEmpty())
+        mutableStateOf(initial?.dishes?.associate {
+            it.dishId to AmountDraft(
+                formatDecimal(it.grams), it.adjustable,
+                formatDecimal(it.minimumGrams), formatDecimal(it.maximumGrams)
+            )
+        }.orEmpty())
     }
     var choosingElement by remember { mutableStateOf(false) }
     var selectedForDish by remember { mutableStateOf(emptySet<Long>()) }
@@ -2129,12 +2344,8 @@ private fun PlannedMealEditorScreen(
         .filter { it.id != initial?.id && it.type == type }
         .flatMap { it.days.asSequence() }
         .toSet()
-    val previewItems = itemAmounts.mapNotNull { (foodId, amount) ->
-        parseDecimal(amount)?.takeIf { it in 0.1..5000.0 }?.let { PlannedFood(foodId, it) }
-    }
-    val previewDishes = dishAmounts.mapNotNull { (dishId, grams) ->
-        parseDecimal(grams)?.takeIf { it in 0.1..5000.0 }?.let { PlannedDish(dishId, it) }
-    }
+    val previewItems = itemAmounts.mapNotNull { (foodId, draft) -> draft.toPlannedFood(foodId) }
+    val previewDishes = dishAmounts.mapNotNull { (dishId, draft) -> draft.toPlannedDish(dishId) }
     val previewAssessment = if (
         recommendation != null && (previewItems.isNotEmpty() || previewDishes.isNotEmpty()) &&
         previewItems.size == itemAmounts.size && previewDishes.size == dishAmounts.size
@@ -2164,12 +2375,12 @@ private fun PlannedMealEditorScreen(
             preferredFoodIds = preferredFoodIds,
             preferredDishIds = preferredDishIds,
             onChooseFood = {
-                itemAmounts = itemAmounts + (it to "100")
+                itemAmounts = itemAmounts + (it to AmountDraft("100"))
                 choosingElement = false
             },
             onChooseDish = {
                 val recipeWeight = dishesById[it]?.totalWeightGrams() ?: 100.0
-                dishAmounts = dishAmounts + (it to formatDecimal(recipeWeight))
+                dishAmounts = dishAmounts + (it to AmountDraft(formatDecimal(recipeWeight)))
                 choosingElement = false
             },
             onDismiss = { choosingElement = false }
@@ -2196,17 +2407,17 @@ private fun PlannedMealEditorScreen(
                     enabled = newDishName.isNotBlank() &&
                         selectedForDish.size >= 2 &&
                         selectedForDish.all { foodId ->
-                            parseDecimal(itemAmounts[foodId].orEmpty())
-                                ?.let { it in 0.1..5000.0 } == true
+                            itemAmounts[foodId]?.toPlannedFood(foodId) != null
                         },
                     onClick = {
                         val ingredients = selectedForDish.mapNotNull { foodId ->
-                            parseDecimal(itemAmounts[foodId].orEmpty())?.let { DishIngredient(foodId, it) }
+                            itemAmounts[foodId]?.toPlannedFood(foodId)?.let { DishIngredient(foodId, it.grams) }
                         }
                         if (ingredients.size == selectedForDish.size && ingredients.size >= 2) {
                             val dish = Dish(System.currentTimeMillis(), newDishName.trim(), ingredients)
                             itemAmounts = itemAmounts - selectedForDish
-                            dishAmounts = dishAmounts + (dish.id to formatDecimal(dish.totalWeightGrams()))
+                            dishAmounts = dishAmounts +
+                                (dish.id to AmountDraft(formatDecimal(dish.totalWeightGrams())))
                             selectedForDish = emptySet()
                             newDishName = ""
                             namingDish = false
@@ -2280,52 +2491,94 @@ private fun PlannedMealEditorScreen(
         }
         HorizontalDivider()
         Text("Elementos de la comida", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        dishAmounts.forEach { (dishId, grams) ->
+        dishAmounts.forEach { (dishId, draft) ->
             val dish = dishesById[dishId]
             if (dish != null) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
-                    Text(dish.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    NumericField(
-                        "Gramos",
-                        grams,
-                        { dishAmounts = dishAmounts + (dishId to it) },
-                        Modifier.width(105.dp)
-                    )
-                    TextButton(onClick = { dishAmounts = dishAmounts - dishId }) { Text("Quitar") }
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
+                        Text(dish.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = { dishAmounts = dishAmounts - dishId }) { Text("Quitar") }
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NumericField(
+                            "Gramos", draft.grams,
+                            { dishAmounts = dishAmounts + (dishId to draft.copy(grams = it)) },
+                            Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = draft.adjustable,
+                            onClick = {
+                                dishAmounts = dishAmounts +
+                                    (dishId to draft.withAdjustable(!draft.adjustable))
+                            },
+                            label = { Text(if (draft.adjustable) "Ajustable" else "Fijo") }
+                        )
+                    }
+                    if (draft.adjustable) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NumericField(
+                                "Mínimo", draft.minimum,
+                                { dishAmounts = dishAmounts + (dishId to draft.copy(minimum = it)) },
+                                Modifier.weight(1f)
+                            )
+                            NumericField(
+                                "Máximo", draft.maximum,
+                                { dishAmounts = dishAmounts + (dishId to draft.copy(maximum = it)) },
+                                Modifier.weight(1f)
+                            )
+                        }
+                    }
                 }
             }
         }
-        itemAmounts.forEach { (foodId, amount) ->
+        itemAmounts.forEach { (foodId, draft) ->
             val food = foodsById[foodId]
             if (food != null) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Checkbox(
-                        checked = foodId in selectedForDish,
-                        onCheckedChange = { checked ->
-                            selectedForDish = if (checked) selectedForDish + foodId else selectedForDish - foodId
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Checkbox(
+                            checked = foodId in selectedForDish,
+                            onCheckedChange = { checked ->
+                                selectedForDish = if (checked) selectedForDish + foodId else selectedForDish - foodId
+                            }
+                        )
+                        SmallFoodCategoryBadge(food.category)
+                        Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = {
+                            itemAmounts = itemAmounts - foodId
+                            selectedForDish = selectedForDish - foodId
+                        }) { Text("Quitar") }
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NumericField(
+                            "Gramos", draft.grams,
+                            { itemAmounts = itemAmounts + (foodId to draft.copy(grams = it)) },
+                            Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = draft.adjustable,
+                            onClick = {
+                                itemAmounts = itemAmounts +
+                                    (foodId to draft.withAdjustable(!draft.adjustable))
+                            },
+                            label = { Text(if (draft.adjustable) "Ajustable" else "Fijo") }
+                        )
+                    }
+                    if (draft.adjustable) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NumericField(
+                                "Mínimo", draft.minimum,
+                                { itemAmounts = itemAmounts + (foodId to draft.copy(minimum = it)) },
+                                Modifier.weight(1f)
+                            )
+                            NumericField(
+                                "Máximo", draft.maximum,
+                                { itemAmounts = itemAmounts + (foodId to draft.copy(maximum = it)) },
+                                Modifier.weight(1f)
+                            )
                         }
-                    )
-                    SmallFoodCategoryBadge(food.category)
-                    Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    NumericField(
-                        "Gramos",
-                        amount,
-                        { itemAmounts = itemAmounts + (foodId to it) },
-                        Modifier.width(105.dp)
-                    )
-                    TextButton(onClick = {
-                        itemAmounts = itemAmounts - foodId
-                        selectedForDish = selectedForDish - foodId
-                    }) { Text("Quitar") }
+                    }
                 }
             }
         }
@@ -2349,11 +2602,18 @@ private fun PlannedMealEditorScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        if (itemAmounts.values.any { it.adjustable } || dishAmounts.values.any { it.adjustable }) {
+            Text(
+                "Las cantidades fijas serán iguales todos los días. Las ajustables podrán variar entre el mínimo y el máximo cuando pulses «Ajustar cantidades» en el plan.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         previewAssessment?.let { assessment ->
             HorizontalDivider()
             Text("Ajuste de esta comida", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
-                "Real/objetivo de la toma (20 % del objetivo diario)",
+                "Referencia orientativa de esta toma; el ajuste automático se decide con el total del día.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -2368,21 +2628,15 @@ private fun PlannedMealEditorScreen(
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(
             onClick = {
-                val parsedItems = itemAmounts.mapNotNull { (foodId, amount) ->
-                    parseDecimal(amount)?.let { PlannedFood(foodId, it) }
-                }
-                val parsedDishes = dishAmounts.mapNotNull { (dishId, grams) ->
-                    parseDecimal(grams)?.let { PlannedDish(dishId, it) }
-                }
+                val parsedItems = itemAmounts.mapNotNull { (foodId, draft) -> draft.toPlannedFood(foodId) }
+                val parsedDishes = dishAmounts.mapNotNull { (dishId, draft) -> draft.toPlannedDish(dishId) }
                 error = when {
                     selectedDays.isEmpty() -> "Selecciona al menos un día."
                     itemAmounts.isEmpty() && dishAmounts.isEmpty() -> "Añade al menos un alimento o un plato."
-                    parsedItems.size != itemAmounts.size -> "Revisa las cantidades de los ingredientes."
-                    parsedDishes.size != dishAmounts.size -> "Revisa las cantidades de los platos."
-                    parsedItems.any { it.grams !in 0.1..5000.0 } ->
-                        "Cada cantidad debe estar entre 0,1 y 5000 g."
-                    parsedDishes.any { it.grams !in 0.1..5000.0 } ->
-                        "Cada cantidad debe estar entre 0,1 y 5000 g."
+                    parsedItems.size != itemAmounts.size ->
+                        "Revisa gramos, mínimo y máximo de los ingredientes ajustables."
+                    parsedDishes.size != dishAmounts.size ->
+                        "Revisa gramos, mínimo y máximo de los platos ajustables."
                     selectedDays.any(occupiedDays::contains) ->
                         "Ya existe otra comida del mismo tipo en alguno de esos días."
                     else -> null
@@ -2394,8 +2648,9 @@ private fun PlannedMealEditorScreen(
                             type = type,
                             days = selectedDays,
                             items = parsedItems,
-                            dishes = parsedDishes
-                        )
+                            dishes = parsedDishes,
+                            dayAmounts = initial?.dayAmounts.orEmpty()
+                        ).sanitizedDayAmounts()
                     )
                 }
             },
