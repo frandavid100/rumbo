@@ -308,8 +308,8 @@ class AppRepository(context: Context) {
         require(measurements.all { it.waistCm == null || it.waistCm in 35.0..250.0 }) {
             "Hay alguna cintura fuera de rango"
         }
-        require(measurements.all { it.weeklyRateKg == null || it.weeklyRateKg in -5.0..5.0 }) {
-            "Hay algún objetivo semanal fuera de rango"
+        require(measurements.all { it.weeklyRateKg == null || it.weeklyRateKg.isFinite() }) {
+            "Hay algún objetivo semanal que no es una cifra finita"
         }
         require(data.foods.all { it.isValid() }) { "Hay algún alimento no válido" }
         require(data.foods.map { it.id }.distinct().size == data.foods.size) {
