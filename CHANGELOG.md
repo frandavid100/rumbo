@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.14.0
+
+- Buscadores contextuales que priorizan alimentos y platos ya utilizados.
+- Ficha de cada plato con información nutricional total y por 100 g.
+- Iconos de proteína, carbohidrato o grasa según el macro predominante del plato.
+- Cantidades de los platos expresadas y almacenadas en gramos, con migración automática de las raciones anteriores.
+
 ## 0.13.0
 
 - Inicio reorganizado con una única escala conjunta de IMC y cintura/altura.
