@@ -1,5 +1,13 @@
 # Historial de cambios
 
+## 0.16.0
+
+- Cantidades fijas o ajustables en cada alimento y plato, con límites mínimo y máximo.
+- Ajuste explícito de cantidades a partir del total nutricional de cada día, con vista previa antes de aplicar.
+- Cantidades ajustables independientes por día aunque la comida se reutilice; las fijas permanecen idénticas.
+- Lista de la compra y vistas diarias actualizadas con los gramos realmente resueltos para cada día.
+- Inicio más claro: botón «Añadir medición» dentro de la primera tarjeta, barras compactas y compra resumida.
+
 ## 0.15.0
 
 - Inicio reorganizado en cuatro tarjetas pulsables: situación corporal, objetivos, menú de hoy y compra.
