@@ -936,39 +936,68 @@ private fun TodayPlanSection(
     Card(Modifier.fillMaxWidth().clickable(onClick = onOpenPlanner)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             HomeCardHeader("Menú de hoy · ${today.label}")
-            assessment?.let { TodayNutritionSummary(it) }
             MealType.entries.forEach { type ->
                 val meal = todayMeals[type]
-                val labels = meal?.let {
-                    it.dishes.mapNotNull { planned -> dishesById[planned.dishId]?.name } +
-                        it.items.mapNotNull { planned -> foodsById[planned.foodId]?.name }
-                }.orEmpty()
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(type.label, modifier = Modifier.weight(0.30f), style = MaterialTheme.typography.bodyMedium)
-                    if (labels.isEmpty()) {
-                        Text("Sin planificar", modifier = Modifier.weight(0.40f), color = MaterialTheme.colorScheme.error)
-                        TextButton(onClick = { onAddMissing(type, today) }) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Añadir")
+                val entries = meal?.let {
+                    it.dishes.mapNotNull { planned ->
+                        dishesById[planned.dishId]?.let { dish ->
+                            dish.name to it.resolvedGrams(planned, today)
                         }
+                    } + it.items.mapNotNull { planned ->
+                        foodsById[planned.foodId]?.let { food ->
+                            food.name to it.resolvedGrams(planned, today)
+                        }
+                    }
+                }.orEmpty()
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            type.label,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (entries.isEmpty()) {
+                            TextButton(onClick = { onAddMissing(type, today) }) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Añadir")
+                            }
+                        }
+                    }
+                    if (entries.isEmpty()) {
+                        Text(
+                            "Sin planificar",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     } else {
-                        Text(labels.joinToString(" · "), modifier = Modifier.weight(0.70f))
+                        entries.forEach { (name, grams) ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(name, modifier = Modifier.weight(1f))
+                                Text(
+                                    "${formatDecimal(grams)} g",
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.End
+                                )
+                            }
+                        }
                     }
                 }
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            assessment?.let { TodayNutritionSummary(it) }
             Text(
                 todayAssessmentText(assessment),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (assessment?.overall == TargetFit.ON_TARGET) {
-                    Color(0xFF2E7D32)
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                color = MaterialTheme.colorScheme.onSurface
             )
             Button(
                 onClick = {
