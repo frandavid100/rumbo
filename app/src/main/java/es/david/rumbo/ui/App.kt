@@ -351,6 +351,10 @@ fun RumboApp(repository: AppRepository) {
                     onAddMeasurement = { screenName = Screen.ADD.name },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
                     onOpenPlanner = { screenName = Screen.PLANNER.name },
+                    onOpenMeal = {
+                        selectedPlannedMealId = it
+                        screenName = Screen.EDIT_PLANNED_MEAL.name
+                    },
                     onOpenFoods = { screenName = Screen.FOODS.name },
                     onAddMissingMeal = { type, day ->
                         draftMealTypeName = type.name
@@ -648,6 +652,7 @@ private fun HomeScreen(
     onAddMeasurement: () -> Unit,
     onExplainBody: () -> Unit,
     onOpenPlanner: () -> Unit,
+    onOpenMeal: (Long) -> Unit,
     onOpenFoods: () -> Unit,
     onAddMissingMeal: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
@@ -687,6 +692,7 @@ private fun HomeScreen(
                 dishesById = dishesById,
                 recommendation = recommendation,
                 onOpenPlanner = onOpenPlanner,
+                onOpenMeal = onOpenMeal,
                 onAddMissing = onAddMissingMeal,
                 onApplyAdjustedMeals = onApplyAdjustedMeals
             )
@@ -903,6 +909,7 @@ private fun TodayPlanSection(
     dishesById: Map<Long, Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
     onOpenPlanner: () -> Unit,
+    onOpenMeal: (Long) -> Unit,
     onAddMissing: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
 ) {
@@ -936,20 +943,36 @@ private fun TodayPlanSection(
     Card(Modifier.fillMaxWidth().clickable(onClick = onOpenPlanner)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             HomeCardHeader("Menú de hoy · ${today.label}")
-            MealType.entries.forEach { type ->
+            MealType.entries.forEachIndexed { index, type ->
                 val meal = todayMeals[type]
                 val entries = meal?.let {
                     it.dishes.mapNotNull { planned ->
                         dishesById[planned.dishId]?.let { dish ->
-                            dish.name to it.resolvedGrams(planned, today)
+                            Triple(
+                                dish.name,
+                                it.resolvedGrams(planned, today),
+                                dish.dominantCategory(foodsById)
+                            )
                         }
                     } + it.items.mapNotNull { planned ->
                         foodsById[planned.foodId]?.let { food ->
-                            food.name to it.resolvedGrams(planned, today)
+                            Triple(
+                                food.name,
+                                it.resolvedGrams(planned, today),
+                                food.category
+                            )
                         }
                     }
                 }.orEmpty()
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                val mealModifier = if (meal == null) {
+                    Modifier.fillMaxWidth()
+                } else {
+                    Modifier.fillMaxWidth().clickable { onOpenMeal(meal.id) }
+                }
+                Column(
+                    mealModifier.padding(vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Row(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -975,12 +998,13 @@ private fun TodayPlanSection(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {
-                        entries.forEach { (name, grams) ->
+                        entries.forEach { (name, grams, category) ->
                             Row(
                                 Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.Top,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                SmallFoodCategoryBadge(category)
                                 Text(name, modifier = Modifier.weight(1f))
                                 Text(
                                     "${formatDecimal(grams)} g",
@@ -990,6 +1014,9 @@ private fun TodayPlanSection(
                             }
                         }
                     }
+                }
+                if (index < MealType.entries.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1023,7 +1050,10 @@ private fun TodayPlanSection(
 
 @Composable
 private fun TodayNutritionSummary(assessment: PlanNutritionAssessment) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             NutritionPercentMetric(
                 "Calorías", assessment.actual.calories, assessment.target.calories,
@@ -1057,8 +1087,9 @@ private fun NutritionPercentMetric(
     modifier: Modifier = Modifier
 ) {
     val ratio = if (target > 0.0) actual / target else 0.0
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(8.dp))
         Column {
             Text("${(ratio * 100).roundToInt()} %", color = color, style = MaterialTheme.typography.titleMedium)
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
