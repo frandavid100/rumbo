@@ -663,7 +663,6 @@ private fun HomeScreen(
     val latest = data.measurements.maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })
     val recommendation = latest?.recommendation
     val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
-    val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
     val effectiveGoal = RecommendationEngine.effectiveValues(data.measurements)
     val goal = effectiveGoal.goal
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
@@ -1294,35 +1293,56 @@ private fun ProgressChart(
     val lineColor = MaterialTheme.colorScheme.primary
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val labelSize = with(LocalDensity.current) { 11.sp.toPx() }
-    Canvas(Modifier.fillMaxWidth().height(138.dp)) {
-        val top = 8.dp.toPx()
-        val bottom = size.height - 8.dp.toPx()
+    Canvas(Modifier.fillMaxWidth().height(118.dp)) {
+        val top = 6.dp.toPx()
+        val bottom = size.height - 6.dp.toPx()
         val left = 8.dp.toPx()
         val right = size.width - 48.dp.toPx()
         val valueRange = maximum - minimum
         fun yFor(value: Double): Float = bottom -
             ((value - minimum) / valueRange).coerceIn(0.0, 1.0).toFloat() * (bottom - top)
+        fun stopFor(value: Double): Float =
+            (1.0 - (value - minimum) / valueRange).coerceIn(0.0, 1.0).toFloat()
 
-        bands.forEach { band ->
-            val bandTop = yFor(band.end)
-            val bandBottom = yFor(band.start)
-            drawRect(
-                band.color.copy(alpha = 0.30f),
-                topLeft = Offset(0f, bandTop),
-                size = Size(size.width, bandBottom - bandTop)
-            )
-        }
+        val topBand = bands.maxByOrNull { it.end }
+        val bottomBand = bands.minByOrNull { it.start }
+        val gradientStops = buildList {
+            topBand?.let { add(0f to it.color.copy(alpha = 0.38f)) }
+            bands.sortedByDescending { (it.start + it.end) / 2.0 }.forEach { band ->
+                add(stopFor((band.start + band.end) / 2.0) to band.color.copy(alpha = 0.38f))
+            }
+            bottomBand?.let { add(1f to it.color.copy(alpha = 0.38f)) }
+        }.distinctBy { it.first }.sortedBy { it.first }
+        val gradient = Brush.verticalGradient(
+            colorStops = gradientStops.toTypedArray(),
+            startY = top,
+            endY = bottom
+        )
+        drawRoundRect(
+            brush = gradient,
+            topLeft = Offset(0f, top),
+            size = Size(size.width, bottom - top),
+            cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx())
+        )
 
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             color = labelColor.toArgb()
             textSize = labelSize
             textAlign = android.graphics.Paint.Align.RIGHT
-            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            typeface = android.graphics.Typeface.create(
+                android.graphics.Typeface.DEFAULT,
+                android.graphics.Typeface.BOLD
+            )
         }
         thresholds.forEach { (threshold, label) ->
             val y = yFor(threshold)
-            drawLine(labelColor.copy(alpha = 0.35f), Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
-            drawContext.canvas.nativeCanvas.drawText(label, size.width - 4.dp.toPx(), y - 3.dp.toPx(), paint)
+            drawLine(
+                labelColor.copy(alpha = 0.28f),
+                Offset(0f, y),
+                Offset(size.width, y),
+                strokeWidth = 1.dp.toPx()
+            )
+            drawContext.canvas.nativeCanvas.drawText(label, size.width - 6.dp.toPx(), y - 4.dp.toPx(), paint)
         }
 
         if (points.isNotEmpty()) {
@@ -1338,10 +1358,9 @@ private fun ProgressChart(
                 Offset(x, yFor(value))
             }
             offsets.zipWithNext().forEach { (start, end) ->
-                drawLine(lineColor, start, end, strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+                drawLine(lineColor, start, end, strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round)
             }
             offsets.forEach { point ->
-                drawCircle(Color.White, radius = 5.dp.toPx(), center = point)
                 drawCircle(lineColor, radius = 3.5.dp.toPx(), center = point)
             }
         }
@@ -1524,10 +1543,6 @@ private fun BodyExplanationScreen(
                     ),
                     thresholds = listOf(18.5 to "18,5", 25.0 to "25", 30.0 to "30")
                 )
-                NarrativeSection(
-                    title = "Qué significa el IMC",
-                    body = "El IMC relaciona peso y altura y sirve para estimar riesgo en población adulta. Es útil como primera señal, pero no distingue grasa de músculo ni describe por completo la composición corporal."
-                )
             }
         }
         assessment?.waistToHeightRatio?.let { ratio ->
@@ -1548,24 +1563,6 @@ private fun BodyExplanationScreen(
                         RiskBand(0.60, 0.70, Color(0xFFE57373))
                     ),
                     thresholds = listOf(0.40 to "0,40", 0.50 to "0,50", 0.60 to "0,60")
-                )
-                NarrativeSection(
-                    title = "Qué significa cintura/altura",
-                    body = "La relación cintura/altura añade información sobre la grasa abdominal. Entre 0,40 y 0,49 suele considerarse saludable; entre 0,50 y 0,59 indica riesgo aumentado; y desde 0,60, riesgo alto. Por debajo de 0,40 también conviene interpretar el resultado con cautela."
-                )
-            }
-        }
-        item {
-            NarrativeSection(
-                title = "Cómo se usan juntos",
-                body = "Rumbo no decide a partir de una sola cifra. Usa el IMC como contexto general y la cintura/altura como señal abdominal. Si ambos evolucionan de forma distinta, evita atribuir automáticamente cualquier cambio de peso a grasa o músculo y prefiere mantener la recomendación hasta disponer de más datos."
-            )
-        }
-        recommendedGoal?.let { result ->
-            item {
-                NarrativeSection(
-                    title = "Por qué se recomienda «${result.goal.label}»",
-                    body = result.explanation
                 )
             }
         }
