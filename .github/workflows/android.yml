@@ -32,9 +32,10 @@ jobs:
       - name: Preparar herramientas de firma
         run: |
           BUILD_TOOLS="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
-          mkdir -p build/signing-tools/lib
+          mkdir -p build/signing-tools/lib build/signing-tools/lib64
           cp "$BUILD_TOOLS/apksigner" "$BUILD_TOOLS/zipalign" build/signing-tools/
           cp "$BUILD_TOOLS/lib/apksigner.jar" build/signing-tools/lib/
+          cp "$BUILD_TOOLS/lib64/libc++.so" build/signing-tools/lib64/
       - uses: actions/upload-artifact@v4
         with:
           name: rumbo-release-unsigned
