@@ -1,5 +1,14 @@
 # Historial de cambios
 
+## 0.17.0
+
+- Separadores sutiles y jerarquía tipográfica Material 3 en todas las tarjetas de Inicio.
+- Objetivo diario presentado como explicación breve y cuatro métricas con iconos y colores propios.
+- Selector de objetivo trasladado a un botón explícito dentro de su tarjeta.
+- Menú de hoy resumido en dos filas de porcentajes, sin barras de progreso.
+- Acceso directo para completar comidas ausentes y valoración textual del ajuste nutricional diario.
+- Ajuste de cantidades del día iniciado directamente desde Inicio.
+
 ## 0.16.0
 
 - Cantidades fijas o ajustables en cada alimento y plato, con límites mínimo y máximo.
