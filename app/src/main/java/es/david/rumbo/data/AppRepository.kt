@@ -308,7 +308,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 8)
+        put("schemaVersion", 9)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -397,7 +397,7 @@ class AppRepository(context: Context) {
                     meal.dishes.forEach { plannedDish ->
                         put(JSONObject().apply {
                             put("dishId", plannedDish.dishId)
-                            put("servings", plannedDish.servings)
+                            put("grams", plannedDish.grams)
                         })
                     }
                 })
@@ -427,6 +427,8 @@ class AppRepository(context: Context) {
         val schemaVersion = root.optInt("schemaVersion", 1)
         val profilesJson = root.optJSONArray("profiles")
         if (profilesJson != null) {
+            val dishes = root.optJSONArray("dishes")?.let(::decodeDishes).orEmpty()
+            val dishesById = dishes.associateBy { it.id }
             val profiles = buildList {
                 for (index in 0 until profilesJson.length()) {
                     val item = profilesJson.getJSONObject(index)
@@ -434,7 +436,11 @@ class AppRepository(context: Context) {
                         ProfileData(
                             profile = decodeProfile(item.getJSONObject("profile")),
                             measurements = decodeMeasurements(item.optJSONArray("measurements") ?: JSONArray()),
-                            plannedMeals = decodePlannedMeals(item.optJSONArray("plannedMeals") ?: JSONArray())
+                            plannedMeals = decodePlannedMeals(
+                                item.optJSONArray("plannedMeals") ?: JSONArray(),
+                                dishesById,
+                                schemaVersion
+                            )
                         )
                     )
                 }
@@ -446,7 +452,6 @@ class AppRepository(context: Context) {
             } else {
                 migrateLegacyFoods(root.optJSONArray("foods")?.let(::decodeFoods), schemaVersion)
             }
-            val dishes = root.optJSONArray("dishes")?.let(::decodeDishes).orEmpty()
             return AppData(profiles, root.optionalLong("activeProfileId"), foods, dishes)
         }
 
@@ -521,7 +526,11 @@ class AppRepository(context: Context) {
         }
     }.sortedWith(foodComparator)
 
-    private fun decodePlannedMeals(array: JSONArray): List<PlannedMeal> = buildList {
+    private fun decodePlannedMeals(
+        array: JSONArray,
+        dishesById: Map<Long, Dish>,
+        schemaVersion: Int
+    ): List<PlannedMeal> = buildList {
         for (index in 0 until array.length()) {
             val item = array.getJSONObject(index)
             val daysJson = item.optJSONArray("days") ?: JSONArray()
@@ -545,7 +554,15 @@ class AppRepository(context: Context) {
                     dishes = buildList {
                         for (dishIndex in 0 until dishesJson.length()) {
                             val planned = dishesJson.getJSONObject(dishIndex)
-                            add(PlannedDish(planned.getLong("dishId"), planned.getDouble("servings")))
+                            val dishId = planned.getLong("dishId")
+                            val grams = if (schemaVersion >= 9) {
+                                planned.getDouble("grams")
+                            } else {
+                                val servings = planned.getDouble("servings")
+                                dishesById[dishId]?.ingredients?.sumOf { it.grams }?.times(servings)
+                                    ?: 0.0
+                            }
+                            add(PlannedDish(dishId, grams))
                         }
                     }
                 )
