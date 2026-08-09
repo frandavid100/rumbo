@@ -29,8 +29,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Probar y compilar
         run: ./gradlew test assembleRelease
+      - name: Preparar herramientas de firma
+        run: |
+          BUILD_TOOLS="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          mkdir -p build/signing-tools/lib build/signing-tools/lib64
+          cp "$BUILD_TOOLS/apksigner" "$BUILD_TOOLS/zipalign" build/signing-tools/
+          cp "$BUILD_TOOLS/lib/apksigner.jar" build/signing-tools/lib/
+          cp "$BUILD_TOOLS/lib64/libc++.so" build/signing-tools/lib64/
       - uses: actions/upload-artifact@v4
         with:
           name: rumbo-release-unsigned
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: |
+            app/build/outputs/apk/release/app-release-unsigned.apk
+            build/signing-tools
           if-no-files-found: error
