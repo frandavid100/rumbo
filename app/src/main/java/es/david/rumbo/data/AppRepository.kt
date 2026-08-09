@@ -7,12 +7,15 @@ import es.david.rumbo.model.ActivityLevel
 import es.david.rumbo.model.AesanFoodCatalog
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.DietCompliance
+import es.david.rumbo.model.Dish
+import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.DefaultFoodCatalog
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedFood
+import es.david.rumbo.model.PlannedDish
 import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.ProfileData
 import es.david.rumbo.model.Sex
@@ -52,7 +55,7 @@ class AppRepository(context: Context) {
         } else {
             current.profiles.map { if (it.profile.id == profile.id) updatedProfile else it }
         }
-        return persistAndReturn(AppData(profiles, profile.id, current.foods))
+        return persistAndReturn(AppData(profiles, profile.id, current.foods, current.dishes))
     }
 
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
@@ -73,7 +76,7 @@ class AppRepository(context: Context) {
         } else {
             current.profiles.map { if (it.profile.id == profile.id) updatedProfile else it }
         }
-        return persistAndReturn(AppData(profiles, profile.id, current.foods))
+        return persistAndReturn(AppData(profiles, profile.id, current.foods, current.dishes))
     }
 
     fun switchProfile(profileId: Long): AppData {
@@ -88,7 +91,7 @@ class AppRepository(context: Context) {
         val remaining = current.profiles.filterNot { it.profile.id == profileId }
         val activeId = if (current.activeProfileId == profileId) remaining.first().profile.id
             else current.activeProfileId
-        return persistAndReturn(AppData(remaining, activeId, current.foods))
+        return persistAndReturn(AppData(remaining, activeId, current.foods, current.dishes))
     }
 
     fun addMeasurement(draft: Measurement): AppData {
@@ -127,16 +130,53 @@ class AppRepository(context: Context) {
 
     fun deleteFood(id: Long): AppData {
         val current = load()
+        val dishes = current.dishes.mapNotNull { dish ->
+            val ingredients = dish.ingredients.filterNot { it.foodId == id }
+            dish.copy(ingredients = ingredients).takeIf { ingredients.isNotEmpty() }
+        }
+        val dishIds = dishes.mapTo(mutableSetOf()) { it.id }
         val profiles = current.profiles.map { profileData ->
             profileData.copy(
                 plannedMeals = profileData.plannedMeals.mapNotNull { meal ->
                     val remaining = meal.items.filterNot { it.foodId == id }
-                    meal.copy(items = remaining).takeIf { remaining.isNotEmpty() }
+                    val plannedDishes = meal.dishes.filter { it.dishId in dishIds }
+                    meal.copy(items = remaining, dishes = plannedDishes)
+                        .takeIf { remaining.isNotEmpty() || plannedDishes.isNotEmpty() }
                 }
             )
         }
         return persistAndReturn(
-            current.copy(profiles = profiles, foods = current.foods.filterNot { it.id == id })
+            current.copy(
+                profiles = profiles,
+                foods = current.foods.filterNot { it.id == id },
+                dishes = dishes
+            )
+        )
+    }
+
+    fun saveDish(dish: Dish): AppData {
+        require(dish.isValid()) { "El plato no es válido" }
+        val current = load()
+        require(dish.ingredients.all { ingredient -> current.foods.any { it.id == ingredient.foodId } }) {
+            "El plato contiene alimentos inexistentes"
+        }
+        val dishes = (current.dishes.filterNot { it.id == dish.id } + dish)
+            .sortedWith(dishComparator)
+        return persistAndReturn(current.copy(dishes = dishes))
+    }
+
+    fun deleteDish(id: Long): AppData {
+        val current = load()
+        val profiles = current.profiles.map { profileData ->
+            profileData.copy(
+                plannedMeals = profileData.plannedMeals.mapNotNull { meal ->
+                    val dishes = meal.dishes.filterNot { it.dishId == id }
+                    meal.copy(dishes = dishes).takeIf { meal.items.isNotEmpty() || dishes.isNotEmpty() }
+                }
+            )
+        }
+        return persistAndReturn(
+            current.copy(profiles = profiles, dishes = current.dishes.filterNot { it.id == id })
         )
     }
 
@@ -146,6 +186,9 @@ class AppRepository(context: Context) {
         val active = current.activeProfileData ?: return current
         require(meal.items.all { item -> current.foods.any { it.id == item.foodId } }) {
             "La comida contiene alimentos inexistentes"
+        }
+        require(meal.dishes.all { item -> current.dishes.any { it.id == item.dishId } }) {
+            "La comida contiene platos inexistentes"
         }
         val otherMeals = active.plannedMeals.filterNot { it.id == meal.id }
         require(otherMeals.none { it.type == meal.type && it.days.any(meal.days::contains) }) {
@@ -188,18 +231,25 @@ class AppRepository(context: Context) {
     private fun normalize(data: AppData): AppData {
         val foods = data.foods.ifEmpty { baseFoods }
         val foodIds = foods.mapTo(mutableSetOf()) { it.id }
+        val dishes = data.dishes.mapNotNull { dish ->
+            val ingredients = dish.ingredients.filter { it.foodId in foodIds }
+            dish.copy(ingredients = ingredients).takeIf { ingredients.isNotEmpty() }
+        }.sortedWith(dishComparator)
+        val dishIds = dishes.mapTo(mutableSetOf()) { it.id }
         val profiles = data.profiles.map { profileData ->
             profileData.copy(
                 measurements = recalculate(profileData.profile, profileData.measurements),
                 plannedMeals = profileData.plannedMeals.mapNotNull { meal ->
                     val items = meal.items.filter { it.foodId in foodIds }
-                    meal.copy(items = items).takeIf { items.isNotEmpty() }
+                    val plannedDishes = meal.dishes.filter { it.dishId in dishIds }
+                    meal.copy(items = items, dishes = plannedDishes)
+                        .takeIf { items.isNotEmpty() || plannedDishes.isNotEmpty() }
                 }.sortedWith(plannedMealComparator)
             )
         }
         val activeId = data.activeProfileId?.takeIf { id -> profiles.any { it.profile.id == id } }
             ?: profiles.firstOrNull()?.profile?.id
-        return AppData(profiles, activeId, foods)
+        return AppData(profiles, activeId, foods, dishes)
     }
 
     private fun validate(data: AppData) {
@@ -220,6 +270,14 @@ class AppRepository(context: Context) {
             "Hay alimentos duplicados"
         }
         val foodIds = data.foods.mapTo(mutableSetOf()) { it.id }
+        require(data.dishes.all { it.isValid() }) { "Hay algún plato no válido" }
+        require(data.dishes.map { it.id }.distinct().size == data.dishes.size) {
+            "Hay platos duplicados"
+        }
+        require(data.dishes.flatMap { it.ingredients }.all { it.foodId in foodIds }) {
+            "Hay platos con alimentos inexistentes"
+        }
+        val dishIds = data.dishes.mapTo(mutableSetOf()) { it.id }
         data.profiles.forEach { profileData ->
             val meals = profileData.plannedMeals
             require(meals.all { it.isValid() }) { "Hay alguna comida planificada no válida" }
@@ -228,6 +286,9 @@ class AppRepository(context: Context) {
             }
             require(meals.flatMap { it.items }.all { it.foodId in foodIds }) {
                 "Hay comidas con alimentos inexistentes"
+            }
+            require(meals.flatMap { it.dishes }.all { it.dishId in dishIds }) {
+                "Hay comidas con platos inexistentes"
             }
             require(MealType.entries.all { type ->
                 val days = meals.filter { it.type == type }.flatMap { it.days }
@@ -247,7 +308,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 7)
+        put("schemaVersion", 8)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -264,6 +325,7 @@ class AppRepository(context: Context) {
             .filterNot(currentFoodsById::containsKey).toList()
         put("foodOverrides", encodeFoods(overrides))
         put("deletedFoodIds", JSONArray().apply { deletedIds.forEach(::put) })
+        put("dishes", encodeDishes(data.dishes))
     }
 
     private fun encodeProfile(profile: UserProfile): JSONObject = JSONObject().apply {
@@ -331,6 +393,31 @@ class AppRepository(context: Context) {
                         })
                     }
                 })
+                put("dishes", JSONArray().apply {
+                    meal.dishes.forEach { plannedDish ->
+                        put(JSONObject().apply {
+                            put("dishId", plannedDish.dishId)
+                            put("servings", plannedDish.servings)
+                        })
+                    }
+                })
+            })
+        }
+    }
+
+    private fun encodeDishes(dishes: List<Dish>): JSONArray = JSONArray().apply {
+        dishes.forEach { dish ->
+            put(JSONObject().apply {
+                put("id", dish.id)
+                put("name", dish.name)
+                put("ingredients", JSONArray().apply {
+                    dish.ingredients.forEach { ingredient ->
+                        put(JSONObject().apply {
+                            put("foodId", ingredient.foodId)
+                            put("grams", ingredient.grams)
+                        })
+                    }
+                })
             })
         }
     }
@@ -359,7 +446,8 @@ class AppRepository(context: Context) {
             } else {
                 migrateLegacyFoods(root.optJSONArray("foods")?.let(::decodeFoods), schemaVersion)
             }
-            return AppData(profiles, root.optionalLong("activeProfileId"), foods)
+            val dishes = root.optJSONArray("dishes")?.let(::decodeDishes).orEmpty()
+            return AppData(profiles, root.optionalLong("activeProfileId"), foods, dishes)
         }
 
         val legacyProfile = root.optJSONObject("profile") ?: return AppData()
@@ -438,6 +526,7 @@ class AppRepository(context: Context) {
             val item = array.getJSONObject(index)
             val daysJson = item.optJSONArray("days") ?: JSONArray()
             val itemsJson = item.optJSONArray("items") ?: JSONArray()
+            val dishesJson = item.optJSONArray("dishes") ?: JSONArray()
             add(
                 PlannedMeal(
                     id = item.getLong("id"),
@@ -452,11 +541,41 @@ class AppRepository(context: Context) {
                             val planned = itemsJson.getJSONObject(itemIndex)
                             add(PlannedFood(planned.getLong("foodId"), planned.getDouble("grams")))
                         }
+                    },
+                    dishes = buildList {
+                        for (dishIndex in 0 until dishesJson.length()) {
+                            val planned = dishesJson.getJSONObject(dishIndex)
+                            add(PlannedDish(planned.getLong("dishId"), planned.getDouble("servings")))
+                        }
                     }
                 )
             )
         }
     }.sortedWith(plannedMealComparator)
+
+    private fun decodeDishes(array: JSONArray): List<Dish> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.getJSONObject(index)
+            val ingredientsJson = item.optJSONArray("ingredients") ?: JSONArray()
+            add(
+                Dish(
+                    id = item.getLong("id"),
+                    name = item.getString("name"),
+                    ingredients = buildList {
+                        for (ingredientIndex in 0 until ingredientsJson.length()) {
+                            val ingredient = ingredientsJson.getJSONObject(ingredientIndex)
+                            add(
+                                DishIngredient(
+                                    ingredient.getLong("foodId"),
+                                    ingredient.getDouble("grams")
+                                )
+                            )
+                        }
+                    }
+                )
+            )
+        }
+    }.sortedWith(dishComparator)
 
     private fun decodeIds(array: JSONArray): Set<Long> = buildSet {
         for (index in 0 until array.length()) add(array.getLong(index))
@@ -511,6 +630,7 @@ class AppRepository(context: Context) {
         private const val KEY_DATA = "app_data_v1"
         private val foodComparator = compareBy<Food> { it.category.ordinal }
             .thenBy { it.name.lowercase() }
+        private val dishComparator = compareBy<Dish> { it.name.lowercase() }
         private val plannedMealComparator = compareBy<PlannedMeal> { it.type.ordinal }
             .thenBy { meal -> WeekDay.entries.indexOfFirst(meal.days::contains) }
     }
