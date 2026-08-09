@@ -1430,17 +1430,27 @@ private fun RecommendationSection(
                 recommendation.calories.toString(),
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (recommendation.isSafetyLimited) {
-                    MaterialTheme.colorScheme.tertiary
-                } else MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.width(6.dp))
             Text("kcal/día", modifier = Modifier.padding(bottom = 8.dp))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            MacroValue("Proteína", recommendation.proteinGrams)
-            MacroValue("Hidratos", recommendation.carbohydrateGrams)
-            MacroValue("Grasa", recommendation.fatGrams)
+            MacroValue(
+                "Proteína",
+                recommendation.proteinGrams,
+                foodCategoryColor(FoodCategory.PROTEIN)
+            )
+            MacroValue(
+                "Hidratos",
+                recommendation.carbohydrateGrams,
+                foodCategoryColor(FoodCategory.CARBOHYDRATE)
+            )
+            MacroValue(
+                "Grasa",
+                recommendation.fatGrams,
+                foodCategoryColor(FoodCategory.FAT)
+            )
         }
         if (recommendation.calculation != null) {
             TextButton(onClick = onExplain) {
