@@ -103,16 +103,32 @@ class AppRepository(context: Context) {
         return updateActive(current, active.copy(measurements = recalculate(active.profile, source)))
     }
 
-    fun setGoal(goal: WeightGoal): AppData {
+    fun setGoal(goal: WeightGoal): AppData = setWeeklyRate(
+        if (goal == WeightGoal.AUTOMATIC) null
+        else RecommendationEngine.weeklyRateFor(goal, load().activeProfileData
+            ?.let { RecommendationEngine.effectiveValues(it.measurements).weightKg })
+    )
+
+    fun setWeeklyRate(weeklyRateKg: Double?): AppData {
         val current = load()
         val active = current.activeProfileData ?: return current
-        if (RecommendationEngine.effectiveValues(active.measurements).goal == goal) return current
-        val change = Measurement(
-            id = System.currentTimeMillis(),
-            date = LocalDate.now(),
-            goal = goal
+        val effective = RecommendationEngine.effectiveValues(active.measurements)
+        if (weeklyRateKg == null && effective.goal == WeightGoal.AUTOMATIC) return current
+        if (weeklyRateKg != null && effective.weeklyRateKg == weeklyRateKg) return current
+        val goal = when {
+            weeklyRateKg == null -> WeightGoal.AUTOMATIC
+            weeklyRateKg < 0.0 -> WeightGoal.LOSE_SLOWLY
+            weeklyRateKg > 0.0 -> WeightGoal.GAIN_SLOWLY
+            else -> WeightGoal.MAINTAIN
+        }
+        return addMeasurement(
+            Measurement(
+                id = System.currentTimeMillis(),
+                date = LocalDate.now(),
+                goal = goal,
+                weeklyRateKg = weeklyRateKg
+            )
         )
-        return addMeasurement(change)
     }
 
     fun deleteMeasurement(id: Long): AppData {
@@ -292,6 +308,9 @@ class AppRepository(context: Context) {
         require(measurements.all { it.waistCm == null || it.waistCm in 35.0..250.0 }) {
             "Hay alguna cintura fuera de rango"
         }
+        require(measurements.all { it.weeklyRateKg == null || it.weeklyRateKg in -5.0..5.0 }) {
+            "Hay algún objetivo semanal fuera de rango"
+        }
         require(data.foods.all { it.isValid() }) { "Hay algún alimento no válido" }
         require(data.foods.map { it.id }.distinct().size == data.foods.size) {
             "Hay alimentos duplicados"
@@ -335,7 +354,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 10)
+        put("schemaVersion", 11)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -373,6 +392,7 @@ class AppRepository(context: Context) {
                 putNullable("activity", measurement.activity?.name)
                 putNullable("compliance", measurement.compliance?.name)
                 putNullable("goal", measurement.goal?.name)
+                putNullable("weeklyRateKg", measurement.weeklyRateKg)
             })
         }
     }
@@ -542,7 +562,8 @@ class AppRepository(context: Context) {
                     waistCm = item.optionalDouble("waistCm"),
                     activity = item.optionalEnum("activity", ActivityLevel::valueOf),
                     compliance = item.optionalEnum("compliance", DietCompliance::valueOf),
-                    goal = item.optionalEnum("goal", WeightGoal::valueOf)
+                    goal = item.optionalEnum("goal", WeightGoal::valueOf),
+                    weeklyRateKg = item.optionalDouble("weeklyRateKg")
                 )
             )
         }
