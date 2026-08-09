@@ -769,7 +769,7 @@ private fun BodyGoalNutritionCard(
                 )
             } else {
                 Text("Para ello debes consumir cada día:", style = MaterialTheme.typography.bodyLarge)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     NutritionGoalMetric(
                         "Calorías", "${recommendation.calories} kcal",
                         Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.primary,
@@ -780,8 +780,6 @@ private fun BodyGoalNutritionCard(
                         foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN),
                         Modifier.weight(1f)
                     )
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NutritionGoalMetric(
                         "Hidratos", "${recommendation.carbohydrateGrams} g",
                         foodCategoryIcon(FoodCategory.CARBOHYDRATE), foodCategoryColor(FoodCategory.CARBOHYDRATE),
@@ -894,16 +892,19 @@ private fun NutritionGoalMetric(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier.padding(horizontal = 10.dp),
+        modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Start
+        horizontalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Text(value, color = color, style = MaterialTheme.typography.titleLarge)
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(
+            value,
+            color = color,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
     }
 }
 
@@ -1055,30 +1056,23 @@ private fun TodayPlanSection(
 
 @Composable
 private fun TodayNutritionSummary(assessment: PlanNutritionAssessment) {
-    Column(
-        Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            NutritionPercentMetric(
-                "Calorías", assessment.actual.calories, assessment.target.calories,
-                Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.primary, Modifier.weight(1f)
-            )
-            NutritionPercentMetric(
-                "Proteína", assessment.actual.proteinGrams, assessment.target.proteinGrams,
-                foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN), Modifier.weight(1f)
-            )
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            NutritionPercentMetric(
-                "Hidratos", assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams,
-                foodCategoryIcon(FoodCategory.CARBOHYDRATE), foodCategoryColor(FoodCategory.CARBOHYDRATE), Modifier.weight(1f)
-            )
-            NutritionPercentMetric(
-                "Grasa", assessment.actual.fatGrams, assessment.target.fatGrams,
-                foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT), Modifier.weight(1f)
-            )
-        }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        NutritionPercentMetric(
+            "Calorías", assessment.actual.calories, assessment.target.calories,
+            Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.primary, Modifier.weight(1f)
+        )
+        NutritionPercentMetric(
+            "Proteína", assessment.actual.proteinGrams, assessment.target.proteinGrams,
+            foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN), Modifier.weight(1f)
+        )
+        NutritionPercentMetric(
+            "Hidratos", assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams,
+            foodCategoryIcon(FoodCategory.CARBOHYDRATE), foodCategoryColor(FoodCategory.CARBOHYDRATE), Modifier.weight(1f)
+        )
+        NutritionPercentMetric(
+            "Grasa", assessment.actual.fatGrams, assessment.target.fatGrams,
+            foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT), Modifier.weight(1f)
+        )
     }
 }
 
@@ -1093,16 +1087,19 @@ private fun NutritionPercentMetric(
 ) {
     val ratio = if (target > 0.0) actual / target else 0.0
     Row(
-        modifier.padding(horizontal = 10.dp),
+        modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Start
+        horizontalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Text("${(ratio * 100).roundToInt()} %", color = color, style = MaterialTheme.typography.titleLarge)
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(
+            "${(ratio * 100).roundToInt()} %",
+            color = color,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
     }
 }
 
