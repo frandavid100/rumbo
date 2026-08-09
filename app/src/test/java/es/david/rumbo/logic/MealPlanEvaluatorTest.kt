@@ -123,7 +123,7 @@ class MealPlanEvaluatorTest {
     }
 
     @Test
-    fun shoppingAmountsExpandDishesAndServings() {
+    fun shoppingAmountsExpandDishesFromPlannedGrams() {
         val dish = es.david.rumbo.model.Dish(
             id = 20,
             name = "Batido",
@@ -133,7 +133,7 @@ class MealPlanEvaluatorTest {
             id = 1,
             type = MealType.BREAKFAST,
             days = setOf(WeekDay.MONDAY, WeekDay.TUESDAY),
-            dishes = listOf(es.david.rumbo.model.PlannedDish(dish.id, 1.5))
+            dishes = listOf(es.david.rumbo.model.PlannedDish(dish.id, 150.0))
         )
 
         val amounts = MealPlanEvaluator.weeklyFoodAmounts(listOf(breakfast), mapOf(dish.id to dish))
