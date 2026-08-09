@@ -349,7 +349,7 @@ fun RumboApp(repository: AppRepository) {
                 )
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
-                    onGoalChange = { data = repository.setGoal(it) },
+                    onGoalChange = { data = repository.setWeeklyRate(it) },
                     onAddMeasurement = { screenName = Screen.ADD.name },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
                     onOpenPlanner = { screenName = Screen.PLANNER.name },
@@ -650,7 +650,7 @@ private fun ProfileSwitcher(
 @Composable
 private fun HomeScreen(
     data: AppData,
-    onGoalChange: (WeightGoal) -> Unit,
+    onGoalChange: (Double?) -> Unit,
     onAddMeasurement: () -> Unit,
     onExplainBody: () -> Unit,
     onOpenPlanner: () -> Unit,
@@ -664,7 +664,8 @@ private fun HomeScreen(
     val recommendation = latest?.recommendation
     val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
     val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
-    val goal = RecommendationEngine.effectiveValues(data.measurements).goal
+    val effectiveGoal = RecommendationEngine.effectiveValues(data.measurements)
+    val goal = effectiveGoal.goal
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
@@ -680,6 +681,7 @@ private fun HomeScreen(
                     recommendedGoal = recommendedGoal,
                     weightKg = RecommendationEngine.effectiveValues(data.measurements).weightKg,
                     goal = goal,
+                    chosenWeeklyRate = effectiveGoal.weeklyRateKg,
                     recommendation = recommendation,
                     onGoalChange = onGoalChange,
                     onExplain = onExplainBody,
@@ -716,38 +718,91 @@ private fun BodyGoalNutritionCard(
     recommendedGoal: RecommendedGoal,
     weightKg: Double?,
     goal: WeightGoal,
+    chosenWeeklyRate: Double?,
     recommendation: es.david.rumbo.model.Recommendation?,
-    onGoalChange: (WeightGoal) -> Unit,
+    onGoalChange: (Double?) -> Unit,
     onExplain: () -> Unit,
     onAddMeasurement: () -> Unit
 ) {
     var choosingGoal by remember { mutableStateOf(false) }
-    val displayedGoal = if (goal == WeightGoal.AUTOMATIC) recommendedGoal.goal else goal
-    val weeklyRate = RecommendationEngine.weeklyRateFor(displayedGoal, weightKg)
+    var manualMagnitude by rememberSaveable { mutableStateOf("") }
+    var manualDirection by remember { mutableStateOf(-1.0) }
+    var manualError by rememberSaveable { mutableStateOf<String?>(null) }
+    val recommendedRate = RecommendationEngine.weeklyRateFor(recommendedGoal.goal, weightKg) ?: 0.0
+    val selectedRate = if (goal == WeightGoal.AUTOMATIC) {
+        recommendedRate
+    } else {
+        chosenWeeklyRate ?: RecommendationEngine.weeklyRateFor(goal, weightKg) ?: 0.0
+    }
     if (choosingGoal) {
         AlertDialog(
             onDismissRequest = { choosingGoal = false },
-            title = { Text("Cambiar objetivo") },
+            title = { Text("Cambiar objetivo semanal") },
             text = {
-                Column {
-                    WeightGoal.entries.forEach { option ->
-                        TextButton(
-                            onClick = {
-                                onGoalChange(option)
-                                choosingGoal = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (option == goal) {
-                                Icon(Icons.Default.Check, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                            }
-                            Text(option.label, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Rumbo recomienda ${weeklyRateAction(recommendedRate)} cada semana.")
+                    OutlinedButton(
+                        onClick = {
+                            onGoalChange(null)
+                            choosingGoal = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (goal == WeightGoal.AUTOMATIC) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
                         }
+                        Text("Volver a lo recomendado")
+                    }
+                    HorizontalDivider()
+                    Text("Elegir una cifra manual", fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = manualDirection < 0.0,
+                            onClick = { manualDirection = -1.0 },
+                            label = { Text("Perder") }
+                        )
+                        FilterChip(
+                            selected = manualDirection > 0.0,
+                            onClick = { manualDirection = 1.0 },
+                            label = { Text("Ganar") }
+                        )
+                    }
+                    OutlinedTextField(
+                        value = manualMagnitude,
+                        onValueChange = {
+                            manualMagnitude = it.filter { char ->
+                                char.isDigit() || char == ',' || char == '.'
+                            }.take(4)
+                            manualError = null
+                        },
+                        label = { Text("Kg por semana") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        "La cifra elegida se conserva, pero el cálculo puede limitarla por seguridad.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    manualError?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             },
             confirmButton = {
+                TextButton(onClick = {
+                    val magnitude = parseDecimal(manualMagnitude)
+                    if (magnitude == null || magnitude !in 0.0..5.0) {
+                        manualError = "Introduce una cifra entre 0 y 5 kg por semana."
+                    } else {
+                        onGoalChange(if (magnitude == 0.0) 0.0 else magnitude * manualDirection)
+                        choosingGoal = false
+                    }
+                }) { Text("Usar esta cifra") }
+            },
+            dismissButton = {
                 TextButton(onClick = { choosingGoal = false }) { Text("Cancelar") }
             }
         )
@@ -756,17 +811,13 @@ private fun BodyGoalNutritionCard(
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             HomeCardHeader("Situación y objetivo")
             CombinedBodyScale(assessment)
-            val goalSentence = if (goal == WeightGoal.AUTOMATIC) {
-                recommendedGoalSentence(displayedGoal, weeklyRate)
-            } else {
-                selectedGoalSentence(displayedGoal, weeklyRate)
-            }
             Text(
-                if (recommendation == null) {
-                    goalSentence
-                } else {
-                    "$goalSentence Para ello, cada día debes consumir:"
-                },
+                weeklyGoalSummary(
+                    recommendedRate = recommendedRate,
+                    selectedRate = selectedRate,
+                    automatic = goal == WeightGoal.AUTOMATIC,
+                    appliedRate = recommendation?.calculation?.appliedWeeklyRateKg
+                ) + if (recommendation == null) "" else " Para ello, cada día debes consumir:",
                 style = MaterialTheme.typography.bodyLarge
             )
             if (recommendation == null) {
@@ -775,26 +826,25 @@ private fun BodyGoalNutritionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     NutritionGoalMetric(
                         "Calorías", "${recommendation.calories} kcal",
-                        Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.primary,
-                        Modifier.weight(1f)
+                        Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.primary
                     )
                     NutritionGoalMetric(
                         "Proteína", "${recommendation.proteinGrams} g",
-                        foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN),
-                        Modifier.weight(1f)
+                        foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN)
                     )
                     NutritionGoalMetric(
                         "Hidratos", "${recommendation.carbohydrateGrams} g",
-                        foodCategoryIcon(FoodCategory.CARBOHYDRATE), foodCategoryColor(FoodCategory.CARBOHYDRATE),
-                        Modifier.weight(1f)
+                        foodCategoryIcon(FoodCategory.CARBOHYDRATE), foodCategoryColor(FoodCategory.CARBOHYDRATE)
                     )
                     NutritionGoalMetric(
                         "Grasa", "${recommendation.fatGrams} g",
-                        foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT),
-                        Modifier.weight(1f)
+                        foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT)
                     )
                 }
             }
@@ -896,19 +946,39 @@ private fun mapRiskValue(value: Double, thresholds: List<Double>): Double {
     return positions[index] + fraction * (positions[index + 1] - positions[index])
 }
 
-private fun recommendedGoalSentence(goal: WeightGoal, weeklyRate: Double?): String = when {
-    goal == WeightGoal.MAINTAIN -> "Te recomendamos mantener el peso."
-    weeklyRate == null -> "Te recomendamos ${goal.label.lowercase()}."
-    else -> "Te recomendamos ${goal.label.lowercase()} · " +
-        "${formatOneDecimal(abs(weeklyRate))} kg/semana."
+private fun weeklyRateAction(rate: Double): String = when {
+    abs(rate) < 0.005 -> "mantener el peso"
+    rate < 0.0 -> "perder ${formatOneDecimal(abs(rate))} kg"
+    else -> "ganar ${formatOneDecimal(rate)} kg"
 }
 
-private fun selectedGoalSentence(goal: WeightGoal, weeklyRate: Double?): String = when {
-    goal == WeightGoal.MAINTAIN -> "Has elegido mantener el peso."
-    weeklyRate == null -> "Has elegido ${goal.label.lowercase()}."
-    else -> "Has elegido ${goal.label.lowercase()} · " +
-        "${formatOneDecimal(abs(weeklyRate))} kg/semana."
+private fun weeklyGoalSummary(
+    recommendedRate: Double,
+    selectedRate: Double,
+    automatic: Boolean,
+    appliedRate: Double?
+): String {
+    val recommended = "Te recomendamos ${weeklyRateAction(recommendedRate)} cada semana"
+    if (automatic) return "$recommended."
+    val comparison = if (
+        abs(recommendedRate) >= 0.005 &&
+        recommendedRate * selectedRate > 0.0
+    ) {
+        val multiple = abs(selectedRate / recommendedRate)
+        " (${formatCompactMultiple(multiple)} veces lo recomendado)"
+    } else {
+        ""
+    }
+    val chosen = "pero tú has elegido ${weeklyRateAction(selectedRate)}$comparison"
+    val limited = appliedRate?.takeIf { abs(it - selectedRate) >= 0.005 }?.let {
+        " Por seguridad, el cálculo aplica ${weeklyRateAction(it)} cada semana."
+    }.orEmpty()
+    return "$recommended, $chosen.$limited"
 }
+
+private fun formatCompactMultiple(value: Double): String =
+    if (abs(value - value.roundToInt()) < 0.05) value.roundToInt().toString()
+    else formatOneDecimal(value)
 
 @Composable
 private fun NutritionGoalMetric(
