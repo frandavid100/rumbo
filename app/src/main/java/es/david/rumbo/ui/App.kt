@@ -663,6 +663,7 @@ private fun HomeScreen(
     val latest = data.measurements.maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })
     val recommendation = latest?.recommendation
     val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
+    val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
     val effectiveGoal = RecommendationEngine.effectiveValues(data.measurements)
     val goal = effectiveGoal.goal
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
