@@ -3,6 +3,7 @@
 package es.david.rumbo.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -49,6 +50,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
@@ -71,6 +73,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -120,6 +123,7 @@ import es.david.rumbo.model.WeightGoal
 import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.nutrition
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -175,6 +179,21 @@ fun RumboApp(repository: AppRepository) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val navigateBack = {
+        screenName = when {
+            screen == Screen.EDIT_MEASUREMENT && selectedMeasurementId != null ->
+                Screen.MEASUREMENT_DETAIL.name
+            screen == Screen.EDIT_FOOD && selectedFoodId != null ->
+                Screen.FOOD_DETAIL.name
+            screen in setOf(Screen.ADD_PLANNED_MEAL, Screen.EDIT_PLANNED_MEAL) ->
+                Screen.PLANNER.name
+            screen in setOf(Screen.ADD_DISH, Screen.EDIT_DISH) -> Screen.DISHES.name
+            screen in setOf(Screen.ADD_FOOD, Screen.FOOD_DETAIL) -> Screen.FOODS.name
+            else -> Screen.HOME.name
+        }
+    }
+
+    BackHandler(enabled = profileReady && screen != Screen.HOME) { navigateBack() }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -213,19 +232,7 @@ fun RumboApp(repository: AppRepository) {
             TopAppBar(
                 navigationIcon = {
                     if (!screen.inNavigation) {
-                        IconButton(onClick = {
-                            screenName = when {
-                                screen == Screen.EDIT_MEASUREMENT && selectedMeasurementId != null ->
-                                    Screen.MEASUREMENT_DETAIL.name
-                                screen == Screen.EDIT_FOOD && selectedFoodId != null ->
-                                    Screen.FOOD_DETAIL.name
-                                screen in setOf(Screen.ADD_PLANNED_MEAL, Screen.EDIT_PLANNED_MEAL) ->
-                                    Screen.PLANNER.name
-                                screen in setOf(Screen.ADD_DISH, Screen.EDIT_DISH) -> Screen.DISHES.name
-                                screen in setOf(Screen.ADD_FOOD, Screen.FOOD_DETAIL) -> Screen.FOODS.name
-                                else -> Screen.HOME.name
-                            }
-                        }) {
+                        IconButton(onClick = navigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                         }
                     }
@@ -321,13 +328,10 @@ fun RumboApp(repository: AppRepository) {
                     data = data,
                     onAdd = { screenName = Screen.ADD.name },
                     onGoalChange = { data = repository.setGoal(it) },
-                    onExplainGoal = { screenName = Screen.GOAL_EXPLANATION.name },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
                     onExplainRecommendation = { screenName = Screen.RECOMMENDATION_EXPLANATION.name },
-                    onOpenMeasurement = {
-                        selectedMeasurementId = it
-                        screenName = Screen.MEASUREMENT_DETAIL.name
-                    }
+                    onOpenPlanner = { screenName = Screen.PLANNER.name },
+                    onOpenFoods = { screenName = Screen.FOODS.name }
                 )
                 screen == Screen.ADD -> AddMeasurementScreen(
                     data = data,
@@ -389,6 +393,7 @@ fun RumboApp(repository: AppRepository) {
                     recommendation = currentRecommendation,
                     initialType = draftMealTypeName?.let { MealType.valueOf(it) },
                     initialDays = draftMealDayName?.let { setOf(WeekDay.valueOf(it)) }.orEmpty(),
+                    onCreateDish = { data = repository.saveDish(it) },
                     onSave = {
                         data = repository.savePlannedMeal(it)
                         draftMealTypeName = null
@@ -408,6 +413,7 @@ fun RumboApp(repository: AppRepository) {
                             existingMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                             recommendation = currentRecommendation,
                             initial = meal,
+                            onCreateDish = { data = repository.saveDish(it) },
                             onSave = {
                                 data = repository.savePlannedMeal(it)
                                 screenName = Screen.PLANNER.name
@@ -528,7 +534,13 @@ fun RumboApp(repository: AppRepository) {
                     onImport = { importLauncher.launch(arrayOf("application/json", "text/plain")) }
                 )
                 screen == Screen.GOAL_EXPLANATION -> GoalExplanationScreen(data)
-                screen == Screen.BODY_EXPLANATION -> BodyExplanationScreen(data)
+                screen == Screen.BODY_EXPLANATION -> BodyExplanationScreen(
+                    data = data,
+                    onOpenMeasurement = {
+                        selectedMeasurementId = it
+                        screenName = Screen.MEASUREMENT_DETAIL.name
+                    }
+                )
                 screen == Screen.RECOMMENDATION_EXPLANATION -> RecommendationExplanationScreen(data)
             }
         }
@@ -583,10 +595,10 @@ private fun HomeScreen(
     data: AppData,
     onAdd: () -> Unit,
     onGoalChange: (WeightGoal) -> Unit,
-    onExplainGoal: () -> Unit,
     onExplainBody: () -> Unit,
     onExplainRecommendation: () -> Unit,
-    onOpenMeasurement: (Long) -> Unit
+    onOpenPlanner: () -> Unit,
+    onOpenFoods: () -> Unit
 ) {
     val profile = data.profile
     val latest = data.measurements.maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })
@@ -594,30 +606,33 @@ private fun HomeScreen(
     val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
     val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
     val goal = RecommendationEngine.effectiveValues(data.measurements).goal
+    val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
+    val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
+    val meals = data.activeProfileData?.plannedMeals.orEmpty()
 
     LazyColumn(
         contentPadding = PaddingValues(start = 24.dp, top = 12.dp, end = 24.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        if (assessment != null) {
+        if (assessment != null && recommendedGoal != null) {
             item {
-                BodyProgressSection(
-                    profile = profile,
-                    measurements = data.measurements,
+                BodySummarySection(
                     assessment = assessment,
+                    recommendedGoal = recommendedGoal,
+                    weightKg = RecommendationEngine.effectiveValues(data.measurements).weightKg,
                     onExplain = onExplainBody
                 )
             }
         }
         item { HorizontalDivider() }
-        recommendedGoal?.let { result ->
-            item { RecommendedGoalSection(result) }
-        }
         item {
-            GoalSection(
-                goal = goal,
-                onGoalChange = onGoalChange,
-                onExplain = onExplainGoal
+            SelectorField(
+                label = "Objetivo",
+                selectedLabel = goal.label,
+                options = WeightGoal.entries,
+                optionLabel = { it.label },
+                onSelect = onGoalChange,
+                onClear = null
             )
         }
         item {
@@ -629,89 +644,181 @@ private fun HomeScreen(
         }
         item { HorizontalDivider() }
         item {
-            Text("Historial", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            TodayPlanSection(
+                meals = meals,
+                foodsById = foodsById,
+                dishesById = dishesById,
+                recommendation = recommendation,
+                onOpenPlanner = onOpenPlanner
+            )
         }
-        if (data.measurements.isEmpty()) {
-            item {
-                Text(
-                    "Todavía no hay mediciones",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
-            }
-        } else {
-            items(
-                data.measurements.sortedWith(
-                    compareByDescending<Measurement> { it.date }.thenByDescending { it.id }
-                ),
-                key = { it.id }
-            ) { measurement ->
-                HistoryEntry(measurement = measurement, onClick = { onOpenMeasurement(measurement.id) })
-                HorizontalDivider(Modifier.padding(top = 4.dp))
-            }
+        item { HorizontalDivider() }
+        item {
+            HomeShoppingSection(
+                meals = meals,
+                foodsById = foodsById,
+                dishesById = dishesById,
+                onOpenFoods = onOpenFoods
+            )
         }
     }
 }
 
 @Composable
-private fun BodyProgressSection(
-    profile: UserProfile,
-    measurements: List<Measurement>,
+private fun BodySummarySection(
     assessment: BodyAssessment,
+    recommendedGoal: RecommendedGoal,
+    weightKg: Double?,
     onExplain: () -> Unit
 ) {
-    val ordered = measurements.sortedWith(compareBy<Measurement> { it.date }.thenBy { it.id })
-    val heightM = profile.heightCm / 100.0
-    val bmiPoints = ordered.mapNotNull { item ->
-        item.weightKg?.let { item.date to it / heightM.pow(2) }
-    }
-    val waistPoints = ordered.mapNotNull { item ->
-        item.waistCm?.let { item.date to it / profile.heightCm }
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        assessment.bmi?.let {
-            BodyIndicator(
-                label = "IMC",
-                value = formatOneDecimal(it),
-                interpretation = assessment.bmiInterpretation.orEmpty()
-            )
-            ProgressChart(
-                points = bmiPoints,
-                minimum = 15.0,
-                maximum = 40.0,
-                bands = listOf(
-                    RiskBand(15.0, 18.5, Color(0xFFE57373)),
-                    RiskBand(18.5, 25.0, Color(0xFF66BB6A)),
-                    RiskBand(25.0, 30.0, Color(0xFFFFCA4B)),
-                    RiskBand(30.0, 40.0, Color(0xFFE57373))
-                ),
-                thresholds = listOf(18.5 to "18,5", 25.0 to "25", 30.0 to "30")
-            )
-        }
-        if (assessment.bmi != null && assessment.waistToHeightRatio != null) HorizontalDivider()
-        assessment.waistToHeightRatio?.let {
-            BodyIndicator(
-                label = "Cintura/altura",
-                value = formatTwoDecimals(it),
-                interpretation = assessment.waistInterpretation.orEmpty()
-            )
-            ProgressChart(
-                points = waistPoints,
-                minimum = 0.35,
-                maximum = 0.70,
-                bands = listOf(
-                    RiskBand(0.35, 0.40, Color(0xFFBDBDBD)),
-                    RiskBand(0.40, 0.50, Color(0xFF66BB6A)),
-                    RiskBand(0.50, 0.60, Color(0xFFFFCA4B)),
-                    RiskBand(0.60, 0.70, Color(0xFFE57373))
-                ),
-                thresholds = listOf(0.40 to "0,40", 0.50 to "0,50", 0.60 to "0,60")
-            )
-        }
+    val weeklyRate = RecommendationEngine.weeklyRateFor(recommendedGoal.goal, weightKg)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        CombinedBodyScale(assessment)
+        Text("Objetivo recomendado", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            recommendedGoal.goal.label,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            weeklyRate?.let(::formatWeeklyRate) ?: "Ritmo pendiente del peso",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         TextButton(onClick = onExplain) {
-            Text("Entender la situación corporal")
+            Text("Entender esta información")
         }
+    }
+}
+
+@Composable
+private fun CombinedBodyScale(assessment: BodyAssessment) {
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val labelSize = with(LocalDensity.current) { 12.sp.toPx() }
+    Canvas(Modifier.fillMaxWidth().height(92.dp)) {
+        val barTop = 38.dp.toPx()
+        val barHeight = 16.dp.toPx()
+        val segmentEnds = listOf(0f, 0.15f, 0.30f, 0.70f, 0.85f, 1f)
+        val colors = listOf(
+            Color(0xFFE57373), Color(0xFFFFCA4B), Color(0xFF66BB6A),
+            Color(0xFFFFCA4B), Color(0xFFE57373)
+        )
+        colors.indices.forEach { index ->
+            val start = segmentEnds[index] * size.width
+            val end = segmentEnds[index + 1] * size.width
+            drawRect(colors[index], Offset(start, barTop), Size(end - start, barHeight))
+        }
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = labelColor.toArgb()
+            textSize = labelSize
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        }
+        fun marker(position: Double, label: String, above: Boolean) {
+            val x = (position.coerceIn(0.04, 0.96) * size.width).toFloat()
+            val lineStart = if (above) barTop - 8.dp.toPx() else barTop + barHeight
+            val lineEnd = if (above) barTop else barTop + barHeight + 8.dp.toPx()
+            drawLine(labelColor, Offset(x, lineStart), Offset(x, lineEnd), strokeWidth = 2.dp.toPx())
+            drawCircle(Color.White, 5.dp.toPx(), Offset(x, barTop + barHeight / 2f))
+            drawCircle(labelColor, 3.5.dp.toPx(), Offset(x, barTop + barHeight / 2f))
+            val textY = if (above) barTop - 13.dp.toPx() else barTop + barHeight + 23.dp.toPx()
+            drawContext.canvas.nativeCanvas.drawText(label, x, textY, paint)
+        }
+        assessment.bmi?.let { marker(mapRiskValue(it, listOf(14.0, 16.0, 18.5, 25.0, 30.0, 40.0)), "IMC ${formatOneDecimal(it)}", true) }
+        assessment.waistToHeightRatio?.let {
+            marker(mapRiskValue(it, listOf(0.30, 0.35, 0.40, 0.50, 0.60, 0.70)), "C/A ${formatTwoDecimals(it)}", false)
+        }
+    }
+}
+
+private fun mapRiskValue(value: Double, thresholds: List<Double>): Double {
+    val positions = listOf(0.0, 0.15, 0.30, 0.70, 0.85, 1.0)
+    if (value <= thresholds.first()) return positions.first()
+    if (value >= thresholds.last()) return positions.last()
+    val index = thresholds.zipWithNext().indexOfFirst { (start, end) -> value in start..end }
+    val fraction = (value - thresholds[index]) / (thresholds[index + 1] - thresholds[index])
+    return positions[index] + fraction * (positions[index + 1] - positions[index])
+}
+
+private fun formatWeeklyRate(rate: Double): String = when {
+    abs(rate) < 0.005 -> "Mantener el peso (0 kg por semana)"
+    rate < 0.0 -> "Aproximadamente ${formatTwoDecimals(abs(rate))} kg menos por semana"
+    else -> "Aproximadamente ${formatTwoDecimals(rate)} kg más por semana"
+}
+
+@Composable
+private fun TodayPlanSection(
+    meals: List<PlannedMeal>,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    recommendation: es.david.rumbo.model.Recommendation?,
+    onOpenPlanner: () -> Unit
+) {
+    val today = WeekDay.entries[LocalDate.now().dayOfWeek.value - 1]
+    val todayMeals = meals.filter { today in it.days }.associateBy { it.type }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Plan para hoy · ${today.label}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        DayNutritionEntry(
+            day = today,
+            meals = meals,
+            foodsById = foodsById,
+            dishesById = dishesById,
+            recommendation = recommendation,
+            onClick = null
+        )
+        MealType.entries.forEach { type ->
+            val meal = todayMeals[type]
+            val labels = meal?.let {
+                it.dishes.mapNotNull { planned -> dishesById[planned.dishId]?.name } +
+                    it.items.mapNotNull { planned -> foodsById[planned.foodId]?.name }
+            }.orEmpty()
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(type.label, modifier = Modifier.weight(0.34f), fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (labels.isEmpty()) "Sin planificar" else labels.joinToString(" · "),
+                    modifier = Modifier.weight(0.66f),
+                    color = if (labels.isEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+        TextButton(onClick = onOpenPlanner) { Text("Abrir el planificador") }
+    }
+}
+
+@Composable
+private fun HomeShoppingSection(
+    meals: List<PlannedMeal>,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    onOpenFoods: () -> Unit
+) {
+    val amounts = remember(meals, dishesById) {
+        MealPlanEvaluator.weeklyFoodAmounts(meals, dishesById)
+    }
+    val entries = remember(amounts, foodsById) {
+        amounts.mapNotNull { (foodId, grams) -> foodsById[foodId]?.let { it to grams } }
+            .sortedBy { it.first.name.lowercase() }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Lista de la compra", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        if (entries.isEmpty()) {
+            Text("El plan todavía no contiene alimentos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            entries.forEach { (food, grams) ->
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SmallFoodCategoryBadge(food.category)
+                    Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Text("${formatDecimal(grams)} g", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+        TextButton(onClick = onOpenFoods) { Text("Abrir Alimentos") }
     }
 }
 
@@ -873,7 +980,7 @@ private fun RecommendationSection(
         }
         if (recommendation.calculation != null) {
             TextButton(onClick = onExplain) {
-                Text("Entender la recomendación")
+                Text("Entender esta recomendación")
             }
         }
     }
@@ -929,9 +1036,19 @@ private fun GoalExplanationScreen(data: AppData) {
 }
 
 @Composable
-private fun BodyExplanationScreen(data: AppData) {
-    val assessment = data.profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
+private fun BodyExplanationScreen(data: AppData, onOpenMeasurement: (Long) -> Unit) {
+    val profile = data.profile
+    val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
+    val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
     val uriHandler = LocalUriHandler.current
+    val ordered = data.measurements.sortedWith(compareBy<Measurement> { it.date }.thenBy { it.id })
+    val heightM = profile?.heightCm?.div(100.0)
+    val bmiPoints = if (heightM == null) emptyList() else ordered.mapNotNull { item ->
+        item.weightKg?.let { item.date to it / heightM.pow(2) }
+    }
+    val waistPoints = if (profile == null) emptyList() else ordered.mapNotNull { item ->
+        item.waistCm?.let { item.date to it / profile.heightCm }
+    }
 
     LazyColumn(
         contentPadding = PaddingValues(20.dp),
@@ -942,16 +1059,50 @@ private fun BodyExplanationScreen(data: AppData) {
         }
         assessment?.bmi?.let { bmi ->
             item {
+                BodyIndicator(
+                    label = "IMC",
+                    value = formatOneDecimal(bmi),
+                    interpretation = assessment.bmiInterpretation.orEmpty()
+                )
+                ProgressChart(
+                    points = bmiPoints,
+                    minimum = 15.0,
+                    maximum = 40.0,
+                    bands = listOf(
+                        RiskBand(15.0, 18.5, Color(0xFFE57373)),
+                        RiskBand(18.5, 25.0, Color(0xFF66BB6A)),
+                        RiskBand(25.0, 30.0, Color(0xFFFFCA4B)),
+                        RiskBand(30.0, 40.0, Color(0xFFE57373))
+                    ),
+                    thresholds = listOf(18.5 to "18,5", 25.0 to "25", 30.0 to "30")
+                )
                 NarrativeSection(
-                    title = "IMC: ${formatOneDecimal(bmi)} · ${assessment.bmiInterpretation.orEmpty()}",
+                    title = "Qué significa el IMC",
                     body = "El IMC relaciona peso y altura y sirve para estimar riesgo en población adulta. Es útil como primera señal, pero no distingue grasa de músculo ni describe por completo la composición corporal."
                 )
             }
         }
         assessment?.waistToHeightRatio?.let { ratio ->
             item {
+                BodyIndicator(
+                    label = "Cintura/altura",
+                    value = formatTwoDecimals(ratio),
+                    interpretation = assessment.waistInterpretation.orEmpty()
+                )
+                ProgressChart(
+                    points = waistPoints,
+                    minimum = 0.35,
+                    maximum = 0.70,
+                    bands = listOf(
+                        RiskBand(0.35, 0.40, Color(0xFFFFCA4B)),
+                        RiskBand(0.40, 0.50, Color(0xFF66BB6A)),
+                        RiskBand(0.50, 0.60, Color(0xFFFFCA4B)),
+                        RiskBand(0.60, 0.70, Color(0xFFE57373))
+                    ),
+                    thresholds = listOf(0.40 to "0,40", 0.50 to "0,50", 0.60 to "0,60")
+                )
                 NarrativeSection(
-                    title = "Cintura/altura: ${formatTwoDecimals(ratio)} · ${assessment.waistInterpretation.orEmpty()}",
+                    title = "Qué significa cintura/altura",
                     body = "La relación cintura/altura añade información sobre la grasa abdominal. Entre 0,40 y 0,49 suele considerarse saludable; entre 0,50 y 0,59 indica riesgo aumentado; y desde 0,60, riesgo alto. Por debajo de 0,40 también conviene interpretar el resultado con cautela."
                 )
             }
@@ -962,12 +1113,35 @@ private fun BodyExplanationScreen(data: AppData) {
                 body = "Rumbo no decide a partir de una sola cifra. Usa el IMC como contexto general y la cintura/altura como señal abdominal. Si ambos evolucionan de forma distinta, evita atribuir automáticamente cualquier cambio de peso a grasa o músculo y prefiere mantener la recomendación hasta disponer de más datos."
             )
         }
+        recommendedGoal?.let { result ->
+            item {
+                NarrativeSection(
+                    title = "Por qué se recomienda «${result.goal.label}»",
+                    body = result.explanation
+                )
+            }
+        }
         item {
             TextButton(
                 onClick = {
                     uriHandler.openUri("https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-overweight-obesity-and-central-adiposity")
                 }
             ) { Text("Consultar los criterios médicos de NICE") }
+        }
+        item { HorizontalDivider() }
+        item { Text("Historial", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        if (data.measurements.isEmpty()) {
+            item { Text("Todavía no hay mediciones", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        } else {
+            items(
+                data.measurements.sortedWith(
+                    compareByDescending<Measurement> { it.date }.thenByDescending { it.id }
+                ),
+                key = { "body_history_${it.id}" }
+            ) { measurement ->
+                HistoryEntry(measurement = measurement, onClick = { onOpenMeasurement(measurement.id) })
+                HorizontalDivider()
+            }
         }
     }
 }
@@ -1811,6 +1985,7 @@ private fun PlannedMealEditorScreen(
     initial: PlannedMeal? = null,
     initialType: MealType? = null,
     initialDays: Set<WeekDay> = emptySet(),
+    onCreateDish: (Dish) -> Unit,
     onSave: (PlannedMeal) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
@@ -1826,8 +2001,10 @@ private fun PlannedMealEditorScreen(
     var dishServings by remember(initial?.id) {
         mutableStateOf(initial?.dishes?.associate { it.dishId to formatDecimal(it.servings) }.orEmpty())
     }
-    var choosingFood by remember { mutableStateOf(false) }
-    var choosingDish by remember { mutableStateOf(false) }
+    var choosingElement by remember { mutableStateOf(false) }
+    var selectedForDish by remember { mutableStateOf(emptySet<Long>()) }
+    var namingDish by remember { mutableStateOf(false) }
+    var newDishName by remember { mutableStateOf("") }
     var confirmDelete by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val foodsById = remember(foods) { foods.associateBy { it.id } }
@@ -1862,26 +2039,64 @@ private fun PlannedMealEditorScreen(
         null
     }
 
-    if (choosingFood) {
-        FoodPickerDialog(
+    if (choosingElement) {
+        MealItemPickerDialog(
             foods = foods,
+            dishes = dishes,
             excludedFoodIds = itemAmounts.keys,
-            onChoose = {
+            excludedDishIds = dishServings.keys,
+            onChooseFood = {
                 itemAmounts = itemAmounts + (it to "100")
-                choosingFood = false
+                choosingElement = false
             },
-            onDismiss = { choosingFood = false }
+            onChooseDish = {
+                dishServings = dishServings + (it to "1")
+                choosingElement = false
+            },
+            onDismiss = { choosingElement = false }
         )
     }
-    if (choosingDish) {
-        DishPickerDialog(
-            dishes = dishes,
-            excludedDishIds = dishServings.keys,
-            onChoose = {
-                dishServings = dishServings + (it to "1")
-                choosingDish = false
+    if (namingDish) {
+        AlertDialog(
+            onDismissRequest = { namingDish = false },
+            title = { Text("Crear plato") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Los alimentos seleccionados se sustituirán por una ración de este plato.")
+                    OutlinedTextField(
+                        value = newDishName,
+                        onValueChange = { newDishName = it.take(80) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Nombre del plato") },
+                        singleLine = true
+                    )
+                }
             },
-            onDismiss = { choosingDish = false }
+            confirmButton = {
+                TextButton(
+                    enabled = newDishName.isNotBlank() &&
+                        selectedForDish.size >= 2 &&
+                        selectedForDish.all { foodId ->
+                            parseDecimal(itemAmounts[foodId].orEmpty())
+                                ?.let { it in 0.1..5000.0 } == true
+                        },
+                    onClick = {
+                        val ingredients = selectedForDish.mapNotNull { foodId ->
+                            parseDecimal(itemAmounts[foodId].orEmpty())?.let { DishIngredient(foodId, it) }
+                        }
+                        if (ingredients.size == selectedForDish.size && ingredients.size >= 2) {
+                            val dish = Dish(System.currentTimeMillis(), newDishName.trim(), ingredients)
+                            itemAmounts = itemAmounts - selectedForDish
+                            dishServings = dishServings + (dish.id to "1")
+                            selectedForDish = emptySet()
+                            newDishName = ""
+                            namingDish = false
+                            onCreateDish(dish)
+                        }
+                    }
+                ) { Text("Crear") }
+            },
+            dismissButton = { TextButton(onClick = { namingDish = false }) { Text("Cancelar") } }
         )
     }
     if (confirmDelete && onDelete != null) {
@@ -1945,34 +2160,7 @@ private fun PlannedMealEditorScreen(
             )
         }
         HorizontalDivider()
-        Text("Alimentos sueltos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        itemAmounts.forEach { (foodId, amount) ->
-            val food = foodsById[foodId]
-            if (food != null) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    SmallFoodCategoryBadge(food.category)
-                    Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    NumericField(
-                        "Gramos",
-                        amount,
-                        { itemAmounts = itemAmounts + (foodId to it) },
-                        Modifier.width(105.dp)
-                    )
-                    TextButton(onClick = { itemAmounts = itemAmounts - foodId }) { Text("Quitar") }
-                }
-            }
-        }
-        OutlinedButton(onClick = { choosingFood = true }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Añadir ingrediente")
-        }
-        HorizontalDivider()
-        Text("Platos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text("Elementos de la comida", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         dishServings.forEach { (dishId, servings) ->
             val dish = dishesById[dishId]
             if (dish != null) {
@@ -1993,10 +2181,54 @@ private fun PlannedMealEditorScreen(
                 }
             }
         }
-        OutlinedButton(onClick = { choosingDish = true }, modifier = Modifier.fillMaxWidth()) {
+        itemAmounts.forEach { (foodId, amount) ->
+            val food = foodsById[foodId]
+            if (food != null) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Checkbox(
+                        checked = foodId in selectedForDish,
+                        onCheckedChange = { checked ->
+                            selectedForDish = if (checked) selectedForDish + foodId else selectedForDish - foodId
+                        }
+                    )
+                    SmallFoodCategoryBadge(food.category)
+                    Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    NumericField(
+                        "Gramos",
+                        amount,
+                        { itemAmounts = itemAmounts + (foodId to it) },
+                        Modifier.width(105.dp)
+                    )
+                    TextButton(onClick = {
+                        itemAmounts = itemAmounts - foodId
+                        selectedForDish = selectedForDish - foodId
+                    }) { Text("Quitar") }
+                }
+            }
+        }
+        OutlinedButton(onClick = { choosingElement = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Añadir plato")
+            Text("Añadir")
+        }
+        if (selectedForDish.size >= 2) {
+            FilledTonalButton(
+                onClick = {
+                    newDishName = ""
+                    namingDish = true
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Crear plato con ${selectedForDish.size} alimentos") }
+        } else if (itemAmounts.size >= 2) {
+            Text(
+                "Marca dos o más alimentos para convertirlos en un plato.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         previewAssessment?.let { assessment ->
             HorizontalDivider()
@@ -2100,6 +2332,86 @@ private fun FoodPickerDialog(
                             ) {
                                 FoodCategoryBadge(food.category)
                                 Text(food.name, modifier = Modifier.weight(1f))
+                            }
+                            HorizontalDivider()
+                        }
+                        if (results.isEmpty()) {
+                            item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+    )
+}
+
+private data class MealPickerResult(
+    val id: Long,
+    val name: String,
+    val category: FoodCategory? = null,
+    val isDish: Boolean = false
+)
+
+@Composable
+private fun MealItemPickerDialog(
+    foods: List<Food>,
+    dishes: List<Dish>,
+    excludedFoodIds: Set<Long>,
+    excludedDishIds: Set<Long>,
+    onChooseFood: (Long) -> Unit,
+    onChooseDish: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val normalized = normalizeSearch(query)
+    val results = remember(foods, dishes, excludedFoodIds, excludedDishIds, normalized) {
+        val dishResults = dishes.asSequence()
+            .filterNot { it.id in excludedDishIds }
+            .filter { normalized.isBlank() || normalizeSearch(it.name).contains(normalized) }
+            .map { MealPickerResult(it.id, it.name, isDish = true) }
+        val foodResults = if (normalized.length < 2) emptySequence() else foods.asSequence()
+            .filterNot { it.id in excludedFoodIds }
+            .filter { normalizeSearch(it.name).contains(normalized) }
+            .map { MealPickerResult(it.id, it.name, category = it.category) }
+        (dishResults + foodResults).sortedBy { it.name.lowercase() }.take(50).toList()
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir a la comida") },
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Buscar platos o alimentos") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                if (normalized.length < 2 && dishes.isEmpty()) {
+                    Text("Escribe al menos dos caracteres.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                        items(results, key = { "meal_picker_${it.isDish}_${it.id}" }) { result ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    if (result.isDish) onChooseDish(result.id) else onChooseFood(result.id)
+                                }.padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                if (result.isDish) SmallDishBadge()
+                                else result.category?.let { SmallFoodCategoryBadge(it) }
+                                Column(Modifier.weight(1f)) {
+                                    Text(result.name)
+                                    Text(
+                                        if (result.isDish) "Plato" else "Alimento",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                             HorizontalDivider()
                         }
@@ -2355,6 +2667,8 @@ private fun DishEditorScreen(
     }
 }
 
+private data class IndexedFood(val food: Food, val searchText: String)
+
 @Composable
 private fun FoodsScreen(
     foods: List<Food>,
@@ -2366,23 +2680,34 @@ private fun FoodsScreen(
     var selectedCategories by remember { mutableStateOf(emptySet<FoodCategory>()) }
     var selectedRetailers by remember { mutableStateOf(emptySet<String>()) }
     var showFilters by remember { mutableStateOf(false) }
-    val normalizedQuery = normalizeSearch(query)
+    var normalizedQuery by remember { mutableStateOf("") }
+    LaunchedEffect(query) {
+        if (query.isNotBlank()) delay(250)
+        normalizedQuery = normalizeSearch(query)
+    }
     val retailers = remember(foods) { foods.mapNotNull { it.retailer }.distinct().sorted() }
-    val filtered = remember(foods, normalizedQuery, selectedCategories, selectedRetailers) {
-        foods.filter { food ->
+    val foodIndex = remember(foods) {
+        foods.sortedWith(compareBy<Food> { it.category.ordinal }.thenBy { it.name.lowercase() })
+            .map { food ->
+                IndexedFood(
+                    food = food,
+                    searchText = normalizeSearch(
+                        listOfNotNull(
+                            food.name, food.category.label, food.brand, food.family,
+                            food.subcategory, food.retailer, food.barcode
+                        ).joinToString(" ")
+                    )
+                )
+            }
+    }
+    val filtered = remember(foodIndex, normalizedQuery, selectedCategories, selectedRetailers) {
+        foodIndex.asSequence().filter { indexed ->
+            val food = indexed.food
             (selectedCategories.isEmpty() || food.category in selectedCategories) &&
                 (selectedRetailers.isEmpty() ||
                     (food.retailer != null && food.retailer in selectedRetailers)) &&
-                (normalizedQuery.isBlank() || listOfNotNull(
-                    food.name,
-                    food.category.label,
-                    food.brand,
-                    food.family,
-                    food.subcategory,
-                    food.retailer,
-                    food.barcode
-                ).any { normalizeSearch(it).contains(normalizedQuery) })
-        }.sortedWith(compareBy<Food> { it.category.ordinal }.thenBy { it.name.lowercase() })
+                (normalizedQuery.isBlank() || indexed.searchText.contains(normalizedQuery))
+        }.map { it.food }.toList()
     }
     val dishesById = remember(dishes) { dishes.associateBy { it.id } }
     val weeklyAmounts = remember(plannedMeals, dishesById) {
