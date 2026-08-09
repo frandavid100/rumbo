@@ -102,8 +102,9 @@ class RecommendationEngineTest {
         val result = RecommendationEngine.recommendGoal(profile, history)
 
         assertEquals(WeightGoal.LOSE_SLOWLY, result.goal)
-        assertTrue(result.explanation.contains("IMC"))
-        assertTrue(result.explanation.contains("cintura/altura"))
+        assertTrue(result.explanation.contains("0,4 kg"))
+        assertTrue(result.explanation.contains("0,5 %"))
+        assertTrue(result.explanation.contains("cintura"))
     }
 
     @Test
