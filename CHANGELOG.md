@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.15.0
+
+- Inicio reorganizado en cuatro tarjetas pulsables: situación corporal, objetivos, menú de hoy y compra.
+- Escala corporal con cinco franjas de la misma anchura y recomendación resumida en una frase.
+- Nuevo objetivo automático que sigue la recomendación corporal vigente en cada medición.
+- Barras diarias de calorías, proteína, hidratos y grasa en el menú de hoy.
+
 ## 0.14.0
 
 - Buscadores contextuales que priorizan alimentos y platos ya utilizados.
