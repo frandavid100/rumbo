@@ -1556,6 +1556,27 @@ private fun waistToHeightExplanation(ratio: Double, heightCm: Double?): String {
         interpretation + target
 }
 
+private fun combinedBodyExplanation(bmi: Double, ratio: Double): String = when {
+    bmi >= 35.0 ->
+        "La prioridad debería ser una pérdida de peso gradual y sostenida. Con un IMC de este nivel, la cintura aporta poca información adicional para decidir el objetivo, aunque sigue siendo útil para seguir el progreso. Puede ser recomendable contar también con supervisión sanitaria."
+    bmi < 18.5 && ratio < 0.50 ->
+        "Tu prioridad debería ser ganar peso de forma gradual, procurando que una parte importante sea músculo. Para ello conviene comer algo más, tomar suficiente proteína y entrenar fuerza con regularidad. No parece adecuado reducir calorías."
+    bmi < 18.5 ->
+        "Aunque tu cintura es elevada, perder más peso podría no ser conveniente. Lo más adecuado sería mejorar la composición corporal: mantener o aumentar ligeramente las calorías, tomar suficiente proteína y entrenar fuerza. Es una combinación poco habitual y merece interpretarse con cautela."
+    bmi < 25.0 && ratio < 0.50 ->
+        "Tus resultados no señalan la necesidad de cambiar de peso. Mantenerlo mientras conservas una alimentación adecuada y cierta actividad física sería un objetivo razonable. Si quieres mejorar la composición corporal, puedes hacerlo mediante fuerza y suficiente proteína sin reducir calorías."
+    bmi < 25.0 && ratio < 0.60 ->
+        "Tu peso no necesita bajar mucho, pero sí sería conveniente reducir la cintura. Lo más adecuado sería perder grasa lentamente mientras mantienes o aumentas el músculo, con un ajuste calórico pequeño, suficiente proteína y entrenamiento de fuerza. La cintura será más informativa que el peso para valorar el progreso."
+    bmi < 25.0 ->
+        "Aunque tu peso total está dentro del intervalo habitual, la acumulación abdominal es elevada. Reducir la cintura debería ser la prioridad, mediante una pérdida moderada de grasa, actividad física regular y entrenamiento de fuerza para conservar músculo."
+    ratio < 0.50 ->
+        "Tienes más peso del habitual, pero sin una acumulación abdominal elevada. Si entrenas fuerza y tomas suficiente proteína, parte de ese peso podría ser músculo y sería razonable priorizar una pérdida lenta o la recomposición corporal. Si no es así, una reducción gradual de peso probablemente mejoraría tu situación."
+    ratio < 0.60 ->
+        "Lo más adecuado sería perder grasa de forma gradual, procurando conservar el músculo. Para ello conviene combinar un déficit calórico moderado con suficiente proteína, entrenamiento de fuerza y actividad física regular. Deberían disminuir tanto el peso como la cintura."
+    else ->
+        "La prioridad debería ser reducir de forma gradual el peso y, especialmente, la cintura. Conviene evitar objetivos extremos y combinar una alimentación con déficit moderado, suficiente proteína, entrenamiento de fuerza y actividad aeróbica regular."
+}
+
 @Composable
 private fun BodyExplanationScreen(
     data: AppData,
@@ -1642,11 +1663,16 @@ private fun BodyExplanationScreen(
                 ) { Text("Fuente: criterios de NICE sobre cintura y altura") }
             }
         }
-        item {
-            PlainNarrativeSection(
-                title = "Cómo se usan juntos",
-                body = "Rumbo no decide a partir de una sola cifra. Usa el IMC como contexto general y la cintura/altura como señal abdominal. Si ambos evolucionan de forma distinta, evita atribuir automáticamente cualquier cambio de peso a grasa o músculo y prefiere mantener la recomendación hasta disponer de más datos."
-            )
+        if (assessment?.bmi != null && assessment.waistToHeightRatio != null) {
+            item {
+                PlainNarrativeSection(
+                    title = "Cómo se usan juntos",
+                    body = combinedBodyExplanation(
+                        bmi = assessment.bmi,
+                        ratio = assessment.waistToHeightRatio
+                    )
+                )
+            }
         }
         recommendedGoal?.let { result ->
             item {
