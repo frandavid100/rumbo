@@ -198,17 +198,17 @@ class RecommendationEngineTest {
                 waistCm = 91.0,
                 activity = ActivityLevel.LIGHT,
                 goal = WeightGoal.LOSE_SLOWLY,
-                weeklyRateKg = -2.0
+                weeklyRateKg = -10.0
             )
         )
 
         assertNotNull(recommendation)
         assertTrue(recommendation!!.isSafetyLimited)
-        assertTrue(recommendation.calculation!!.appliedWeeklyRateKg > -2.0)
+        assertTrue(recommendation.calculation!!.appliedWeeklyRateKg > -10.0)
         assertEquals(
-            -2.0,
+            -10.0,
             RecommendationEngine.effectiveValues(
-                listOf(Measurement(id = 1, date = LocalDate.of(2026, 8, 9), goal = WeightGoal.LOSE_SLOWLY, weeklyRateKg = -2.0))
+                listOf(Measurement(id = 1, date = LocalDate.of(2026, 8, 9), goal = WeightGoal.LOSE_SLOWLY, weeklyRateKg = -10.0))
             ).weeklyRateKg!!,
             0.0
         )
