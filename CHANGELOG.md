@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.18.0
+
+- Situación corporal, objetivo y recomendación nutricional reunidos en una sola tarjeta.
+- Texto contextual distinto para el objetivo automático recomendado y para una elección manual.
+- Acciones «Añadir medición» y «Cambiar objetivo» alineadas al pie de la tarjeta.
+- Acceso a la explicación del cálculo nutricional desde la pantalla detallada conjunta.
+
 ## 0.17.0
 
 - Separadores sutiles y jerarquía tipográfica Material 3 en todas las tarjetas de Inicio.
