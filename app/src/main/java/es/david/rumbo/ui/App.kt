@@ -773,7 +773,7 @@ private fun BodyGoalNutritionCard(
                         onValueChange = {
                             manualMagnitude = it.filter { char ->
                                 char.isDigit() || char == ',' || char == '.'
-                            }.take(4)
+                            }.take(12)
                             manualError = null
                         },
                         label = { Text("Kg por semana") },
@@ -794,8 +794,8 @@ private fun BodyGoalNutritionCard(
             confirmButton = {
                 TextButton(onClick = {
                     val magnitude = parseDecimal(manualMagnitude)
-                    if (magnitude == null || magnitude !in 0.0..5.0) {
-                        manualError = "Introduce una cifra entre 0 y 5 kg por semana."
+                    if (magnitude == null || !magnitude.isFinite() || magnitude < 0.0) {
+                        manualError = "Introduce una cifra numérica válida."
                     } else {
                         onGoalChange(if (magnitude == 0.0) 0.0 else magnitude * manualDirection)
                         choosingGoal = false
