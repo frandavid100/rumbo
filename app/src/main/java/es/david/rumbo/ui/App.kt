@@ -350,7 +350,6 @@ fun RumboApp(repository: AppRepository) {
                     onGoalChange = { data = repository.setGoal(it) },
                     onAddMeasurement = { screenName = Screen.ADD.name },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
-                    onExplainRecommendation = { screenName = Screen.RECOMMENDATION_EXPLANATION.name },
                     onOpenPlanner = { screenName = Screen.PLANNER.name },
                     onOpenFoods = { screenName = Screen.FOODS.name },
                     onAddMissingMeal = { type, day ->
@@ -590,7 +589,8 @@ fun RumboApp(repository: AppRepository) {
                     onOpenMeasurement = {
                         selectedMeasurementId = it
                         screenName = Screen.MEASUREMENT_DETAIL.name
-                    }
+                    },
+                    onExplainRecommendation = { screenName = Screen.RECOMMENDATION_EXPLANATION.name }
                 )
                 screen == Screen.RECOMMENDATION_EXPLANATION -> RecommendationExplanationScreen(data)
             }
@@ -647,7 +647,6 @@ private fun HomeScreen(
     onGoalChange: (WeightGoal) -> Unit,
     onAddMeasurement: () -> Unit,
     onExplainBody: () -> Unit,
-    onExplainRecommendation: () -> Unit,
     onOpenPlanner: () -> Unit,
     onOpenFoods: () -> Unit,
     onAddMissingMeal: (MealType, WeekDay) -> Unit,
@@ -669,23 +668,17 @@ private fun HomeScreen(
     ) {
         if (assessment != null && recommendedGoal != null) {
             item {
-                BodySummarySection(
+                BodyGoalNutritionCard(
                     assessment = assessment,
                     recommendedGoal = recommendedGoal,
                     weightKg = RecommendationEngine.effectiveValues(data.measurements).weightKg,
+                    goal = goal,
+                    recommendation = recommendation,
+                    onGoalChange = onGoalChange,
                     onExplain = onExplainBody,
                     onAddMeasurement = onAddMeasurement
                 )
             }
-        }
-        item {
-            GoalNutritionCard(
-                goal = goal,
-                resolvedGoal = recommendedGoal?.goal,
-                recommendation = recommendation,
-                onGoalChange = onGoalChange,
-                onExplain = onExplainRecommendation
-            )
         }
         item {
             TodayPlanSection(
@@ -710,26 +703,98 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun BodySummarySection(
+private fun BodyGoalNutritionCard(
     assessment: BodyAssessment,
     recommendedGoal: RecommendedGoal,
     weightKg: Double?,
+    goal: WeightGoal,
+    recommendation: es.david.rumbo.model.Recommendation?,
+    onGoalChange: (WeightGoal) -> Unit,
     onExplain: () -> Unit,
     onAddMeasurement: () -> Unit
 ) {
-    val weeklyRate = RecommendationEngine.weeklyRateFor(recommendedGoal.goal, weightKg)
+    var choosingGoal by remember { mutableStateOf(false) }
+    val displayedGoal = if (goal == WeightGoal.AUTOMATIC) recommendedGoal.goal else goal
+    val weeklyRate = RecommendationEngine.weeklyRateFor(displayedGoal, weightKg)
+    if (choosingGoal) {
+        AlertDialog(
+            onDismissRequest = { choosingGoal = false },
+            title = { Text("Cambiar objetivo") },
+            text = {
+                Column {
+                    WeightGoal.entries.forEach { option ->
+                        TextButton(
+                            onClick = {
+                                onGoalChange(option)
+                                choosingGoal = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (option == goal) {
+                                Icon(Icons.Default.Check, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(option.label, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { choosingGoal = false }) { Text("Cancelar") }
+            }
+        )
+    }
     Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            HomeCardHeader("Situación corporal")
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            HomeCardHeader("Situación y objetivo")
             CombinedBodyScale(assessment)
             Text(
-                recommendedGoalSentence(recommendedGoal.goal, weeklyRate),
+                if (goal == WeightGoal.AUTOMATIC) {
+                    recommendedGoalSentence(displayedGoal, weeklyRate)
+                } else {
+                    selectedGoalSentence(displayedGoal, weeklyRate)
+                },
                 style = MaterialTheme.typography.bodyLarge
             )
-            Button(onClick = onAddMeasurement, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Añadir medición")
+            if (recommendation == null) {
+                Text(
+                    "Añade una medición con peso para calcular los objetivos nutricionales.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text("Para ello debes consumir cada día:", style = MaterialTheme.typography.bodyLarge)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NutritionGoalMetric(
+                        "Calorías", "${recommendation.calories} kcal",
+                        Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.primary,
+                        Modifier.weight(1f)
+                    )
+                    NutritionGoalMetric(
+                        "Proteína", "${recommendation.proteinGrams} g",
+                        foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN),
+                        Modifier.weight(1f)
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NutritionGoalMetric(
+                        "Hidratos", "${recommendation.carbohydrateGrams} g",
+                        foodCategoryIcon(FoodCategory.CARBOHYDRATE), foodCategoryColor(FoodCategory.CARBOHYDRATE),
+                        Modifier.weight(1f)
+                    )
+                    NutritionGoalMetric(
+                        "Grasa", "${recommendation.fatGrams} g",
+                        foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT),
+                        Modifier.weight(1f)
+                    )
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = onAddMeasurement, modifier = Modifier.weight(1f)) {
+                    Text("Añadir medición")
+                }
+                OutlinedButton(onClick = { choosingGoal = true }, modifier = Modifier.weight(1f)) {
+                    Text("Cambiar objetivo")
+                }
             }
         }
     }
@@ -807,87 +872,11 @@ private fun recommendedGoalSentence(goal: WeightGoal, weeklyRate: Double?): Stri
         "(alrededor de ${formatOneDecimal(abs(weeklyRate))} kg por semana)."
 }
 
-@Composable
-private fun GoalNutritionCard(
-    goal: WeightGoal,
-    resolvedGoal: WeightGoal?,
-    recommendation: es.david.rumbo.model.Recommendation?,
-    onGoalChange: (WeightGoal) -> Unit,
-    onExplain: () -> Unit
-) {
-    var choosingGoal by remember { mutableStateOf(false) }
-    val displayedGoal = if (goal == WeightGoal.AUTOMATIC) resolvedGoal ?: goal else goal
-    if (choosingGoal) {
-        AlertDialog(
-            onDismissRequest = { choosingGoal = false },
-            title = { Text("Cambiar objetivo") },
-            text = {
-                Column {
-                    WeightGoal.entries.forEach { option ->
-                        TextButton(
-                            onClick = {
-                                onGoalChange(option)
-                                choosingGoal = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (option == goal) {
-                                Icon(Icons.Default.Check, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                            }
-                            Text(option.label, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { choosingGoal = false }) { Text("Cancelar") }
-            }
-        )
-    }
-    Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            HomeCardHeader("Objetivo y nutrición diaria")
-            if (recommendation == null) {
-                Text(
-                    "Añade una medición con peso para calcular los objetivos nutricionales.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Text(
-                    "Si quieres ${displayedGoal.label.lowercase()}, cada día debes consumir:",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    NutritionGoalMetric(
-                        "Calorías", "${recommendation.calories} kcal",
-                        Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.primary,
-                        Modifier.weight(1f)
-                    )
-                    NutritionGoalMetric(
-                        "Proteína", "${recommendation.proteinGrams} g",
-                        foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN),
-                        Modifier.weight(1f)
-                    )
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    NutritionGoalMetric(
-                        "Hidratos", "${recommendation.carbohydrateGrams} g",
-                        foodCategoryIcon(FoodCategory.CARBOHYDRATE), foodCategoryColor(FoodCategory.CARBOHYDRATE),
-                        Modifier.weight(1f)
-                    )
-                    NutritionGoalMetric(
-                        "Grasa", "${recommendation.fatGrams} g",
-                        foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT),
-                        Modifier.weight(1f)
-                    )
-                }
-            }
-            Button(onClick = { choosingGoal = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Cambiar objetivo")
-            }
-        }
-    }
+private fun selectedGoalSentence(goal: WeightGoal, weeklyRate: Double?): String = when {
+    goal == WeightGoal.MAINTAIN -> "Has elegido mantener el peso."
+    weeklyRate == null -> "Has elegido ${goal.label.lowercase()}."
+    else -> "Has elegido ${goal.label.lowercase()} " +
+        "(alrededor de ${formatOneDecimal(abs(weeklyRate))} kg por semana)."
 }
 
 @Composable
@@ -1326,7 +1315,11 @@ private fun GoalExplanationScreen(data: AppData) {
 }
 
 @Composable
-private fun BodyExplanationScreen(data: AppData, onOpenMeasurement: (Long) -> Unit) {
+private fun BodyExplanationScreen(
+    data: AppData,
+    onOpenMeasurement: (Long) -> Unit,
+    onExplainRecommendation: () -> Unit
+) {
     val profile = data.profile
     val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
     val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
@@ -1345,7 +1338,7 @@ private fun BodyExplanationScreen(data: AppData, onOpenMeasurement: (Long) -> Un
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Text("Entender la situación corporal", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Entender la situación y el objetivo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
         assessment?.bmi?.let { bmi ->
             item {
@@ -1409,6 +1402,11 @@ private fun BodyExplanationScreen(data: AppData, onOpenMeasurement: (Long) -> Un
                     title = "Por qué se recomienda «${result.goal.label}»",
                     body = result.explanation
                 )
+            }
+        }
+        item {
+            TextButton(onClick = onExplainRecommendation) {
+                Text("Entender cómo se calculan las calorías y los macros")
             }
         }
         item {
