@@ -34,6 +34,8 @@ object RecommendationEngine {
         candidate: Measurement? = null
     ): EffectiveValues {
         val ordered = history.sortedWith(compareBy<Measurement> { it.date }.thenBy { it.id })
+        val goalChange = candidate?.takeIf { it.goal != null }
+            ?: ordered.asReversed().firstOrNull { it.goal != null }
         return EffectiveValues(
             weightKg = candidate?.weightKg
                 ?: ordered.asReversed().firstOrNull { it.weightKg != null }?.weightKg,
@@ -42,9 +44,8 @@ object RecommendationEngine {
             activity = candidate?.activity
                 ?: ordered.asReversed().firstOrNull { it.activity != null }?.activity
                 ?: ActivityLevel.LIGHT,
-            goal = candidate?.goal
-                ?: ordered.asReversed().firstOrNull { it.goal != null }?.goal
-                ?: WeightGoal.AUTOMATIC
+            goal = goalChange?.goal ?: WeightGoal.AUTOMATIC,
+            weeklyRateKg = goalChange?.weeklyRateKg
         )
     }
 
@@ -154,7 +155,7 @@ object RecommendationEngine {
         }
 
         val paceReason = weight?.let {
-            val desiredRate = desiredWeeklyRate(values.goal, it)
+            val desiredRate = values.weeklyRateKg ?: desiredWeeklyRate(values.goal, it)
             if (desiredRate == 0.0) {
                 "El ritmo buscado es mantener una tendencia estable."
             } else {
@@ -271,7 +272,7 @@ object RecommendationEngine {
         val bmr = 10.0 * weight + 6.25 * profile.heightCm - 5.0 * age + sexAdjustment
         val maintenance = bmr * values.activity.multiplier
 
-        var desiredRate = desiredWeeklyRate(values.goal, weight)
+        var desiredRate = values.weeklyRateKg ?: desiredWeeklyRate(values.goal, weight)
         var safetyReason: String? = null
 
         if (desiredRate < 0.0) {
