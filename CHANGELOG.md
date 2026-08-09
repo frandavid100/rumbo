@@ -1,5 +1,14 @@
 # Historial de cambios
 
+## 0.13.0
+
+- Inicio reorganizado con una única escala conjunta de IMC y cintura/altura.
+- Objetivo recomendado con variación semanal, recomendación energética, plan de hoy y compra semanal.
+- Gráficas corporales e historial trasladados a la explicación detallada.
+- Selector único de platos y alimentos en las comidas.
+- Creación directa de platos a partir de varios alimentos seleccionados.
+- Corrección del gesto Atrás y optimización del buscador de alimentos.
+
 ## 0.12.0
 
 - Botón para añadir directamente las comidas ausentes de un día.
