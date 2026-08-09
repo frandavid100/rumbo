@@ -958,27 +958,29 @@ private fun weeklyGoalSummary(
     automatic: Boolean,
     appliedRate: Double?
 ): String {
-    val recommended = "Te recomendamos ${weeklyRateAction(recommendedRate)} cada semana"
-    if (automatic) return "$recommended."
-    val comparison = if (
-        abs(recommendedRate) >= 0.005 &&
-        recommendedRate * selectedRate > 0.0
-    ) {
-        val multiple = abs(selectedRate / recommendedRate)
-        " (${formatCompactMultiple(multiple)} veces lo recomendado)"
-    } else {
-        ""
+    if (automatic) {
+        return "Te recomendamos ${weeklyRateAction(recommendedRate)} cada semana."
     }
-    val chosen = "pero tú has elegido ${weeklyRateAction(selectedRate)}$comparison"
-    val limited = appliedRate?.takeIf { abs(it - selectedRate) >= 0.005 }?.let {
-        " Por seguridad, el cálculo aplica ${weeklyRateAction(it)} cada semana."
-    }.orEmpty()
-    return "$recommended, $chosen.$limited"
+    val applied = appliedRate ?: selectedRate
+    if (abs(applied - selectedRate) < 0.005) {
+        return "Te recomendamos ${weeklyRateAction(recommendedRate)} cada semana, " +
+            "pero tú has elegido ${weeklyRateAction(selectedRate)}."
+    }
+    val safeLimit = when {
+        abs(applied) < 0.005 && selectedRate < 0.0 ->
+            "en tu situación no es recomendable perder peso"
+        abs(applied) < 0.005 && selectedRate > 0.0 ->
+            "en tu situación no es recomendable ganar peso"
+        selectedRate < 0.0 ->
+            "en tu situación no es recomendable perder más de ${formatOneDecimal(abs(applied))} kg cada semana"
+        selectedRate > 0.0 ->
+            "en tu situación no es recomendable ganar más de ${formatOneDecimal(abs(applied))} kg cada semana"
+        else ->
+            "en tu situación se recomienda mantener el peso"
+    }
+    return "Has elegido ${weeklyRateAction(selectedRate)} cada semana, pero $safeLimit."
 }
 
-private fun formatCompactMultiple(value: Double): String =
-    if (abs(value - value.roundToInt()) < 0.05) value.roundToInt().toString()
-    else formatOneDecimal(value)
 
 @Composable
 private fun NutritionGoalMetric(
