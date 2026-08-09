@@ -8,6 +8,7 @@ import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.nutrition
+import es.david.rumbo.model.totalWeightGrams
 import kotlin.math.abs
 
 enum class TargetFit {
@@ -86,9 +87,12 @@ object MealPlanEvaluator {
                     item.grams * meal.days.size
             }
             meal.dishes.forEach { plannedDish ->
-                dishesById[plannedDish.dishId]?.ingredients?.forEach { ingredient ->
-                    totals[ingredient.foodId] = totals.getOrDefault(ingredient.foodId, 0.0) +
-                        ingredient.grams * plannedDish.servings * meal.days.size
+                dishesById[plannedDish.dishId]?.let { dish ->
+                    val recipeWeight = dish.totalWeightGrams()
+                    if (recipeWeight > 0.0) dish.ingredients.forEach { ingredient ->
+                        totals[ingredient.foodId] = totals.getOrDefault(ingredient.foodId, 0.0) +
+                            ingredient.grams * (plannedDish.grams / recipeWeight) * meal.days.size
+                    }
                 }
             }
         }
