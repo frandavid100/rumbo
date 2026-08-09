@@ -210,9 +210,13 @@ object RecommendationEngine {
         history: List<Measurement>,
         candidate: Measurement? = null
     ): RecommendedGoal {
-        val body = assessBody(profile, history, candidate)
+        val relevantHistory = candidate?.let { item ->
+            history.filter { !it.date.isAfter(item.date) }
+        } ?: history
+        val body = assessBody(profile, relevantHistory, candidate)
         val bmi = body?.bmi
         val waistRatio = body?.waistToHeightRatio
+        val weight = effectiveValues(relevantHistory, candidate).weightKg
 
         val goal = when {
             bmi?.let { it < 18.5 } == true -> WeightGoal.GAIN_SLOWLY
@@ -224,27 +228,46 @@ object RecommendationEngine {
             else -> WeightGoal.MAINTAIN
         }
 
+        val rate = weight?.let { abs(desiredWeeklyRate(goal, it)) }
+        val rateText = rate?.let(::formatOneDecimalForText) ?: "—"
+        val referenceDate = candidate?.date
+            ?: relevantHistory.maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })?.date
+            ?: LocalDate.now()
+        val recentHistory = relevantHistory.filter { !it.date.isBefore(referenceDate.minusDays(HISTORY_DAYS)) }
+        val recentWeights = recentHistory.filter { it.weightKg != null }
+        val weightSpan = if (recentWeights.size >= 2) {
+            ChronoUnit.DAYS.between(recentWeights.minOf { it.date }, recentWeights.maxOf { it.date })
+        } else 0L
+        val compliance = recentHistory.mapNotNull { it.compliance?.score }
+        val canAdapt = recentWeights.size >= 4 && weightSpan >= MINIMUM_HISTORY_DAYS &&
+            compliance.size >= 3 && compliance.average() in 2.75..3.25
+        val historyText = if (canAdapt) {
+            "Rumbo utiliza tu evolución reciente para ajustar las calorías e intentar mantener este ritmo."
+        } else {
+            "Es un punto de partida: cuando haya suficientes mediciones, Rumbo ajustará las calorías según tu evolución real."
+        }
+
         val explanation = when (goal) {
             WeightGoal.GAIN_SLOWLY ->
-                "El IMC está por debajo de 18,5; conviene evitar un déficit y recuperar peso de forma gradual."
-            WeightGoal.LOSE_FASTER -> {
-                val reason = when {
-                    waistRatio?.let { it >= 0.60 } == true ->
-                        "la relación cintura/altura está en ${formatForText(waistRatio)}"
-                    else ->
-                        "el IMC está en ${formatForText(bmi)} y la relación cintura/altura en ${formatForText(waistRatio)}"
-                }
-                "Se propone el ritmo superior permitido porque $reason; sigue limitado a una pérdida prudente."
+                "Te recomendamos ganar $rateText kg por semana porque tu peso es bajo para tu altura. El objetivo es recuperarlo gradualmente, evitando un superávit innecesariamente grande y favoreciendo que parte de la ganancia sea músculo. $historyText"
+            WeightGoal.LOSE_FASTER -> when {
+                bmi?.let { it >= 35.0 } == true ->
+                    "Te recomendamos perder $rateText kg por semana porque tu IMC muestra un exceso importante de peso. Rumbo limita el ritmo al 0,75 % semanal para evitar objetivos extremos; en esta situación también puede ser conveniente contar con supervisión sanitaria. $historyText"
+                bmi?.let { it < 25.0 } == true && waistRatio?.let { it >= 0.60 } == true ->
+                    "Te recomendamos perder $rateText kg por semana porque, aunque tu peso total está dentro del intervalo habitual, tu cintura muestra una acumulación abdominal elevada. Rumbo utiliza un ritmo del 0,75 % semanal, más decidido pero todavía gradual. $historyText"
+                else ->
+                    "Te recomendamos perder $rateText kg por semana porque los indicadores muestran un exceso más claro de grasa corporal o abdominal. Rumbo utiliza el 0,75 % semanal: un ritmo mayor, pero todavía dentro del intervalo gradual utilizado en las referencias. $historyText"
             }
-            WeightGoal.LOSE_SLOWLY -> {
-                val indicators = buildList {
-                    bmi?.takeIf { it >= 25.0 }?.let { add("IMC ${formatForText(it)}") }
-                    waistRatio?.takeIf { it >= 0.50 }?.let { add("cintura/altura ${formatForText(it)}") }
-                }.joinToString(" y ")
-                "Una pérdida gradual es coherente con $indicators, sin justificar un déficit mayor."
+            WeightGoal.LOSE_SLOWLY -> when {
+                bmi?.let { it < 25.0 } == true ->
+                    "Te recomendamos perder $rateText kg por semana para reducir la grasa abdominal sin provocar una bajada importante de peso. Rumbo utiliza el 0,5 % de tu peso como ritmo inicial prudente; en tu caso será más importante observar la cintura que la báscula. $historyText"
+                waistRatio?.let { it < 0.50 } == true ->
+                    "Te recomendamos perder $rateText kg por semana porque tu peso está por encima del intervalo habitual, aunque la cintura no muestra una acumulación abdominal elevada. Por esa discrepancia, Rumbo utiliza el ritmo prudente del 0,5 % semanal. $historyText"
+                else ->
+                    "Te recomendamos perder $rateText kg por semana porque tanto tu peso como tu cintura están ligeramente por encima de sus referencias. Rumbo utiliza el ritmo prudente del 0,5 % semanal, suficiente para reducir grasa sin aplicar un déficit excesivo. $historyText"
             }
             WeightGoal.MAINTAIN ->
-                "Los indicadores disponibles no justifican automáticamente ganar ni perder peso."
+                "Te recomendamos mantener el peso porque ninguno de los dos indicadores justifica ganarlo o perderlo. Las variaciones pequeñas son normales; el objetivo es conservar una tendencia estable. $historyText"
             else -> ""
         }
 
@@ -479,6 +502,9 @@ object RecommendationEngine {
     }
 
     private fun roundTo25(value: Int): Int = ((value + 12) / 25) * 25
+
+    private fun formatOneDecimalForText(value: Double): String =
+        String.format(java.util.Locale.forLanguageTag("es-ES"), "%.1f", value)
 
     private fun formatForText(value: Double?): String = value?.let {
         String.format(java.util.Locale.forLanguageTag("es-ES"), "%.2f", it)
