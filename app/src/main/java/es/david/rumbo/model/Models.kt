@@ -24,6 +24,7 @@ enum class DietCompliance(val label: String, val score: Int) {
 }
 
 enum class WeightGoal(val label: String, val weeklyRateFactor: Double, val maximumRate: Double) {
+    AUTOMATIC("Automático", 0.0, 0.0),
     LOSE_FASTER("Perder peso más deprisa", -0.005, 0.50),
     LOSE_SLOWLY("Perder peso poco a poco", -0.0025, 0.25),
     MAINTAIN("Mantener el peso", 0.0, 0.0),
