@@ -144,9 +144,9 @@ data class Dish(
 
 data class PlannedDish(
     val dishId: Long,
-    val servings: Double
+    val grams: Double
 ) {
-    fun isValid(): Boolean = dishId > 0 && servings in 0.1..20.0
+    fun isValid(): Boolean = dishId > 0 && grams in 0.1..5000.0
 }
 
 data class PlannedMeal(
@@ -171,10 +171,29 @@ data class NutritionTotals(
     val isComplete: Boolean = true
 )
 
-fun Dish.nutrition(foodsById: Map<Long, Food>, servings: Double = 1.0): NutritionTotals =
+fun Dish.totalWeightGrams(): Double = ingredients.sumOf { it.grams }
+
+fun Dish.nutrition(foodsById: Map<Long, Food>): NutritionTotals =
     ingredients.fold(NutritionTotals()) { total, ingredient ->
-        total + ingredient.nutrition(foodsById, servings)
+        total + ingredient.nutrition(foodsById)
     }
+
+fun Dish.nutritionForGrams(foodsById: Map<Long, Food>, grams: Double): NutritionTotals {
+    val totalWeight = totalWeightGrams()
+    return if (totalWeight <= 0.0) NutritionTotals(isComplete = false)
+    else nutrition(foodsById).scaled(grams / totalWeight)
+}
+
+fun Dish.dominantCategory(foodsById: Map<Long, Food>): FoodCategory {
+    val totals = nutrition(foodsById)
+    val energyByMacro = listOf(
+        FoodCategory.PROTEIN to totals.proteinGrams * 4.0,
+        FoodCategory.CARBOHYDRATE to totals.carbohydrateGrams * 4.0,
+        FoodCategory.FAT to totals.fatGrams * 9.0
+    )
+    return energyByMacro.maxByOrNull { it.second }?.takeIf { it.second > 0.0 }?.first
+        ?: FoodCategory.OTHER
+}
 
 fun PlannedMeal.nutrition(
     foodsById: Map<Long, Food>,
@@ -186,7 +205,7 @@ fun PlannedMeal.nutrition(
     return dishes.fold(foodTotals) { total, plannedDish ->
         val dish = dishesById[plannedDish.dishId]
         if (dish == null) total.copy(isComplete = false)
-        else total + dish.nutrition(foodsById, plannedDish.servings)
+        else total + dish.nutritionForGrams(foodsById, plannedDish.grams)
     }
 }
 
@@ -196,12 +215,9 @@ private fun PlannedFood.nutrition(foodsById: Map<Long, Food>): NutritionTotals {
     return food.nutrition(factor)
 }
 
-private fun DishIngredient.nutrition(
-    foodsById: Map<Long, Food>,
-    servings: Double
-): NutritionTotals {
+private fun DishIngredient.nutrition(foodsById: Map<Long, Food>): NutritionTotals {
     val food = foodsById[foodId]
-    val factor = grams * servings / 100.0
+    val factor = grams / 100.0
     return food.nutrition(factor)
 }
 
@@ -223,6 +239,15 @@ private operator fun NutritionTotals.plus(other: NutritionTotals): NutritionTota
         fiberGrams = fiberGrams + other.fiberGrams,
         isComplete = isComplete && other.isComplete
     )
+
+private fun NutritionTotals.scaled(factor: Double): NutritionTotals = NutritionTotals(
+    calories = calories * factor,
+    proteinGrams = proteinGrams * factor,
+    carbohydrateGrams = carbohydrateGrams * factor,
+    fatGrams = fatGrams * factor,
+    fiberGrams = fiberGrams * factor,
+    isComplete = isComplete
+)
 
 data class Food(
     val id: Long,
