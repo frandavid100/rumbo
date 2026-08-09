@@ -1516,6 +1516,10 @@ private fun PlainNarrativeSection(title: String, body: String) {
 
 private const val NICE_BODY_ASSESSMENT_URL =
     "https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-overweight-obesity-and-central-adiposity"
+private const val NHS_WEIGHT_LOSS_RATE_URL =
+    "https://www.nhs.uk/live-well/healthy-weight/managing-your-weight/tips-to-help-you-lose-weight/"
+private const val WEIGHT_LOSS_RATE_STUDY_URL =
+    "https://pubmed.ncbi.nlm.nih.gov/21558571/"
 
 private fun bmiExplanation(bmi: Double): String {
     val interpretation = when {
@@ -1629,7 +1633,8 @@ private fun BodyExplanationScreen(
                 TextButton(
                     onClick = {
                         uriHandler.openUri(NICE_BODY_ASSESSMENT_URL)
-                    }
+                    },
+                    contentPadding = PaddingValues(0.dp)
                 ) { Text("Fuente: criterios de NICE sobre el IMC") }
             }
         }
@@ -1659,14 +1664,15 @@ private fun BodyExplanationScreen(
                 TextButton(
                     onClick = {
                         uriHandler.openUri(NICE_BODY_ASSESSMENT_URL)
-                    }
+                    },
+                    contentPadding = PaddingValues(0.dp)
                 ) { Text("Fuente: criterios de NICE sobre cintura y altura") }
             }
         }
         if (assessment?.bmi != null && assessment.waistToHeightRatio != null) {
             item {
                 PlainNarrativeSection(
-                    title = "Cómo se usan juntos",
+                    title = "Nuestra recomendación",
                     body = combinedBodyExplanation(
                         bmi = assessment.bmi,
                         ratio = assessment.waistToHeightRatio
@@ -1676,10 +1682,24 @@ private fun BodyExplanationScreen(
         }
         recommendedGoal?.let { result ->
             item {
-                PlainNarrativeSection(
-                    title = "Por qué se recomienda «${result.goal.label}»",
-                    body = result.explanation
-                )
+                val weight = RecommendationEngine.effectiveValues(data.measurements).weightKg
+                val rate = RecommendationEngine.weeklyRateFor(result.goal, weight)
+                val title = when {
+                    rate == null || rate == 0.0 -> "Por qué recomendamos mantener el peso"
+                    rate < 0.0 -> "Por qué recomendamos perder ${formatOneDecimal(abs(rate))} kg por semana"
+                    else -> "Por qué recomendamos ganar ${formatOneDecimal(rate)} kg por semana"
+                }
+                PlainNarrativeSection(title = title, body = result.explanation)
+                if (result.goal in setOf(WeightGoal.LOSE_SLOWLY, WeightGoal.LOSE_FASTER)) {
+                    TextButton(
+                        onClick = { uriHandler.openUri(NHS_WEIGHT_LOSS_RATE_URL) },
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("Referencia: ritmo gradual recomendado por el NHS") }
+                    TextButton(
+                        onClick = { uriHandler.openUri(WEIGHT_LOSS_RATE_STUDY_URL) },
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("Estudio: ritmo de pérdida y conservación muscular") }
+                }
             }
         }
         item {
