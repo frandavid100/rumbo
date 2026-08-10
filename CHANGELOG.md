@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.38.0
+
+- Sustituye el catálogo general de unos 29.000 productos por un subconjunto compacto de Mercadona con información nutricional completa.
+- Pregunta durante la creación del perfil cómo se distribuirán las calorías entre las cinco comidas.
+- Mueve el selector de perfil al lado izquierdo de la barra superior y lo representa mediante color e inicial.
+- Corrige el título y la posición de la valoración nutricional de «Menú de hoy».
+
 ## 0.18.0
 
 - Situación corporal, objetivo y recomendación nutricional reunidos en una sola tarjeta.
