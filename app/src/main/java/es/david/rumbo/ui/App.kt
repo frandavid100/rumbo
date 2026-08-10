@@ -397,7 +397,8 @@ fun RumboApp(repository: AppRepository) {
                             data = data,
                             initial = measurement,
                             onSave = {
-                                data = repository.addMeasurement(it)                                screenName = Screen.MEASUREMENT_DETAIL.name
+                                data = repository.addMeasurement(it)
+                                screenName = Screen.MEASUREMENT_DETAIL.name
                             }
                         )
                     }
@@ -797,7 +798,8 @@ private fun BodyGoalNutritionCard(
                         manualError = "Introduce una cifra numérica válida."
                     } else {
                         onGoalChange(if (magnitude == 0.0) 0.0 else magnitude * manualDirection)
-                        choosingGoal = false                    }
+                        choosingGoal = false
+                    }
                 }) { Text("Usar esta cifra") }
             },
             dismissButton = {
@@ -1653,7 +1655,8 @@ private fun combinedBodyExplanation(bmi: Double, ratio: Double): String = when {
     ratio < 0.50 ->
         "Tienes más peso del habitual, pero sin una acumulación abdominal elevada. Si entrenas fuerza y tomas suficiente proteína, parte de ese peso podría ser músculo y sería razonable priorizar una pérdida lenta o la recomposición corporal. Si no es así, una reducción gradual de peso probablemente mejoraría tu situación."
     ratio < 0.60 ->
-        "Lo más adecuado sería perder grasa de forma gradual, procurando conservar el músculo. Para ello conviene combinar un déficit calórico moderado con suficiente proteína, entrenamiento de fuerza y actividad física regular. Deberían disminuir tanto el peso como la cintura."    else ->
+        "Lo más adecuado sería perder grasa de forma gradual, procurando conservar el músculo. Para ello conviene combinar un déficit calórico moderado con suficiente proteína, entrenamiento de fuerza y actividad física regular. Deberían disminuir tanto el peso como la cintura."
+    else ->
         "La prioridad debería ser reducir de forma gradual el peso y, especialmente, la cintura. Conviene evitar objetivos extremos y combinar una alimentación con déficit moderado, suficiente proteína, entrenamiento de fuerza y actividad aeróbica regular."
 }
 
@@ -2067,7 +2070,8 @@ private fun AddMeasurementScreen(
     var waist by rememberSaveable(initial?.id) {
         mutableStateOf(initial?.waistCm?.let(::formatDecimal) ?: "")
     }
-    var activity by remember(initial?.id) { mutableStateOf(initial?.activity) }    var compliance by remember(initial?.id) { mutableStateOf(initial?.compliance) }
+    var activity by remember(initial?.id) { mutableStateOf(initial?.activity) }
+    var compliance by remember(initial?.id) { mutableStateOf(initial?.compliance) }
     var goal by remember(initial?.id) { mutableStateOf(initial?.goal) }
     var error by rememberSaveable(initial?.id) { mutableStateOf<String?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -2466,7 +2470,8 @@ private fun WeeklyPlannerScreen(
                             showDays = false,
                             day = selectedDay,
                             onClick = { onOpenMeal(meal.id) }
-                        )                    }
+                        )
+                    }
                     HorizontalDivider()
                 }
             }
@@ -2865,7 +2870,8 @@ private fun PlannedMealEditorScreen(
         mutableStateOf(initial?.dishes?.associate {
             it.dishId to AmountDraft(
                 formatDecimal(it.grams), it.adjustable,
-                formatDecimal(it.minimumGrams), formatDecimal(it.maximumGrams)            )
+                formatDecimal(it.minimumGrams), formatDecimal(it.maximumGrams)
+            )
         }.orEmpty())
     }
     var choosingElement by remember { mutableStateOf(false) }
@@ -3264,7 +3270,8 @@ private fun FoodPickerDialog(
                         HorizontalDivider()
                     }
                     if (results.isEmpty() && normalized.length >= 2) {
-                        item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }                    }
+                        item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }
+                    }
                 }
             }
         },
@@ -4062,7 +4069,8 @@ private fun FoodDetailScreen(
         HorizontalDivider()
         Text("Alimentos similares", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Misma subcategoría culinaria y composición suficientemente próxima para intercambiar cantidades parecidas sin alterar mucho los macros.",            style = MaterialTheme.typography.bodySmall,
+            "Misma subcategoría culinaria y composición suficientemente próxima para intercambiar cantidades parecidas sin alterar mucho los macros.",
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (similarFoods.isEmpty()) {
