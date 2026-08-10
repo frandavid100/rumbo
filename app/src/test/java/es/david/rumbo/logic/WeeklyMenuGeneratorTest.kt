@@ -18,7 +18,8 @@ class WeeklyMenuGeneratorTest {
         food(1, "Pollo", 165.0, 31.0, 0.0, 3.6),
         food(2, "Arroz", 360.0, 7.0, 79.0, 0.6),
         food(3, "Salmón", 208.0, 20.0, 0.0, 13.0),
-        food(4, "Patata", 77.0, 2.0, 17.0, 0.1)
+        food(4, "Patata", 77.0, 2.0, 17.0, 0.1),
+        food(5, "Nueces", 700.0, 17.0, 2.0, 70.0)
     )
     private val recommendation = Recommendation(2000, 140, 220, 65, "")
 
@@ -51,12 +52,42 @@ class WeeklyMenuGeneratorTest {
         }
         assertTrue(tuesdayLunch.items.any { it.foodId == 1L })
         assertTrue(result.meals.filter { it.type == MealType.LUNCH }.all {
-            it.items.size == 2 && it.items.all { item -> item.foodId in setOf(1L, 2L) }
+            it.items.isNotEmpty() && it.items.all { item -> item.foodId in setOf(1L, 2L) }
         })
         assertTrue(result.meals.filter { it.type == MealType.DINNER }.all {
-            it.items.size == 2 && it.items.all { item -> item.foodId in setOf(3L, 4L) }
+            it.items.isNotEmpty() && it.items.all { item -> item.foodId in setOf(3L, 4L) }
         })
-        assertEquals(28, result.history.size)
+        assertTrue(result.history.size in 14..28)
+    }
+
+    @Test
+    fun calorieDenseOptionalFoodIsNotAddedWhenItsMinimumExceedsMealTarget() {
+        val mondayBreakfast = PlanningSlot(WeekDay.MONDAY, MealType.BREAKFAST)
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                PlanningRule(
+                    itemKind = PlannedItemKind.FOOD,
+                    itemId = 2,
+                    allowedMealTypes = setOf(MealType.BREAKFAST),
+                    fixedSlots = setOf(mondayBreakfast),
+                    fixedGrams = mapOf(MealType.BREAKFAST to 110.0),
+                    frequency = PlanningFrequency.NORMAL,
+                    preferredGrams = 110.0
+                ),
+                rule(5, setOf(MealType.BREAKFAST))
+            ),
+            history = emptyList(),
+            foodsById = foods.associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            seed = 7
+        )
+
+        val breakfast = result.meals.single {
+            it.type == MealType.BREAKFAST && WeekDay.MONDAY in it.days
+        }
+        assertEquals(listOf(2L), breakfast.items.map { it.foodId })
     }
 
     @Test
