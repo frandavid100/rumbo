@@ -3,6 +3,7 @@ package es.david.rumbo.data
 import android.content.Context
 import androidx.core.content.edit
 import es.david.rumbo.logic.RecommendationEngine
+import es.david.rumbo.logic.GeneratedWeeklyMenu
 import es.david.rumbo.model.ActivityLevel
 import es.david.rumbo.model.AesanFoodCatalog
 import es.david.rumbo.model.AppData
@@ -14,6 +15,11 @@ import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.MenuHistoryEntry
+import es.david.rumbo.model.PlannedItemKind
+import es.david.rumbo.model.PlanningFrequency
+import es.david.rumbo.model.PlanningRule
+import es.david.rumbo.model.PlanningSlot
 import es.david.rumbo.model.MealDayAmounts
 import es.david.rumbo.model.PlannedFood
 import es.david.rumbo.model.PlannedDish
@@ -50,7 +56,9 @@ class AppRepository(context: Context) {
         val updatedProfile = ProfileData(
             profile = profile,
             measurements = recalculate(profile, existing?.measurements.orEmpty()),
-            plannedMeals = existing?.plannedMeals.orEmpty()
+            plannedMeals = existing?.plannedMeals.orEmpty(),
+            planningRules = existing?.planningRules.orEmpty(),
+            menuHistory = existing?.menuHistory.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -71,7 +79,9 @@ class AppRepository(context: Context) {
         val updatedProfile = ProfileData(
             profile = profile,
             measurements = recalculate(profile, source),
-            plannedMeals = existing?.plannedMeals.orEmpty()
+            plannedMeals = existing?.plannedMeals.orEmpty(),
+            planningRules = existing?.planningRules.orEmpty(),
+            menuHistory = existing?.menuHistory.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -243,6 +253,43 @@ class AppRepository(context: Context) {
         )
     }
 
+    fun savePlanningRule(rule: PlanningRule): AppData {
+        require(rule.isValid()) { "La regla de planificación no es válida" }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        val exists = when (rule.itemKind) {
+            PlannedItemKind.FOOD -> current.foods.any { it.id == rule.itemId }
+            PlannedItemKind.DISH -> current.dishes.any { it.id == rule.itemId }
+        }
+        require(exists) { "El elemento configurado ya no existe" }
+        val rules = active.planningRules.filterNot {
+            it.itemKind == rule.itemKind && it.itemId == rule.itemId
+        } + rule
+        return updateActive(current, active.copy(planningRules = rules))
+    }
+
+    fun deletePlanningRule(kind: PlannedItemKind, itemId: Long): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(
+            current,
+            active.copy(planningRules = active.planningRules.filterNot {
+                it.itemKind == kind && it.itemId == itemId
+            })
+        )
+    }
+
+    fun applyGeneratedMenu(result: GeneratedWeeklyMenu): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        val sanitized = result.meals.map { it.sanitizedDayAmounts() }
+        require(sanitized.all { it.isValid() }) { "El menú generado no es válido" }
+        return updateActive(
+            current,
+            active.copy(plannedMeals = sanitized.sortedWith(plannedMealComparator), menuHistory = result.history)
+        )
+    }
+
     fun deletePlannedMeal(id: Long): AppData {
         val current = load()
         val active = current.activeProfileData ?: return current
@@ -287,7 +334,19 @@ class AppRepository(context: Context) {
                     val plannedDishes = meal.dishes.filter { it.dishId in dishIds }
                     meal.copy(items = items, dishes = plannedDishes).sanitizedDayAmounts()
                         .takeIf { items.isNotEmpty() || plannedDishes.isNotEmpty() }
-                }.sortedWith(plannedMealComparator)
+                }.sortedWith(plannedMealComparator),
+                planningRules = profileData.planningRules.filter { rule ->
+                    rule.isValid() && when (rule.itemKind) {
+                        PlannedItemKind.FOOD -> rule.itemId in foodIds
+                        PlannedItemKind.DISH -> rule.itemId in dishIds
+                    }
+                },
+                menuHistory = profileData.menuHistory.filter { entry ->
+                    when (entry.itemKind) {
+                        PlannedItemKind.FOOD -> entry.itemId in foodIds
+                        PlannedItemKind.DISH -> entry.itemId in dishIds
+                    }
+                }
             )
         }
         val activeId = data.activeProfileId?.takeIf { id -> profiles.any { it.profile.id == id } }
@@ -336,7 +395,16 @@ class AppRepository(context: Context) {
             require(meals.flatMap { it.dishes }.all { it.dishId in dishIds }) {
                 "Hay comidas con platos inexistentes"
             }
-            require(MealType.entries.all { type ->
+            require(profileData.planningRules.all { it.isValid() }) {
+                "Hay reglas de planificación no válidas"
+            }
+            require(profileData.planningRules.all { rule ->
+                when (rule.itemKind) {
+                    PlannedItemKind.FOOD -> rule.itemId in foodIds
+                    PlannedItemKind.DISH -> rule.itemId in dishIds
+                }
+            }) { "Hay reglas para elementos inexistentes" }
+                        require(MealType.entries.all { type ->
                 val days = meals.filter { it.type == type }.flatMap { it.days }
                 days.distinct().size == days.size
             }) { "Hay comidas del mismo tipo que se solapan" }
@@ -354,7 +422,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 11)
+        put("schemaVersion", 12)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -362,6 +430,8 @@ class AppRepository(context: Context) {
                     put("profile", encodeProfile(profileData.profile))
                     put("measurements", encodeMeasurements(profileData.measurements))
                     put("plannedMeals", encodePlannedMeals(profileData.plannedMeals))
+                    put("planningRules", encodePlanningRules(profileData.planningRules))
+                    put("menuHistory", encodeMenuHistory(profileData.menuHistory))
                 })
             }
         })
@@ -481,6 +551,42 @@ class AppRepository(context: Context) {
         }
     }
 
+    private fun encodePlanningRules(rules: List<PlanningRule>): JSONArray = JSONArray().apply {
+        rules.forEach { rule ->
+            put(JSONObject().apply {
+                put("itemKind", rule.itemKind.name)
+                put("itemId", rule.itemId)
+                put("allowedMealTypes", JSONArray().apply {
+                    rule.allowedMealTypes.forEach { put(it.name) }
+                })
+                put("fixedSlots", JSONArray().apply {
+                    rule.fixedSlots.forEach { slot ->
+                        put(JSONObject().apply {
+                            put("day", slot.day.name)
+                            put("mealType", slot.mealType.name)
+                        })
+                    }
+                })
+                put("frequency", rule.frequency.name)
+                put("preferredGrams", rule.preferredGrams)
+                put("minimumFactor", rule.minimumFactor)
+                put("maximumFactor", rule.maximumFactor)
+            })
+        }
+    }
+
+    private fun encodeMenuHistory(history: List<MenuHistoryEntry>): JSONArray = JSONArray().apply {
+        history.forEach { entry ->
+            put(JSONObject().apply {
+                put("generation", entry.generation)
+                put("itemKind", entry.itemKind.name)
+                put("itemId", entry.itemId)
+                put("day", entry.day.name)
+                put("mealType", entry.mealType.name)
+            })
+        }
+    }
+
     private fun encodeDishes(dishes: List<Dish>): JSONArray = JSONArray().apply {
         dishes.forEach { dish ->
             put(JSONObject().apply {
@@ -516,7 +622,9 @@ class AppRepository(context: Context) {
                                 item.optJSONArray("plannedMeals") ?: JSONArray(),
                                 dishesById,
                                 schemaVersion
-                            )
+                            ),
+                            planningRules = decodePlanningRules(item.optJSONArray("planningRules") ?: JSONArray()),
+                            menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray())
                         )
                     )
                 }
@@ -688,6 +796,53 @@ class AppRepository(context: Context) {
             )
         }
     }.sortedWith(plannedMealComparator)
+
+    private fun decodePlanningRules(array: JSONArray): List<PlanningRule> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.getJSONObject(index)
+            val allowed = item.optJSONArray("allowedMealTypes") ?: JSONArray()
+            val fixed = item.optJSONArray("fixedSlots") ?: JSONArray()
+            add(
+                PlanningRule(
+                    itemKind = PlannedItemKind.valueOf(item.getString("itemKind")),
+                    itemId = item.getLong("itemId"),
+                    allowedMealTypes = buildSet {
+                        for (i in 0 until allowed.length()) add(MealType.valueOf(allowed.getString(i)))
+                    },
+                    fixedSlots = buildSet {
+                        for (i in 0 until fixed.length()) {
+                            val slot = fixed.getJSONObject(i)
+                            add(
+                                PlanningSlot(
+                                    WeekDay.valueOf(slot.getString("day")),
+                                    MealType.valueOf(slot.getString("mealType"))
+                                )
+                            )
+                        }
+                    },
+                    frequency = PlanningFrequency.valueOf(item.optString("frequency", PlanningFrequency.NORMAL.name)),
+                    preferredGrams = item.optDouble("preferredGrams", 100.0),
+                    minimumFactor = item.optDouble("minimumFactor", 0.5),
+                    maximumFactor = item.optDouble("maximumFactor", 1.5)
+                )
+            )
+        }
+    }
+
+    private fun decodeMenuHistory(array: JSONArray): List<MenuHistoryEntry> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.getJSONObject(index)
+            add(
+                MenuHistoryEntry(
+                    generation = item.getInt("generation"),
+                    itemKind = PlannedItemKind.valueOf(item.getString("itemKind")),
+                    itemId = item.getLong("itemId"),
+                    day = WeekDay.valueOf(item.getString("day")),
+                    mealType = MealType.valueOf(item.getString("mealType"))
+                )
+            )
+        }
+    }
 
     private fun decodeDishes(array: JSONArray): List<Dish> = buildList {
         for (index in 0 until array.length()) {
