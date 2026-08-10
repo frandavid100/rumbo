@@ -667,6 +667,13 @@ fun RumboApp(repository: AppRepository) {
                                 draftMealDayName = null
                                 screenName = Screen.ADD_PLANNED_MEAL.name
                             },
+                            planningRule = data.activeProfileData?.planningRules?.firstOrNull {
+                                it.itemKind == PlannedItemKind.DISH && it.itemId == dish.id
+                            },
+                            onSavePlanningRule = { data = repository.savePlanningRule(it) },
+                            onDeletePlanningRule = {
+                                data = repository.deletePlanningRule(PlannedItemKind.DISH, dish.id)
+                            },
                             onEdit = { screenName = Screen.EDIT_DISH.name },
                             onDelete = {
                                 data = repository.deleteDish(dish.id)
@@ -762,6 +769,13 @@ fun RumboApp(repository: AppRepository) {
                                 draftMealTypeName = null
                                 draftMealDayName = null
                                 screenName = Screen.ADD_PLANNED_MEAL.name
+                            },
+                            planningRule = data.activeProfileData?.planningRules?.firstOrNull {
+                                it.itemKind == PlannedItemKind.FOOD && it.itemId == food.id
+                            },
+                            onSavePlanningRule = { data = repository.savePlanningRule(it) },
+                            onDeletePlanningRule = {
+                                data = repository.deletePlanningRule(PlannedItemKind.FOOD, food.id)
                             },
                             onEdit = { screenName = Screen.EDIT_FOOD.name },
                             onDelete = {
@@ -2549,6 +2563,142 @@ private data class PlanningCandidate(
     val name: String,
     val defaultGrams: Double
 )
+
+
+@Composable
+private fun PlanningRuleCards(
+    itemKind: PlannedItemKind,
+    itemId: Long,
+    defaultGrams: Double,
+    rule: PlanningRule?,
+    onSave: (PlanningRule) -> Unit,
+    onDelete: () -> Unit
+) {
+    var editingFixedType by remember(itemKind, itemId) { mutableStateOf<MealType?>(null) }
+    val base = rule ?: PlanningRule(
+        itemKind = itemKind,
+        itemId = itemId,
+        allowedMealTypes = emptySet(),
+        fixedSlots = emptySet(),
+        frequency = PlanningFrequency.NEVER,
+        preferredGrams = defaultGrams
+    )
+
+    fun persist(updated: PlanningRule) {
+        if (updated.frequency == PlanningFrequency.NEVER && updated.fixedSlots.isEmpty()) {
+            onDelete()
+        } else {
+            onSave(updated)
+        }
+    }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Añadirlo al menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            HorizontalDivider()
+            Text(
+                "Rumbo lo tendrá en cuenta al generar nuevas semanas.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            SelectorField(
+                label = "Frecuencia",
+                selectedLabel = if (rule == null || base.frequency == PlanningFrequency.NEVER) {
+                    "No añadir aleatoriamente"
+                } else base.frequency.label,
+                options = PlanningFrequency.entries,
+                optionLabel = {
+                    if (it == PlanningFrequency.NEVER) "No añadir aleatoriamente" else it.label
+                },
+                onSelect = { selected ->
+                    val allowed = if (
+                        selected != PlanningFrequency.NEVER && base.allowedMealTypes.isEmpty()
+                    ) MealType.entries.toSet() else base.allowedMealTypes
+                    persist(base.copy(frequency = selected, allowedMealTypes = allowed))
+                },
+                onClear = null
+            )
+            if (base.frequency != PlanningFrequency.NEVER) {
+                Text("Puede aparecer en", fontWeight = FontWeight.SemiBold)
+                MealType.entries.chunked(3).forEach { types ->
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        types.forEach { type ->
+                            FilterChip(
+                                selected = type in base.allowedMealTypes,
+                                onClick = {
+                                    val updated = if (type in base.allowedMealTypes) {
+                                        base.allowedMealTypes - type
+                                    } else base.allowedMealTypes + type
+                                    if (updated.isNotEmpty()) {
+                                        persist(base.copy(allowedMealTypes = updated))
+                                    }
+                                },
+                                label = { Text(type.label) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Comidas fijas", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            HorizontalDivider()
+            Text(
+                "Añade todas las combinaciones de comida y día en las que debe aparecer siempre.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            val configuredTypes = MealType.entries.filter { type ->
+                base.fixedSlots.any { it.mealType == type }
+            }
+            if (configuredTypes.isNotEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    configuredTypes.forEach { type ->
+                        FilterChip(
+                            selected = editingFixedType == type,
+                            onClick = { editingFixedType = type },
+                            label = { Text(type.label) }
+                        )
+                    }
+                }
+            }
+            SelectorField(
+                label = "Añadir o editar",
+                selectedLabel = editingFixedType?.label ?: "Elegir comida",
+                options = MealType.entries,
+                optionLabel = { it.label },
+                onSelect = { editingFixedType = it },
+                onClear = null
+            )
+            editingFixedType?.let { type ->
+                FixedDayRow(
+                    label = "Días fijos en ${type.label.lowercase()}",
+                    type = type,
+                    selected = base.fixedSlots,
+                    onChange = { updatedSlots ->
+                        persist(base.copy(fixedSlots = updatedSlots))
+                    }
+                )
+            }
+            if (configuredTypes.isEmpty() && editingFixedType == null) {
+                Text(
+                    "Todavía no hay ninguna comida fija.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun AutomaticPlanningScreen(
@@ -4561,6 +4711,9 @@ private fun DishDetailScreen(
     onOpenMeal: (Long) -> Unit,
     onAddToMeal: (Long) -> Unit,
     onAddNewMeal: () -> Unit,
+    planningRule: PlanningRule?,
+    onSavePlanningRule: (PlanningRule) -> Unit,
+    onDeletePlanningRule: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -4663,6 +4816,15 @@ private fun DishDetailScreen(
             }
         }
 
+        PlanningRuleCards(
+            itemKind = PlannedItemKind.DISH,
+            itemId = dish.id,
+            defaultGrams = totalWeight.coerceAtLeast(100.0),
+            rule = planningRule,
+            onSave = onSavePlanningRule,
+            onDelete = onDeletePlanningRule
+        )
+
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Ingredientes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -4684,6 +4846,15 @@ private fun DishDetailScreen(
                 }
             }
         }
+
+        PlanningRuleCards(
+            itemKind = PlannedItemKind.FOOD,
+            itemId = food.id,
+            defaultGrams = 100.0,
+            rule = planningRule,
+            onSave = onSavePlanningRule,
+            onDelete = onDeletePlanningRule
+        )
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -5296,6 +5467,9 @@ private fun FoodDetailScreen(
     onOpenMeal: (Long) -> Unit,
     onAddToMeal: (Long) -> Unit,
     onAddNewMeal: () -> Unit,
+    planningRule: PlanningRule?,
+    onSavePlanningRule: (PlanningRule) -> Unit,
+    onDeletePlanningRule: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
