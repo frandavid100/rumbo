@@ -24,6 +24,7 @@ import es.david.rumbo.model.MealDayAmounts
 import es.david.rumbo.model.PlannedFood
 import es.david.rumbo.model.PlannedDish
 import es.david.rumbo.model.PlannedMeal
+import es.david.rumbo.model.PlanWeek
 import es.david.rumbo.model.ProfileData
 import es.david.rumbo.model.Sex
 import es.david.rumbo.model.UserProfile
@@ -220,8 +221,13 @@ class AppRepository(context: Context) {
         require(sanitized.dishes.all { item -> current.dishes.any { it.id == item.dishId } }) {
             "La comida contiene platos inexistentes"
         }
-        val otherMeals = active.plannedMeals.filterNot { it.id == sanitized.id }
-        require(otherMeals.none { it.type == sanitized.type && it.days.any(sanitized.days::contains) }) {
+        val otherMeals = active.plannedMeals.filterNot {
+            it.id == sanitized.id && it.planWeek == sanitized.planWeek
+        }
+        require(otherMeals.none {
+            it.planWeek == sanitized.planWeek && it.type == sanitized.type &&
+                it.days.any(sanitized.days::contains)
+        }) {
             "Ya hay otra comida de este tipo en alguno de los días seleccionados"
         }
         val updated = active.copy(
@@ -230,8 +236,11 @@ class AppRepository(context: Context) {
         return updateActive(current, updated)
     }
 
-    fun savePlannedMeals(meals: List<PlannedMeal>): AppData {
-        val sanitized = meals.map { it.sanitizedDayAmounts() }
+    fun savePlannedMeals(
+        meals: List<PlannedMeal>,
+        planWeek: PlanWeek = PlanWeek.CURRENT
+    ): AppData {
+        val sanitized = meals.map { it.copy(planWeek = planWeek).sanitizedDayAmounts() }
         val current = load()
         val active = current.activeProfileData ?: return current
         require(sanitized.all { it.isValid() }) { "Hay alguna comida planificada no válida" }
@@ -247,9 +256,10 @@ class AppRepository(context: Context) {
             val days = sanitized.filter { it.type == type }.flatMap { it.days }
             days.distinct().size == days.size
         }) { "Hay comidas del mismo tipo que se solapan" }
+        val preserved = active.plannedMeals.filterNot { it.planWeek == planWeek }
         return updateActive(
             current,
-            active.copy(plannedMeals = sanitized.sortedWith(plannedMealComparator))
+            active.copy(plannedMeals = (preserved + sanitized).sortedWith(plannedMealComparator))
         )
     }
 
@@ -279,14 +289,24 @@ class AppRepository(context: Context) {
         )
     }
 
-    fun applyGeneratedMenu(result: GeneratedWeeklyMenu): AppData {
+    fun applyGeneratedMenu(
+        result: GeneratedWeeklyMenu,
+        planWeek: PlanWeek = PlanWeek.CURRENT
+    ): AppData {
         val current = load()
         val active = current.activeProfileData ?: return current
-        val sanitized = result.meals.map { it.sanitizedDayAmounts() }
+        val idOffset = if (planWeek == PlanWeek.NEXT) 500_000_000_000L else 0L
+        val sanitized = result.meals.map {
+            it.copy(id = it.id + idOffset, planWeek = planWeek).sanitizedDayAmounts()
+        }
         require(sanitized.all { it.isValid() }) { "El menú generado no es válido" }
+        val preserved = active.plannedMeals.filterNot { it.planWeek == planWeek }
         return updateActive(
             current,
-            active.copy(plannedMeals = sanitized.sortedWith(plannedMealComparator), menuHistory = result.history)
+            active.copy(
+                plannedMeals = (preserved + sanitized).sortedWith(plannedMealComparator),
+                menuHistory = result.history
+            )
         )
     }
 
@@ -404,9 +424,13 @@ class AppRepository(context: Context) {
                     PlannedItemKind.DISH -> rule.itemId in dishIds
                 }
             }) { "Hay reglas para elementos inexistentes" }
-                        require(MealType.entries.all { type ->
-                val days = meals.filter { it.type == type }.flatMap { it.days }
-                days.distinct().size == days.size
+            require(PlanWeek.entries.all { week ->
+                MealType.entries.all { type ->
+                    val days = meals.filter {
+                        it.planWeek == week && it.type == type
+                    }.flatMap { it.days }
+                    days.distinct().size == days.size
+                }
             }) { "Hay comidas del mismo tipo que se solapan" }
         }
     }
@@ -422,7 +446,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 12)
+        put("schemaVersion", 13)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -499,6 +523,7 @@ class AppRepository(context: Context) {
             put(JSONObject().apply {
                 put("id", meal.id)
                 put("type", meal.type.name)
+                put("planWeek", meal.planWeek.name)
                 put("days", JSONArray().apply {
                     WeekDay.entries.filter(meal.days::contains).forEach { put(it.name) }
                 })
@@ -566,6 +591,9 @@ class AppRepository(context: Context) {
                             put("mealType", slot.mealType.name)
                         })
                     }
+                })
+                put("fixedGrams", JSONObject().apply {
+                    rule.fixedGrams.forEach { (type, grams) -> put(type.name, grams) }
                 })
                 put("frequency", rule.frequency.name)
                 put("preferredGrams", rule.preferredGrams)
@@ -726,6 +754,9 @@ class AppRepository(context: Context) {
                 PlannedMeal(
                     id = item.getLong("id"),
                     type = MealType.valueOf(item.getString("type")),
+                    planWeek = if (schemaVersion >= 13) {
+                        PlanWeek.valueOf(item.optString("planWeek", PlanWeek.CURRENT.name))
+                    } else PlanWeek.CURRENT,
                     days = buildSet {
                         for (dayIndex in 0 until daysJson.length()) {
                             add(WeekDay.valueOf(daysJson.getString(dayIndex)))
@@ -818,6 +849,14 @@ class AppRepository(context: Context) {
                                     MealType.valueOf(slot.getString("mealType"))
                                 )
                             )
+                        }
+                    },
+                    fixedGrams = buildMap {
+                        val amounts = item.optJSONObject("fixedGrams")
+                        if (amounts != null) {
+                            amounts.keys().forEach { key ->
+                                put(MealType.valueOf(key), amounts.getDouble(key))
+                            }
                         }
                     },
                     frequency = PlanningFrequency.valueOf(item.optString("frequency", PlanningFrequency.NORMAL.name)),
