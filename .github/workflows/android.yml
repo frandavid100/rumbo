@@ -15,14 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Preparar copia privada temporal de las fuentes
-        run: git archive --format=zip --output=rumbo-source.zip HEAD
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rumbo-source
-          path: rumbo-source.zip
-          retention-days: 1
-          if-no-files-found: error
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -30,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Generar catálogo AESAN
+      - name: Generar catálogo nutricional de Mercadona
         run: |
           python -m pip install -r tools/requirements.txt
           python tools/import_aesan.py
