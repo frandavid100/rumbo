@@ -39,10 +39,10 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Compara calorías y macros de cada toma con el 20 % de la recomendación diaria y los totales de cada día con el 100 %.
 - Distingue entre objetivo alcanzado, próximo, fuera de rango y plan incompleto, mostrando cada nutriente por separado.
 - Calcula una lista de la compra semanal con los gramos acumulados de cada alimento planificado.
-- Incluye los 52 alimentos de la hoja «Dieta» y 29.113 productos con EAN únicos de la base abierta de AESAN de 2022.
-- Conserva también los registros incompletos y muestra claramente los nutrientes que AESAN no proporciona.
+- Incluye los 52 alimentos iniciales y un catálogo compacto de productos de Mercadona con EAN y datos nutricionales completos.
+- Excluye productos de otros comercios y fichas sin los cuatro valores necesarios para planificar menús.
 - Muestra marca, familia, subcategoría, denominación legal, ingredientes, grasas saturadas, azúcares, sal, EAN y procedencia cuando figuran en la fuente.
-- Identifica 1.436 referencias de Mercadona a partir de la marca o del fabricante declarados en AESAN.
+- Identifica las referencias de Mercadona a partir de la marca o del fabricante declarados en AESAN.
 - Permite consultar, crear, editar y eliminar alimentos; el catálogo es común a todos los perfiles.
 - Conserva en las copias de seguridad las altas, ediciones y eliminaciones del usuario; el catálogo público ya viaja dentro de la aplicación y no se duplica en cada copia.
 - Identifica cada categoría mediante un icono y un color estables.
@@ -69,17 +69,18 @@ Requisitos: Android Studio compatible con AGP 8.13, JDK 17 y Android SDK 36.
 
 El APK de depuración se genera en `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Regenerar el catálogo AESAN
+## Regenerar el catálogo de Mercadona
 
-El APK publicado incluye el catálogo transformado. El repositorio no versiona
-esa copia generada: para crearla desde el libro oficial de AESAN:
+El APK publicado incluye un subconjunto nutricional de Mercadona. El repositorio
+no versiona esa copia generada: para crearla desde el libro oficial de AESAN:
 
 1. Instala Python 3 y ejecuta `python3 -m pip install -r tools/requirements.txt`.
 2. Ejecuta `python3 tools/import_aesan.py` desde la raíz del proyecto.
 
-El importador descarga el libro oficial, conserva un registro por EAN y no
-modifica los valores nutricionales publicados por AESAN. Debe ejecutarse antes
-de compilar una copia recién clonada del repositorio.
+El importador descarga el libro oficial, conserva un registro completo por EAN
+solo cuando la marca o el fabricante permiten atribuirlo a Mercadona y no modifica
+los valores nutricionales publicados. Debe ejecutarse antes de compilar una copia
+recién clonada del repositorio.
 
 ## Criterio de cálculo
 
