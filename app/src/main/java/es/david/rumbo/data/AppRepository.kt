@@ -961,7 +961,8 @@ class AppRepository(context: Context) {
         private val foodComparator = compareBy<Food> { it.category.ordinal }
             .thenBy { it.name.lowercase() }
         private val dishComparator = compareBy<Dish> { it.name.lowercase() }
-        private val plannedMealComparator = compareBy<PlannedMeal> { it.type.ordinal }
+        private val plannedMealComparator = compareBy<PlannedMeal> { it.planWeek.ordinal }
+            .thenBy { it.type.ordinal }
             .thenBy { meal -> WeekDay.entries.indexOfFirst(meal.days::contains) }
     }
 }
