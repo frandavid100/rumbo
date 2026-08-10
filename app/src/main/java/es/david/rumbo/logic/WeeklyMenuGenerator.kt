@@ -14,6 +14,7 @@ import es.david.rumbo.model.PlanningSlot
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.nutrition
+import es.david.rumbo.model.nutritionForGrams
 import es.david.rumbo.model.resolvedGrams
 import java.util.Random
 import kotlin.math.abs
