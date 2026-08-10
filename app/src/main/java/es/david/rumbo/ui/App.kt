@@ -4801,7 +4801,21 @@ private fun DishDetailScreen(
     val per100Factor = if (totalWeight > 0.0) 100.0 / totalWeight else 0.0
     val category = dish.dominantCategory(foodsById)
     val menuUsages = remember(dish.id, plannedMeals) {
-        plannedMeals.mapNotNull { meal ->
+        plannedMeals.filter { it.planWeek == PlanWeek.CURRENT }.mapNotNull { meal ->
+            val amounts = meal.days.map { day ->
+                meal.dishes.filter { it.dishId == dish.id }.sumOf { meal.resolvedGrams(it, day) }
+            }
+            if (amounts.any { it > 0.0 }) {
+                Triple(
+                    meal.id,
+                    "${meal.type.label} · ${meal.days.joinToString { it.shortLabel }}",
+                    amountRangeLabel(amounts)
+                )
+            } else null
+        }
+    }
+    val nextMenuUsages = remember(dish.id, plannedMeals) {
+        plannedMeals.filter { it.planWeek == PlanWeek.NEXT }.mapNotNull { meal ->
             val amounts = meal.days.map { day ->
                 meal.dishes.filter { it.dishId == dish.id }.sumOf { meal.resolvedGrams(it, day) }
             }
@@ -4925,10 +4939,10 @@ private fun DishDetailScreen(
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Presente en el menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("En el menú de esta semana", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 HorizontalDivider()
                 if (menuUsages.isEmpty()) {
-                    Text("Este plato no está incluido en ninguna comida.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Este plato no está incluido en el menú de esta semana.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     menuUsages.forEachIndexed { index, (mealId, label, amount) ->
                         Row(
@@ -4939,6 +4953,32 @@ private fun DishDetailScreen(
                             Text(amount)
                         }
                         if (index < menuUsages.lastIndex) HorizontalDivider()
+                    }
+                }
+                OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Añadir a otra comida")
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("En el menú de la semana que viene", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider()
+                if (nextMenuUsages.isEmpty()) {
+                    Text("Este plato no está incluido en el menú de la semana que viene.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    nextMenuUsages.forEachIndexed { index, (mealId, label, amount) ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, modifier = Modifier.weight(1f), maxLines = 2)
+                            Text(amount)
+                        }
+                        if (index < nextMenuUsages.lastIndex) HorizontalDivider()
                     }
                 }
                 OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
@@ -5546,7 +5586,31 @@ private fun FoodDetailScreen(
     val similarFoods = FoodSimilarityEngine.findSimilar(food, foods)
     val menuUsages = remember(food.id, plannedMeals, dishes) {
         val dishesById = dishes.associateBy { it.id }
-        plannedMeals.mapNotNull { meal ->
+        plannedMeals.filter { it.planWeek == PlanWeek.CURRENT }.mapNotNull { meal ->
+            val amounts = meal.days.map { day ->
+                val direct = meal.items.filter { it.foodId == food.id }
+                    .sumOf { meal.resolvedGrams(it, day) }
+                val throughDishes = meal.dishes.sumOf { plannedDish ->
+                    val dish = dishesById[plannedDish.dishId] ?: return@sumOf 0.0
+                    val recipeWeight = dish.totalWeightGrams()
+                    if (recipeWeight <= 0.0) return@sumOf 0.0
+                    val ingredientGrams = dish.ingredients.filter { it.foodId == food.id }.sumOf { it.grams }
+                    ingredientGrams * meal.resolvedGrams(plannedDish, day) / recipeWeight
+                }
+                direct + throughDishes
+            }
+            if (amounts.any { it > 0.0 }) {
+                Triple(
+                    meal.id,
+                    "${meal.type.label} · ${meal.days.joinToString { it.shortLabel }}",
+                    amountRangeLabel(amounts)
+                )
+            } else null
+        }
+    }
+    val nextMenuUsages = remember(food.id, plannedMeals, dishes) {
+        val dishesById = dishes.associateBy { it.id }
+        plannedMeals.filter { it.planWeek == PlanWeek.NEXT }.mapNotNull { meal ->
             val amounts = meal.days.map { day ->
                 val direct = meal.items.filter { it.foodId == food.id }
                     .sumOf { meal.resolvedGrams(it, day) }
@@ -5669,10 +5733,10 @@ private fun FoodDetailScreen(
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Presente en el menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("En el menú de esta semana", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 HorizontalDivider()
                 if (menuUsages.isEmpty()) {
-                    Text("Este alimento no está incluido en ninguna comida.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Este alimento no está incluido en el menú de esta semana.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     menuUsages.forEachIndexed { index, (mealId, label, amount) ->
                         Row(
@@ -5683,6 +5747,32 @@ private fun FoodDetailScreen(
                             Text(amount)
                         }
                         if (index < menuUsages.lastIndex) HorizontalDivider()
+                    }
+                }
+                OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Añadir a otra comida")
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("En el menú de la semana que viene", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider()
+                if (nextMenuUsages.isEmpty()) {
+                    Text("Este alimento no está incluido en el menú de la semana que viene.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    nextMenuUsages.forEachIndexed { index, (mealId, label, amount) ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, modifier = Modifier.weight(1f), maxLines = 2)
+                            Text(amount)
+                        }
+                        if (index < nextMenuUsages.lastIndex) HorizontalDivider()
                     }
                 }
                 OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
