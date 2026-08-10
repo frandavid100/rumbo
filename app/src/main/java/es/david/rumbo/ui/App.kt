@@ -4836,15 +4836,6 @@ private fun DishDetailScreen(
             }
         }
 
-        PlanningRuleCards(
-            itemKind = PlannedItemKind.FOOD,
-            itemId = food.id,
-            defaultGrams = 100.0,
-            rule = planningRule,
-            onSave = onSavePlanningRule,
-            onDelete = onDeletePlanningRule
-        )
-
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Presente en el menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -5578,6 +5569,16 @@ private fun FoodDetailScreen(
                 }
             }
         }
+
+
+        PlanningRuleCards(
+            itemKind = PlannedItemKind.FOOD,
+            itemId = food.id,
+            defaultGrams = 100.0,
+            rule = planningRule,
+            onSave = onSavePlanningRule,
+            onDelete = onDeletePlanningRule
+        )
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
