@@ -383,8 +383,7 @@ data class AppData(
         get() = activeProfileData?.measurements.orEmpty()
 
     val isActiveProfileReady: Boolean
-        get() = profile != null && measurements.any { it.weightKg != null } &&
-            measurements.any { it.waistCm != null } && measurements.any { it.goal != null }
+        get() = profile != null && measurements.any { it.weightKg != null || it.waistCm != null }
 }
 
 data class EffectiveValues(
