@@ -5,7 +5,7 @@ import androidx.core.content.edit
 import es.david.rumbo.logic.RecommendationEngine
 import es.david.rumbo.logic.GeneratedWeeklyMenu
 import es.david.rumbo.model.ActivityLevel
-import es.david.rumbo.model.AesanFoodCatalog
+import es.david.rumbo.model.MercadonaFoodCatalog
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.DietCompliance
 import es.david.rumbo.model.Dish
@@ -38,7 +38,7 @@ import java.time.LocalDate
 class AppRepository(context: Context) {
     private val preferences = context.getSharedPreferences("rumbo_data", Context.MODE_PRIVATE)
     private val baseFoods: List<Food> by lazy {
-        (DefaultFoodCatalog.items + AesanFoodCatalog.load(context))
+        (DefaultFoodCatalog.items + MercadonaFoodCatalog.load(context))
             .distinctBy { it.id }
             .sortedWith(foodComparator)
     }
