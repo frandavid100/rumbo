@@ -5,6 +5,7 @@ import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedFood
 import es.david.rumbo.model.PlannedMeal
+import es.david.rumbo.model.MealDayAmounts
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
 import org.junit.Assert.assertEquals
@@ -51,15 +52,15 @@ class MealPlanEvaluatorTest {
 
         assertEquals(
             TargetFit.ON_TARGET,
-            MealPlanEvaluator.assessMeal(meal(100.0), foods, recommendation).overall
+            MealPlanEvaluator.assessMeal(meal(100.0), foods, emptyMap(), recommendation).overall
         )
         assertEquals(
             TargetFit.CLOSE,
-            MealPlanEvaluator.assessMeal(meal(115.0), foods, recommendation).overall
+            MealPlanEvaluator.assessMeal(meal(115.0), foods, emptyMap(), recommendation).overall
         )
         assertEquals(
             TargetFit.OUTSIDE,
-            MealPlanEvaluator.assessMeal(meal(125.0), foods, recommendation).overall
+            MealPlanEvaluator.assessMeal(meal(125.0), foods, emptyMap(), recommendation).overall
         )
     }
 
@@ -74,7 +75,7 @@ class MealPlanEvaluatorTest {
             )
         }
 
-        val result = MealPlanEvaluator.assessDay(WeekDay.MONDAY, meals, foods, recommendation)
+        val result = MealPlanEvaluator.assessDay(WeekDay.MONDAY, meals, foods, emptyMap(), recommendation)
 
         assertEquals(TargetFit.ON_TARGET, result.overall)
         assertEquals(2000.0, result.actual.calories, 0.001)
@@ -94,6 +95,7 @@ class MealPlanEvaluatorTest {
             WeekDay.MONDAY,
             listOf(breakfast),
             foods,
+            emptyMap(),
             recommendation
         )
 
@@ -116,8 +118,46 @@ class MealPlanEvaluatorTest {
             items = listOf(PlannedFood(balancedMeal.id, 50.0))
         )
 
-        val amounts = MealPlanEvaluator.weeklyFoodAmounts(listOf(breakfast, dinner))
+        val amounts = MealPlanEvaluator.weeklyFoodAmounts(listOf(breakfast, dinner), emptyMap())
 
         assertEquals(400.0, amounts.getValue(balancedMeal.id), 0.001)
+    }
+
+    @Test
+    fun shoppingAmountsExpandDishesFromPlannedGrams() {
+        val dish = es.david.rumbo.model.Dish(
+            id = 20,
+            name = "Batido",
+            ingredients = listOf(es.david.rumbo.model.DishIngredient(balancedMeal.id, 100.0))
+        )
+        val breakfast = PlannedMeal(
+            id = 1,
+            type = MealType.BREAKFAST,
+            days = setOf(WeekDay.MONDAY, WeekDay.TUESDAY),
+            dishes = listOf(es.david.rumbo.model.PlannedDish(dish.id, 150.0))
+        )
+
+        val amounts = MealPlanEvaluator.weeklyFoodAmounts(listOf(breakfast), mapOf(dish.id to dish))
+
+        assertEquals(300.0, amounts.getValue(balancedMeal.id), 0.001)
+    }
+
+    @Test
+    fun shoppingAmountsUseEachDaysResolvedAmount() {
+        val adjustable = PlannedFood(balancedMeal.id, 100.0, true, 50.0, 200.0)
+        val breakfast = PlannedMeal(
+            id = 1,
+            type = MealType.BREAKFAST,
+            days = setOf(WeekDay.MONDAY, WeekDay.TUESDAY),
+            items = listOf(adjustable),
+            dayAmounts = listOf(
+                MealDayAmounts(WeekDay.MONDAY, foodGrams = mapOf(balancedMeal.id to 80.0)),
+                MealDayAmounts(WeekDay.TUESDAY, foodGrams = mapOf(balancedMeal.id to 130.0))
+            )
+        )
+
+        val amounts = MealPlanEvaluator.weeklyFoodAmounts(listOf(breakfast), emptyMap())
+
+        assertEquals(210.0, amounts.getValue(balancedMeal.id), 0.001)
     }
 }

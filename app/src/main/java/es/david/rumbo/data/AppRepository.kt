@@ -3,22 +3,34 @@ package es.david.rumbo.data
 import android.content.Context
 import androidx.core.content.edit
 import es.david.rumbo.logic.RecommendationEngine
+import es.david.rumbo.logic.GeneratedWeeklyMenu
 import es.david.rumbo.model.ActivityLevel
-import es.david.rumbo.model.AesanFoodCatalog
+import es.david.rumbo.model.MercadonaFoodCatalog
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.DietCompliance
+import es.david.rumbo.model.Dish
+import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.DefaultFoodCatalog
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.MenuHistoryEntry
+import es.david.rumbo.model.PlannedItemKind
+import es.david.rumbo.model.PlanningFrequency
+import es.david.rumbo.model.PlanningRule
+import es.david.rumbo.model.PlanningSlot
+import es.david.rumbo.model.MealDayAmounts
 import es.david.rumbo.model.PlannedFood
+import es.david.rumbo.model.PlannedDish
 import es.david.rumbo.model.PlannedMeal
+import es.david.rumbo.model.PlanWeek
 import es.david.rumbo.model.ProfileData
 import es.david.rumbo.model.Sex
 import es.david.rumbo.model.UserProfile
 import es.david.rumbo.model.WeightGoal
 import es.david.rumbo.model.WeekDay
+import es.david.rumbo.model.sanitizedDayAmounts
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -26,7 +38,7 @@ import java.time.LocalDate
 class AppRepository(context: Context) {
     private val preferences = context.getSharedPreferences("rumbo_data", Context.MODE_PRIVATE)
     private val baseFoods: List<Food> by lazy {
-        (DefaultFoodCatalog.items + AesanFoodCatalog.load(context))
+        (DefaultFoodCatalog.items + MercadonaFoodCatalog.load(context))
             .distinctBy { it.id }
             .sortedWith(foodComparator)
     }
@@ -45,19 +57,21 @@ class AppRepository(context: Context) {
         val updatedProfile = ProfileData(
             profile = profile,
             measurements = recalculate(profile, existing?.measurements.orEmpty()),
-            plannedMeals = existing?.plannedMeals.orEmpty()
+            plannedMeals = existing?.plannedMeals.orEmpty(),
+            planningRules = existing?.planningRules.orEmpty(),
+            menuHistory = existing?.menuHistory.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
         } else {
             current.profiles.map { if (it.profile.id == profile.id) updatedProfile else it }
         }
-        return persistAndReturn(AppData(profiles, profile.id, current.foods))
+        return persistAndReturn(AppData(profiles, profile.id, current.foods, current.dishes))
     }
 
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
-        require(baseline.weightKg != null && baseline.waistCm != null && baseline.goal != null) {
-            "El perfil inicial necesita peso, cintura y objetivo"
+        require(baseline.weightKg != null || baseline.waistCm != null) {
+            "El perfil inicial necesita al menos el peso o la cintura"
         }
         val current = load()
         val existing = current.profiles.firstOrNull { it.profile.id == profile.id }
@@ -66,14 +80,16 @@ class AppRepository(context: Context) {
         val updatedProfile = ProfileData(
             profile = profile,
             measurements = recalculate(profile, source),
-            plannedMeals = existing?.plannedMeals.orEmpty()
+            plannedMeals = existing?.plannedMeals.orEmpty(),
+            planningRules = existing?.planningRules.orEmpty(),
+            menuHistory = existing?.menuHistory.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
         } else {
             current.profiles.map { if (it.profile.id == profile.id) updatedProfile else it }
         }
-        return persistAndReturn(AppData(profiles, profile.id, current.foods))
+        return persistAndReturn(AppData(profiles, profile.id, current.foods, current.dishes))
     }
 
     fun switchProfile(profileId: Long): AppData {
@@ -88,7 +104,7 @@ class AppRepository(context: Context) {
         val remaining = current.profiles.filterNot { it.profile.id == profileId }
         val activeId = if (current.activeProfileId == profileId) remaining.first().profile.id
             else current.activeProfileId
-        return persistAndReturn(AppData(remaining, activeId, current.foods))
+        return persistAndReturn(AppData(remaining, activeId, current.foods, current.dishes))
     }
 
     fun addMeasurement(draft: Measurement): AppData {
@@ -98,16 +114,32 @@ class AppRepository(context: Context) {
         return updateActive(current, active.copy(measurements = recalculate(active.profile, source)))
     }
 
-    fun setGoal(goal: WeightGoal): AppData {
+    fun setGoal(goal: WeightGoal): AppData = setWeeklyRate(
+        if (goal == WeightGoal.AUTOMATIC) null
+        else RecommendationEngine.weeklyRateFor(goal, load().activeProfileData
+            ?.let { RecommendationEngine.effectiveValues(it.measurements).weightKg })
+    )
+
+    fun setWeeklyRate(weeklyRateKg: Double?): AppData {
         val current = load()
         val active = current.activeProfileData ?: return current
-        if (RecommendationEngine.effectiveValues(active.measurements).goal == goal) return current
-        val change = Measurement(
-            id = System.currentTimeMillis(),
-            date = LocalDate.now(),
-            goal = goal
+        val effective = RecommendationEngine.effectiveValues(active.measurements)
+        if (weeklyRateKg == null && effective.goal == WeightGoal.AUTOMATIC) return current
+        if (weeklyRateKg != null && effective.weeklyRateKg == weeklyRateKg) return current
+        val goal = when {
+            weeklyRateKg == null -> WeightGoal.AUTOMATIC
+            weeklyRateKg < 0.0 -> WeightGoal.LOSE_SLOWLY
+            weeklyRateKg > 0.0 -> WeightGoal.GAIN_SLOWLY
+            else -> WeightGoal.MAINTAIN
+        }
+        return addMeasurement(
+            Measurement(
+                id = System.currentTimeMillis(),
+                date = LocalDate.now(),
+                goal = goal,
+                weeklyRateKg = weeklyRateKg
+            )
         )
-        return addMeasurement(change)
     }
 
     fun deleteMeasurement(id: Long): AppData {
@@ -127,34 +159,157 @@ class AppRepository(context: Context) {
 
     fun deleteFood(id: Long): AppData {
         val current = load()
+        // A recipe is immutable after creation. Refuse to remove one of its
+        // ingredients; the user can delete the complete dish first.
+        if (current.dishes.any { dish -> dish.ingredients.any { it.foodId == id } }) return current
+        val dishes = current.dishes
+        val dishIds = dishes.mapTo(mutableSetOf()) { it.id }
         val profiles = current.profiles.map { profileData ->
             profileData.copy(
                 plannedMeals = profileData.plannedMeals.mapNotNull { meal ->
                     val remaining = meal.items.filterNot { it.foodId == id }
-                    meal.copy(items = remaining).takeIf { remaining.isNotEmpty() }
+                    val plannedDishes = meal.dishes.filter { it.dishId in dishIds }
+                    meal.copy(items = remaining, dishes = plannedDishes).sanitizedDayAmounts()
+                        .takeIf { remaining.isNotEmpty() || plannedDishes.isNotEmpty() }
                 }
             )
         }
         return persistAndReturn(
-            current.copy(profiles = profiles, foods = current.foods.filterNot { it.id == id })
+            current.copy(
+                profiles = profiles,
+                foods = current.foods.filterNot { it.id == id },
+                dishes = dishes
+            )
+        )
+    }
+
+    fun saveDish(dish: Dish): AppData {
+        require(dish.isValid()) { "El plato no es válido" }
+        val current = load()
+        val existing = current.dishes.firstOrNull { it.id == dish.id }
+        val savedDish = existing?.let { dish.copy(ingredients = it.ingredients) } ?: dish
+        require(savedDish.ingredients.all { ingredient -> current.foods.any { it.id == ingredient.foodId } }) {
+            "El plato contiene alimentos inexistentes"
+        }
+        val dishes = (current.dishes.filterNot { it.id == savedDish.id } + savedDish)
+            .sortedWith(dishComparator)
+        return persistAndReturn(current.copy(dishes = dishes))
+    }
+
+    fun deleteDish(id: Long): AppData {
+        val current = load()
+        val profiles = current.profiles.map { profileData ->
+            profileData.copy(
+                plannedMeals = profileData.plannedMeals.mapNotNull { meal ->
+                    val dishes = meal.dishes.filterNot { it.dishId == id }
+                    meal.copy(dishes = dishes).sanitizedDayAmounts()
+                        .takeIf { meal.items.isNotEmpty() || dishes.isNotEmpty() }
+                }
+            )
+        }
+        return persistAndReturn(
+            current.copy(profiles = profiles, dishes = current.dishes.filterNot { it.id == id })
         )
     }
 
     fun savePlannedMeal(meal: PlannedMeal): AppData {
-        require(meal.isValid()) { "La comida planificada no es válida" }
+        val sanitized = meal.sanitizedDayAmounts()
+        require(sanitized.isValid()) { "La comida planificada no es válida" }
         val current = load()
         val active = current.activeProfileData ?: return current
-        require(meal.items.all { item -> current.foods.any { it.id == item.foodId } }) {
+        require(sanitized.items.all { item -> current.foods.any { it.id == item.foodId } }) {
             "La comida contiene alimentos inexistentes"
         }
-        val otherMeals = active.plannedMeals.filterNot { it.id == meal.id }
-        require(otherMeals.none { it.type == meal.type && it.days.any(meal.days::contains) }) {
+        require(sanitized.dishes.all { item -> current.dishes.any { it.id == item.dishId } }) {
+            "La comida contiene platos inexistentes"
+        }
+        val otherMeals = active.plannedMeals.filterNot {
+            it.id == sanitized.id && it.planWeek == sanitized.planWeek
+        }
+        require(otherMeals.none {
+            it.planWeek == sanitized.planWeek && it.type == sanitized.type &&
+                it.days.any(sanitized.days::contains)
+        }) {
             "Ya hay otra comida de este tipo en alguno de los días seleccionados"
         }
         val updated = active.copy(
-            plannedMeals = (otherMeals + meal).sortedWith(plannedMealComparator)
+            plannedMeals = (otherMeals + sanitized).sortedWith(plannedMealComparator)
         )
         return updateActive(current, updated)
+    }
+
+    fun savePlannedMeals(
+        meals: List<PlannedMeal>,
+        planWeek: PlanWeek = PlanWeek.CURRENT
+    ): AppData {
+        val sanitized = meals.map { it.copy(planWeek = planWeek).sanitizedDayAmounts() }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        require(sanitized.all { it.isValid() }) { "Hay alguna comida planificada no válida" }
+        val foodIds = current.foods.mapTo(mutableSetOf()) { it.id }
+        val dishIds = current.dishes.mapTo(mutableSetOf()) { it.id }
+        require(sanitized.flatMap { it.items }.all { it.foodId in foodIds }) {
+            "Hay comidas con alimentos inexistentes"
+        }
+        require(sanitized.flatMap { it.dishes }.all { it.dishId in dishIds }) {
+            "Hay comidas con platos inexistentes"
+        }
+        require(MealType.entries.all { type ->
+            val days = sanitized.filter { it.type == type }.flatMap { it.days }
+            days.distinct().size == days.size
+        }) { "Hay comidas del mismo tipo que se solapan" }
+        val preserved = active.plannedMeals.filterNot { it.planWeek == planWeek }
+        return updateActive(
+            current,
+            active.copy(plannedMeals = (preserved + sanitized).sortedWith(plannedMealComparator))
+        )
+    }
+
+    fun savePlanningRule(rule: PlanningRule): AppData {
+        require(rule.isValid()) { "La regla de planificación no es válida" }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        val exists = when (rule.itemKind) {
+            PlannedItemKind.FOOD -> current.foods.any { it.id == rule.itemId }
+            PlannedItemKind.DISH -> current.dishes.any { it.id == rule.itemId }
+        }
+        require(exists) { "El elemento configurado ya no existe" }
+        val rules = active.planningRules.filterNot {
+            it.itemKind == rule.itemKind && it.itemId == rule.itemId
+        } + rule
+        return updateActive(current, active.copy(planningRules = rules))
+    }
+
+    fun deletePlanningRule(kind: PlannedItemKind, itemId: Long): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(
+            current,
+            active.copy(planningRules = active.planningRules.filterNot {
+                it.itemKind == kind && it.itemId == itemId
+            })
+        )
+    }
+
+    fun applyGeneratedMenu(
+        result: GeneratedWeeklyMenu,
+        planWeek: PlanWeek = PlanWeek.CURRENT
+    ): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        val idOffset = if (planWeek == PlanWeek.NEXT) 500_000_000_000L else 0L
+        val sanitized = result.meals.map {
+            it.copy(id = it.id + idOffset, planWeek = planWeek).sanitizedDayAmounts()
+        }
+        require(sanitized.all { it.isValid() }) { "El menú generado no es válido" }
+        val preserved = active.plannedMeals.filterNot { it.planWeek == planWeek }
+        return updateActive(
+            current,
+            active.copy(
+                plannedMeals = (preserved + sanitized).sortedWith(plannedMealComparator),
+                menuHistory = result.history
+            )
+        )
     }
 
     fun deletePlannedMeal(id: Long): AppData {
@@ -188,18 +343,37 @@ class AppRepository(context: Context) {
     private fun normalize(data: AppData): AppData {
         val foods = data.foods.ifEmpty { baseFoods }
         val foodIds = foods.mapTo(mutableSetOf()) { it.id }
+        val dishes = data.dishes.mapNotNull { dish ->
+            val ingredients = dish.ingredients.filter { it.foodId in foodIds }
+            dish.copy(ingredients = ingredients).takeIf { ingredients.isNotEmpty() }
+        }.sortedWith(dishComparator)
+        val dishIds = dishes.mapTo(mutableSetOf()) { it.id }
         val profiles = data.profiles.map { profileData ->
             profileData.copy(
                 measurements = recalculate(profileData.profile, profileData.measurements),
                 plannedMeals = profileData.plannedMeals.mapNotNull { meal ->
                     val items = meal.items.filter { it.foodId in foodIds }
-                    meal.copy(items = items).takeIf { items.isNotEmpty() }
-                }.sortedWith(plannedMealComparator)
+                    val plannedDishes = meal.dishes.filter { it.dishId in dishIds }
+                    meal.copy(items = items, dishes = plannedDishes).sanitizedDayAmounts()
+                        .takeIf { items.isNotEmpty() || plannedDishes.isNotEmpty() }
+                }.sortedWith(plannedMealComparator),
+                planningRules = profileData.planningRules.filter { rule ->
+                    rule.isValid() && when (rule.itemKind) {
+                        PlannedItemKind.FOOD -> rule.itemId in foodIds
+                        PlannedItemKind.DISH -> rule.itemId in dishIds
+                    }
+                },
+                menuHistory = profileData.menuHistory.filter { entry ->
+                    when (entry.itemKind) {
+                        PlannedItemKind.FOOD -> entry.itemId in foodIds
+                        PlannedItemKind.DISH -> entry.itemId in dishIds
+                    }
+                }
             )
         }
         val activeId = data.activeProfileId?.takeIf { id -> profiles.any { it.profile.id == id } }
             ?: profiles.firstOrNull()?.profile?.id
-        return AppData(profiles, activeId, foods)
+        return AppData(profiles, activeId, foods, dishes)
     }
 
     private fun validate(data: AppData) {
@@ -215,11 +389,22 @@ class AppRepository(context: Context) {
         require(measurements.all { it.waistCm == null || it.waistCm in 35.0..250.0 }) {
             "Hay alguna cintura fuera de rango"
         }
+        require(measurements.all { it.weeklyRateKg == null || it.weeklyRateKg.isFinite() }) {
+            "Hay algún objetivo semanal que no es una cifra finita"
+        }
         require(data.foods.all { it.isValid() }) { "Hay algún alimento no válido" }
         require(data.foods.map { it.id }.distinct().size == data.foods.size) {
             "Hay alimentos duplicados"
         }
         val foodIds = data.foods.mapTo(mutableSetOf()) { it.id }
+        require(data.dishes.all { it.isValid() }) { "Hay algún plato no válido" }
+        require(data.dishes.map { it.id }.distinct().size == data.dishes.size) {
+            "Hay platos duplicados"
+        }
+        require(data.dishes.flatMap { it.ingredients }.all { it.foodId in foodIds }) {
+            "Hay platos con alimentos inexistentes"
+        }
+        val dishIds = data.dishes.mapTo(mutableSetOf()) { it.id }
         data.profiles.forEach { profileData ->
             val meals = profileData.plannedMeals
             require(meals.all { it.isValid() }) { "Hay alguna comida planificada no válida" }
@@ -229,9 +414,25 @@ class AppRepository(context: Context) {
             require(meals.flatMap { it.items }.all { it.foodId in foodIds }) {
                 "Hay comidas con alimentos inexistentes"
             }
-            require(MealType.entries.all { type ->
-                val days = meals.filter { it.type == type }.flatMap { it.days }
-                days.distinct().size == days.size
+            require(meals.flatMap { it.dishes }.all { it.dishId in dishIds }) {
+                "Hay comidas con platos inexistentes"
+            }
+            require(profileData.planningRules.all { it.isValid() }) {
+                "Hay reglas de planificación no válidas"
+            }
+            require(profileData.planningRules.all { rule ->
+                when (rule.itemKind) {
+                    PlannedItemKind.FOOD -> rule.itemId in foodIds
+                    PlannedItemKind.DISH -> rule.itemId in dishIds
+                }
+            }) { "Hay reglas para elementos inexistentes" }
+            require(PlanWeek.entries.all { week ->
+                MealType.entries.all { type ->
+                    val days = meals.filter {
+                        it.planWeek == week && it.type == type
+                    }.flatMap { it.days }
+                    days.distinct().size == days.size
+                }
             }) { "Hay comidas del mismo tipo que se solapan" }
         }
     }
@@ -247,7 +448,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 7)
+        put("schemaVersion", 13)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -255,6 +456,8 @@ class AppRepository(context: Context) {
                     put("profile", encodeProfile(profileData.profile))
                     put("measurements", encodeMeasurements(profileData.measurements))
                     put("plannedMeals", encodePlannedMeals(profileData.plannedMeals))
+                    put("planningRules", encodePlanningRules(profileData.planningRules))
+                    put("menuHistory", encodeMenuHistory(profileData.menuHistory))
                 })
             }
         })
@@ -264,6 +467,7 @@ class AppRepository(context: Context) {
             .filterNot(currentFoodsById::containsKey).toList()
         put("foodOverrides", encodeFoods(overrides))
         put("deletedFoodIds", JSONArray().apply { deletedIds.forEach(::put) })
+        put("dishes", encodeDishes(data.dishes))
     }
 
     private fun encodeProfile(profile: UserProfile): JSONObject = JSONObject().apply {
@@ -284,6 +488,7 @@ class AppRepository(context: Context) {
                 putNullable("activity", measurement.activity?.name)
                 putNullable("compliance", measurement.compliance?.name)
                 putNullable("goal", measurement.goal?.name)
+                putNullable("weeklyRateKg", measurement.weeklyRateKg)
             })
         }
     }
@@ -320,6 +525,7 @@ class AppRepository(context: Context) {
             put(JSONObject().apply {
                 put("id", meal.id)
                 put("type", meal.type.name)
+                put("planWeek", meal.planWeek.name)
                 put("days", JSONArray().apply {
                     WeekDay.entries.filter(meal.days::contains).forEach { put(it.name) }
                 })
@@ -328,6 +534,99 @@ class AppRepository(context: Context) {
                         put(JSONObject().apply {
                             put("foodId", item.foodId)
                             put("grams", item.grams)
+                            put("adjustable", item.adjustable)
+                            put("minimumGrams", item.minimumGrams)
+                            put("maximumGrams", item.maximumGrams)
+                        })
+                    }
+                })
+                put("dishes", JSONArray().apply {
+                    meal.dishes.forEach { plannedDish ->
+                        put(JSONObject().apply {
+                            put("dishId", plannedDish.dishId)
+                            put("grams", plannedDish.grams)
+                            put("adjustable", plannedDish.adjustable)
+                            put("minimumGrams", plannedDish.minimumGrams)
+                            put("maximumGrams", plannedDish.maximumGrams)
+                        })
+                    }
+                })
+                put("dayAmounts", JSONArray().apply {
+                    meal.dayAmounts.forEach { amounts ->
+                        put(JSONObject().apply {
+                            put("day", amounts.day.name)
+                            put("items", JSONArray().apply {
+                                amounts.foodGrams.forEach { (foodId, grams) ->
+                                    put(JSONObject().apply {
+                                        put("foodId", foodId)
+                                        put("grams", grams)
+                                    })
+                                }
+                            })
+                            put("dishes", JSONArray().apply {
+                                amounts.dishGrams.forEach { (dishId, grams) ->
+                                    put(JSONObject().apply {
+                                        put("dishId", dishId)
+                                        put("grams", grams)
+                                    })
+                                }
+                            })
+                        })
+                    }
+                })
+            })
+        }
+    }
+
+    private fun encodePlanningRules(rules: List<PlanningRule>): JSONArray = JSONArray().apply {
+        rules.forEach { rule ->
+            put(JSONObject().apply {
+                put("itemKind", rule.itemKind.name)
+                put("itemId", rule.itemId)
+                put("allowedMealTypes", JSONArray().apply {
+                    rule.allowedMealTypes.forEach { put(it.name) }
+                })
+                put("fixedSlots", JSONArray().apply {
+                    rule.fixedSlots.forEach { slot ->
+                        put(JSONObject().apply {
+                            put("day", slot.day.name)
+                            put("mealType", slot.mealType.name)
+                        })
+                    }
+                })
+                put("fixedGrams", JSONObject().apply {
+                    rule.fixedGrams.forEach { (type, grams) -> put(type.name, grams) }
+                })
+                put("frequency", rule.frequency.name)
+                put("preferredGrams", rule.preferredGrams)
+                put("minimumFactor", rule.minimumFactor)
+                put("maximumFactor", rule.maximumFactor)
+            })
+        }
+    }
+
+    private fun encodeMenuHistory(history: List<MenuHistoryEntry>): JSONArray = JSONArray().apply {
+        history.forEach { entry ->
+            put(JSONObject().apply {
+                put("generation", entry.generation)
+                put("itemKind", entry.itemKind.name)
+                put("itemId", entry.itemId)
+                put("day", entry.day.name)
+                put("mealType", entry.mealType.name)
+            })
+        }
+    }
+
+    private fun encodeDishes(dishes: List<Dish>): JSONArray = JSONArray().apply {
+        dishes.forEach { dish ->
+            put(JSONObject().apply {
+                put("id", dish.id)
+                put("name", dish.name)
+                put("ingredients", JSONArray().apply {
+                    dish.ingredients.forEach { ingredient ->
+                        put(JSONObject().apply {
+                            put("foodId", ingredient.foodId)
+                            put("grams", ingredient.grams)
                         })
                     }
                 })
@@ -340,6 +639,8 @@ class AppRepository(context: Context) {
         val schemaVersion = root.optInt("schemaVersion", 1)
         val profilesJson = root.optJSONArray("profiles")
         if (profilesJson != null) {
+            val dishes = root.optJSONArray("dishes")?.let(::decodeDishes).orEmpty()
+            val dishesById = dishes.associateBy { it.id }
             val profiles = buildList {
                 for (index in 0 until profilesJson.length()) {
                     val item = profilesJson.getJSONObject(index)
@@ -347,7 +648,13 @@ class AppRepository(context: Context) {
                         ProfileData(
                             profile = decodeProfile(item.getJSONObject("profile")),
                             measurements = decodeMeasurements(item.optJSONArray("measurements") ?: JSONArray()),
-                            plannedMeals = decodePlannedMeals(item.optJSONArray("plannedMeals") ?: JSONArray())
+                            plannedMeals = decodePlannedMeals(
+                                item.optJSONArray("plannedMeals") ?: JSONArray(),
+                                dishesById,
+                                schemaVersion
+                            ),
+                            planningRules = decodePlanningRules(item.optJSONArray("planningRules") ?: JSONArray()),
+                            menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray())
                         )
                     )
                 }
@@ -359,7 +666,7 @@ class AppRepository(context: Context) {
             } else {
                 migrateLegacyFoods(root.optJSONArray("foods")?.let(::decodeFoods), schemaVersion)
             }
-            return AppData(profiles, root.optionalLong("activeProfileId"), foods)
+            return AppData(profiles, root.optionalLong("activeProfileId"), foods, dishes)
         }
 
         val legacyProfile = root.optJSONObject("profile") ?: return AppData()
@@ -393,7 +700,8 @@ class AppRepository(context: Context) {
                     waistCm = item.optionalDouble("waistCm"),
                     activity = item.optionalEnum("activity", ActivityLevel::valueOf),
                     compliance = item.optionalEnum("compliance", DietCompliance::valueOf),
-                    goal = item.optionalEnum("goal", WeightGoal::valueOf)
+                    goal = item.optionalEnum("goal", WeightGoal::valueOf),
+                    weeklyRateKg = item.optionalDouble("weeklyRateKg")
                 )
             )
         }
@@ -433,15 +741,24 @@ class AppRepository(context: Context) {
         }
     }.sortedWith(foodComparator)
 
-    private fun decodePlannedMeals(array: JSONArray): List<PlannedMeal> = buildList {
+    private fun decodePlannedMeals(
+        array: JSONArray,
+        dishesById: Map<Long, Dish>,
+        schemaVersion: Int
+    ): List<PlannedMeal> = buildList {
         for (index in 0 until array.length()) {
             val item = array.getJSONObject(index)
             val daysJson = item.optJSONArray("days") ?: JSONArray()
             val itemsJson = item.optJSONArray("items") ?: JSONArray()
+            val dishesJson = item.optJSONArray("dishes") ?: JSONArray()
+            val dayAmountsJson = item.optJSONArray("dayAmounts") ?: JSONArray()
             add(
                 PlannedMeal(
                     id = item.getLong("id"),
                     type = MealType.valueOf(item.getString("type")),
+                    planWeek = if (schemaVersion >= 13) {
+                        PlanWeek.valueOf(item.optString("planWeek", PlanWeek.CURRENT.name))
+                    } else PlanWeek.CURRENT,
                     days = buildSet {
                         for (dayIndex in 0 until daysJson.length()) {
                             add(WeekDay.valueOf(daysJson.getString(dayIndex)))
@@ -450,13 +767,147 @@ class AppRepository(context: Context) {
                     items = buildList {
                         for (itemIndex in 0 until itemsJson.length()) {
                             val planned = itemsJson.getJSONObject(itemIndex)
-                            add(PlannedFood(planned.getLong("foodId"), planned.getDouble("grams")))
+                            val grams = planned.getDouble("grams")
+                            add(
+                                PlannedFood(
+                                    foodId = planned.getLong("foodId"),
+                                    grams = grams,
+                                    adjustable = schemaVersion >= 10 && planned.optBoolean("adjustable", false),
+                                    minimumGrams = if (schemaVersion >= 10) planned.optDouble("minimumGrams", grams * 0.5) else grams * 0.5,
+                                    maximumGrams = if (schemaVersion >= 10) planned.optDouble("maximumGrams", grams * 1.5) else grams * 1.5
+                                )
+                            )
+                        }
+                    },
+                    dishes = buildList {
+                        for (dishIndex in 0 until dishesJson.length()) {
+                            val planned = dishesJson.getJSONObject(dishIndex)
+                            val dishId = planned.getLong("dishId")
+                            val grams = if (schemaVersion >= 9) {
+                                planned.getDouble("grams")
+                            } else {
+                                val servings = planned.getDouble("servings")
+                                dishesById[dishId]?.ingredients?.sumOf { it.grams }?.times(servings)
+                                    ?: 0.0
+                            }
+                            add(
+                                PlannedDish(
+                                    dishId = dishId,
+                                    grams = grams,
+                                    adjustable = schemaVersion >= 10 && planned.optBoolean("adjustable", false),
+                                    minimumGrams = if (schemaVersion >= 10) planned.optDouble("minimumGrams", grams * 0.5) else grams * 0.5,
+                                    maximumGrams = if (schemaVersion >= 10) planned.optDouble("maximumGrams", grams * 1.5) else grams * 1.5
+                                )
+                            )
+                        }
+                    },
+                    dayAmounts = buildList {
+                        if (schemaVersion >= 10) for (amountIndex in 0 until dayAmountsJson.length()) {
+                            val amounts = dayAmountsJson.getJSONObject(amountIndex)
+                            val foodAmountsJson = amounts.optJSONArray("items") ?: JSONArray()
+                            val dishAmountsJson = amounts.optJSONArray("dishes") ?: JSONArray()
+                            add(
+                                MealDayAmounts(
+                                    day = WeekDay.valueOf(amounts.getString("day")),
+                                    foodGrams = buildMap {
+                                        for (i in 0 until foodAmountsJson.length()) {
+                                            val entry = foodAmountsJson.getJSONObject(i)
+                                            put(entry.getLong("foodId"), entry.getDouble("grams"))
+                                        }
+                                    },
+                                    dishGrams = buildMap {
+                                        for (i in 0 until dishAmountsJson.length()) {
+                                            val entry = dishAmountsJson.getJSONObject(i)
+                                            put(entry.getLong("dishId"), entry.getDouble("grams"))
+                                        }
+                                    }
+                                )
+                            )
+                        }
+                    }
+                ).sanitizedDayAmounts()
+            )
+        }
+    }.sortedWith(plannedMealComparator)
+
+    private fun decodePlanningRules(array: JSONArray): List<PlanningRule> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.getJSONObject(index)
+            val allowed = item.optJSONArray("allowedMealTypes") ?: JSONArray()
+            val fixed = item.optJSONArray("fixedSlots") ?: JSONArray()
+            add(
+                PlanningRule(
+                    itemKind = PlannedItemKind.valueOf(item.getString("itemKind")),
+                    itemId = item.getLong("itemId"),
+                    allowedMealTypes = buildSet {
+                        for (i in 0 until allowed.length()) add(MealType.valueOf(allowed.getString(i)))
+                    },
+                    fixedSlots = buildSet {
+                        for (i in 0 until fixed.length()) {
+                            val slot = fixed.getJSONObject(i)
+                            add(
+                                PlanningSlot(
+                                    WeekDay.valueOf(slot.getString("day")),
+                                    MealType.valueOf(slot.getString("mealType"))
+                                )
+                            )
+                        }
+                    },
+                    fixedGrams = buildMap {
+                        val amounts = item.optJSONObject("fixedGrams")
+                        if (amounts != null) {
+                            amounts.keys().forEach { key ->
+                                put(MealType.valueOf(key), amounts.getDouble(key))
+                            }
+                        }
+                    },
+                    frequency = PlanningFrequency.valueOf(item.optString("frequency", PlanningFrequency.NORMAL.name)),
+                    preferredGrams = item.optDouble("preferredGrams", 100.0),
+                    minimumFactor = item.optDouble("minimumFactor", 0.5),
+                    maximumFactor = item.optDouble("maximumFactor", 1.5)
+                )
+            )
+        }
+    }
+
+    private fun decodeMenuHistory(array: JSONArray): List<MenuHistoryEntry> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.getJSONObject(index)
+            add(
+                MenuHistoryEntry(
+                    generation = item.getInt("generation"),
+                    itemKind = PlannedItemKind.valueOf(item.getString("itemKind")),
+                    itemId = item.getLong("itemId"),
+                    day = WeekDay.valueOf(item.getString("day")),
+                    mealType = MealType.valueOf(item.getString("mealType"))
+                )
+            )
+        }
+    }
+
+    private fun decodeDishes(array: JSONArray): List<Dish> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.getJSONObject(index)
+            val ingredientsJson = item.optJSONArray("ingredients") ?: JSONArray()
+            add(
+                Dish(
+                    id = item.getLong("id"),
+                    name = item.getString("name"),
+                    ingredients = buildList {
+                        for (ingredientIndex in 0 until ingredientsJson.length()) {
+                            val ingredient = ingredientsJson.getJSONObject(ingredientIndex)
+                            add(
+                                DishIngredient(
+                                    ingredient.getLong("foodId"),
+                                    ingredient.getDouble("grams")
+                                )
+                            )
                         }
                     }
                 )
             )
         }
-    }.sortedWith(plannedMealComparator)
+    }.sortedWith(dishComparator)
 
     private fun decodeIds(array: JSONArray): Set<Long> = buildSet {
         for (index in 0 until array.length()) add(array.getLong(index))
@@ -511,7 +962,9 @@ class AppRepository(context: Context) {
         private const val KEY_DATA = "app_data_v1"
         private val foodComparator = compareBy<Food> { it.category.ordinal }
             .thenBy { it.name.lowercase() }
-        private val plannedMealComparator = compareBy<PlannedMeal> { it.type.ordinal }
+        private val dishComparator = compareBy<Dish> { it.name.lowercase() }
+        private val plannedMealComparator = compareBy<PlannedMeal> { it.planWeek.ordinal }
+            .thenBy { it.type.ordinal }
             .thenBy { meal -> WeekDay.entries.indexOfFirst(meal.days::contains) }
     }
 }

@@ -1,6 +1,6 @@
 # Datos de terceros
 
-## Catálogo AESAN 2022
+## Catálogo nutricional de Mercadona (AESAN 2022)
 
 Rumbo incorpora una transformación de la «Base de datos de alimentos y bebidas
 comercializados en España en 2022», publicada por la Agencia Española de
@@ -8,10 +8,14 @@ Seguridad Alimentaria y Nutrición (AESAN):
 
 https://www.aesan.gob.es/AECOSAN/web/seguridad_alimentaria/subseccion/alimentosBebidas.htm
 
-La aplicación conserva los productos con EAN de la hoja `Tabla1`, incluidos los
-registros cuya declaración nutricional es incompleta. Se normalizan espacios,
-se compacta el archivo y se asigna automáticamente un icono nutricional; no se
-alteran los valores declarados por la fuente.
+La aplicación conserva únicamente productos atribuidos a Mercadona mediante la
+marca o el fabricante y cuya declaración de calorías, grasas, carbohidratos y
+proteínas está completa. Se normalizan espacios, se compacta el archivo y se
+asigna automáticamente un icono nutricional; no se alteran los valores declarados.
+
+Los endpoints usados por la tienda web de Mercadona no constituyen una API
+oficialmente soportada y no ofrecen los macronutrientes como campos estructurados.
+Por ello Rumbo no los consulta desde el móvil ni depende de ellos para planificar.
 
 Los datos fueron recogidos por terceros durante 2022 y pueden no reflejar
 reformulaciones, retiradas ni disponibilidad comercial posteriores. La mención

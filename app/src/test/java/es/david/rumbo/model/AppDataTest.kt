@@ -39,31 +39,31 @@ class AppDataTest {
     }
 
     @Test
-    fun profileIsReadyOnlyWithWeightWaistAndExplicitGoal() {
-        val incomplete = AppData(
-            profiles = listOf(
-                ProfileData(
-                    david,
-                    listOf(Measurement(10, LocalDate.of(2026, 8, 8), weightKg = 83.4, waistCm = 91.0))
-                )
-            ),
+    fun profileIsReadyWithEitherBodyMeasurementAndAutomaticGoal() {
+        val empty = AppData(
+            profiles = listOf(ProfileData(david)),
             activeProfileId = david.id
         )
-        val complete = incomplete.copy(
+        val weightOnly = empty.copy(
             profiles = listOf(
                 ProfileData(
                     david,
-                    incomplete.measurements + Measurement(
-                        11,
-                        LocalDate.of(2026, 8, 8),
-                        goal = WeightGoal.LOSE_SLOWLY
-                    )
+                    listOf(Measurement(10, LocalDate.of(2026, 8, 8), weightKg = 83.4))
+                )
+            )
+        )
+        val waistOnly = empty.copy(
+            profiles = listOf(
+                ProfileData(
+                    david,
+                    listOf(Measurement(11, LocalDate.of(2026, 8, 8), waistCm = 91.0))
                 )
             )
         )
 
-        assertFalse(incomplete.isActiveProfileReady)
-        assertTrue(complete.isActiveProfileReady)
+        assertFalse(empty.isActiveProfileReady)
+        assertTrue(weightOnly.isActiveProfileReady)
+        assertTrue(waistOnly.isActiveProfileReady)
     }
 
     @Test
@@ -84,5 +84,18 @@ class AppDataTest {
 
         assertTrue(data.activeProfileData?.plannedMeals.isNullOrEmpty())
         assertEquals(listOf(davidMeal), data.profiles.first().plannedMeals)
+    }
+
+    @Test
+    fun dishesAreSharedBetweenProfiles() {
+        val dish = Dish(30, "Batido", listOf(DishIngredient(1, 250.0)))
+        val data = AppData(
+            profiles = listOf(ProfileData(david), ProfileData(araceli)),
+            activeProfileId = david.id,
+            dishes = listOf(dish)
+        )
+
+        assertEquals(listOf(dish), data.dishes)
+        assertEquals(2, data.profiles.size)
     }
 }

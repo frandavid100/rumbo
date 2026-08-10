@@ -1,12 +1,15 @@
 package es.david.rumbo.logic
 
 import es.david.rumbo.model.Food
+import es.david.rumbo.model.Dish
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.NutritionTotals
 import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.nutrition
+import es.david.rumbo.model.resolvedGrams
+import es.david.rumbo.model.totalWeightGrams
 import kotlin.math.abs
 
 enum class TargetFit {
@@ -48,36 +51,59 @@ object MealPlanEvaluator {
     private const val CLOSE_TOLERANCE = 0.20
     private val mealShare = 1.0 / MealType.entries.size
 
-    fun mealTarget(recommendation: Recommendation): NutritionTarget =
-        dailyTarget(recommendation).scaled(mealShare)
+    fun mealTarget(
+        recommendation: Recommendation,
+        share: Double = mealShare
+    ): NutritionTarget = dailyTarget(recommendation).scaled(share.coerceIn(0.0, 1.0))
 
     fun assessMeal(
         meal: PlannedMeal,
         foodsById: Map<Long, Food>,
-        recommendation: Recommendation
-    ): PlanNutritionAssessment = assess(meal.nutrition(foodsById), mealTarget(recommendation))
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        day: WeekDay? = null,
+        mealShare: Double = this.mealShare
+    ): PlanNutritionAssessment = assess(
+        meal.nutrition(foodsById, dishesById, day),
+        mealTarget(recommendation, mealShare)
+    )
 
     fun assessDay(
         day: WeekDay,
         meals: List<PlannedMeal>,
         foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
         recommendation: Recommendation
     ): PlanNutritionAssessment {
         val dayMeals = meals.filter { day in it.days }
         val actual = dayMeals.fold(NutritionTotals()) { total, meal ->
-            total + meal.nutrition(foodsById)
+            total + meal.nutrition(foodsById, dishesById, day)
         }
         val presentTypes = dayMeals.mapTo(mutableSetOf()) { it.type }
         val missing = MealType.entries.filterNot(presentTypes::contains)
         return assess(actual, dailyTarget(recommendation)).copy(missingMealTypes = missing)
     }
 
-    fun weeklyFoodAmounts(meals: List<PlannedMeal>): Map<Long, Double> {
+    fun weeklyFoodAmounts(
+        meals: List<PlannedMeal>,
+        dishesById: Map<Long, Dish>
+    ): Map<Long, Double> {
         val totals = mutableMapOf<Long, Double>()
         meals.forEach { meal ->
-            meal.items.forEach { item ->
-                totals[item.foodId] = totals.getOrDefault(item.foodId, 0.0) +
-                    item.grams * meal.days.size
+            meal.days.forEach { day ->
+                meal.items.forEach { item ->
+                    totals[item.foodId] = totals.getOrDefault(item.foodId, 0.0) +
+                        meal.resolvedGrams(item, day)
+                }
+                meal.dishes.forEach { plannedDish ->
+                    dishesById[plannedDish.dishId]?.let { dish ->
+                        val recipeWeight = dish.totalWeightGrams()
+                        if (recipeWeight > 0.0) dish.ingredients.forEach { ingredient ->
+                            totals[ingredient.foodId] = totals.getOrDefault(ingredient.foodId, 0.0) +
+                                ingredient.grams * (meal.resolvedGrams(plannedDish, day) / recipeWeight)
+                        }
+                    }
+                }
             }
         }
         return totals
