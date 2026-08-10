@@ -49,14 +49,14 @@ class WeeklyMenuGeneratorTest {
         val tuesdayLunch = result.meals.single {
             it.type == MealType.LUNCH && WeekDay.TUESDAY in it.days
         }
-        assertEquals(1L, tuesdayLunch.items.single().foodId)
+        assertTrue(tuesdayLunch.items.any { it.foodId == 1L })
         assertTrue(result.meals.filter { it.type == MealType.LUNCH }.all {
-            it.items.single().foodId in setOf(1L, 2L)
+            it.items.size == 2 && it.items.all { item -> item.foodId in setOf(1L, 2L) }
         })
         assertTrue(result.meals.filter { it.type == MealType.DINNER }.all {
-            it.items.single().foodId in setOf(3L, 4L)
+            it.items.size == 2 && it.items.all { item -> item.foodId in setOf(3L, 4L) }
         })
-        assertEquals(14, result.history.size)
+        assertEquals(28, result.history.size)
     }
 
     @Test
@@ -127,10 +127,10 @@ class WeeklyMenuGeneratorTest {
 
         val snackItem = result.meals.single {
             it.type == MealType.MORNING_SNACK && WeekDay.MONDAY in it.days
-        }.items.single()
+        }.items.single { it.foodId == 2L }
         val dinnerItem = result.meals.single {
             it.type == MealType.DINNER && WeekDay.MONDAY in it.days
-        }.items.single()
+        }.items.single { it.foodId == 2L }
         assertEquals(90.0, snackItem.grams, 0.001)
         assertTrue(!snackItem.adjustable)
         assertTrue(dinnerItem.adjustable)
