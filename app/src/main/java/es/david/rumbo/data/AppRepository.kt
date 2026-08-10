@@ -61,8 +61,8 @@ class AppRepository(context: Context) {
     }
 
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
-        require(baseline.weightKg != null && baseline.waistCm != null && baseline.goal != null) {
-            "El perfil inicial necesita peso, cintura y objetivo"
+        require(baseline.weightKg != null || baseline.waistCm != null) {
+            "El perfil inicial necesita al menos el peso o la cintura"
         }
         val current = load()
         val existing = current.profiles.firstOrNull { it.profile.id == profile.id }
