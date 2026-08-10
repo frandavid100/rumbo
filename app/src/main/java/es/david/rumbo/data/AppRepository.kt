@@ -159,10 +159,10 @@ class AppRepository(context: Context) {
 
     fun deleteFood(id: Long): AppData {
         val current = load()
-        val dishes = current.dishes.mapNotNull { dish ->
-            val ingredients = dish.ingredients.filterNot { it.foodId == id }
-            dish.copy(ingredients = ingredients).takeIf { ingredients.isNotEmpty() }
-        }
+        // A recipe is immutable after creation. Refuse to remove one of its
+        // ingredients; the user can delete the complete dish first.
+        if (current.dishes.any { dish -> dish.ingredients.any { it.foodId == id } }) return current
+        val dishes = current.dishes
         val dishIds = dishes.mapTo(mutableSetOf()) { it.id }
         val profiles = current.profiles.map { profileData ->
             profileData.copy(
@@ -186,10 +186,12 @@ class AppRepository(context: Context) {
     fun saveDish(dish: Dish): AppData {
         require(dish.isValid()) { "El plato no es válido" }
         val current = load()
-        require(dish.ingredients.all { ingredient -> current.foods.any { it.id == ingredient.foodId } }) {
+        val existing = current.dishes.firstOrNull { it.id == dish.id }
+        val savedDish = existing?.let { dish.copy(ingredients = it.ingredients) } ?: dish
+        require(savedDish.ingredients.all { ingredient -> current.foods.any { it.id == ingredient.foodId } }) {
             "El plato contiene alimentos inexistentes"
         }
-        val dishes = (current.dishes.filterNot { it.id == dish.id } + dish)
+        val dishes = (current.dishes.filterNot { it.id == savedDish.id } + savedDish)
             .sortedWith(dishComparator)
         return persistAndReturn(current.copy(dishes = dishes))
     }
