@@ -470,8 +470,8 @@ fun RumboApp(repository: AppRepository) {
                         draftDishId = null
                         screenName = Screen.ADD_PLANNED_MEAL.name
                     },
-                    onApplyAdjustedMeals = { meals, week ->
-                        data = repository.savePlannedMeals(meals, week)
+                    onApplyAdjustedMeals = { meals ->
+                        data = repository.savePlannedMeals(meals, PlanWeek.CURRENT)
                     }
                 )
                 screen == Screen.ADD -> AddMeasurementScreen(
@@ -538,7 +538,9 @@ fun RumboApp(repository: AppRepository) {
                         draftDishId = null
                         screenName = Screen.ADD_PLANNED_MEAL.name
                     },
-                    onApplyAdjustedMeals = { data = repository.savePlannedMeals(it) }
+                    onApplyAdjustedMeals = { meals, week ->
+                        data = repository.savePlannedMeals(meals, week)
+                    }
                 )
                 screen == Screen.AUTO_PLANNING -> AutomaticPlanningScreen(
                     rules = data.activeProfileData?.planningRules.orEmpty(),
