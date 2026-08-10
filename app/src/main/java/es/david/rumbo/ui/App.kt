@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -60,6 +61,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -103,6 +105,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.david.rumbo.data.AppRepository
@@ -265,6 +268,7 @@ fun RumboApp(repository: AppRepository) {
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.shadow(2.dp),
                 navigationIcon = {
                     if (!screen.inNavigation) {
                         IconButton(onClick = navigateBack) {
@@ -273,13 +277,19 @@ fun RumboApp(repository: AppRepository) {
                     }
                 },
                 title = {
-                    Column {
-                        Text("Rumbo", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Calorías con contexto, no con prisas",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (screen == Screen.EDIT_PLANNED_MEAL) {
+                        Text("Editar comida", fontWeight = FontWeight.SemiBold)
+                    } else if (screen == Screen.ADD_PLANNED_MEAL) {
+                        Text("Nueva comida", fontWeight = FontWeight.SemiBold)
+                    } else {
+                        Column {
+                            Text("Rumbo", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Calorías con contexto, no con prisas",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -566,7 +576,13 @@ fun RumboApp(repository: AppRepository) {
                         FoodDetailScreen(
                             food = food,
                             foods = data.foods,
+                            plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
+                            dishes = data.dishes,
                             onOpenFood = { selectedFoodId = it },
+                            onOpenMeal = {
+                                selectedPlannedMealId = it
+                                screenName = Screen.EDIT_PLANNED_MEAL.name
+                            },
                             onEdit = { screenName = Screen.EDIT_FOOD.name },
                             onDelete = {
                                 data = repository.deleteFood(food.id)
@@ -3112,11 +3128,6 @@ private fun PlannedMealEditorScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text(
-            if (initial == null) "Nueva comida" else "Editar comida",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.fillMaxWidth()) {
@@ -3152,6 +3163,12 @@ private fun PlannedMealEditorScreen(
                             },
                             enabled = day !in occupiedDays,
                             label = { Text(day.shortLabel) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                labelColor = MaterialTheme.colorScheme.onSurface,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                            ),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -3163,6 +3180,15 @@ private fun PlannedMealEditorScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                previewAssessment?.let { assessment ->
+                    HorizontalDivider(Modifier.padding(top = 4.dp))
+                    TodayNutritionSummary(assessment)
+                    Text(
+                        assessment.overall.fitLabel(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
         Card(Modifier.fillMaxWidth()) {
@@ -3170,7 +3196,7 @@ private fun PlannedMealEditorScreen(
                 Text("Alimentos y platos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         dishAmounts.forEach { (dishId, draft) ->
             val dish = dishesById[dishId] ?: return@forEach
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Column {
                 Row(
                     Modifier.fillMaxWidth().padding(start = 12.dp, top = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -3178,11 +3204,12 @@ private fun PlannedMealEditorScreen(
                 ) {
                     SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
                     Column(Modifier.weight(1f)) {
-                        Text(dish.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                         Text(
-                            if (draft.adjustable) "↕ Automático" else "Fijo",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            dish.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     CompactGramField(draft.grams) {
@@ -3225,11 +3252,12 @@ private fun PlannedMealEditorScreen(
                         }
                     }
                 }
+                HorizontalDivider()
             }
         }
         itemAmounts.forEach { (foodId, draft) ->
             val food = foodsById[foodId] ?: return@forEach
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Column {
                 Row(
                     Modifier.fillMaxWidth().padding(start = 12.dp, top = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -3242,7 +3270,9 @@ private fun PlannedMealEditorScreen(
                                 food.name,
                                 modifier = Modifier.weight(1f),
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
                             if (foodId in selectedForDish) {
                                 Icon(
@@ -3253,11 +3283,6 @@ private fun PlannedMealEditorScreen(
                                 )
                             }
                         }
-                        Text(
-                            if (draft.adjustable) "↕ Automático" else "Fijo",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                     CompactGramField(draft.grams) {
                         itemAmounts = itemAmounts + (foodId to draft.copy(grams = it))
@@ -3321,6 +3346,7 @@ private fun PlannedMealEditorScreen(
                         }
                     }
                 }
+                HorizontalDivider()
             }
         }
         OutlinedButton(onClick = { choosingElement = true }, modifier = Modifier.fillMaxWidth()) {
@@ -3338,19 +3364,6 @@ private fun PlannedMealEditorScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Crear plato con ${selectedForDish.size} alimentos") }
-        }
-        previewAssessment?.let { assessment ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HomeCardHeader("Valoración nutricional", showArrow = false)
-                    TodayNutritionSummary(assessment)
-                    Text(
-                        assessment.overall.fitLabel(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -4205,13 +4218,42 @@ private fun foodCategoryIcon(category: FoodCategory): ImageVector = when (catego
 private fun FoodDetailScreen(
     food: Food,
     foods: List<Food>,
+    plannedMeals: List<PlannedMeal>,
+    dishes: List<Dish>,
     onOpenFood: (Long) -> Unit,
+    onOpenMeal: (Long) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     val similarFoods = FoodSimilarityEngine.findSimilar(food, foods)
+    val menuUsages = remember(food.id, plannedMeals, dishes) {
+        val dishesById = dishes.associateBy { it.id }
+        plannedMeals.mapNotNull { meal ->
+            val amounts = meal.days.map { day ->
+                val direct = meal.items.filter { it.foodId == food.id }
+                    .sumOf { meal.resolvedGrams(it, day) }
+                val throughDishes = meal.dishes.sumOf { plannedDish ->
+                    val dish = dishesById[plannedDish.dishId] ?: return@sumOf 0.0
+                    val recipeWeight = dish.totalWeightGrams()
+                    if (recipeWeight <= 0.0) return@sumOf 0.0
+                    val ingredientGrams = dish.ingredients
+                        .filter { it.foodId == food.id }
+                        .sumOf { it.grams }
+                    ingredientGrams * meal.resolvedGrams(plannedDish, day) / recipeWeight
+                }
+                direct + throughDishes
+            }
+            if (amounts.any { it > 0.0 }) {
+                Triple(
+                    meal.id,
+                    "${meal.type.label} · ${meal.days.joinToString { it.shortLabel }}",
+                    amountRangeLabel(amounts)
+                )
+            } else null
+        }
+    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -4290,6 +4332,28 @@ private fun FoodDetailScreen(
             }
         }
         HorizontalDivider()
+        Text(
+            "Presente en el menú",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        if (menuUsages.isEmpty()) {
+            Text(
+                "Este alimento no está incluido en ninguna comida.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            menuUsages.forEach { (mealId, label, amount) ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(label, modifier = Modifier.weight(1f), maxLines = 2)
+                    Text(amount, fontWeight = FontWeight.SemiBold)
+                }
+                HorizontalDivider()
+            }
+        }
         Text("Alimentos similares", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
             "Misma subcategoría culinaria y composición suficientemente próxima para intercambiar cantidades parecidas sin alterar mucho los macros.",
@@ -4784,12 +4848,13 @@ private fun CompactGramField(value: String, onValueChange: (String) -> Unit) {
             onValueChange = { raw ->
                 onValueChange(raw.filter { it.isDigit() || it == ',' || it == '.' }.take(6))
             },
-            modifier = Modifier.width(68.dp),
+            modifier = Modifier.width(82.dp),
+            suffix = {
+                Text("g", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true
         )
-        Spacer(Modifier.width(3.dp))
-        Text("g")
     }
 }
 
