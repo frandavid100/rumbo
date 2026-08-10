@@ -136,6 +136,7 @@ import es.david.rumbo.model.WeightGoal
 import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.dominantCategory
 import es.david.rumbo.model.nutrition
+import es.david.rumbo.model.nutritionForGrams
 import es.david.rumbo.model.resolvedGrams
 import es.david.rumbo.model.sanitizedDayAmounts
 import es.david.rumbo.model.totalWeightGrams
@@ -211,6 +212,7 @@ fun RumboApp(repository: AppRepository) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var mealShares by remember { mutableStateOf(loadMealShares(context)) }
+    var adjustmentRange by remember { mutableStateOf(loadAdjustmentRange(context)) }
     val navigateBack = {
         screenName = when {
             screen == Screen.EDIT_MEASUREMENT && selectedMeasurementId != null ->
@@ -277,12 +279,16 @@ fun RumboApp(repository: AppRepository) {
                     }
                 },
                 title = {
-                    if (screen == Screen.EDIT_PLANNED_MEAL) {
-                        Text("Editar comida", fontWeight = FontWeight.SemiBold)
-                    } else if (screen == Screen.ADD_PLANNED_MEAL) {
-                        Text("Nueva comida", fontWeight = FontWeight.SemiBold)
-                    } else {
-                        Column {
+                    when (screen) {
+                        Screen.EDIT_PLANNED_MEAL ->
+                            Text("Editar comida", fontWeight = FontWeight.SemiBold)
+                        Screen.ADD_PLANNED_MEAL ->
+                            Text("Nueva comida", fontWeight = FontWeight.SemiBold)
+                        Screen.BODY_EXPLANATION, Screen.RECOMMENDATION_EXPLANATION ->
+                            Text("Situación y objetivo", fontWeight = FontWeight.SemiBold)
+                        Screen.PLANNER ->
+                            Text("Menú semanal", fontWeight = FontWeight.SemiBold)
+                        else -> Column {
                             Text("Rumbo", fontWeight = FontWeight.SemiBold)
                             Text(
                                 "Calorías con contexto, no con prisas",
@@ -446,6 +452,7 @@ fun RumboApp(repository: AppRepository) {
                     existingMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                     recommendation = currentRecommendation,
                     mealShares = mealShares,
+                    adjustmentRange = adjustmentRange,
                     initialType = draftMealTypeName?.let { MealType.valueOf(it) },
                     initialDays = draftMealDayName?.let { setOf(WeekDay.valueOf(it)) }.orEmpty(),
                     preferredFoodIds = preferredFoodIds,
@@ -475,6 +482,7 @@ fun RumboApp(repository: AppRepository) {
                             existingMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                             recommendation = currentRecommendation,
                             mealShares = mealShares,
+                            adjustmentRange = adjustmentRange,
                             initial = meal,
                             preferredFoodIds = preferredFoodIds,
                             preferredDishIds = preferredDishIds,
@@ -628,9 +636,14 @@ fun RumboApp(repository: AppRepository) {
                 )
                 screen == Screen.SETTINGS -> SettingsScreen(
                     mealShares = mealShares,
+                    adjustmentRange = adjustmentRange,
                     onSaveMealShares = {
                         saveMealShares(context, it)
                         mealShares = it
+                    },
+                    onSaveAdjustmentRange = {
+                        saveAdjustmentRange(context, it)
+                        adjustmentRange = it
                     },
                     onExport = { exportLauncher.launch("rumbo-copia-${LocalDate.now()}.json") },
                     onImport = { importLauncher.launch(arrayOf("application/json", "text/plain")) }
@@ -2909,14 +2922,58 @@ private fun AmountDraft.toPlannedDish(dishId: Long): PlannedDish? {
         .takeIf { it.isValid() }
 }
 
-private fun AmountDraft.withAdjustable(enabled: Boolean): AmountDraft {
+private fun AmountDraft.withAdjustable(
+    enabled: Boolean,
+    divisor: Double = 2.0,
+    multiplier: Double = 1.5
+): AmountDraft {
     if (!enabled) return copy(adjustable = false)
     val amount = parseDecimal(grams) ?: 100.0
     return copy(
         adjustable = true,
-        minimum = minimum.ifBlank { formatDecimal((amount * 0.5).coerceAtLeast(0.1)) },
-        maximum = maximum.ifBlank { formatDecimal((amount * 1.5).coerceAtMost(5000.0)) }
+        minimum = formatDecimal((amount / divisor.coerceAtLeast(1.0)).coerceAtLeast(0.1)),
+        maximum = formatDecimal((amount * multiplier.coerceAtLeast(1.0)).coerceAtMost(5000.0))
     )
+}
+
+private fun adjustMealAmounts(
+    itemAmounts: Map<Long, AmountDraft>,
+    dishAmounts: Map<Long, AmountDraft>,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    targetCalories: Double
+): Pair<Map<Long, AmountDraft>, Map<Long, AmountDraft>> {
+    fun foodCalories(foodId: Long, grams: Double): Double =
+        (foodsById[foodId]?.calories ?: 0.0) * grams / 100.0
+    fun dishCalories(dishId: Long, grams: Double): Double =
+        dishesById[dishId]?.nutritionForGrams(foodsById, grams)?.calories ?: 0.0
+
+    val fixedCalories =
+        itemAmounts.filterValues { !it.adjustable }.entries.sumOf { (id, draft) ->
+            foodCalories(id, parseDecimal(draft.grams) ?: 0.0)
+        } +
+        dishAmounts.filterValues { !it.adjustable }.entries.sumOf { (id, draft) ->
+            dishCalories(id, parseDecimal(draft.grams) ?: 0.0)
+        }
+    val adjustableCalories =
+        itemAmounts.filterValues { it.adjustable }.entries.sumOf { (id, draft) ->
+            foodCalories(id, parseDecimal(draft.grams) ?: 0.0)
+        } +
+        dishAmounts.filterValues { it.adjustable }.entries.sumOf { (id, draft) ->
+            dishCalories(id, parseDecimal(draft.grams) ?: 0.0)
+        }
+    if (adjustableCalories <= 0.0) return itemAmounts to dishAmounts
+    val factor = ((targetCalories - fixedCalories) / adjustableCalories).coerceAtLeast(0.0)
+
+    fun adjusted(draft: AmountDraft): AmountDraft {
+        if (!draft.adjustable) return draft
+        val current = parseDecimal(draft.grams) ?: return draft
+        val minimum = parseDecimal(draft.minimum) ?: current
+        val maximum = parseDecimal(draft.maximum) ?: current
+        return draft.copy(grams = formatDecimal((current * factor).coerceIn(minimum, maximum)))
+    }
+    return itemAmounts.mapValues { adjusted(it.value) } to
+        dishAmounts.mapValues { adjusted(it.value) }
 }
 
 @Composable
@@ -2926,6 +2983,7 @@ private fun PlannedMealEditorScreen(
     existingMeals: List<PlannedMeal>,
     recommendation: es.david.rumbo.model.Recommendation?,
     mealShares: Map<MealType, Double>,
+    adjustmentRange: Pair<Double, Double>,
     initial: PlannedMeal? = null,
     initialType: MealType? = null,
     initialDays: Set<WeekDay> = emptySet(),
@@ -2962,9 +3020,6 @@ private fun PlannedMealEditorScreen(
     var selectedForDish by remember { mutableStateOf(emptySet<Long>()) }
     var expandedFoodMenuId by remember { mutableStateOf<Long?>(null) }
     var expandedDishMenuId by remember { mutableStateOf<Long?>(null) }
-    var adjustmentTarget by remember { mutableStateOf<Pair<Boolean, Long>?>(null) }
-    var adjustmentDivisor by remember { mutableStateOf("2") }
-    var adjustmentMultiplier by remember { mutableStateOf("1,5") }
     var replacingFoodId by remember { mutableStateOf<Long?>(null) }
     var namingDish by remember { mutableStateOf(false) }
     var newDishName by remember { mutableStateOf("") }
@@ -3018,40 +3073,6 @@ private fun PlannedMealEditorScreen(
             },
             onDismiss = { choosingElement = false }
         )
-    }
-    adjustmentTarget?.let { (isDish, itemId) ->
-        val draft = if (isDish) dishAmounts[itemId] else itemAmounts[itemId]
-        if (draft != null) {
-            AlertDialog(
-                onDismissRequest = { adjustmentTarget = null },
-                title = { Text("Intervalo de ajuste") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Limita cuánto puede reducirse o aumentarse esta cantidad.")
-                        NumericField("Dividir como máximo entre", adjustmentDivisor, { adjustmentDivisor = it }, Modifier.fillMaxWidth())
-                        NumericField("Multiplicar como máximo por", adjustmentMultiplier, { adjustmentMultiplier = it }, Modifier.fillMaxWidth())
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val amount = parseDecimal(draft.grams)
-                        val divisor = parseDecimal(adjustmentDivisor)
-                        val multiplier = parseDecimal(adjustmentMultiplier)
-                        if (amount != null && divisor != null && divisor >= 1.0 && multiplier != null && multiplier >= 1.0) {
-                            val updated = draft.copy(
-                                adjustable = true,
-                                minimum = formatDecimal((amount / divisor).coerceAtLeast(0.1)),
-                                maximum = formatDecimal((amount * multiplier).coerceAtMost(5000.0))
-                            )
-                            if (isDish) dishAmounts = dishAmounts + (itemId to updated)
-                            else itemAmounts = itemAmounts + (itemId to updated)
-                            adjustmentTarget = null
-                        }
-                    }) { Text("Guardar") }
-                },
-                dismissButton = { TextButton(onClick = { adjustmentTarget = null }) { Text("Cancelar") } }
-            )
-        }
     }
     replacingFoodId?.let { sourceId ->
         foodsById[sourceId]?.let { source ->
@@ -3165,7 +3186,7 @@ private fun PlannedMealEditorScreen(
                             label = { Text(day.shortLabel) },
                             colors = FilterChipDefaults.filterChipColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                selectedContainerColor = MaterialTheme.colorScheme.outlineVariant,
                                 labelColor = MaterialTheme.colorScheme.onSurface,
                                 selectedLabelColor = MaterialTheme.colorScheme.onSurface
                             ),
@@ -3188,6 +3209,27 @@ private fun PlannedMealEditorScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    OutlinedButton(
+                        onClick = {
+                            if (itemAmounts.values.none { it.adjustable } &&
+                                dishAmounts.values.none { it.adjustable }
+                            ) {
+                                error = "Permite ajustar al menos un elemento desde su menú de opciones."
+                            } else {
+                                val adjusted = adjustMealAmounts(
+                                    itemAmounts,
+                                    dishAmounts,
+                                    foodsById,
+                                    dishesById,
+                                    assessment.target.calories
+                                )
+                                itemAmounts = adjusted.first
+                                dishAmounts = adjusted.second
+                                error = null
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Ajustar cantidades") }
                 }
             }
         }
@@ -3207,7 +3249,6 @@ private fun PlannedMealEditorScreen(
                         Text(
                             dish.name,
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -3226,19 +3267,11 @@ private fun PlannedMealEditorScreen(
                             DropdownMenuItem(
                                 text = { Text(if (draft.adjustable) "Dejar cantidad fija" else "Permitir ajuste automático") },
                                 onClick = {
-                                    dishAmounts = dishAmounts + (dishId to draft.withAdjustable(!draft.adjustable))
-                                    expandedDishMenuId = null
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Configurar intervalo") },
-                                onClick = {
-                                    val amount = parseDecimal(draft.grams) ?: 100.0
-                                    val minimum = parseDecimal(draft.minimum) ?: amount * 0.5
-                                    val maximum = parseDecimal(draft.maximum) ?: amount * 1.5
-                                    adjustmentDivisor = formatDecimal((amount / minimum).coerceAtLeast(1.0))
-                                    adjustmentMultiplier = formatDecimal((maximum / amount).coerceAtLeast(1.0))
-                                    adjustmentTarget = true to dishId
+                                    dishAmounts = dishAmounts + (dishId to draft.withAdjustable(
+                                            !draft.adjustable,
+                                            adjustmentRange.first,
+                                            adjustmentRange.second
+                                        ))
                                     expandedDishMenuId = null
                                 }
                             )
@@ -3270,7 +3303,6 @@ private fun PlannedMealEditorScreen(
                                 food.name,
                                 modifier = Modifier.weight(1f),
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -3298,19 +3330,11 @@ private fun PlannedMealEditorScreen(
                             DropdownMenuItem(
                                 text = { Text(if (draft.adjustable) "Dejar cantidad fija" else "Permitir ajuste automático") },
                                 onClick = {
-                                    itemAmounts = itemAmounts + (foodId to draft.withAdjustable(!draft.adjustable))
-                                    expandedFoodMenuId = null
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Configurar intervalo") },
-                                onClick = {
-                                    val amount = parseDecimal(draft.grams) ?: 100.0
-                                    val minimum = parseDecimal(draft.minimum) ?: amount * 0.5
-                                    val maximum = parseDecimal(draft.maximum) ?: amount * 1.5
-                                    adjustmentDivisor = formatDecimal((amount / minimum).coerceAtLeast(1.0))
-                                    adjustmentMultiplier = formatDecimal((maximum / amount).coerceAtLeast(1.0))
-                                    adjustmentTarget = false to foodId
+                                    itemAmounts = itemAmounts + (foodId to draft.withAdjustable(
+                                            !draft.adjustable,
+                                            adjustmentRange.first,
+                                            adjustmentRange.second
+                                        ))
                                     expandedFoodMenuId = null
                                 }
                             )
@@ -3395,7 +3419,7 @@ private fun PlannedMealEditorScreen(
                     )
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.weight(1f)
         ) { Text("Guardar") }
         if (onDelete != null) {
             OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) {
@@ -4544,10 +4568,25 @@ private fun saveMealShares(context: android.content.Context, shares: Map<MealTyp
     }.apply()
 }
 
+private fun loadAdjustmentRange(context: android.content.Context): Pair<Double, Double> {
+    val preferences = context.getSharedPreferences("quantity_adjustment", 0)
+    return preferences.getFloat("divisor", 2.0f).toDouble() to
+        preferences.getFloat("multiplier", 1.5f).toDouble()
+}
+
+private fun saveAdjustmentRange(context: android.content.Context, range: Pair<Double, Double>) {
+    context.getSharedPreferences("quantity_adjustment", 0).edit()
+        .putFloat("divisor", range.first.toFloat())
+        .putFloat("multiplier", range.second.toFloat())
+        .apply()
+}
+
 @Composable
 private fun SettingsScreen(
     mealShares: Map<MealType, Double>,
+    adjustmentRange: Pair<Double, Double>,
     onSaveMealShares: (Map<MealType, Double>) -> Unit,
+    onSaveAdjustmentRange: (Pair<Double, Double>) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit
 ) {
@@ -4560,6 +4599,13 @@ private fun SettingsScreen(
         )
     }
     var error by remember { mutableStateOf<String?>(null) }
+    var adjustmentDivisor by remember(adjustmentRange) {
+        mutableStateOf(formatDecimal(adjustmentRange.first))
+    }
+    var adjustmentMultiplier by remember(adjustmentRange) {
+        mutableStateOf(formatDecimal(adjustmentRange.second))
+    }
+    var adjustmentError by remember { mutableStateOf<String?>(null) }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -4617,6 +4663,43 @@ private fun SettingsScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Guardar distribución") }
+            }
+        }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Ajuste automático de cantidades",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "Estos límites se aplican a todos los elementos que permitas ajustar.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                NumericField("Dividir como máximo entre", adjustmentDivisor, {
+                    adjustmentDivisor = it
+                    adjustmentError = null
+                }, Modifier.fillMaxWidth())
+                NumericField("Multiplicar como máximo por", adjustmentMultiplier, {
+                    adjustmentMultiplier = it
+                    adjustmentError = null
+                }, Modifier.fillMaxWidth())
+                adjustmentError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                OutlinedButton(
+                    onClick = {
+                        val divisor = parseDecimal(adjustmentDivisor)
+                        val multiplier = parseDecimal(adjustmentMultiplier)
+                        adjustmentError = if (
+                            divisor == null || divisor !in 1.0..10.0 ||
+                            multiplier == null || multiplier !in 1.0..10.0
+                        ) "Ambos factores deben estar entre 1 y 10."
+                        else {
+                            onSaveAdjustmentRange(divisor to multiplier)
+                            null
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Guardar límites") }
             }
         }
         Card(Modifier.fillMaxWidth()) {
