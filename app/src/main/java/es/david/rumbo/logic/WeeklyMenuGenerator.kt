@@ -88,11 +88,11 @@ object WeeklyMenuGenerator {
                 val additions = when {
                     fixed.any { it.itemKind == PlannedItemKind.DISH } -> emptyList()
                     fixed.isNotEmpty() -> {
-                        val dishCandidates = rules.filter {
-                            it.itemKind == PlannedItemKind.DISH &&
-                                slot.mealType in it.allowedMealTypes &&
-                                it.frequency != PlanningFrequency.NEVER &&
-                                fixed.none(it::sameItem)
+                        val dishCandidates = rules.filter { candidate ->
+                            candidate.itemKind == PlannedItemKind.DISH &&
+                                slot.mealType in candidate.allowedMealTypes &&
+                                candidate.frequency != PlanningFrequency.NEVER &&
+                                fixed.none { fixedRule -> fixedRule.sameItem(candidate) }
                         }
                         if (dishCandidates.isEmpty()) emptyList()
                         else listOf(chooseRule(slot, dishCandidates, assignments, recent, random))
