@@ -59,10 +59,10 @@ class WeeklyMenuGeneratorTest {
         assertEquals(14, result.history.size)
     }
 
-    @Test(expected = PlanningConflictException::class)
-    fun incompatibleFixedRulesAreReported() {
+    @Test
+    fun severalFixedFoodsCanShareTheSameMeal() {
         val slot = PlanningSlot(WeekDay.MONDAY, MealType.LUNCH)
-        WeeklyMenuGenerator.generate(
+        val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
                 rule(1, setOf(MealType.LUNCH), fixed = setOf(slot)),
@@ -75,6 +75,29 @@ class WeeklyMenuGeneratorTest {
             recommendation = recommendation,
             seed = 42
         )
+
+        val mondayLunch = result.meals.single {
+            it.type == MealType.LUNCH && WeekDay.MONDAY in it.days
+        }
+        assertEquals(setOf(1L, 2L), mondayLunch.items.map { it.foodId }.toSet())
+    }
+
+    @Test
+    fun everyConfiguredMealTypeIsGenerated() {
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = MealType.entries.mapIndexed { index, type ->
+                rule((index % foods.size + 1).toLong(), setOf(type))
+            },
+            history = emptyList(),
+            foodsById = foods.associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            seed = 9
+        )
+
+        assertEquals(35, result.meals.size)
+        assertEquals(MealType.entries.toSet(), result.meals.map { it.type }.toSet())
     }
 
     private fun rule(
