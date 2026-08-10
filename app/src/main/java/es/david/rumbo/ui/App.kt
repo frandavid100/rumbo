@@ -2586,6 +2586,13 @@ private fun PlanningRuleCards(
     onDelete: () -> Unit
 ) {
     var editingFixedType by remember(itemKind, itemId) { mutableStateOf<MealType?>(null) }
+    var fixedAmount by remember(itemKind, itemId, editingFixedType, rule?.fixedGrams) {
+        mutableStateOf(
+            editingFixedType?.let { type ->
+                rule?.fixedGrams?.get(type)?.let(::formatDecimal)
+            }.orEmpty()
+        )
+    }
     val base = rule ?: PlanningRule(
         itemKind = itemKind,
         itemId = itemId,
@@ -2696,9 +2703,47 @@ private fun PlanningRuleCards(
                     type = type,
                     selected = base.fixedSlots,
                     onChange = { updatedSlots ->
-                        persist(base.copy(fixedSlots = updatedSlots))
+                        val hasType = updatedSlots.any { it.mealType == type }
+                        persist(
+                            base.copy(
+                                fixedSlots = updatedSlots,
+                                fixedGrams = if (hasType) base.fixedGrams
+                                else base.fixedGrams - type
+                            )
+                        )
                     }
                 )
+                OutlinedTextField(
+                    value = fixedAmount,
+                    onValueChange = { fixedAmount = it.take(8) },
+                    label = { Text("Cantidad fija (opcional)") },
+                    placeholder = { Text("Cualquier cantidad") },
+                    suffix = { Text("g", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    "Si lo dejas vacío, Rumbo ajustará la cantidad a las necesidades de esa comida.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = {
+                        val grams = parseDecimal(fixedAmount)
+                        val amounts = if (fixedAmount.isBlank()) {
+                            base.fixedGrams - type
+                        } else {
+                            base.fixedGrams + (type to checkNotNull(grams))
+                        }
+                        persist(base.copy(fixedGrams = amounts))
+                    },
+                    enabled = fixedAmount.isBlank() ||
+                        (parseDecimal(fixedAmount)?.let { it in 0.1..5000.0 } == true),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (fixedAmount.isBlank()) "Permitir cualquier cantidad" else "Guardar cantidad")
+                }
             }
             if (configuredTypes.isEmpty() && editingFixedType == null) {
                 Text(
