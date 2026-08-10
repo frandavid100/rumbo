@@ -456,13 +456,18 @@ fun RumboApp(repository: AppRepository) {
                     onGoalChange = { data = repository.setWeeklyRate(it) },
                     onAddMeasurement = { screenName = Screen.ADD.name },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
-                    onOpenPlanner = { screenName = Screen.PLANNER.name },
+                    onOpenPlanner = {
+                        plannerWeekName = PlanWeek.CURRENT.name
+                        screenName = Screen.PLANNER.name
+                    },
                     onOpenMeal = {
+                        plannerWeekName = PlanWeek.CURRENT.name
                         selectedPlannedMealId = it
                         screenName = Screen.EDIT_PLANNED_MEAL.name
                     },
                     onOpenFoods = { screenName = Screen.FOODS.name },
                     onAddMissingMeal = { type, day ->
+                        plannerWeekName = PlanWeek.CURRENT.name
                         screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
                         draftMealTypeName = type.name
                         draftMealDayName = day.name
