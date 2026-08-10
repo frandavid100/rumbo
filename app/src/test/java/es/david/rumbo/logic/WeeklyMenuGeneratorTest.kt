@@ -100,6 +100,41 @@ class WeeklyMenuGeneratorTest {
         assertEquals(MealType.entries.toSet(), result.meals.map { it.type }.toSet())
     }
 
+    @Test
+    fun fixedQuantityIsAppliedOnlyToItsMealType() {
+        val lunch = PlanningSlot(WeekDay.MONDAY, MealType.MORNING_SNACK)
+        val dinner = PlanningSlot(WeekDay.MONDAY, MealType.DINNER)
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                PlanningRule(
+                    itemKind = PlannedItemKind.FOOD,
+                    itemId = 2,
+                    allowedMealTypes = emptySet(),
+                    fixedSlots = setOf(lunch, dinner),
+                    fixedGrams = mapOf(MealType.MORNING_SNACK to 90.0),
+                    frequency = PlanningFrequency.NEVER,
+                    preferredGrams = 150.0
+                )
+            ),
+            history = emptyList(),
+            foodsById = foods.associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            seed = 12
+        )
+
+        val snackItem = result.meals.single {
+            it.type == MealType.MORNING_SNACK && WeekDay.MONDAY in it.days
+        }.items.single()
+        val dinnerItem = result.meals.single {
+            it.type == MealType.DINNER && WeekDay.MONDAY in it.days
+        }.items.single()
+        assertEquals(90.0, snackItem.grams, 0.001)
+        assertTrue(!snackItem.adjustable)
+        assertTrue(dinnerItem.adjustable)
+    }
+
     private fun rule(
         id: Long,
         types: Set<MealType>,
