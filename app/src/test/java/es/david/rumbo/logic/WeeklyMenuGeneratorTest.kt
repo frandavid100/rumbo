@@ -118,7 +118,7 @@ class WeeklyMenuGeneratorTest {
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = MealType.entries.mapIndexed { index, type ->
-                rule((index % foods.size + 1).toLong(), setOf(type))
+                rule((index % 4 + 1).toLong(), setOf(type))
             },
             history = emptyList(),
             foodsById = foods.associateBy { it.id },
