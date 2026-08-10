@@ -524,6 +524,7 @@ fun RumboApp(repository: AppRepository) {
                     foods = data.foods,
                     dishes = data.dishes,
                     recommendation = currentRecommendation,
+                    mealShares = mealShares,
                     initialWeek = PlanWeek.valueOf(plannerWeekName),
                     onWeekChange = { plannerWeekName = it.name },
                     onApplyGeneratedMenu = { result, week ->
@@ -3086,6 +3087,7 @@ private fun WeeklyPlannerScreen(
     foods: List<Food>,
     dishes: List<Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
+    mealShares: Map<MealType, Double>,
     initialWeek: PlanWeek,
     onWeekChange: (PlanWeek) -> Unit,
     onApplyGeneratedMenu: (es.david.rumbo.logic.GeneratedWeeklyMenu, PlanWeek) -> Unit,
@@ -3187,7 +3189,8 @@ private fun WeeklyPlannerScreen(
                                         history = menuHistory,
                                         foodsById = foodsById,
                                         dishesById = dishesById,
-                                        recommendation = recommendation
+                                        recommendation = recommendation,
+                                        mealShares = mealShares
                                     )
                                 }.onSuccess {
                                     onApplyGeneratedMenu(it, selectedWeek)
