@@ -139,6 +139,7 @@ import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedFood
 import es.david.rumbo.model.PlannedDish
 import es.david.rumbo.model.PlannedMeal
+import es.david.rumbo.model.PlanWeek
 import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
@@ -206,6 +207,7 @@ fun RumboApp(repository: AppRepository) {
     var selectedPlannedMealId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedDishId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
+    var plannerWeekName by rememberSaveable { mutableStateOf(PlanWeek.CURRENT.name) }
     var draftMealDayName by rememberSaveable { mutableStateOf<String?>(null) }
     var draftFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftDishId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -468,7 +470,9 @@ fun RumboApp(repository: AppRepository) {
                         draftDishId = null
                         screenName = Screen.ADD_PLANNED_MEAL.name
                     },
-                    onApplyAdjustedMeals = { data = repository.savePlannedMeals(it) }
+                    onApplyAdjustedMeals = { meals, week ->
+                        data = repository.savePlannedMeals(meals, week)
+                    }
                 )
                 screen == Screen.ADD -> AddMeasurementScreen(
                     data = data,
@@ -515,12 +519,18 @@ fun RumboApp(repository: AppRepository) {
                     foods = data.foods,
                     dishes = data.dishes,
                     recommendation = currentRecommendation,
-                    onApplyGeneratedMenu = { data = repository.applyGeneratedMenu(it) },
-                    onOpenMeal = {
-                        selectedPlannedMealId = it
+                    initialWeek = PlanWeek.valueOf(plannerWeekName),
+                    onWeekChange = { plannerWeekName = it.name },
+                    onApplyGeneratedMenu = { result, week ->
+                        data = repository.applyGeneratedMenu(result, week)
+                    },
+                    onOpenMeal = { mealId, week ->
+                        plannerWeekName = week.name
+                        selectedPlannedMealId = mealId
                         screenName = Screen.EDIT_PLANNED_MEAL.name
                     },
-                    onAddMissing = { type, day ->
+                    onAddMissing = { type, day, week ->
+                        plannerWeekName = week.name
                         screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
                         draftMealTypeName = type.name
                         draftMealDayName = day.name
@@ -545,6 +555,7 @@ fun RumboApp(repository: AppRepository) {
                     mealShares = mealShares,
                     adjustmentRange = adjustmentRange,
                     initialType = draftMealTypeName?.let { MealType.valueOf(it) },
+                    initialPlanWeek = PlanWeek.valueOf(plannerWeekName),
                     initialDays = draftMealDayName?.let { setOf(WeekDay.valueOf(it)) }.orEmpty(),
                     initialFoodId = draftFoodId,
                     initialDishId = draftDishId,
@@ -921,6 +932,7 @@ private fun HomeScreen(
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
+        .filter { it.planWeek == PlanWeek.CURRENT }
 
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
@@ -3740,6 +3752,7 @@ private fun PlannedMealEditorScreen(
     adjustmentRange: Pair<Double, Double>,
     initial: PlannedMeal? = null,
     initialType: MealType? = null,
+    initialPlanWeek: PlanWeek = PlanWeek.CURRENT,
     initialDays: Set<WeekDay> = emptySet(),
     initialFoodId: Long? = null,
     initialDishId: Long? = null,
@@ -3788,8 +3801,11 @@ private fun PlannedMealEditorScreen(
     var error by remember { mutableStateOf<String?>(null) }
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val dishesById = remember(dishes) { dishes.associateBy { it.id } }
+    val planWeek = initial?.planWeek ?: initialPlanWeek
     val occupiedDays = existingMeals.asSequence()
-        .filter { it.id != initial?.id && it.type == type }
+        .filter {
+            it.id != initial?.id && it.planWeek == planWeek && it.type == type
+        }
         .flatMap { it.days.asSequence() }
         .toSet()
     val previewItems = itemAmounts.mapNotNull { (foodId, draft) -> draft.toPlannedFood(foodId) }
@@ -3802,6 +3818,7 @@ private fun PlannedMealEditorScreen(
             PlannedMeal(
                 id = initial?.id ?: 1L,
                 type = type,
+                planWeek = planWeek,
                 days = selectedDays.ifEmpty { setOf(WeekDay.MONDAY) },
                 items = previewItems,
                 dishes = previewDishes
@@ -4227,6 +4244,7 @@ private fun PlannedMealEditorScreen(
                         PlannedMeal(
                             id = initial?.id ?: System.currentTimeMillis(),
                             type = type,
+                            planWeek = planWeek,
                             days = selectedDays,
                             items = parsedItems,
                             dishes = parsedDishes,
