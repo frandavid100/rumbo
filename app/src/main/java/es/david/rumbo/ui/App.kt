@@ -3360,7 +3360,7 @@ private fun PlannedMealEditorScreen(
                             }
                         }
                         val grams = parseDecimal(draft.grams)
-                        val calories = grams?.let { food.calories * it / 100.0 }
+                        val calories = grams?.let { amount -> food.calories?.times(amount)?.div(100.0) }
                         Text(
                             calories?.let { "${formatDecimal(it)} kcal en esta cantidad" }
                                 ?: "Introduce una cantidad",
