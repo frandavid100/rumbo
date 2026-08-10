@@ -8,6 +8,7 @@ import es.david.rumbo.model.NutritionTotals
 import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
+import es.david.rumbo.model.nutrition
 import es.david.rumbo.model.nutritionForGrams
 import es.david.rumbo.model.resolvedGrams
 import es.david.rumbo.model.sanitizedDayAmounts
@@ -60,7 +61,8 @@ object MealQuantityOptimizer {
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
-        days: Set<WeekDay> = WeekDay.entries.toSet()
+        days: Set<WeekDay> = WeekDay.entries.toSet(),
+        mealShares: Map<MealType, Double> = defaultMealShares
     ): QuantityOptimizationResult {
         var optimizedMeals = meals
         val changes = mutableListOf<QuantityChange>()
@@ -78,22 +80,37 @@ object MealQuantityOptimizer {
             val target = before.target
             val amounts = variables.map { it.initial }.toMutableList()
             var actual = before.actual.toVector()
+            val mealActual = optimizedMeals
+                .filter { day in it.days }
+                .associate { meal ->
+                    meal.id to meal.nutrition(foodsById, dishesById, day).toVector()
+                }.toMutableMap()
 
             repeat(16) {
                 variables.forEachIndexed { index, variable ->
                     val withoutCurrent = actual - variable.perGram * amounts[index]
+                    val currentMeal = mealActual.getValue(variable.mealId)
+                    val mealWithoutCurrent = currentMeal - variable.perGram * amounts[index]
+                    val mealTarget = MealPlanEvaluator.mealTarget(
+                        recommendation,
+                        mealShares[variable.mealType]
+                            ?: defaultMealShares.getValue(variable.mealType)
+                    )
+                    fun combinedScore(amount: Double): Double =
+                        score(withoutCurrent + variable.perGram * amount, target) +
+                            score(mealWithoutCurrent + variable.perGram * amount, mealTarget) * 2.0
+
                     var low = variable.minimum
                     var high = variable.maximum
                     repeat(28) {
                         val left = low + (high - low) / 3.0
                         val right = high - (high - low) / 3.0
-                        if (score(withoutCurrent + variable.perGram * left, target) <=
-                            score(withoutCurrent + variable.perGram * right, target)
-                        ) high = right else low = left
+                        if (combinedScore(left) <= combinedScore(right)) high = right else low = left
                     }
                     val best = ((low + high) / 2.0).coerceIn(variable.minimum, variable.maximum)
                     amounts[index] = best
                     actual = withoutCurrent + variable.perGram * best
+                    mealActual[variable.mealId] = mealWithoutCurrent + variable.perGram * best
                 }
             }
 
@@ -225,4 +242,12 @@ object MealQuantityOptimizer {
         carbohydrates * factor,
         fat * factor
     )
+    private val defaultMealShares = mapOf(
+        MealType.BREAKFAST to 0.25,
+        MealType.MORNING_SNACK to 0.10,
+        MealType.LUNCH to 0.35,
+        MealType.AFTERNOON_SNACK to 0.10,
+        MealType.DINNER to 0.20
+    )
+
 }
