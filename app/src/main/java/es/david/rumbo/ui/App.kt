@@ -196,6 +196,8 @@ fun RumboApp(repository: AppRepository) {
     var selectedDishId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
     var draftMealDayName by rememberSaveable { mutableStateOf<String?>(null) }
+    var draftFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var draftDishId by rememberSaveable { mutableStateOf<Long?>(null) }
     var foodReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var dishReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     val screen = Screen.valueOf(screenName)
@@ -301,6 +303,14 @@ fun RumboApp(repository: AppRepository) {
                             Text("Menú semanal", fontWeight = FontWeight.SemiBold)
                         Screen.FOODS ->
                             Text("Alimentos y platos", fontWeight = FontWeight.SemiBold)
+                        Screen.FOOD_DETAIL ->
+                            Text("Alimento", fontWeight = FontWeight.SemiBold)
+                        Screen.DISH_DETAIL ->
+                            Text("Plato", fontWeight = FontWeight.SemiBold)
+                        Screen.ADD_FOOD, Screen.EDIT_FOOD ->
+                            Text(if (screen == Screen.ADD_FOOD) "Nuevo alimento" else "Editar alimento", fontWeight = FontWeight.SemiBold)
+                        Screen.ADD_DISH, Screen.EDIT_DISH ->
+                            Text(if (screen == Screen.ADD_DISH) "Nuevo plato" else "Editar plato", fontWeight = FontWeight.SemiBold)
                         else -> Column {
                             Text("Rumbo", fontWeight = FontWeight.SemiBold)
                             Text(
@@ -365,8 +375,11 @@ fun RumboApp(repository: AppRepository) {
                     },
                     onOpenFoods = { screenName = Screen.FOODS.name },
                     onAddMissingMeal = { type, day ->
+                        screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
                         draftMealTypeName = type.name
                         draftMealDayName = day.name
+                        draftFoodId = null
+                        draftDishId = null
                         screenName = Screen.ADD_PLANNED_MEAL.name
                     },
                     onApplyAdjustedMeals = { data = repository.savePlannedMeals(it) }
@@ -419,8 +432,11 @@ fun RumboApp(repository: AppRepository) {
                         screenName = Screen.EDIT_PLANNED_MEAL.name
                     },
                     onAddMissing = { type, day ->
+                        screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
                         draftMealTypeName = type.name
                         draftMealDayName = day.name
+                        draftFoodId = null
+                        draftDishId = null
                         screenName = Screen.ADD_PLANNED_MEAL.name
                     },
                     onApplyAdjustedMeals = { data = repository.savePlannedMeals(it) }
@@ -434,6 +450,8 @@ fun RumboApp(repository: AppRepository) {
                     adjustmentRange = adjustmentRange,
                     initialType = draftMealTypeName?.let { MealType.valueOf(it) },
                     initialDays = draftMealDayName?.let { setOf(WeekDay.valueOf(it)) }.orEmpty(),
+                    initialFoodId = draftFoodId,
+                    initialDishId = draftDishId,
                     preferredFoodIds = preferredFoodIds,
                     preferredDishIds = preferredDishIds,
                     onCreateDish = { data = repository.saveDish(it) },
@@ -451,6 +469,8 @@ fun RumboApp(repository: AppRepository) {
                         data = repository.savePlannedMeal(it)
                         draftMealTypeName = null
                         draftMealDayName = null
+                        draftFoodId = null
+                        draftDishId = null
                         screenName = Screen.PLANNER.name
                     }
                 )
@@ -513,6 +533,43 @@ fun RumboApp(repository: AppRepository) {
                         DishDetailScreen(
                             dish = dish,
                             foods = data.foods,
+                            plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
+                            onOpenFood = {
+                                selectedFoodId = it
+                                foodReturnScreenName = Screen.DISH_DETAIL.name
+                                screenName = Screen.FOOD_DETAIL.name
+                            },
+                            onOpenMeal = {
+                                selectedPlannedMealId = it
+                                screenName = Screen.EDIT_PLANNED_MEAL.name
+                            },
+                            onAddToMeal = { mealId ->
+                                val meal = data.activeProfileData?.plannedMeals?.firstOrNull { it.id == mealId }
+                                if (meal != null) {
+                                    val existing = meal.dishes.firstOrNull { it.dishId == dish.id }
+                                    val amount = dish.totalWeightGrams().takeIf { it > 0.0 } ?: 100.0
+                                    val updated = if (existing == null) {
+                                        meal.copy(dishes = meal.dishes + PlannedDish(dish.id, amount, false, amount * 0.5, amount * 1.5))
+                                    } else {
+                                        meal.copy(dishes = meal.dishes.map {
+                                            if (it.dishId == dish.id) it.copy(
+                                                grams = it.grams + amount,
+                                                minimumGrams = (it.grams + amount) * 0.5,
+                                                maximumGrams = (it.grams + amount) * 1.5
+                                            ) else it
+                                        })
+                                    }
+                                    data = repository.savePlannedMeal(updated)
+                                }
+                            },
+                            onAddNewMeal = {
+                                screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
+                                draftFoodId = null
+                                draftDishId = dish.id
+                                draftMealTypeName = null
+                                draftMealDayName = null
+                                screenName = Screen.ADD_PLANNED_MEAL.name
+                            },
                             onEdit = { screenName = Screen.EDIT_DISH.name },
                             onDelete = {
                                 data = repository.deleteDish(dish.id)
@@ -581,6 +638,33 @@ fun RumboApp(repository: AppRepository) {
                             onOpenMeal = {
                                 selectedPlannedMealId = it
                                 screenName = Screen.EDIT_PLANNED_MEAL.name
+                            },
+                            onAddToMeal = { mealId ->
+                                val meal = data.activeProfileData?.plannedMeals?.firstOrNull { it.id == mealId }
+                                if (meal != null) {
+                                    val existing = meal.items.firstOrNull { it.foodId == food.id }
+                                    val amount = 100.0
+                                    val updated = if (existing == null) {
+                                        meal.copy(items = meal.items + PlannedFood(food.id, amount, false, amount * 0.5, amount * 1.5))
+                                    } else {
+                                        meal.copy(items = meal.items.map {
+                                            if (it.foodId == food.id) it.copy(
+                                                grams = it.grams + amount,
+                                                minimumGrams = (it.grams + amount) * 0.5,
+                                                maximumGrams = (it.grams + amount) * 1.5
+                                            ) else it
+                                        })
+                                    }
+                                    data = repository.savePlannedMeal(updated)
+                                }
+                            },
+                            onAddNewMeal = {
+                                screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
+                                draftFoodId = food.id
+                                draftDishId = null
+                                draftMealTypeName = null
+                                draftMealDayName = null
+                                screenName = Screen.ADD_PLANNED_MEAL.name
                             },
                             onEdit = { screenName = Screen.EDIT_FOOD.name },
                             onDelete = {
@@ -3007,6 +3091,8 @@ private fun PlannedMealEditorScreen(
     initial: PlannedMeal? = null,
     initialType: MealType? = null,
     initialDays: Set<WeekDay> = emptySet(),
+    initialFoodId: Long? = null,
+    initialDishId: Long? = null,
     preferredFoodIds: Set<Long>,
     preferredDishIds: Set<Long>,
     onCreateDish: (Dish) -> Unit,
@@ -3027,7 +3113,9 @@ private fun PlannedMealEditorScreen(
                 formatDecimal(it.grams), it.adjustable,
                 formatDecimal(it.minimumGrams), formatDecimal(it.maximumGrams)
             )
-        }.orEmpty())
+        }.orEmpty().ifEmpty {
+            initialFoodId?.let { mapOf(it to AmountDraft("100")) }.orEmpty()
+        })
     }
     var dishAmounts by rememberSaveable(initial?.id, stateSaver = amountDraftMapSaver) {
         mutableStateOf(initial?.dishes?.associate {
@@ -3035,7 +3123,9 @@ private fun PlannedMealEditorScreen(
                 formatDecimal(it.grams), it.adjustable,
                 formatDecimal(it.minimumGrams), formatDecimal(it.maximumGrams)
             )
-        }.orEmpty())
+        }.orEmpty().ifEmpty {
+            initialDishId?.let { mapOf(it to AmountDraft("100")) }.orEmpty()
+        })
     }
     var choosingElement by remember { mutableStateOf(false) }
     var selectedForDish by rememberSaveable(stateSaver = longSetSaver) { mutableStateOf(emptySet<Long>()) }
@@ -3955,16 +4045,51 @@ private fun DishesScreen(
 private fun DishDetailScreen(
     dish: Dish,
     foods: List<Food>,
+    plannedMeals: List<PlannedMeal>,
+    onOpenFood: (Long) -> Unit,
+    onOpenMeal: (Long) -> Unit,
+    onAddToMeal: (Long) -> Unit,
+    onAddNewMeal: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    var choosingMeal by remember { mutableStateOf(false) }
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val totals = dish.nutrition(foodsById)
     val totalWeight = dish.totalWeightGrams()
     val per100Factor = if (totalWeight > 0.0) 100.0 / totalWeight else 0.0
     val category = dish.dominantCategory(foodsById)
+    val menuUsages = remember(dish.id, plannedMeals) {
+        plannedMeals.mapNotNull { meal ->
+            val amounts = meal.days.map { day ->
+                meal.dishes.filter { it.dishId == dish.id }.sumOf { meal.resolvedGrams(it, day) }
+            }
+            if (amounts.any { it > 0.0 }) {
+                Triple(
+                    meal.id,
+                    "${meal.type.label} · ${meal.days.joinToString { it.shortLabel }}",
+                    amountRangeLabel(amounts)
+                )
+            } else null
+        }
+    }
 
+    if (choosingMeal) {
+        AddToMealDialog(
+            meals = plannedMeals,
+            itemName = dish.name,
+            onChoose = {
+                onAddToMeal(it)
+                choosingMeal = false
+            },
+            onCreateNew = {
+                choosingMeal = false
+                onAddNewMeal()
+            },
+            onDismiss = { choosingMeal = false }
+        )
+    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -3980,70 +4105,154 @@ private fun DishDetailScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            FoodCategoryBadge(category)
-            Column(Modifier.weight(1f)) {
-                Text(dish.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FoodCategoryBadge(category)
+                    Column(Modifier.weight(1f)) {
+                        Text(dish.name, style = MaterialTheme.typography.headlineSmall)
+                        Text(
+                            "${dish.ingredients.size} ingredientes · ${formatDecimal(totalWeight)} g en total",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                HorizontalDivider()
+                Text("Plato completo", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    "Predomina ${category.label.lowercase()} · ${formatDecimal(totalWeight)} g en total",
-                    color = foodCategoryColor(category),
+                    "${formatDecimal(totals.calories)} kcal",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
+                )
+                NutritionLine("Proteínas", totals.proteinGrams, Color(0xFFC62828))
+                NutritionLine("Carbohidratos", totals.carbohydrateGrams, Color(0xFF2563A6))
+                NutritionLine("Grasas", totals.fatGrams, Color(0xFF9A6700))
+                NutritionLine("Fibra", totals.fiberGrams)
+                if (!totals.isComplete) {
+                    Text(
+                        "Algún ingrediente no tiene todos sus datos nutricionales.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                HorizontalDivider()
+                Text(
+                    "Por 100 g: ${formatDecimal(totals.calories * per100Factor)} kcal · " +
+                        "P ${formatDecimal(totals.proteinGrams * per100Factor)} g · " +
+                        "H ${formatDecimal(totals.carbohydrateGrams * per100Factor)} g · " +
+                        "G ${formatDecimal(totals.fatGrams * per100Factor)} g",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        HorizontalDivider()
-        Text("Plato completo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
-            "${formatDecimal(totals.calories)} kcal",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-        NutritionLine("Grasas", totals.fatGrams)
-        NutritionLine("Carbohidratos", totals.carbohydrateGrams)
-        NutritionLine("Proteínas", totals.proteinGrams)
-        NutritionLine("Fibra", totals.fiberGrams)
-        if (!totals.isComplete) {
-            Text(
-                "El resultado es parcial porque algún ingrediente no tiene todos sus datos nutricionales.",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-        HorizontalDivider()
-        Text("Valores por 100 g", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
-            "${formatDecimal(totals.calories * per100Factor)} kcal",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-        NutritionLine("Grasas", totals.fatGrams * per100Factor)
-        NutritionLine("Carbohidratos", totals.carbohydrateGrams * per100Factor)
-        NutritionLine("Proteínas", totals.proteinGrams * per100Factor)
-        NutritionLine("Fibra", totals.fiberGrams * per100Factor)
-        HorizontalDivider()
-        Text("Ingredientes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        dish.ingredients.forEach { ingredient ->
-            val food = foodsById[ingredient.foodId]
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                if (food != null) SmallFoodCategoryBadge(food.category) else Spacer(Modifier.size(24.dp))
-                Text(food?.name ?: "Alimento eliminado", modifier = Modifier.weight(1f))
-                Text("${formatDecimal(ingredient.grams)} g", fontWeight = FontWeight.SemiBold)
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Ingredientes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                dish.ingredients.forEachIndexed { index, ingredient ->
+                    val food = foodsById[ingredient.foodId]
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .then(if (food != null) Modifier.clickable { onOpenFood(food.id) } else Modifier)
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        if (food != null) SmallFoodCategoryBadge(food.category) else Spacer(Modifier.size(24.dp))
+                        Text(food?.name ?: "Alimento eliminado", modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("${formatDecimal(ingredient.grams)} g")
+                    }
+                    if (index < dish.ingredients.lastIndex) HorizontalDivider()
+                }
             }
         }
-        Button(onClick = onEdit, modifier = Modifier.fillMaxWidth()) { Text("Editar plato") }
-        TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Eliminar plato", color = MaterialTheme.colorScheme.error)
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Presente en el menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                if (menuUsages.isEmpty()) {
+                    Text("Este plato no está incluido en ninguna comida.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    menuUsages.forEachIndexed { index, (mealId, label, amount) ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, modifier = Modifier.weight(1f), maxLines = 2)
+                            Text(amount)
+                        }
+                        if (index < menuUsages.lastIndex) HorizontalDivider()
+                    }
+                }
+                OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Añadir a otra comida")
+                }
+            }
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) { Text("Editar") }
+            OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
         }
     }
+}
+
+@Composable
+private fun AddToMealDialog(
+    meals: List<PlannedMeal>,
+    itemName: String,
+    onChoose: (Long) -> Unit,
+    onCreateNew: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir a una comida") },
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                Text(
+                    itemName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(8.dp))
+                meals.sortedWith(compareBy<PlannedMeal> { it.type.ordinal }.thenBy { it.id }).forEachIndexed { index, meal ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onChoose(meal.id) }.padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${meal.type.label} · ${meal.days.joinToString { it.shortLabel }}",
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    }
+                    if (index < meals.lastIndex) HorizontalDivider()
+                }
+                if (meals.isNotEmpty()) HorizontalDivider()
+                Row(
+                    Modifier.fillMaxWidth().clickable(onClick = onCreateNew).padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Crear otra comida")
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }
 
 @Composable
@@ -4492,10 +4701,13 @@ private fun FoodDetailScreen(
     dishes: List<Dish>,
     onOpenFood: (Long) -> Unit,
     onOpenMeal: (Long) -> Unit,
+    onAddToMeal: (Long) -> Unit,
+    onAddNewMeal: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    var choosingMeal by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     val similarFoods = FoodSimilarityEngine.findSimilar(food, foods)
     val menuUsages = remember(food.id, plannedMeals, dishes) {
@@ -4508,9 +4720,7 @@ private fun FoodDetailScreen(
                     val dish = dishesById[plannedDish.dishId] ?: return@sumOf 0.0
                     val recipeWeight = dish.totalWeightGrams()
                     if (recipeWeight <= 0.0) return@sumOf 0.0
-                    val ingredientGrams = dish.ingredients
-                        .filter { it.foodId == food.id }
-                        .sumOf { it.grams }
+                    val ingredientGrams = dish.ingredients.filter { it.foodId == food.id }.sumOf { it.grams }
                     ingredientGrams * meal.resolvedGrams(plannedDish, day) / recipeWeight
                 }
                 direct + throughDishes
@@ -4524,6 +4734,22 @@ private fun FoodDetailScreen(
             } else null
         }
     }
+
+    if (choosingMeal) {
+        AddToMealDialog(
+            meals = plannedMeals,
+            itemName = food.name,
+            onChoose = {
+                onAddToMeal(it)
+                choosingMeal = false
+            },
+            onCreateNew = {
+                choosingMeal = false
+                onAddNewMeal()
+            },
+            onDismiss = { choosingMeal = false }
+        )
+    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -4532,119 +4758,124 @@ private fun FoodDetailScreen(
             confirmButton = {
                 TextButton(onClick = onDelete) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") }
-            }
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } }
         )
     }
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            FoodCategoryBadge(food.category)
-            Column(Modifier.weight(1f)) {
-                Text(food.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FoodCategoryBadge(food.category)
+                    Column(Modifier.weight(1f)) {
+                        Text(food.name, style = MaterialTheme.typography.headlineSmall)
+                        Text(
+                            listOfNotNull(food.brand, food.subcategory ?: food.family).joinToString(" · ")
+                                .ifBlank { food.category.label },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Predominan: ${food.category.label.lowercase()}",
+                            color = foodCategoryColor(food.category),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                HorizontalDivider()
+                Text("Valores por 100 g o 100 ml", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    listOfNotNull(food.brand, food.subcategory ?: food.family).joinToString(" · ")
-                        .ifBlank { food.category.label },
-                    color = foodCategoryColor(food.category),
+                    food.calories?.let { "${formatDecimal(it)} kcal" } ?: "Energía sin datos",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
-            }
-        }
-        if (food.barcode != null || food.retailer != null || food.source != null) {
-            food.barcode?.let { MetadataLine("Código EAN", it) }
-            food.retailer?.let { MetadataLine("Comercio identificado", it) }
-            food.source?.let { MetadataLine("Fuente", it) }
-        }
-        HorizontalDivider()
-        Text("Valores por 100 g o 100 ml", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
-            food.calories?.let { "${formatDecimal(it)} kcal" } ?: "Energía no indicada",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-        NutritionLine("Grasas", food.fatGrams)
-        NutritionLine("de las cuales saturadas", food.saturatedFatGrams)
-        NutritionLine("Carbohidratos", food.carbohydrateGrams)
-        NutritionLine("de los cuales azúcares", food.sugarGrams)
-        NutritionLine("Proteínas", food.proteinGrams)
-        NutritionLine("Fibra", food.fiberGrams)
-        NutritionLine("Sal", food.saltGrams)
-        food.legalName?.let {
-            HorizontalDivider()
-            Text("Denominación legal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(it, style = MaterialTheme.typography.bodyMedium)
-        }
-        food.ingredients?.let {
-            Text("Ingredientes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(it, style = MaterialTheme.typography.bodyMedium)
-        }
-        if (food.links.isNotEmpty()) {
-            HorizontalDivider()
-            Text("Enlaces", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            food.links.forEach { link ->
-                Row(
-                    Modifier.fillMaxWidth().clickable { uriHandler.openUri(link) }.padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(linkLabel(link), modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
-                    Icon(
-                        Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = "Abrir enlace",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                NutritionLine("Proteínas", food.proteinGrams, Color(0xFFC62828))
+                NutritionLine("Carbohidratos", food.carbohydrateGrams, Color(0xFF2563A6))
+                NutritionLine("Grasas", food.fatGrams, Color(0xFF9A6700))
+                NutritionLine("de las cuales saturadas", food.saturatedFatGrams)
+                NutritionLine("de los cuales azúcares", food.sugarGrams)
+                NutritionLine("Fibra", food.fiberGrams)
+                NutritionLine("Sal", food.saltGrams)
+                food.legalName?.let {
+                    HorizontalDivider()
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                food.ingredients?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (food.links.isNotEmpty()) {
+                    HorizontalDivider()
+                    food.links.forEachIndexed { index, link ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { uriHandler.openUri(link) }.padding(vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                if (linkLabel(link).contains("mercadona", ignoreCase = true)) "Ver producto en Mercadona"
+                                else "Ver fuente: ${linkLabel(link)}",
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Abrir enlace", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        if (index < food.links.lastIndex) HorizontalDivider()
+                    }
                 }
             }
         }
-        HorizontalDivider()
-        Text(
-            "Presente en el menú",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        if (menuUsages.isEmpty()) {
-            Text(
-                "Este alimento no está incluido en ninguna comida.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            menuUsages.forEach { (mealId, label, amount) ->
-                Row(
-                    Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(label, modifier = Modifier.weight(1f), maxLines = 2)
-                    Text(amount, fontWeight = FontWeight.SemiBold)
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Presente en el menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                if (menuUsages.isEmpty()) {
+                    Text("Este alimento no está incluido en ninguna comida.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    menuUsages.forEachIndexed { index, (mealId, label, amount) ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, modifier = Modifier.weight(1f), maxLines = 2)
+                            Text(amount)
+                        }
+                        if (index < menuUsages.lastIndex) HorizontalDivider()
+                    }
                 }
-                HorizontalDivider()
+                OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Añadir a otra comida")
+                }
             }
         }
-        Text("Alimentos similares", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
-            "Misma subcategoría culinaria y composición suficientemente próxima para intercambiar cantidades parecidas sin alterar mucho los macros.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (similarFoods.isEmpty()) {
-            Text(
-                "No hay sustitutos suficientemente próximos en el catálogo actual.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            similarFoods.forEach { similar ->
-                FoodListEntry(food = similar, onClick = { onOpenFood(similar.id) })
-                HorizontalDivider()
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Alimentos similares", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Puedes sustituirlo por estos alimentos sin alterar demasiado el reparto nutricional.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (similarFoods.isEmpty()) {
+                    Text("No hay sustitutos suficientemente próximos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    similarFoods.forEachIndexed { index, similar ->
+                        FoodListEntry(food = similar, onClick = { onOpenFood(similar.id) })
+                        if (index < similarFoods.lastIndex) HorizontalDivider()
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Button(onClick = onEdit, modifier = Modifier.fillMaxWidth()) { Text("Editar alimento") }
-        TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Eliminar alimento", color = MaterialTheme.colorScheme.error)
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) { Text("Editar") }
+            OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
         }
     }
 }
@@ -4654,10 +4885,14 @@ private fun linkLabel(link: String): String = runCatching {
 }.getOrNull().orEmpty().ifBlank { link }
 
 @Composable
-private fun NutritionLine(label: String, grams: Double?) {
+private fun NutritionLine(label: String, grams: Double?, valueColor: Color = Color.Unspecified) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(grams?.let { "${formatDecimal(it)} g" } ?: "No indicada", fontWeight = FontWeight.SemiBold)
+        Text(
+            grams?.let { "${formatDecimal(it)} g" } ?: "Sin datos",
+            color = if (grams == null) MaterialTheme.colorScheme.onSurfaceVariant else valueColor,
+            fontWeight = if (grams == null) FontWeight.Normal else FontWeight.SemiBold
+        )
     }
 }
 
