@@ -3034,17 +3034,23 @@ private fun WeeklyPlannerScreen(
     foods: List<Food>,
     dishes: List<Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
-    onApplyGeneratedMenu: (es.david.rumbo.logic.GeneratedWeeklyMenu) -> Unit,
-    onOpenMeal: (Long) -> Unit,
-    onAddMissing: (MealType, WeekDay) -> Unit,
-    onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
+    initialWeek: PlanWeek,
+    onWeekChange: (PlanWeek) -> Unit,
+    onApplyGeneratedMenu: (es.david.rumbo.logic.GeneratedWeeklyMenu, PlanWeek) -> Unit,
+    onOpenMeal: (Long, PlanWeek) -> Unit,
+    onAddMissing: (MealType, WeekDay, PlanWeek) -> Unit,
+    onApplyAdjustedMeals: (List<PlannedMeal>, PlanWeek) -> Unit
 ) {
+    var selectedWeek by rememberSaveable { mutableStateOf(initialWeek) }
+    val visibleMeals = remember(meals, selectedWeek) {
+        meals.filter { it.planWeek == selectedWeek }
+    }
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val dishesById = remember(dishes) { dishes.associateBy { it.id } }
-    val assessments = remember(meals, foodsById, dishesById, recommendation) {
+    val assessments = remember(visibleMeals, foodsById, dishesById, recommendation) {
         recommendation?.let { target ->
             WeekDay.entries.associateWith { day ->
-                MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, target)
+                MealPlanEvaluator.assessDay(day, visibleMeals, foodsById, dishesById, target)
             }
         }.orEmpty()
     }
@@ -3066,7 +3072,7 @@ private fun WeeklyPlannerScreen(
         QuantityOptimizationPreviewDialog(
             result = result,
             onApply = {
-                onApplyAdjustedMeals(result.meals)
+                onApplyAdjustedMeals(result.meals, selectedWeek)
                 optimizationPreview = null
             },
             onDismiss = { optimizationPreview = null }
@@ -3088,6 +3094,24 @@ private fun WeeklyPlannerScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PlanWeek.entries.forEach { week ->
+                    FilterChip(
+                        selected = selectedWeek == week,
+                        onClick = {
+                            selectedWeek = week
+                            onWeekChange(week)
+                        },
+                        label = { Text(week.label) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+        item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     HomeCardHeader("Valoración semanal", showArrow = false)
@@ -3106,7 +3130,7 @@ private fun WeeklyPlannerScreen(
                             } else {
                                 runCatching {
                                     WeeklyMenuGenerator.generate(
-                                        currentMeals = meals,
+                                        currentMeals = visibleMeals,
                                         rules = planningRules,
                                         history = menuHistory,
                                         foodsById = foodsById,
@@ -3114,7 +3138,7 @@ private fun WeeklyPlannerScreen(
                                         recommendation = recommendation
                                     )
                                 }.onSuccess {
-                                    onApplyGeneratedMenu(it)
+                                    onApplyGeneratedMenu(it, selectedWeek)
                                     generationMessage = "Semana generada. Se han respetado las comidas fijas y las frecuencias elegidas."
                                 }.onFailure {
                                     generationMessage = it.message ?: "No se pudo generar una semana válida."
@@ -3130,7 +3154,7 @@ private fun WeeklyPlannerScreen(
                                     "Necesitas una recomendación nutricional antes de ajustar el plan."
                             } else {
                                 val result = MealQuantityOptimizer.optimize(
-                                    meals, foodsById, dishesById, recommendation
+                                    visibleMeals, foodsById, dishesById, recommendation
                                 )
                                 if (result.changes.isNotEmpty()) optimizationPreview = result
                                 else optimizationMessage = if (result.days.isEmpty()) {
@@ -3149,12 +3173,12 @@ private fun WeeklyPlannerScreen(
         items(WeekDay.entries, key = { "weekly_card_${it.name}" }) { day ->
             WeeklyDayCard(
                 day = day,
-                meals = meals,
+                meals = visibleMeals,
                 foodsById = foodsById,
                 dishesById = dishesById,
                 assessment = assessments[day],
-                onOpenMeal = onOpenMeal,
-                onAddMissing = onAddMissing
+                onOpenMeal = { onOpenMeal(it, selectedWeek) },
+                onAddMissing = { type, day -> onAddMissing(type, day, selectedWeek) }
             )
         }
     }
