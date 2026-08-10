@@ -337,7 +337,18 @@ fun RumboApp(repository: AppRepository) {
             TopAppBar(
                 modifier = Modifier.shadow(2.dp),
                 navigationIcon = {
-                    if (!screen.inNavigation) {
+                    if (profileReady && screen == Screen.HOME && data.profile != null) {
+                        ProfileSwitcher(
+                            profiles = data.profiles.map { it.profile },
+                            activeProfile = data.profile,
+                            onSelect = {
+                                data = repository.switchProfile(it)
+                                screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
+                            },
+                            onManage = { screenName = Screen.PROFILE.name },
+                            onSettings = { screenName = Screen.SETTINGS.name }
+                        )
+                    } else if (!screen.inNavigation) {
                         IconButton(onClick = navigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                         }
@@ -415,18 +426,6 @@ fun RumboApp(repository: AppRepository) {
                             Icon(Icons.Default.Search, contentDescription = "Buscar alimentos y platos")
                         }
                     }
-                    if (data.profile != null) {
-                        ProfileSwitcher(
-                            profiles = data.profiles.map { it.profile },
-                            activeProfile = data.profile,
-                            onSelect = {
-                                data = repository.switchProfile(it)
-                                screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
-                            },
-                            onManage = { screenName = Screen.PROFILE.name },
-                            onSettings = { screenName = Screen.SETTINGS.name }
-                        )
-                    }
                 }
             )
         },
@@ -440,8 +439,11 @@ fun RumboApp(repository: AppRepository) {
                     profiles = data.profiles.map { it.profile },
                     isOnboarding = data.profile == null,
                     requiresBaseline = true,
-                    onCreate = { profile, baseline ->
+                    mealShares = mealShares,
+                    onCreate = { profile, baseline, shares ->
                         data = repository.saveProfileWithBaseline(profile, baseline)
+                        saveMealShares(context, shares)
+                        mealShares = shares
                         screenName = Screen.HOME.name
                     },
                     onSave = { data = repository.saveProfile(it) },
@@ -824,8 +826,11 @@ fun RumboApp(repository: AppRepository) {
                     profiles = data.profiles.map { it.profile },
                     isOnboarding = false,
                     requiresBaseline = false,
-                    onCreate = { profile, baseline ->
+                    mealShares = mealShares,
+                    onCreate = { profile, baseline, shares ->
                         data = repository.saveProfileWithBaseline(profile, baseline)
+                        saveMealShares(context, shares)
+                        mealShares = shares
                         screenName = Screen.HOME.name
                     },
                     onSave = {
@@ -877,11 +882,18 @@ private fun ProfileSwitcher(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        TextButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.Person, contentDescription = null)
-            Spacer(Modifier.width(4.dp))
-            Text(activeProfile?.name ?: "Perfil", maxLines = 1)
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        IconButton(onClick = { expanded = true }) {
+            Box(
+                Modifier.size(36.dp).background(profileColor(activeProfile?.id), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    activeProfile?.name?.trim()?.firstOrNull()?.uppercase() ?: "?",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             profiles.forEach { profile ->
@@ -916,6 +928,15 @@ private fun ProfileSwitcher(
             )
         }
     }
+}
+
+private fun profileColor(id: Long?): Color {
+    val colors = listOf(
+        Color(0xFF455A64), Color(0xFF5D4037), Color(0xFF6A1B9A),
+        Color(0xFF1565C0), Color(0xFF00695C), Color(0xFFAD1457)
+    )
+    val index = (((id ?: 0L) % colors.size) + colors.size) % colors.size
+    return colors[index.toInt()]
 }
 
 @Composable
@@ -1365,7 +1386,14 @@ private fun TodayPlanSection(
     }
     Card(Modifier.fillMaxWidth().clickable(onClick = onOpenPlanner)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            HomeCardHeader("Menú de hoy · ${today.label}")
+            HomeCardHeader("Menú de hoy, ${today.label.lowercase()}")
+            assessment?.let { TodayNutritionSummary(it) }
+            Text(
+                todayAssessmentText(assessment),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             MealType.entries.forEachIndexed { index, type ->
                 val meal = todayMeals[type]
                 val entries = meal?.let {
@@ -1436,13 +1464,6 @@ private fun TodayPlanSection(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            assessment?.let { TodayNutritionSummary(it) }
-            Text(
-                todayAssessmentText(assessment),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = {
@@ -6147,7 +6168,8 @@ private fun ProfileScreen(
     profiles: List<UserProfile>,
     isOnboarding: Boolean,
     requiresBaseline: Boolean,
-    onCreate: (UserProfile, Measurement) -> Unit,
+    mealShares: Map<MealType, Double>,
+    onCreate: (UserProfile, Measurement, Map<MealType, Double>) -> Unit,
     onSave: (UserProfile) -> Unit,
     onSwitch: (Long) -> Unit,
     onDelete: (Long) -> Unit
@@ -6166,6 +6188,13 @@ private fun ProfileScreen(
     var initialWaist by rememberSaveable(editedProfile?.id, creating) { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingDelete by remember { mutableStateOf<UserProfile?>(null) }
+    var shareValues by remember(editedProfile?.id, creating) {
+        mutableStateOf(
+            MealType.entries.associateWith {
+                ((mealShares[it] ?: defaultMealShares.getValue(it)) * 100).roundToInt().toString()
+            }
+        )
+    }
     val needsBaseline = creating || requiresBaseline
 
     pendingDelete?.let { selected ->
@@ -6294,6 +6323,48 @@ private fun ProfileScreen(
             }
         }
 
+        if (creating) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Distribución de las comidas",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    HorizontalDivider()
+                    Text(
+                        "Indica qué porcentaje de las calorías diarias quieres reservar para cada comida.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    MealType.entries.forEach { type ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(type.label, modifier = Modifier.weight(1f))
+                            OutlinedTextField(
+                                value = shareValues[type].orEmpty(),
+                                onValueChange = { raw ->
+                                    shareValues = shareValues + (type to raw.filter(Char::isDigit).take(2))
+                                    error = null
+                                },
+                                modifier = Modifier.width(82.dp),
+                                suffix = { Text("%") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true
+                            )
+                        }
+                    }
+                    Text(
+                        "La suma debe ser 100 %. Podrás cambiarla después en Opciones.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         OutlinedButton(
             onClick = {
@@ -6306,6 +6377,7 @@ private fun ProfileScreen(
                 )
                 val parsedWeight = parseDecimal(initialWeight)
                 val parsedWaist = parseDecimal(initialWaist)
+                val parsedShares = MealType.entries.associateWith { shareValues[it]?.toIntOrNull() }
                 error = when {
                     !candidate.isValid() -> "Revisa el nombre, la altura y el año de nacimiento. La app está diseñada para personas adultas."
                     needsBaseline && initialWeight.isNotBlank() && (parsedWeight == null || parsedWeight !in 30.0..350.0) ->
@@ -6314,6 +6386,10 @@ private fun ProfileScreen(
                         "La cintura debe estar entre 35 y 250 cm."
                     needsBaseline && parsedWeight == null && parsedWaist == null ->
                         "Introduce al menos el peso o la cintura."
+                    creating && parsedShares.values.any { it == null || it !in 0..90 } ->
+                        "Revisa los porcentajes de las comidas."
+                    creating && parsedShares.values.sumOf { it ?: 0 } != 100 ->
+                        "Los porcentajes de las comidas deben sumar 100 %."
                     else -> null
                 }
                 if (error == null) {
@@ -6326,7 +6402,8 @@ private fun ProfileScreen(
                                 weightKg = parsedWeight,
                                 waistCm = parsedWaist,
                                 goal = WeightGoal.AUTOMATIC
-                            )
+                            ),
+                            parsedShares.mapValues { (it.value ?: 0) / 100.0 }
                         )
                     } else onSave(candidate)
                     creating = false
