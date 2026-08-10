@@ -51,16 +51,22 @@ object MealPlanEvaluator {
     private const val CLOSE_TOLERANCE = 0.20
     private val mealShare = 1.0 / MealType.entries.size
 
-    fun mealTarget(recommendation: Recommendation): NutritionTarget =
-        dailyTarget(recommendation).scaled(mealShare)
+    fun mealTarget(
+        recommendation: Recommendation,
+        share: Double = mealShare
+    ): NutritionTarget = dailyTarget(recommendation).scaled(share.coerceIn(0.0, 1.0))
 
     fun assessMeal(
         meal: PlannedMeal,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
-        day: WeekDay? = null
-    ): PlanNutritionAssessment = assess(meal.nutrition(foodsById, dishesById, day), mealTarget(recommendation))
+        day: WeekDay? = null,
+        mealShare: Double = this.mealShare
+    ): PlanNutritionAssessment = assess(
+        meal.nutrition(foodsById, dishesById, day),
+        mealTarget(recommendation, mealShare)
+    )
 
     fun assessDay(
         day: WeekDay,
