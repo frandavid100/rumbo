@@ -411,8 +411,18 @@ fun RumboApp(repository: AppRepository) {
                                         }
                                     )
                                 }
+                                val foodBelongsToDish = screen == Screen.FOOD_DETAIL &&
+                                    data.dishes.any { dish ->
+                                        dish.ingredients.any { it.foodId == selectedFoodId }
+                                    }
                                 DropdownMenuItem(
-                                    text = { Text("Eliminar") },
+                                    text = {
+                                        Text(
+                                            if (foodBelongsToDish) "Eliminar primero los platos que lo usan"
+                                            else "Eliminar"
+                                        )
+                                    },
+                                    enabled = !foodBelongsToDish,
                                     onClick = {
                                         detailMenuExpanded = false
                                         pendingTopDelete = screen
