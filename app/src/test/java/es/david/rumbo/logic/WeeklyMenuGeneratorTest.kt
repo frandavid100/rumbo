@@ -115,7 +115,8 @@ class WeeklyMenuGeneratorTest {
                     fixedGrams = mapOf(MealType.MORNING_SNACK to 90.0),
                     frequency = PlanningFrequency.NEVER,
                     preferredGrams = 150.0
-                )
+                ),
+                rule(1, setOf(MealType.MORNING_SNACK, MealType.DINNER))
             ),
             history = emptyList(),
             foodsById = foods.associateBy { it.id },
