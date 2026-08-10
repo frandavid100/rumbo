@@ -5617,7 +5617,7 @@ private fun WaistMeasurementHelp() {
     val uriHandler = LocalUriHandler.current
     TextButton(
         onClick = {
-            uriHandler.openUri("https://www.nhs.uk/common-health-questions/lifestyle/why-is-my-waist-size-important/")
+            uriHandler.openUri("https://www.comunidad.madrid/salud/sobrepeso-obesidad")
         },
         contentPadding = PaddingValues(horizontal = 0.dp)
     ) {
