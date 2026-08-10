@@ -36,10 +36,25 @@ jobs:
           cp "$BUILD_TOOLS/apksigner" "$BUILD_TOOLS/zipalign" build/signing-tools/
           cp "$BUILD_TOOLS/lib/apksigner.jar" build/signing-tools/lib/
           cp "$BUILD_TOOLS/lib64/libc++.so" build/signing-tools/lib64/
+      - name: Firmar APK con una clave temporal
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p build/signed
+          PASS="$(openssl rand -base64 36 | tr -d '\n')"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/rumbo-release.jks" -storepass "$PASS" -keypass "$PASS" -alias rumbo -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Rumbo, OU=Rumbo, O=Rumbo, L=Unknown, ST=Unknown, C=ES"
+          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-0.40.0-aligned.apk"
+          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$PASS" --key-pass "pass:$PASS" --out build/signed/Rumbo-0.40.0.apk "$RUNNER_TEMP/Rumbo-0.40.0-aligned.apk"
+          build/signing-tools/apksigner verify --verbose --print-certs build/signed/Rumbo-0.40.0.apk
       - uses: actions/upload-artifact@v4
         with:
           name: rumbo-release-unsigned
           path: |
             app/build/outputs/apk/release/app-release-unsigned.apk
             build/signing-tools
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: rumbo-0.40.0-signed-temporary
+          path: build/signed/Rumbo-0.40.0.apk
           if-no-files-found: error
