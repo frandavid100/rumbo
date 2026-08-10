@@ -147,12 +147,9 @@ data class PlanningRule(
     val maximumFactor: Double = 1.5
 ) {
     fun isValid(): Boolean =
-        itemId > 0 && allowedMealTypes.isNotEmpty() &&
-            allowedMealTypes.all { it == MealType.LUNCH || it == MealType.DINNER } &&
-            fixedSlots.all {
-                (it.mealType == MealType.LUNCH || it.mealType == MealType.DINNER) &&
-                    it.mealType in allowedMealTypes
-            } &&
+        itemId > 0 &&
+            (frequency == PlanningFrequency.NEVER || allowedMealTypes.isNotEmpty()) &&
+            (allowedMealTypes.isNotEmpty() || fixedSlots.isNotEmpty()) &&
             preferredGrams in 1.0..5000.0 &&
             minimumFactor in 0.1..1.0 && maximumFactor in 1.0..5.0
 }
