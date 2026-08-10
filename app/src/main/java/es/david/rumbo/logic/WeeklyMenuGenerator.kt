@@ -202,7 +202,13 @@ object WeeklyMenuGenerator {
                     chosen + candidate, slot, foodsById, dishesById, recommendation, mealShare
                 )
                 val nutritionalImprovement = before - after
-                if (chosen.isNotEmpty() && nutritionalImprovement <= 0.01) {
+                val minimumCalories = (chosen + candidate).sumOf {
+                    it.vector(slot, foodsById, dishesById).calories
+                }
+                val calorieCeiling = recommendation.calories * mealShare * 1.10
+                if (chosen.isNotEmpty() &&
+                    (nutritionalImprovement <= 0.01 || minimumCalories > calorieCeiling)
+                ) {
                     return@mapNotNull null
                 }
                 val weeklyCount = assigned.values.flatten().count { it.sameItem(candidate) }
