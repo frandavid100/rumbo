@@ -30,7 +30,6 @@ class PlanningConflictException(message: String) : IllegalArgumentException(mess
 object WeeklyMenuGenerator {
     private const val CANDIDATE_WEEKS = 80
     private const val HISTORY_GENERATIONS = 8
-    private val generatedTypes = setOf(MealType.LUNCH, MealType.DINNER)
 
     fun generate(
         currentMeals: List<PlannedMeal>,
@@ -41,24 +40,25 @@ object WeeklyMenuGenerator {
         recommendation: Recommendation,
         seed: Long = System.currentTimeMillis()
     ): GeneratedWeeklyMenu {
-        require(rules.isNotEmpty()) { "Configura al menos un alimento o plato para generar la semana." }
+        require(rules.isNotEmpty()) { "Añade al menos un alimento o plato al menú." }
         require(rules.all { it.isValid() }) { "Hay reglas de planificación incompletas." }
         require(rules.all { rule ->
             when (rule.itemKind) {
                 PlannedItemKind.FOOD -> foodsById[rule.itemId]?.hasComparableNutrition() == true
                 PlannedItemKind.DISH -> dishesById[rule.itemId]?.nutrition(foodsById)?.isComplete == true
             }
-        }) { "Todos los elementos del repertorio necesitan datos nutricionales completos." }
+        }) { "Todos los elementos seleccionados necesitan datos nutricionales completos." }
 
-        val fixedBySlot = rules.flatMap { rule -> rule.fixedSlots.map { it to rule } }
+        val fixedBySlot = rules
+            .flatMap { rule -> rule.fixedSlots.map { it to rule } }
             .groupBy({ it.first }, { it.second })
-        fixedBySlot.entries.firstOrNull {
-            it.value.distinctBy { rule -> rule.itemKind to rule.itemId }.size > 1
-        }?.let { (slot, _) ->
-            throw PlanningConflictException(
-                "Hay más de una regla fija para ${slot.day.label.lowercase()} · ${slot.mealType.label.lowercase()}."
-            )
-        }
+            .mapValues { (_, values) -> values.distinctBy { it.itemKind to it.itemId } }
+
+        val generatedTypes = MealType.entries.filter { type ->
+            rules.any { type in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER } ||
+                fixedBySlot.keys.any { it.mealType == type }
+        }.toSet()
+        require(generatedTypes.isNotEmpty()) { "Indica al menos una comida en las reglas del menú." }
 
         val slots = WeekDay.entries.flatMap { day ->
             generatedTypes.map { type -> PlanningSlot(day, type) }
@@ -77,17 +77,33 @@ object WeeklyMenuGenerator {
         val recent = history.filter { it.generation >= generation - HISTORY_GENERATIONS }
         val preserved = currentMeals.filterNot { it.type in generatedTypes }
         var bestMeals: List<PlannedMeal>? = null
-        var bestAssignments: Map<PlanningSlot, PlanningRule>? = null
+        var bestAssignments: Map<PlanningSlot, List<PlanningRule>>? = null
         var bestScore = Double.POSITIVE_INFINITY
 
         repeat(CANDIDATE_WEEKS) { candidateIndex ->
             val random = Random(seed + candidateIndex * 104729L)
-            val assignments = linkedMapOf<PlanningSlot, PlanningRule>()
+            val assignments = linkedMapOf<PlanningSlot, List<PlanningRule>>()
             slots.forEach { slot ->
-                assignments[slot] = fixedBySlot[slot]?.firstOrNull()
-                    ?: chooseRule(slot, rules, assignments, recent, random)
+                val fixed = fixedBySlot[slot].orEmpty()
+                val additions = when {
+                    fixed.any { it.itemKind == PlannedItemKind.DISH } -> emptyList()
+                    fixed.isNotEmpty() -> {
+                        val dishCandidates = rules.filter {
+                            it.itemKind == PlannedItemKind.DISH &&
+                                slot.mealType in it.allowedMealTypes &&
+                                it.frequency != PlanningFrequency.NEVER &&
+                                fixed.none(it::sameItem)
+                        }
+                        if (dishCandidates.isEmpty()) emptyList()
+                        else listOf(chooseRule(slot, dishCandidates, assignments, recent, random))
+                    }
+                    else -> listOf(chooseRule(slot, rules, assignments, recent, random))
+                }
+                assignments[slot] = (fixed + additions).distinctBy { it.itemKind to it.itemId }
             }
-            val generated = assignments.map { (slot, rule) -> rule.toMeal(slot, generation) }
+            val generated = assignments.map { (slot, assignedRules) ->
+                assignedRules.toMeal(slot, generation)
+            }
             val optimized = MealQuantityOptimizer.optimize(
                 preserved + generated, foodsById, dishesById, recommendation
             ).meals
@@ -102,15 +118,18 @@ object WeeklyMenuGenerator {
         }
 
         val assignments = checkNotNull(bestAssignments)
-        val newHistory = (recent + assignments.map { (slot, rule) ->
-            MenuHistoryEntry(
-                generation = generation,
-                itemKind = rule.itemKind,
-                itemId = rule.itemId,
-                day = slot.day,
-                mealType = slot.mealType
-            )
-        }).takeLast(HISTORY_GENERATIONS * slots.size)
+        val entriesPerGeneration = assignments.values.sumOf { it.size }.coerceAtLeast(1)
+        val newHistory = (recent + assignments.flatMap { (slot, assignedRules) ->
+            assignedRules.map { rule ->
+                MenuHistoryEntry(
+                    generation = generation,
+                    itemKind = rule.itemKind,
+                    itemId = rule.itemId,
+                    day = slot.day,
+                    mealType = slot.mealType
+                )
+            }
+        }).takeLast(HISTORY_GENERATIONS * entriesPerGeneration)
 
         return GeneratedWeeklyMenu(
             meals = checkNotNull(bestMeals),
@@ -122,23 +141,28 @@ object WeeklyMenuGenerator {
     private fun chooseRule(
         slot: PlanningSlot,
         rules: List<PlanningRule>,
-        assigned: Map<PlanningSlot, PlanningRule>,
+        assigned: Map<PlanningSlot, List<PlanningRule>>,
         history: List<MenuHistoryEntry>,
         random: Random
     ): PlanningRule {
         val candidates = rules.filter {
             slot.mealType in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER
         }
+        if (candidates.isEmpty()) {
+            throw PlanningConflictException(
+                "No hay candidatos para ${slot.day.label.lowercase()} · ${slot.mealType.label.lowercase()}."
+            )
+        }
         val weighted = candidates.map { rule ->
-            val weeklyCount = assigned.values.count { it.sameItem(rule) }
-            val previousDayRule = if (slot.day.ordinal > 0) {
-                assigned[PlanningSlot(WeekDay.entries[slot.day.ordinal - 1], slot.mealType)]
-            } else null
+            val weeklyCount = assigned.values.flatten().count { it.sameItem(rule) }
+            val previousDayRules = if (slot.day.ordinal > 0) {
+                assigned[PlanningSlot(WeekDay.entries[slot.day.ordinal - 1], slot.mealType)].orEmpty()
+            } else emptyList()
             val recentCount = history.count {
                 it.itemKind == rule.itemKind && it.itemId == rule.itemId
             }
             val repetitionPenalty = 1.0 + weeklyCount * weeklyCount * 1.7 + recentCount * 0.35
-            val adjacentPenalty = if (previousDayRule?.sameItem(rule) == true) 8.0 else 1.0
+            val adjacentPenalty = if (previousDayRules.any { it.sameItem(rule) }) 8.0 else 1.0
             rule to (rule.frequency.weight / repetitionPenalty / adjacentPenalty)
         }
         val total = weighted.sumOf { it.second }
@@ -152,7 +176,7 @@ object WeeklyMenuGenerator {
 
     private fun score(
         meals: List<PlannedMeal>,
-        assignments: Map<PlanningSlot, PlanningRule>,
+        assignments: Map<PlanningSlot, List<PlanningRule>>,
         history: List<MenuHistoryEntry>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
@@ -167,46 +191,56 @@ object WeeklyMenuGenerator {
                 relativeError(assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams).pow(2) * 1.5 +
                 relativeError(assessment.actual.fatGrams, assessment.target.fatGrams).pow(2) * 1.5
         }
-        val quantityPenalty = assignments.entries.sumOf { (slot, rule) ->
+        val quantityPenalty = assignments.entries.sumOf { (slot, assignedRules) ->
             val meal = meals.first { it.type == slot.mealType && slot.day in it.days }
-            val grams = when (rule.itemKind) {
-                PlannedItemKind.FOOD -> meal.items.first { it.foodId == rule.itemId }
-                    .let { meal.resolvedGrams(it, slot.day) }
-                PlannedItemKind.DISH -> meal.dishes.first { it.dishId == rule.itemId }
-                    .let { meal.resolvedGrams(it, slot.day) }
+            assignedRules.sumOf { rule ->
+                val grams = when (rule.itemKind) {
+                    PlannedItemKind.FOOD -> meal.items.first { it.foodId == rule.itemId }
+                        .let { meal.resolvedGrams(it, slot.day) }
+                    PlannedItemKind.DISH -> meal.dishes.first { it.dishId == rule.itemId }
+                        .let { meal.resolvedGrams(it, slot.day) }
+                }
+                val factor = grams / rule.preferredGrams
+                val halfRange = ((rule.maximumFactor - rule.minimumFactor) / 2.0).coerceAtLeast(0.1)
+                (abs(factor - 1.0) / halfRange).pow(2)
             }
-            val factor = grams / rule.preferredGrams
-            val halfRange = ((rule.maximumFactor - rule.minimumFactor) / 2.0).coerceAtLeast(0.1)
-            (abs(factor - 1.0) / halfRange).pow(2)
         }
-        val counts = assignments.values.groupingBy { it.itemKind to it.itemId }.eachCount()
+        val allRules = assignments.values.flatten()
+        val counts = allRules.groupingBy { it.itemKind to it.itemId }.eachCount()
         val varietyPenalty = counts.values.sumOf { count ->
             (count - 2).coerceAtLeast(0).toDouble().pow(2) * 1.5
         }
-        val recentPenalty = assignments.values.sumOf { rule ->
+        val recentPenalty = allRules.sumOf { rule ->
             history.count { it.itemKind == rule.itemKind && it.itemId == rule.itemId } * 0.15
         }
         return nutritional + quantityPenalty + varietyPenalty + recentPenalty
     }
 
-    private fun PlanningRule.toMeal(slot: PlanningSlot, generation: Int): PlannedMeal {
-        val minimum = preferredGrams * minimumFactor
-        val maximum = preferredGrams * maximumFactor
+    private fun List<PlanningRule>.toMeal(slot: PlanningSlot, generation: Int): PlannedMeal {
         val id = generation.toLong() * 1000L + slot.day.ordinal * 10L + slot.mealType.ordinal + 1L
-        return when (itemKind) {
-            PlannedItemKind.FOOD -> PlannedMeal(
-                id = id,
-                type = slot.mealType,
-                days = setOf(slot.day),
-                items = listOf(PlannedFood(itemId, preferredGrams, true, minimum, maximum))
-            )
-            PlannedItemKind.DISH -> PlannedMeal(
-                id = id,
-                type = slot.mealType,
-                days = setOf(slot.day),
-                dishes = listOf(PlannedDish(itemId, preferredGrams, true, minimum, maximum))
-            )
-        }
+        return PlannedMeal(
+            id = id,
+            type = slot.mealType,
+            days = setOf(slot.day),
+            items = filter { it.itemKind == PlannedItemKind.FOOD }.map { rule ->
+                PlannedFood(
+                    rule.itemId,
+                    rule.preferredGrams,
+                    true,
+                    rule.preferredGrams * rule.minimumFactor,
+                    rule.preferredGrams * rule.maximumFactor
+                )
+            },
+            dishes = filter { it.itemKind == PlannedItemKind.DISH }.map { rule ->
+                PlannedDish(
+                    rule.itemId,
+                    rule.preferredGrams,
+                    true,
+                    rule.preferredGrams * rule.minimumFactor,
+                    rule.preferredGrams * rule.maximumFactor
+                )
+            }
+        )
     }
 
     private fun PlanningRule.sameItem(other: PlanningRule): Boolean =
