@@ -397,8 +397,7 @@ fun RumboApp(repository: AppRepository) {
                             data = data,
                             initial = measurement,
                             onSave = {
-                                data = repository.addMeasurement(it)
-                                screenName = Screen.MEASUREMENT_DETAIL.name
+                                data = repository.addMeasurement(it)                                screenName = Screen.MEASUREMENT_DETAIL.name
                             }
                         )
                     }
@@ -705,6 +704,7 @@ private fun HomeScreen(
                 meals = meals,
                 foodsById = foodsById,
                 dishesById = dishesById,
+                profileId = profile?.id,
                 onOpenFoods = onOpenFoods
             )
         }
@@ -797,8 +797,7 @@ private fun BodyGoalNutritionCard(
                         manualError = "Introduce una cifra numérica válida."
                     } else {
                         onGoalChange(if (magnitude == 0.0) 0.0 else magnitude * manualDirection)
-                        choosingGoal = false
-                    }
+                        choosingGoal = false                    }
                 }) { Text("Usar esta cifra") }
             },
             dismissButton = {
@@ -1074,8 +1073,8 @@ private fun TodayPlanSection(
                     Modifier.fillMaxWidth().clickable { onOpenMeal(meal.id) }
                 }
                 Column(
-                    mealModifier.padding(vertical = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    mealModifier.padding(vertical = 5.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
                 ) {
                     Row(
                         Modifier.fillMaxWidth(),
@@ -1084,7 +1083,7 @@ private fun TodayPlanSection(
                         Text(
                             type.label,
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         if (entries.isEmpty()) {
@@ -1130,24 +1129,30 @@ private fun TodayPlanSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            OutlinedButton(
-                onClick = {
-                    if (recommendation == null) {
-                        optimizationMessage = "Necesitas una recomendación nutricional antes de ajustar el menú."
-                    } else {
-                        val result = MealQuantityOptimizer.optimize(
-                            meals, foodsById, dishesById, recommendation, setOf(today)
-                        )
-                        if (result.changes.isNotEmpty()) optimizationPreview = result
-                        else optimizationMessage = if (result.days.isEmpty()) {
-                            "Completa el día y marca uno o varios elementos como ajustables. Las cantidades fijas nunca se modifican."
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        if (recommendation == null) {
+                            optimizationMessage = "Necesitas una recomendación nutricional antes de ajustar el menú."
                         } else {
-                            "Las cantidades actuales ya son la mejor combinación encontrada dentro de los límites indicados."
+                            val result = MealQuantityOptimizer.optimize(
+                                meals, foodsById, dishesById, recommendation, setOf(today)
+                            )
+                            if (result.changes.isNotEmpty()) optimizationPreview = result
+                            else optimizationMessage = if (result.days.isEmpty()) {
+                                "Completa el día y marca uno o varios elementos como ajustables. Las cantidades fijas nunca se modifican."
+                            } else {
+                                "Las cantidades actuales ya son la mejor combinación encontrada dentro de los límites indicados."
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Ajustar cantidades") }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Ajustar cantidades") }
+                OutlinedButton(
+                    onClick = onOpenPlanner,
+                    modifier = Modifier.weight(1f)
+                ) { Text("Ver menú semanal") }
+            }
         }
     }
 }
@@ -1197,8 +1202,7 @@ private fun NutritionPercentMetric(
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1
-        )
-    }
+        )    }
 }
 
 private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
@@ -1229,6 +1233,7 @@ private fun HomeShoppingSection(
     meals: List<PlannedMeal>,
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
+    profileId: Long?,
     onOpenFoods: () -> Unit
 ) {
     val amounts = remember(meals, dishesById) {
@@ -1238,48 +1243,103 @@ private fun HomeShoppingSection(
         amounts.mapNotNull { (foodId, grams) -> foodsById[foodId]?.let { it to grams } }
             .sortedBy { it.first.name.lowercase() }
     }
-    Card(Modifier.fillMaxWidth().clickable(onClick = onOpenFoods)) {
+    val context = LocalContext.current
+    val shoppingPreferences = remember { context.getSharedPreferences("shopping_state", 0) }
+    val preferenceKey = "available_foods_${profileId ?: 0L}"
+    var availableFoodIds by remember(profileId) {
+        mutableStateOf(
+            shoppingPreferences.getStringSet(preferenceKey, emptySet())
+                .orEmpty()
+                .mapNotNull(String::toLongOrNull)
+        )
+    }
+    fun saveAvailableFoods(updated: List<Long>) {
+        availableFoodIds = updated
+        shoppingPreferences.edit()
+            .putStringSet(preferenceKey, updated.map(Long::toString).toSet())
+            .apply()
+    }
+    val neededEntries = entries.filterNot { (food, _) -> food.id in availableFoodIds }
+    val notNeededEntries = entries.filter { (food, _) -> food.id in availableFoodIds }
+
+    Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            HomeCardHeader("Lista de la compra")
+            Box(Modifier.fillMaxWidth().clickable(onClick = onOpenFoods)) {
+                HomeCardHeader("Lista de la compra")
+            }
             if (entries.isEmpty()) {
                 Text("El plan todavía no contiene alimentos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                entries.take(6).forEach { (food, grams) ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        SmallFoodCategoryBadge(food.category)
-                        Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        Text("${formatDecimal(grams)} g", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Por comprar",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                neededEntries.forEach { (food, grams) ->
+                    HomeShoppingEntry(
+                        food = food,
+                        grams = grams,
+                        checked = false,
+                        onCheckedChange = { available ->
+                            if (available) saveAvailableFoods(availableFoodIds + food.id)
+                        }
+                    )
+                }
+                if (notNeededEntries.isNotEmpty()) {
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                    Text(
+                        "No hace falta comprar",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    notNeededEntries.forEach { (food, grams) ->
+                        HomeShoppingEntry(
+                            food = food,
+                            grams = grams,
+                            checked = true,
+                            onCheckedChange = { available ->
+                                if (!available) saveAvailableFoods(availableFoodIds - food.id)
+                            }
+                        )
                     }
                 }
-                if (entries.size > 6) Text(
-                    "Y ${entries.size - 6} productos más",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
 }
 
 @Composable
+private fun HomeShoppingEntry(
+    food: Food,
+    grams: Double,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        SmallFoodCategoryBadge(food.category)
+        Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text("${formatDecimal(grams)} g", fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
 private fun BodyIndicator(
     label: String,
-    value: String,
-    interpretation: String
+    value: String
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(
-                label,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(interpretation, style = MaterialTheme.typography.bodyLarge)
-        }
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
         Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
     }
 }
@@ -1531,16 +1591,12 @@ private const val NICE_BODY_ASSESSMENT_URL =
     "https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-overweight-obesity-and-central-adiposity"
 private const val NHS_WEIGHT_LOSS_RATE_URL =
     "https://www.nhs.uk/live-well/healthy-weight/managing-your-weight/tips-to-help-you-lose-weight/"
-private const val WEIGHT_LOSS_RATE_STUDY_URL =
-    "https://pubmed.ncbi.nlm.nih.gov/21558571/"
 private const val MIFFLIN_ST_JEOR_URL =
     "https://pubmed.ncbi.nlm.nih.gov/2305711/"
 private const val ENERGY_BALANCE_MODEL_URL =
     "https://pmc.ncbi.nlm.nih.gov/articles/PMC3859816/"
 private const val PROTEIN_META_ANALYSIS_URL =
     "https://pubmed.ncbi.nlm.nih.gov/28698222/"
-private const val EFSA_FAT_REFERENCE_URL =
-    "https://www.efsa.europa.eu/en/press/news/nda100326"
 
 private fun bmiExplanation(bmi: Double): String {
     val interpretation = when {
@@ -1597,8 +1653,7 @@ private fun combinedBodyExplanation(bmi: Double, ratio: Double): String = when {
     ratio < 0.50 ->
         "Tienes más peso del habitual, pero sin una acumulación abdominal elevada. Si entrenas fuerza y tomas suficiente proteína, parte de ese peso podría ser músculo y sería razonable priorizar una pérdida lenta o la recomposición corporal. Si no es así, una reducción gradual de peso probablemente mejoraría tu situación."
     ratio < 0.60 ->
-        "Lo más adecuado sería perder grasa de forma gradual, procurando conservar el músculo. Para ello conviene combinar un déficit calórico moderado con suficiente proteína, entrenamiento de fuerza y actividad física regular. Deberían disminuir tanto el peso como la cintura."
-    else ->
+        "Lo más adecuado sería perder grasa de forma gradual, procurando conservar el músculo. Para ello conviene combinar un déficit calórico moderado con suficiente proteína, entrenamiento de fuerza y actividad física regular. Deberían disminuir tanto el peso como la cintura."    else ->
         "La prioridad debería ser reducir de forma gradual el peso y, especialmente, la cintura. Conviene evitar objetivos extremos y combinar una alimentación con déficit moderado, suficiente proteína, entrenamiento de fuerza y actividad aeróbica regular."
 }
 
@@ -1631,8 +1686,7 @@ private fun BodyExplanationScreen(
             item {
                 BodyIndicator(
                     label = "IMC",
-                    value = formatOneDecimal(bmi),
-                    interpretation = assessment.bmiInterpretation.orEmpty()
+                    value = formatOneDecimal(bmi)
                 )
                 ProgressChart(
                     points = bmiPoints,
@@ -1646,6 +1700,7 @@ private fun BodyExplanationScreen(
                     ),
                     thresholds = listOf(18.5 to "18,5", 25.0 to "25", 30.0 to "30")
                 )
+                Spacer(Modifier.height(10.dp))
                 Text(
                     bmiExplanation(bmi),
                     style = MaterialTheme.typography.bodyLarge,
@@ -1661,8 +1716,7 @@ private fun BodyExplanationScreen(
             item {
                 BodyIndicator(
                     label = "Cintura / altura",
-                    value = formatTwoDecimals(ratio),
-                    interpretation = assessment.waistInterpretation.orEmpty()
+                    value = formatTwoDecimals(ratio)
                 )
                 ProgressChart(
                     points = waistPoints,
@@ -1676,6 +1730,7 @@ private fun BodyExplanationScreen(
                     ),
                     thresholds = listOf(0.40 to "0,40", 0.50 to "0,50", 0.60 to "0,60")
                 )
+                Spacer(Modifier.height(10.dp))
                 Text(
                     waistToHeightExplanation(ratio, profile.heightCm),
                     style = MaterialTheme.typography.bodyLarge,
@@ -1712,10 +1767,6 @@ private fun BodyExplanationScreen(
                             onClick = { uriHandler.openUri(NHS_WEIGHT_LOSS_RATE_URL) },
                             contentPadding = PaddingValues(0.dp)
                         ) { Text("Referencia: ritmo gradual recomendado por el NHS") }
-                        TextButton(
-                            onClick = { uriHandler.openUri(WEIGHT_LOSS_RATE_STUDY_URL) },
-                            contentPadding = PaddingValues(0.dp)
-                        ) { Text("Estudio: ritmo de pérdida y conservación muscular") }
                     }
                 }
 
@@ -1755,7 +1806,19 @@ private fun BodyExplanationScreen(
                     }.joinToString(" ")
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "Según tu peso, altura, edad y sexo, Mifflin–St Jeor estima un gasto de ${formatOneDecimal(calculation.restingCalories)} kcal al día en reposo. Al incorporar tu actividad «${calculation.activity.label.lowercase()}», estimamos un mantenimiento de ${formatOneDecimal(calculation.maintenanceCalories)} kcal. $goalCalculation $adjustments Tras los ajustes obtenemos ${formatOneDecimal(calculation.beforeRoundingCalories)} kcal y redondeamos al múltiplo de 25 más cercano: ${recommendation.calories} kcal al día.",
+                        "Según tu peso, altura, edad y sexo, Mifflin–St Jeor estima un gasto de ${formatOneDecimal(calculation.restingCalories)} kcal al día en reposo. Al incorporar tu actividad «${calculation.activity.label.lowercase()}», estimamos un mantenimiento de ${formatOneDecimal(calculation.maintenanceCalories)} kcal.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "$goalCalculation",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "$adjustments Tras los ajustes obtenemos ${formatOneDecimal(calculation.beforeRoundingCalories)} kcal y redondeamos al múltiplo de 25 más cercano: ${recommendation.calories} kcal al día.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -1808,8 +1871,19 @@ private fun BodyExplanationScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        proteinContext + referenceWeightText +
-                            " Reservamos aproximadamente el 25 % de las calorías para ${recommendation.fatGrams} g de grasa, dentro del intervalo recomendado, y completamos las calorías restantes con ${recommendation.carbohydrateGrams} g de hidratos para aportar energía. Este no es el único reparto saludable posible, pero ofrece un equilibrio razonable entre composición corporal, energía y facilidad para mantener la dieta.",
+                        proteinContext + referenceWeightText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Reservamos aproximadamente el 25 % de las calorías para ${recommendation.fatGrams} g de grasa y completamos las calorías restantes con ${recommendation.carbohydrateGrams} g de hidratos para aportar energía.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Este no es el único reparto saludable posible, pero ofrece un equilibrio razonable entre composición corporal, energía y facilidad para mantener la dieta.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -1817,10 +1891,6 @@ private fun BodyExplanationScreen(
                         onClick = { uriHandler.openUri(PROTEIN_META_ANALYSIS_URL) },
                         contentPadding = PaddingValues(0.dp)
                     ) { Text("Referencia: proteína y conservación muscular") }
-                    TextButton(
-                        onClick = { uriHandler.openUri(EFSA_FAT_REFERENCE_URL) },
-                        contentPadding = PaddingValues(0.dp)
-                    ) { Text("Referencia: intervalo de grasas de la EFSA") }
                 }
             }
         }
@@ -1997,8 +2067,7 @@ private fun AddMeasurementScreen(
     var waist by rememberSaveable(initial?.id) {
         mutableStateOf(initial?.waistCm?.let(::formatDecimal) ?: "")
     }
-    var activity by remember(initial?.id) { mutableStateOf(initial?.activity) }
-    var compliance by remember(initial?.id) { mutableStateOf(initial?.compliance) }
+    var activity by remember(initial?.id) { mutableStateOf(initial?.activity) }    var compliance by remember(initial?.id) { mutableStateOf(initial?.compliance) }
     var goal by remember(initial?.id) { mutableStateOf(initial?.goal) }
     var error by rememberSaveable(initial?.id) { mutableStateOf<String?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -2397,8 +2466,7 @@ private fun WeeklyPlannerScreen(
                             showDays = false,
                             day = selectedDay,
                             onClick = { onOpenMeal(meal.id) }
-                        )
-                    }
+                        )                    }
                     HorizontalDivider()
                 }
             }
@@ -2797,8 +2865,7 @@ private fun PlannedMealEditorScreen(
         mutableStateOf(initial?.dishes?.associate {
             it.dishId to AmountDraft(
                 formatDecimal(it.grams), it.adjustable,
-                formatDecimal(it.minimumGrams), formatDecimal(it.maximumGrams)
-            )
+                formatDecimal(it.minimumGrams), formatDecimal(it.maximumGrams)            )
         }.orEmpty())
     }
     var choosingElement by remember { mutableStateOf(false) }
@@ -3197,8 +3264,7 @@ private fun FoodPickerDialog(
                         HorizontalDivider()
                     }
                     if (results.isEmpty() && normalized.length >= 2) {
-                        item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }
-                    }
+                        item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }                    }
                 }
             }
         },
@@ -3597,8 +3663,7 @@ private fun DishEditorScreen(
 private data class IndexedFood(val food: Food, val searchText: String)
 
 @Composable
-private fun FoodsScreen(
-    foods: List<Food>,
+private fun FoodsScreen(    foods: List<Food>,
     plannedMeals: List<PlannedMeal>,
     dishes: List<Dish>,
     onOpenFood: (Long) -> Unit
@@ -3997,8 +4062,7 @@ private fun FoodDetailScreen(
         HorizontalDivider()
         Text("Alimentos similares", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Misma subcategoría culinaria y composición suficientemente próxima para intercambiar cantidades parecidas sin alterar mucho los macros.",
-            style = MaterialTheme.typography.bodySmall,
+            "Misma subcategoría culinaria y composición suficientemente próxima para intercambiar cantidades parecidas sin alterar mucho los macros.",            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (similarFoods.isEmpty()) {
@@ -4397,8 +4461,7 @@ private fun NumericField(
 @Composable
 private fun <T> SelectorField(
     label: String,
-    selectedLabel: String,
-    options: List<T>,
+    selectedLabel: String,    options: List<T>,
     optionLabel: (T) -> String,
     onSelect: (T) -> Unit,
     onClear: (() -> Unit)?
