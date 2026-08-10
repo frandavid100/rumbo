@@ -515,7 +515,6 @@ fun RumboApp(repository: AppRepository) {
                     foods = data.foods,
                     dishes = data.dishes,
                     recommendation = currentRecommendation,
-                    onConfigureGeneration = { screenName = Screen.AUTO_PLANNING.name },
                     onApplyGeneratedMenu = { data = repository.applyGeneratedMenu(it) },
                     onOpenMeal = {
                         selectedPlannedMealId = it
@@ -3023,7 +3022,6 @@ private fun WeeklyPlannerScreen(
     foods: List<Food>,
     dishes: List<Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
-    onConfigureGeneration: () -> Unit,
     onApplyGeneratedMenu: (es.david.rumbo.logic.GeneratedWeeklyMenu) -> Unit,
     onOpenMeal: (Long) -> Unit,
     onAddMissing: (MealType, WeekDay) -> Unit,
@@ -3089,39 +3087,30 @@ private fun WeeklyPlannerScreen(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onConfigureGeneration,
-                            modifier = Modifier.weight(1f)
-                        ) { Text("Configurar") }
-                        OutlinedButton(
-                            onClick = {
-                                if (recommendation == null) {
-                                    generationMessage = "Necesitas una recomendación nutricional para generar la semana."
-                                } else {
-                                    runCatching {
-                                        WeeklyMenuGenerator.generate(
-                                            currentMeals = meals,
-                                            rules = planningRules,
-                                            history = menuHistory,
-                                            foodsById = foodsById,
-                                            dishesById = dishesById,
-                                            recommendation = recommendation
-                                        )
-                                    }.onSuccess {
-                                        onApplyGeneratedMenu(it)
-                                        generationMessage = "Semana generada. Se han respetado las reglas fijas, las frecuencias y los límites de las raciones."
-                                    }.onFailure {
-                                        generationMessage = it.message ?: "No se pudo generar una semana válida."
-                                    }
+                    OutlinedButton(
+                        onClick = {
+                            if (recommendation == null) {
+                                generationMessage = "Necesitas una recomendación nutricional para generar la semana."
+                            } else {
+                                runCatching {
+                                    WeeklyMenuGenerator.generate(
+                                        currentMeals = meals,
+                                        rules = planningRules,
+                                        history = menuHistory,
+                                        foodsById = foodsById,
+                                        dishesById = dishesById,
+                                        recommendation = recommendation
+                                    )
+                                }.onSuccess {
+                                    onApplyGeneratedMenu(it)
+                                    generationMessage = "Semana generada. Se han respetado las comidas fijas y las frecuencias elegidas."
+                                }.onFailure {
+                                    generationMessage = it.message ?: "No se pudo generar una semana válida."
                                 }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) { Text(if (menuHistory.isEmpty()) "Generar semana" else "Regenerar") }
-                    }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(if (menuHistory.isEmpty()) "Generar menú semanal" else "Regenerar menú semanal") }
                     OutlinedButton(
                         onClick = {
                             if (recommendation == null) {
