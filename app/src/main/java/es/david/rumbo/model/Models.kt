@@ -220,11 +220,11 @@ data class MealDayAmounts(
 data class PlannedMeal(
     val id: Long,
     val type: MealType,
-    val planWeek: PlanWeek = PlanWeek.CURRENT,
     val days: Set<WeekDay>,
     val items: List<PlannedFood> = emptyList(),
     val dishes: List<PlannedDish> = emptyList(),
-    val dayAmounts: List<MealDayAmounts> = emptyList()
+    val dayAmounts: List<MealDayAmounts> = emptyList(),
+    val planWeek: PlanWeek = PlanWeek.CURRENT
 ) {
     fun isValid(): Boolean {
         val adjustableFoods = items.filter { it.adjustable }.associateBy { it.foodId }
