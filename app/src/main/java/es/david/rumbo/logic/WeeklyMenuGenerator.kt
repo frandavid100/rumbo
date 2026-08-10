@@ -106,6 +106,9 @@ object WeeklyMenuGenerator {
                 preserved + generated, foodsById, dishesById, recommendation,
                 mealShares = mealShares
             ).meals
+            if (!isFeasible(optimized, foodsById, dishesById, recommendation)) {
+                return@repeat
+            }
             val score = score(
                 optimized, assignments, recent, foodsById, dishesById, recommendation,
                 mealShares
@@ -117,7 +120,10 @@ object WeeklyMenuGenerator {
             }
         }
 
-        val assignments = checkNotNull(bestAssignments)
+        val assignments = bestAssignments ?: throw PlanningConflictException(
+            "Las cantidades fijas y los mínimos configurados no permiten generar un menú seguro. " +
+                "Reduce alguna cantidad fija o amplía el margen de ajuste."
+        )
         val entriesPerGeneration = assignments.values.sumOf { it.size }.coerceAtLeast(1)
         val newHistory = (recent + assignments.flatMap { (slot, assignedRules) ->
             assignedRules.map { rule ->
@@ -173,8 +179,6 @@ object WeeklyMenuGenerator {
             MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
             else -> 4
         }
-        val minimumItems = minOf(2, (chosen + eligible)
-            .distinctBy { it.itemKind to it.itemId }.size)
 
         while (chosen.size < maximumItems) {
             var candidates = eligible.filter { candidate ->
@@ -187,13 +191,20 @@ object WeeklyMenuGenerator {
                 candidates = candidates.filter { it.itemKind == PlannedItemKind.DISH }
             }
 
+            // Evaluate every adjustable item at its minimum. If even its
+            // minimum makes the meal worse, it must not be added merely to
+            // increase variety.
             val before = combinationError(
-                chosen, foodsById, dishesById, recommendation, mealShare
+                chosen, slot, foodsById, dishesById, recommendation, mealShare
             )
-            val ranked = candidates.map { candidate ->
+            val viable = candidates.mapNotNull { candidate ->
                 val after = combinationError(
-                    chosen + candidate, foodsById, dishesById, recommendation, mealShare
+                    chosen + candidate, slot, foodsById, dishesById, recommendation, mealShare
                 )
+                val nutritionalImprovement = before - after
+                if (chosen.isNotEmpty() && nutritionalImprovement <= 0.01) {
+                    return@mapNotNull null
+                }
                 val weeklyCount = assigned.values.flatten().count { it.sameItem(candidate) }
                 val recentCount = history.count {
                     it.itemKind == candidate.itemKind && it.itemId == candidate.itemId
@@ -207,12 +218,11 @@ object WeeklyMenuGenerator {
                     }
                 ) 0.12 else 0.0
                 val penalty = weeklyCount * 0.10 + recentCount * 0.025
-                candidate to (before - after + frequencyBonus + varietyBonus - penalty +
+                candidate to (nutritionalImprovement + frequencyBonus + varietyBonus - penalty +
                     random.nextDouble() * 0.04)
             }.sortedByDescending { it.second }
 
-            val best = ranked.firstOrNull() ?: break
-            if (chosen.size >= minimumItems && best.second <= 0.02) break
+            val best = viable.firstOrNull() ?: break
             chosen += best.first
         }
         return chosen
@@ -220,13 +230,14 @@ object WeeklyMenuGenerator {
 
     private fun combinationError(
         rules: List<PlanningRule>,
+        slot: PlanningSlot,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
         mealShare: Double
     ): Double {
         val total = rules.fold(MealVector(0.0, 0.0, 0.0, 0.0)) { sum, rule ->
-            sum + rule.vector(foodsById, dishesById)
+            sum + rule.vector(slot, foodsById, dishesById)
         }
         return nutritionError(
             total.calories, total.protein, total.carbohydrates, total.fat,
@@ -235,12 +246,16 @@ object WeeklyMenuGenerator {
     }
 
     private fun PlanningRule.vector(
+        slot: PlanningSlot,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>
-    ): MealVector = when (itemKind) {
+    ): MealVector {
+        val grams = fixedGrams[slot.mealType]?.takeIf { slot in fixedSlots }
+            ?: preferredGrams * minimumFactor
+        return when (itemKind) {
         PlannedItemKind.FOOD -> {
             val food = foodsById[itemId]
-            val factor = preferredGrams / 100.0
+            val factor = grams / 100.0
             MealVector(
                 (food?.calories ?: 0.0) * factor,
                 (food?.proteinGrams ?: 0.0) * factor,
@@ -249,10 +264,11 @@ object WeeklyMenuGenerator {
             )
         }
         PlannedItemKind.DISH -> dishesById[itemId]
-            ?.nutritionForGrams(foodsById, preferredGrams)
+            ?.nutritionForGrams(foodsById, grams)
             ?.let {
                 MealVector(it.calories, it.proteinGrams, it.carbohydrateGrams, it.fatGrams)
             } ?: MealVector(0.0, 0.0, 0.0, 0.0)
+        }
     }
 
     private fun nutritionError(
@@ -341,11 +357,7 @@ object WeeklyMenuGenerator {
             ) * 2.5
         }
         val compositionPenalty = assignments.values.sumOf { assignedRules ->
-            when {
-                assignedRules.isEmpty() -> 100.0
-                assignedRules.size == 1 -> 20.0
-                else -> 0.0
-            }
+            if (assignedRules.isEmpty()) 100.0 else 0.0
         }
         val quantityPenalty = assignments.entries.sumOf { (slot, assignedRules) ->
             val meal = meals.first { it.type == slot.mealType && slot.day in it.days }
@@ -371,6 +383,21 @@ object WeeklyMenuGenerator {
         }
         return nutritional + mealBalancePenalty + compositionPenalty +
             quantityPenalty + varietyPenalty + recentPenalty
+    }
+
+    private fun isFeasible(
+        meals: List<PlannedMeal>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation
+    ): Boolean = WeekDay.entries.all { day ->
+        val assessment = MealPlanEvaluator.assessDay(
+            day, meals, foodsById, dishesById, recommendation
+        )
+        assessment.actual.calories <= assessment.target.calories * 1.10 &&
+            assessment.actual.proteinGrams <= assessment.target.proteinGrams * 1.25 &&
+            assessment.actual.carbohydrateGrams <= assessment.target.carbohydrateGrams * 1.25 &&
+            assessment.actual.fatGrams <= assessment.target.fatGrams * 1.25
     }
 
     private fun List<PlanningRule>.toMeal(slot: PlanningSlot, generation: Int): PlannedMeal {
