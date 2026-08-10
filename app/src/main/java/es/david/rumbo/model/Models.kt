@@ -109,6 +109,11 @@ enum class MealType(val label: String) {
     DINNER("Cena")
 }
 
+enum class PlanWeek(val label: String) {
+    CURRENT("Esta semana"),
+    NEXT("Semana que viene")
+}
+
 enum class WeekDay(val label: String, val shortLabel: String) {
     MONDAY("Lunes", "L"),
     TUESDAY("Martes", "M"),
@@ -141,6 +146,7 @@ data class PlanningRule(
     val itemId: Long,
     val allowedMealTypes: Set<MealType>,
     val fixedSlots: Set<PlanningSlot> = emptySet(),
+    val fixedGrams: Map<MealType, Double> = emptyMap(),
     val frequency: PlanningFrequency = PlanningFrequency.NORMAL,
     val preferredGrams: Double,
     val minimumFactor: Double = 0.5,
@@ -150,6 +156,8 @@ data class PlanningRule(
         itemId > 0 &&
             (frequency == PlanningFrequency.NEVER || allowedMealTypes.isNotEmpty()) &&
             (allowedMealTypes.isNotEmpty() || fixedSlots.isNotEmpty()) &&
+            fixedGrams.keys.all { type -> fixedSlots.any { it.mealType == type } } &&
+            fixedGrams.values.all { it in 0.1..5000.0 } &&
             preferredGrams in 1.0..5000.0 &&
             minimumFactor in 0.1..1.0 && maximumFactor in 1.0..5.0
 }
@@ -212,6 +220,7 @@ data class MealDayAmounts(
 data class PlannedMeal(
     val id: Long,
     val type: MealType,
+    val planWeek: PlanWeek = PlanWeek.CURRENT,
     val days: Set<WeekDay>,
     val items: List<PlannedFood> = emptyList(),
     val dishes: List<PlannedDish> = emptyList(),
