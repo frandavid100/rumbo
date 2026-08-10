@@ -37,7 +37,6 @@ jobs:
           cp "$BUILD_TOOLS/lib/apksigner.jar" build/signing-tools/lib/
           cp "$BUILD_TOOLS/lib64/libc++.so" build/signing-tools/lib64/
       - name: Firmar APK con una clave temporal
-        if: github.event_name != 'pull_request'
         run: |
           mkdir -p build/signed
           PASS="$(openssl rand -base64 36 | tr -d '\n')"
@@ -53,7 +52,6 @@ jobs:
             build/signing-tools
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: github.event_name != 'pull_request'
         with:
           name: rumbo-0.40.0-signed-temporary
           path: build/signed/Rumbo-0.40.0.apk
