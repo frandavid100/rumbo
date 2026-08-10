@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.40.0
+
+- Construye cada comida desde sus cantidades fijas y comprueba el margen restante antes de añadir otros elementos.
+- Permite comidas de un solo elemento cuando cualquier añadido empeoraría el ajuste.
+- Descarta alimentos cuya cantidad mínima rebase el límite calórico de la comida.
+- Rechaza semanas que superen gravemente los objetivos diarios en vez de presentar la combinación menos mala.
+
 ## 0.39.0
 
 - Bloquea definitivamente las proporciones de los ingredientes de cada plato una vez creado; al variar su cantidad, todos escalan juntos.
