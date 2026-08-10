@@ -35,6 +35,9 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Eco
@@ -220,6 +223,8 @@ fun RumboApp(repository: AppRepository) {
     val context = LocalContext.current
     var mealShares by remember { mutableStateOf(loadMealShares(context)) }
     var adjustmentRange by remember { mutableStateOf(loadAdjustmentRange(context)) }
+    var detailMenuExpanded by remember { mutableStateOf(false) }
+    var pendingTopDelete by remember { mutableStateOf<Screen?>(null) }
     val screenStateHolder = rememberSaveableStateHolder()
     val navigateBack = {
         screenName = when {
@@ -280,6 +285,43 @@ fun RumboApp(repository: AppRepository) {
         }
     }
 
+    if (pendingTopDelete != null) {
+        val deletingFood = pendingTopDelete == Screen.FOOD_DETAIL
+        val itemName = if (deletingFood) {
+            data.foods.firstOrNull { it.id == selectedFoodId }?.name
+        } else {
+            data.dishes.firstOrNull { it.id == selectedDishId }?.name
+        }.orEmpty()
+        AlertDialog(
+            onDismissRequest = { pendingTopDelete = null },
+            title = { Text("¿Eliminar ${itemName}?") },
+            text = {
+                Text(
+                    if (deletingFood) "Se eliminará del catálogo y de las comidas que lo utilicen."
+                    else "Se eliminará el plato y se quitará de las comidas planificadas."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (deletingFood) {
+                            selectedFoodId?.let { data = repository.deleteFood(it) }
+                            selectedFoodId = null
+                        } else {
+                            selectedDishId?.let { data = repository.deleteDish(it) }
+                            selectedDishId = null
+                        }
+                        pendingTopDelete = null
+                        screenName = Screen.FOODS.name
+                    }
+                ) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingTopDelete = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -322,6 +364,34 @@ fun RumboApp(repository: AppRepository) {
                     }
                 },
                 actions = {
+                    if (screen in setOf(Screen.FOOD_DETAIL, Screen.DISH_DETAIL)) {
+                        Box {
+                            IconButton(onClick = { detailMenuExpanded = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Opciones")
+                            }
+                            DropdownMenu(
+                                expanded = detailMenuExpanded,
+                                onDismissRequest = { detailMenuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Editar") },
+                                    onClick = {
+                                        detailMenuExpanded = false
+                                        screenName = if (screen == Screen.FOOD_DETAIL) {
+                                            Screen.EDIT_FOOD.name
+                                        } else Screen.EDIT_DISH.name
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Eliminar") },
+                                    onClick = {
+                                        detailMenuExpanded = false
+                                        pendingTopDelete = screen
+                                    }
+                                )
+                            }
+                        }
+                    }
                     if (profileReady && screen == Screen.HOME) {
                         IconButton(onClick = { screenName = Screen.FOODS.name }) {
                             Icon(Icons.Default.Search, contentDescription = "Buscar alimentos y platos")
@@ -4155,6 +4225,7 @@ private fun DishDetailScreen(
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Ingredientes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider()
                 dish.ingredients.forEachIndexed { index, ingredient ->
                     val food = foodsById[ingredient.foodId]
                     Row(
@@ -4176,6 +4247,7 @@ private fun DishDetailScreen(
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Presente en el menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider()
                 if (menuUsages.isEmpty()) {
                     Text("Este plato no está incluido en ninguna comida.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
@@ -4198,10 +4270,6 @@ private fun DishDetailScreen(
             }
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) { Text("Editar") }
-            OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
-        }
     }
 }
 
@@ -4694,6 +4762,90 @@ private fun foodCategoryIcon(category: FoodCategory): ImageVector = when (catego
 }
 
 @Composable
+private fun NutrientIconValue(
+    icon: ImageVector,
+    description: String,
+    value: Double?,
+    suffix: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Icon(icon, contentDescription = description, tint = color, modifier = Modifier.size(19.dp))
+        Text(
+            value?.let { "${formatDecimal(it)} ${suffix}" } ?: "—",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (value == null) MaterialTheme.colorScheme.onSurfaceVariant else color,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun FoodPrimaryNutritionStrip(food: Food) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        NutrientIconValue(
+            Icons.Default.LocalFireDepartment, "Calorías", food.calories, "kcal",
+            MaterialTheme.colorScheme.onSurface, Modifier.weight(1.25f)
+        )
+        NutrientIconValue(
+            Icons.Default.FitnessCenter, "Proteínas", food.proteinGrams, "g",
+            Color(0xFFC62828), Modifier.weight(1f)
+        )
+        NutrientIconValue(
+            Icons.Default.Grain, "Carbohidratos", food.carbohydrateGrams, "g",
+            Color(0xFF2563A6), Modifier.weight(1f)
+        )
+        NutrientIconValue(
+            Icons.Default.Opacity, "Grasas", food.fatGrams, "g",
+            Color(0xFF9A6700), Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun FoodSecondaryNutritionStrip(food: Food) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        NutrientIconValue(
+            Icons.Default.Circle, "Grasas saturadas", food.saturatedFatGrams, "g",
+            Color(0xFF8D4E2F), Modifier.weight(1f)
+        )
+        NutrientIconValue(
+            Icons.Default.Cake, "Azúcares", food.sugarGrams, "g",
+            Color(0xFF9C3D78), Modifier.weight(1f)
+        )
+        NutrientIconValue(
+            Icons.Default.Eco, "Fibra", food.fiberGrams, "g",
+            Color(0xFF287A3D), Modifier.weight(1f)
+        )
+        NutrientIconValue(
+            Icons.Default.AcUnit, "Sal", food.saltGrams, "g",
+            Color(0xFF607D8B), Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun SimilarFoodEntry(food: Food, onClick: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Text(
+            food.name,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        FoodPrimaryNutritionStrip(food)
+    }
+}
+
+@Composable
 private fun FoodDetailScreen(
     food: Food,
     foods: List<Food>,
@@ -4772,12 +4924,16 @@ private fun FoodDetailScreen(
                     FoodCategoryBadge(food.category)
                     Column(Modifier.weight(1f)) {
                         Text(food.name, style = MaterialTheme.typography.headlineSmall)
-                        Text(
-                            listOfNotNull(food.brand, food.subcategory ?: food.family).joinToString(" · ")
-                                .ifBlank { food.category.label },
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        listOfNotNull(food.brand, food.subcategory ?: food.family)
+                            .joinToString(" · ")
+                            .takeIf { it.isNotBlank() }
+                            ?.let {
+                                Text(
+                                    it,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         Text(
                             "Predominan: ${food.category.label.lowercase()}",
                             color = foodCategoryColor(food.category),
@@ -4787,19 +4943,9 @@ private fun FoodDetailScreen(
                 }
                 HorizontalDivider()
                 Text("Valores por 100 g o 100 ml", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    food.calories?.let { "${formatDecimal(it)} kcal" } ?: "Energía sin datos",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
-                )
-                NutritionLine("Proteínas", food.proteinGrams, Color(0xFFC62828))
-                NutritionLine("Carbohidratos", food.carbohydrateGrams, Color(0xFF2563A6))
-                NutritionLine("Grasas", food.fatGrams, Color(0xFF9A6700))
-                NutritionLine("de las cuales saturadas", food.saturatedFatGrams)
-                NutritionLine("de los cuales azúcares", food.sugarGrams)
-                NutritionLine("Fibra", food.fiberGrams)
-                NutritionLine("Sal", food.saltGrams)
+                FoodPrimaryNutritionStrip(food)
+                HorizontalDivider()
+                FoodSecondaryNutritionStrip(food)
                 food.legalName?.let {
                     HorizontalDivider()
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -4832,6 +4978,7 @@ private fun FoodDetailScreen(
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Presente en el menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider()
                 if (menuUsages.isEmpty()) {
                     Text("Este alimento no está incluido en ninguna comida.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
@@ -4857,6 +5004,7 @@ private fun FoodDetailScreen(
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Alimentos similares", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider()
                 Text(
                     "Puedes sustituirlo por estos alimentos sin alterar demasiado el reparto nutricional.",
                     style = MaterialTheme.typography.bodySmall,
@@ -4866,17 +5014,13 @@ private fun FoodDetailScreen(
                     Text("No hay sustitutos suficientemente próximos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     similarFoods.forEachIndexed { index, similar ->
-                        FoodListEntry(food = similar, onClick = { onOpenFood(similar.id) })
+                        SimilarFoodEntry(food = similar, onClick = { onOpenFood(similar.id) })
                         if (index < similarFoods.lastIndex) HorizontalDivider()
                     }
                 }
             }
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) { Text("Editar") }
-            OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
-        }
     }
 }
 
