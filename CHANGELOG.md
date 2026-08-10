@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.39.0
+
+- Bloquea definitivamente las proporciones de los ingredientes de cada plato una vez creado; al variar su cantidad, todos escalan juntos.
+- Retira de la interfaz el editor manual de comidas y las acciones para añadir o modificar elementos directamente en ellas.
+- Señala con un candado todas las cantidades fijadas por el usuario en el menú diario y semanal.
+- Evita que eliminar un alimento modifique silenciosamente la receta de un plato.
+
 ## 0.38.0
 
 - Sustituye el catálogo general de unos 29.000 productos por un subconjunto compacto de Mercadona con información nutricional completa.
