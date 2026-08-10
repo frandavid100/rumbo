@@ -2458,7 +2458,6 @@ private fun AddMeasurementScreen(
 }
 
 @Composable
-@Composable
 private fun DeleteMeasurementDialog(
     measurement: Measurement,
     onConfirm: () -> Unit,
@@ -5627,7 +5626,6 @@ private fun WaistMeasurementHelp() {
 }
 
 @Composable
-private fun CompactGramField@Composable
 private fun CompactGramField(value: String, onValueChange: (String) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
