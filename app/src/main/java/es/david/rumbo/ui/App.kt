@@ -96,7 +96,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -1319,12 +1322,11 @@ private fun HomeShoppingEntry(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        SmallFoodCategoryBadge(food.category)
         Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         Text("${formatDecimal(grams)} g", fontWeight = FontWeight.SemiBold)
     }
@@ -1852,35 +1854,42 @@ private fun BodyExplanationScreen(
                             ""
                         }
                     Spacer(Modifier.height(12.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        MacroValue(
-                            "Proteína",
-                            recommendation.proteinGrams,
-                            foodCategoryColor(FoodCategory.PROTEIN)
-                        )
-                        MacroValue(
-                            "Hidratos",
-                            recommendation.carbohydrateGrams,
-                            foodCategoryColor(FoodCategory.CARBOHYDRATE)
-                        )
-                        MacroValue(
-                            "Grasa",
-                            recommendation.fatGrams,
-                            foodCategoryColor(FoodCategory.FAT)
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
                     Text(
-                        proteinContext + referenceWeightText,
+                        buildAnnotatedString {
+                            val marker = "${recommendation.proteinGrams} g de proteína"
+                            val parts = proteinContext.split(marker, limit = 2)
+                            append(parts.first())
+                            withStyle(
+                                SpanStyle(
+                                    color = foodCategoryColor(FoodCategory.PROTEIN),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            ) { append(marker) }
+                            if (parts.size > 1) append(parts[1])
+                            append(referenceWeightText)
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "Reservamos aproximadamente el 25 % de las calorías para ${recommendation.fatGrams} g de grasa y completamos las calorías restantes con ${recommendation.carbohydrateGrams} g de hidratos para aportar energía.",
+                        buildAnnotatedString {
+                            append("Reservamos aproximadamente el 25 % de las calorías para ")
+                            withStyle(
+                                SpanStyle(
+                                    color = foodCategoryColor(FoodCategory.FAT),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            ) { append("${recommendation.fatGrams} g de grasa") }
+                            append(" y completamos las calorías restantes con ")
+                            withStyle(
+                                SpanStyle(
+                                    color = foodCategoryColor(FoodCategory.CARBOHYDRATE),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            ) { append("${recommendation.carbohydrateGrams} g de hidratos") }
+                            append(" para aportar energía.")
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -2263,14 +2272,15 @@ private fun WeeklyPlannerScreen(
     onAddMissing: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
 ) {
-    var viewName by rememberSaveable { mutableStateOf(PlannerView.WEEK.name) }
-    var selectedDayName by rememberSaveable { mutableStateOf(WeekDay.MONDAY.name) }
-    val view = PlannerView.valueOf(viewName)
-    val today = WeekDay.entries[LocalDate.now().dayOfWeek.value - 1]
-    val selectedDay = if (view == PlannerView.TODAY) today else WeekDay.valueOf(selectedDayName)
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val dishesById = remember(dishes) { dishes.associateBy { it.id } }
-    val grouped = remember(meals) { meals.groupBy { it.type } }
+    val assessments = remember(meals, foodsById, dishesById, recommendation) {
+        recommendation?.let { target ->
+            WeekDay.entries.associateWith { day ->
+                MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, target)
+            }
+        }.orEmpty()
+    }
     var optimizationPreview by remember { mutableStateOf<QuantityOptimizationResult?>(null) }
     var optimizationMessage by remember { mutableStateOf<String?>(null) }
 
@@ -2289,202 +2299,229 @@ private fun WeeklyPlannerScreen(
             onDismissRequest = { optimizationMessage = null },
             title = { Text("Ajustar cantidades") },
             text = { Text(message) },
-            confirmButton = { TextButton(onClick = { optimizationMessage = null }) { Text("Entendido") } }
+            confirmButton = {
+                TextButton(onClick = { optimizationMessage = null }) { Text("Entendido") }
+            }
         )
     }
+
     LazyColumn(
-        contentPadding = PaddingValues(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 96.dp)
+        contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("Plan de comidas", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Compara cada comida y cada día con tu recomendación actual.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                "Real/objetivo · verde ≤10 % · amarillo ≤20 % · rojo >20 %",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall
-            )
-            Spacer(Modifier.height(14.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PlannerView.entries.forEach { option ->
-                    FilterChip(
-                        selected = view == option,
-                        onClick = { viewName = option.name },
-                        label = { Text(option.label) },
-                        modifier = Modifier.weight(1f)
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HomeCardHeader("Valoración semanal")
+                    if (recommendation != null) {
+                        WeeklyNutritionSummary(assessments.values.toList())
+                    }
+                    Text(
+                        weeklyAssessmentText(assessments.values.toList(), recommendation),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                    OutlinedButton(
+                        onClick = {
+                            if (recommendation == null) {
+                                optimizationMessage =
+                                    "Necesitas una recomendación nutricional antes de ajustar el plan."
+                            } else {
+                                val result = MealQuantityOptimizer.optimize(
+                                    meals, foodsById, dishesById, recommendation
+                                )
+                                if (result.changes.isNotEmpty()) optimizationPreview = result
+                                else optimizationMessage = if (result.days.isEmpty()) {
+                                    "Completa al menos un día y marca uno o varios elementos como ajustables. Los elementos fijos nunca se modifican."
+                                } else {
+                                    "Las cantidades actuales ya son la mejor combinación encontrada dentro de los límites indicados."
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Ajustar cantidades") }
                 }
             }
-            if (view == PlannerView.DAY) {
-                Spacer(Modifier.height(10.dp))
-                WeekDay.entries.chunked(4).forEach { rowDays ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        rowDays.forEach { day ->
-                            FilterChip(
-                                selected = day == selectedDay,
-                                onClick = { selectedDayName = day.name },
-                                label = { Text(day.shortLabel) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        repeat(4 - rowDays.size) { Spacer(Modifier.weight(1f)) }
-                    }
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            FilledTonalButton(
-                onClick = {
-                    if (recommendation == null) {
-                        optimizationMessage = "Necesitas una recomendación nutricional antes de ajustar el plan."
-                    } else {
-                        val result = MealQuantityOptimizer.optimize(
-                            meals, foodsById, dishesById, recommendation
-                        )
-                        if (result.changes.isNotEmpty()) optimizationPreview = result
-                        else optimizationMessage = if (result.days.isEmpty()) {
-                            "Completa al menos un día y marca uno o varios elementos como ajustables. Los elementos fijos nunca se modifican."
-                        } else {
-                            "Las cantidades actuales ya son la mejor combinación encontrada dentro de los límites indicados."
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Ajustar cantidades")
-            }
-            Spacer(Modifier.height(8.dp))
         }
 
-        if (view == PlannerView.WEEK) {
-            item {
-                Text(
-                    "Totales por día",
-                    modifier = Modifier.padding(top = 6.dp, bottom = 4.dp),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            items(WeekDay.entries, key = { "day_${it.name}" }) { day ->
-                DayNutritionEntry(
-                    day = day,
-                    meals = meals,
-                    foodsById = foodsById,
-                    dishesById = dishesById,
-                    recommendation = recommendation,
-                    onClick = {
-                        selectedDayName = day.name
-                        viewName = PlannerView.DAY.name
+        items(WeekDay.entries, key = { "weekly_card_${it.name}" }) { day ->
+            WeeklyDayCard(
+                day = day,
+                meals = meals,
+                foodsById = foodsById,
+                dishesById = dishesById,
+                assessment = assessments[day],
+                onOpenMeal = onOpenMeal,
+                onAddMissing = onAddMissing
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeeklyNutritionSummary(assessments: List<PlanNutritionAssessment>) {
+    if (assessments.isEmpty()) return
+    val actualCalories = assessments.sumOf { it.actual.calories }
+    val targetCalories = assessments.sumOf { it.target.calories }
+    val actualProtein = assessments.sumOf { it.actual.proteinGrams }
+    val targetProtein = assessments.sumOf { it.target.proteinGrams }
+    val actualCarbohydrates = assessments.sumOf { it.actual.carbohydrateGrams }
+    val targetCarbohydrates = assessments.sumOf { it.target.carbohydrateGrams }
+    val actualFat = assessments.sumOf { it.actual.fatGrams }
+    val targetFat = assessments.sumOf { it.target.fatGrams }
+
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        NutritionPercentMetric(
+            "Calorías", actualCalories, targetCalories,
+            Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
+        )
+        NutritionPercentMetric(
+            "Proteína", actualProtein, targetProtein,
+            foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN), Modifier.weight(1f)
+        )
+        NutritionPercentMetric(
+            "Hidratos", actualCarbohydrates, targetCarbohydrates,
+            foodCategoryIcon(FoodCategory.CARBOHYDRATE),
+            foodCategoryColor(FoodCategory.CARBOHYDRATE),
+            Modifier.weight(1f)
+        )
+        NutritionPercentMetric(
+            "Grasa", actualFat, targetFat,
+            foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT), Modifier.weight(1f)
+        )
+    }
+}
+
+private fun weeklyAssessmentText(
+    assessments: List<PlanNutritionAssessment>,
+    recommendation: es.david.rumbo.model.Recommendation?
+): String {
+    if (recommendation == null) return "Añade una medición para poder valorar el menú semanal."
+    if (assessments.isEmpty()) return "Todavía no hay días que se puedan valorar."
+    val incompleteDays = assessments.count { it.missingMealTypes.isNotEmpty() }
+    if (incompleteDays > 0) {
+        return if (incompleteDays == 1) {
+            "Falta completar un día de la semana antes de poder valorar el conjunto."
+        } else {
+            "Falta completar $incompleteDays días de la semana antes de poder valorar el conjunto."
+        }
+    }
+    if (assessments.any { !it.actual.isComplete }) {
+        return "Faltan datos nutricionales para valorar el menú semanal completo."
+    }
+    val nutrients = listOf(
+        Triple("calorías", assessments.sumOf { it.actual.calories }, assessments.sumOf { it.target.calories }),
+        Triple("proteína", assessments.sumOf { it.actual.proteinGrams }, assessments.sumOf { it.target.proteinGrams }),
+        Triple(
+            "hidratos",
+            assessments.sumOf { it.actual.carbohydrateGrams },
+            assessments.sumOf { it.target.carbohydrateGrams }
+        ),
+        Triple("grasa", assessments.sumOf { it.actual.fatGrams }, assessments.sumOf { it.target.fatGrams })
+    )
+    val below = nutrients.filter { (_, actual, target) -> target > 0.0 && actual < target * 0.90 }
+        .map { it.first }
+    val above = nutrients.filter { (_, actual, target) -> target > 0.0 && actual > target * 1.10 }
+        .map { it.first }
+    if (below.isEmpty() && above.isEmpty()) {
+        return "El menú semanal está bien ajustado a tus objetivos."
+    }
+    return buildList {
+        if (below.isNotEmpty()) add("Por debajo del objetivo semanal: ${below.joinToString()}.")
+        if (above.isNotEmpty()) add("Por encima del objetivo semanal: ${above.joinToString()}.")
+    }.joinToString(" ")
+}
+
+@Composable
+private fun WeeklyDayCard(
+    day: WeekDay,
+    meals: List<PlannedMeal>,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    assessment: PlanNutritionAssessment?,
+    onOpenMeal: (Long) -> Unit,
+    onAddMissing: (MealType, WeekDay) -> Unit
+) {
+    val dayMeals = meals.filter { day in it.days }.associateBy { it.type }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            HomeCardHeader(day.label)
+            MealType.entries.forEachIndexed { index, type ->
+                val meal = dayMeals[type]
+                val entries = meal?.let {
+                    it.dishes.mapNotNull { planned ->
+                        dishesById[planned.dishId]?.let { dish ->
+                            Triple(
+                                dish.name,
+                                it.resolvedGrams(planned, day),
+                                dish.dominantCategory(foodsById)
+                            )
+                        }
+                    } + it.items.mapNotNull { planned ->
+                        foodsById[planned.foodId]?.let { food ->
+                            Triple(food.name, it.resolvedGrams(planned, day), food.category)
+                        }
                     }
-                )
-                HorizontalDivider()
-            }
-            item {
-                Text(
-                    "Comidas reutilizables",
-                    modifier = Modifier.padding(top = 22.dp, bottom = 4.dp),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            MealType.entries.forEach { type ->
-                val typeMeals = grouped[type].orEmpty()
-                if (typeMeals.isNotEmpty()) {
-                    item(key = "meal_header_${type.name}") {
+                }.orEmpty()
+                val mealModifier = if (meal == null) {
+                    Modifier.fillMaxWidth()
+                } else {
+                    Modifier.fillMaxWidth().clickable { onOpenMeal(meal.id) }
+                }
+                Column(
+                    mealModifier.padding(vertical = 5.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             type.label,
-                            modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                            modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.SemiBold
                         )
-                    }
-                    items(typeMeals, key = { it.id }) { meal ->
-                        PlannedMealListEntry(
-                            meal = meal,
-                            foodsById = foodsById,
-                            dishesById = dishesById,
-                            recommendation = recommendation,
-                            showDays = true,
-                            day = null,
-                            onClick = { onOpenMeal(meal.id) }
-                        )
-                        HorizontalDivider()
-                    }
-                }
-            }
-        } else {
-            item {
-                Text(
-                    if (view == PlannerView.TODAY) "Hoy · ${selectedDay.label}" else selectedDay.label,
-                    modifier = Modifier.padding(top = 6.dp, bottom = 4.dp),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                DayNutritionEntry(
-                    day = selectedDay,
-                    meals = meals,
-                    foodsById = foodsById,
-                    dishesById = dishesById,
-                    recommendation = recommendation,
-                    onClick = null
-                )
-                HorizontalDivider()
-            }
-            MealType.entries.forEach { type ->
-                val meal = grouped[type].orEmpty().firstOrNull { selectedDay in it.days }
-                item(key = "selected_${selectedDay.name}_${type.name}") {
-                    Text(
-                        type.label,
-                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    if (meal == null) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Sin planificar",
-                                modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            TextButton(onClick = { onAddMissing(type, selectedDay) }) {
-                                Icon(Icons.Default.Add, contentDescription = null)
+                        if (entries.isEmpty()) {
+                            TextButton(onClick = { onAddMissing(type, day) }) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text("Añadir")
                             }
                         }
-                    } else {
-                        PlannedMealListEntry(
-                            meal = meal,
-                            foodsById = foodsById,
-                            dishesById = dishesById,
-                            recommendation = recommendation,
-                            showDays = false,
-                            day = selectedDay,
-                            onClick = { onOpenMeal(meal.id) }
-                        )
                     }
-                    HorizontalDivider()
+                    if (entries.isEmpty()) {
+                        Text(
+                            "Sin planificar",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } else {
+                        entries.forEach { (name, grams, category) ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                SmallFoodCategoryBadge(category)
+                                Text(name, modifier = Modifier.weight(1f))
+                                Text(
+                                    "${formatDecimal(grams)} g",
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.End
+                                )
+                            }
+                        }
+                    }
+                }
+                if (index < MealType.entries.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
-        }
-
-        if (meals.isEmpty()) {
-            item {
-                Text(
-                    "Todavía no hay comidas. Pulsa + para crear la primera.",
-                    modifier = Modifier.padding(vertical = 24.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            assessment?.let { TodayNutritionSummary(it) }
+            Text(
+                todayAssessmentText(assessment),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
