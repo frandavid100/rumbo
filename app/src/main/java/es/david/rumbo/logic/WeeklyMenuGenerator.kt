@@ -38,6 +38,7 @@ object WeeklyMenuGenerator {
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
+        mealShares: Map<MealType, Double> = defaultMealShares,
         seed: Long = System.currentTimeMillis()
     ): GeneratedWeeklyMenu {
         require(rules.isNotEmpty()) { "Añade al menos un alimento o plato al menú." }
@@ -84,31 +85,29 @@ object WeeklyMenuGenerator {
             val random = Random(seed + candidateIndex * 104729L)
             val assignments = linkedMapOf<PlanningSlot, List<PlanningRule>>()
             slots.forEach { slot ->
-                val fixed = fixedBySlot[slot].orEmpty()
-                val additions = when {
-                    fixed.any { it.itemKind == PlannedItemKind.DISH } -> emptyList()
-                    fixed.isNotEmpty() -> {
-                        val dishCandidates = rules.filter { candidate ->
-                            candidate.itemKind == PlannedItemKind.DISH &&
-                                slot.mealType in candidate.allowedMealTypes &&
-                                candidate.frequency != PlanningFrequency.NEVER &&
-                                fixed.none { fixedRule -> fixedRule.sameItem(candidate) }
-                        }
-                        if (dishCandidates.isEmpty()) emptyList()
-                        else listOf(chooseRule(slot, dishCandidates, assignments, recent, random))
-                    }
-                    else -> listOf(chooseRule(slot, rules, assignments, recent, random))
-                }
-                assignments[slot] = (fixed + additions).distinctBy { it.itemKind to it.itemId }
+                assignments[slot] = completeSlot(
+                    slot = slot,
+                    fixed = fixedBySlot[slot].orEmpty(),
+                    rules = rules,
+                    assigned = assignments,
+                    history = recent,
+                    random = random,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = recommendation,
+                    mealShare = mealShares[slot.mealType] ?: defaultMealShares.getValue(slot.mealType)
+                )
             }
             val generated = assignments.map { (slot, assignedRules) ->
                 assignedRules.toMeal(slot, generation)
             }
             val optimized = MealQuantityOptimizer.optimize(
-                preserved + generated, foodsById, dishesById, recommendation
+                preserved + generated, foodsById, dishesById, recommendation,
+                mealShares = mealShares
             ).meals
             val score = score(
-                optimized, assignments, recent, foodsById, dishesById, recommendation
+                optimized, assignments, recent, foodsById, dishesById, recommendation,
+                mealShares
             )
             if (score < bestScore) {
                 bestScore = score
@@ -136,6 +135,142 @@ object WeeklyMenuGenerator {
             history = newHistory,
             generation = generation
         )
+    }
+
+    private data class MealVector(
+        val calories: Double,
+        val protein: Double,
+        val carbohydrates: Double,
+        val fat: Double
+    ) {
+        operator fun plus(other: MealVector) = MealVector(
+            calories + other.calories,
+            protein + other.protein,
+            carbohydrates + other.carbohydrates,
+            fat + other.fat
+        )
+    }
+
+    private fun completeSlot(
+        slot: PlanningSlot,
+        fixed: List<PlanningRule>,
+        rules: List<PlanningRule>,
+        assigned: Map<PlanningSlot, List<PlanningRule>>,
+        history: List<MenuHistoryEntry>,
+        random: Random,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShare: Double
+    ): List<PlanningRule> {
+        val chosen = fixed.distinctBy { it.itemKind to it.itemId }.toMutableList()
+        val eligible = rules.filter {
+            slot.mealType in it.allowedMealTypes &&
+                it.frequency != PlanningFrequency.NEVER
+        }
+        val maximumItems = when (slot.mealType) {
+            MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
+            else -> 4
+        }
+        val minimumItems = minOf(2, (chosen + eligible)
+            .distinctBy { it.itemKind to it.itemId }.size)
+
+        while (chosen.size < maximumItems) {
+            var candidates = eligible.filter { candidate ->
+                chosen.none { it.sameItem(candidate) } &&
+                    !(candidate.itemKind == PlannedItemKind.DISH &&
+                        chosen.any { it.itemKind == PlannedItemKind.DISH })
+            }
+            if (candidates.isEmpty()) break
+            if (chosen.isEmpty() && candidates.any { it.itemKind == PlannedItemKind.DISH }) {
+                candidates = candidates.filter { it.itemKind == PlannedItemKind.DISH }
+            }
+
+            val before = combinationError(
+                chosen, foodsById, dishesById, recommendation, mealShare
+            )
+            val ranked = candidates.map { candidate ->
+                val after = combinationError(
+                    chosen + candidate, foodsById, dishesById, recommendation, mealShare
+                )
+                val weeklyCount = assigned.values.flatten().count { it.sameItem(candidate) }
+                val recentCount = history.count {
+                    it.itemKind == candidate.itemKind && it.itemId == candidate.itemId
+                }
+                val frequencyBonus = kotlin.math.ln(candidate.frequency.weight + 1.0) * 0.10
+                val varietyBonus = if (
+                    candidate.itemKind == PlannedItemKind.FOOD &&
+                    chosen.none {
+                        it.itemKind == PlannedItemKind.FOOD &&
+                            foodsById[it.itemId]?.category == foodsById[candidate.itemId]?.category
+                    }
+                ) 0.12 else 0.0
+                val penalty = weeklyCount * 0.10 + recentCount * 0.025
+                candidate to (before - after + frequencyBonus + varietyBonus - penalty +
+                    random.nextDouble() * 0.04)
+            }.sortedByDescending { it.second }
+
+            val best = ranked.firstOrNull() ?: break
+            if (chosen.size >= minimumItems && best.second <= 0.02) break
+            chosen += best.first
+        }
+        return chosen
+    }
+
+    private fun combinationError(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShare: Double
+    ): Double {
+        val total = rules.fold(MealVector(0.0, 0.0, 0.0, 0.0)) { sum, rule ->
+            sum + rule.vector(foodsById, dishesById)
+        }
+        return nutritionError(
+            total.calories, total.protein, total.carbohydrates, total.fat,
+            recommendation, mealShare
+        )
+    }
+
+    private fun PlanningRule.vector(
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): MealVector = when (itemKind) {
+        PlannedItemKind.FOOD -> {
+            val food = foodsById[itemId]
+            val factor = preferredGrams / 100.0
+            MealVector(
+                (food?.calories ?: 0.0) * factor,
+                (food?.proteinGrams ?: 0.0) * factor,
+                (food?.carbohydrateGrams ?: 0.0) * factor,
+                (food?.fatGrams ?: 0.0) * factor
+            )
+        }
+        PlannedItemKind.DISH -> dishesById[itemId]
+            ?.nutritionForGrams(foodsById, preferredGrams)
+            ?.let {
+                MealVector(it.calories, it.proteinGrams, it.carbohydrateGrams, it.fatGrams)
+            } ?: MealVector(0.0, 0.0, 0.0, 0.0)
+    }
+
+    private fun nutritionError(
+        calories: Double,
+        protein: Double,
+        carbohydrates: Double,
+        fat: Double,
+        recommendation: Recommendation,
+        share: Double
+    ): Double {
+        fun squared(actual: Double, target: Double): Double {
+            if (target <= 0.0) return 0.0
+            val error = (actual - target) / target
+            return error * error
+        }
+        return squared(calories, recommendation.calories * share) * 5.0 +
+            squared(protein, recommendation.proteinGrams * share) * 4.0 +
+            squared(carbohydrates, recommendation.carbohydrateGrams * share) * 1.5 +
+            squared(fat, recommendation.fatGrams * share) * 2.0
     }
 
     private fun chooseRule(
@@ -180,7 +315,8 @@ object WeeklyMenuGenerator {
         history: List<MenuHistoryEntry>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
-        recommendation: Recommendation
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double>
     ): Double {
         val daily = WeekDay.entries.map {
             MealPlanEvaluator.assessDay(it, meals, foodsById, dishesById, recommendation)
@@ -190,6 +326,25 @@ object WeeklyMenuGenerator {
                 relativeError(assessment.actual.proteinGrams, assessment.target.proteinGrams).pow(2) * 4.0 +
                 relativeError(assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams).pow(2) * 1.5 +
                 relativeError(assessment.actual.fatGrams, assessment.target.fatGrams).pow(2) * 1.5
+        }
+        val mealBalancePenalty = assignments.keys.sumOf { slot ->
+            val meal = meals.first { it.type == slot.mealType && slot.day in it.days }
+            val actual = meal.nutrition(foodsById, dishesById, slot.day)
+            nutritionError(
+                actual.calories,
+                actual.proteinGrams,
+                actual.carbohydrateGrams,
+                actual.fatGrams,
+                recommendation,
+                mealShares[slot.mealType] ?: defaultMealShares.getValue(slot.mealType)
+            ) * 2.5
+        }
+        val compositionPenalty = assignments.values.sumOf { assignedRules ->
+            when {
+                assignedRules.isEmpty() -> 100.0
+                assignedRules.size == 1 -> 20.0
+                else -> 0.0
+            }
         }
         val quantityPenalty = assignments.entries.sumOf { (slot, assignedRules) ->
             val meal = meals.first { it.type == slot.mealType && slot.day in it.days }
@@ -213,7 +368,8 @@ object WeeklyMenuGenerator {
         val recentPenalty = allRules.sumOf { rule ->
             history.count { it.itemKind == rule.itemKind && it.itemId == rule.itemId } * 0.15
         }
-        return nutritional + quantityPenalty + varietyPenalty + recentPenalty
+        return nutritional + mealBalancePenalty + compositionPenalty +
+            quantityPenalty + varietyPenalty + recentPenalty
     }
 
     private fun List<PlanningRule>.toMeal(slot: PlanningSlot, generation: Int): PlannedMeal {
@@ -254,4 +410,12 @@ object WeeklyMenuGenerator {
 
     private fun relativeError(actual: Double, target: Double): Double =
         if (target <= 0.0) 0.0 else abs(actual - target) / target
+    private val defaultMealShares = mapOf(
+        MealType.BREAKFAST to 0.25,
+        MealType.MORNING_SNACK to 0.10,
+        MealType.LUNCH to 0.35,
+        MealType.AFTERNOON_SNACK to 0.10,
+        MealType.DINNER to 0.20
+    )
+
 }
