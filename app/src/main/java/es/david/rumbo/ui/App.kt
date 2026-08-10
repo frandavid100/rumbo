@@ -402,15 +402,15 @@ fun RumboApp(repository: AppRepository) {
                                 expanded = detailMenuExpanded,
                                 onDismissRequest = { detailMenuExpanded = false }
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text("Editar") },
-                                    onClick = {
-                                        detailMenuExpanded = false
-                                        screenName = if (screen == Screen.FOOD_DETAIL) {
-                                            Screen.EDIT_FOOD.name
-                                        } else Screen.EDIT_DISH.name
-                                    }
-                                )
+                                if (screen == Screen.FOOD_DETAIL) {
+                                    DropdownMenuItem(
+                                        text = { Text("Editar") },
+                                        onClick = {
+                                            detailMenuExpanded = false
+                                            screenName = Screen.EDIT_FOOD.name
+                                        }
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("Eliminar") },
                                     onClick = {
@@ -1399,29 +1399,26 @@ private fun TodayPlanSection(
                 val entries = meal?.let {
                     it.dishes.mapNotNull { planned ->
                         dishesById[planned.dishId]?.let { dish ->
-                            Triple(
+                            MenuItemLine(
                                 dish.name,
                                 it.resolvedGrams(planned, today),
-                                dish.dominantCategory(foodsById)
+                                dish.dominantCategory(foodsById),
+                                locked = !planned.adjustable
                             )
                         }
                     } + it.items.mapNotNull { planned ->
                         foodsById[planned.foodId]?.let { food ->
-                            Triple(
+                            MenuItemLine(
                                 food.name,
                                 it.resolvedGrams(planned, today),
-                                food.category
+                                food.category,
+                                locked = !planned.adjustable
                             )
                         }
                     }
                 }.orEmpty()
-                val mealModifier = if (meal == null) {
-                    Modifier.fillMaxWidth()
-                } else {
-                    Modifier.fillMaxWidth().clickable { onOpenMeal(meal.id) }
-                }
                 Column(
-                    mealModifier.padding(vertical = 5.dp),
+                    Modifier.fillMaxWidth().padding(vertical = 5.dp),
                     verticalArrangement = Arrangement.spacedBy(9.dp)
                 ) {
                     Row(
@@ -1434,25 +1431,26 @@ private fun TodayPlanSection(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
-                        if (entries.isEmpty()) {
-                            TextButton(onClick = { onAddMissing(type, today) }) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Añadir")
-                            }
-                        }
                     }
                     if (entries.isNotEmpty()) {
-                        entries.forEach { (name, grams, category) ->
+                        entries.forEach { entry ->
                             Row(
                                 Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                SmallFoodCategoryBadge(category)
-                                Text(name, modifier = Modifier.weight(1f))
+                                SmallFoodCategoryBadge(entry.category)
+                                Text(entry.name, modifier = Modifier.weight(1f))
+                                if (entry.locked) {
+                                    Icon(
+                                        Icons.Default.Lock,
+                                        contentDescription = "Cantidad fijada por ti",
+                                        modifier = Modifier.size(17.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 Text(
-                                    "${formatDecimal(grams)} g",
+                                    "${formatDecimal(entry.grams)} g",
                                     fontWeight = FontWeight.SemiBold,
                                     textAlign = TextAlign.End
                                 )
@@ -1491,6 +1489,13 @@ private fun TodayPlanSection(
         }
     }
 }
+
+private data class MenuItemLine(
+    val name: String,
+    val grams: Double,
+    val category: FoodCategory,
+    val locked: Boolean
+)
 
 @Composable
 private fun TodayNutritionSummary(assessment: PlanNutritionAssessment) {
@@ -3353,25 +3358,26 @@ private fun WeeklyDayCard(
                 val entries = meal?.let {
                     it.dishes.mapNotNull { planned ->
                         dishesById[planned.dishId]?.let { dish ->
-                            Triple(
+                            MenuItemLine(
                                 dish.name,
                                 it.resolvedGrams(planned, day),
-                                dish.dominantCategory(foodsById)
+                                dish.dominantCategory(foodsById),
+                                locked = !planned.adjustable
                             )
                         }
                     } + it.items.mapNotNull { planned ->
                         foodsById[planned.foodId]?.let { food ->
-                            Triple(food.name, it.resolvedGrams(planned, day), food.category)
+                            MenuItemLine(
+                                food.name,
+                                it.resolvedGrams(planned, day),
+                                food.category,
+                                locked = !planned.adjustable
+                            )
                         }
                     }
                 }.orEmpty()
-                val mealModifier = if (meal == null) {
-                    Modifier.fillMaxWidth()
-                } else {
-                    Modifier.fillMaxWidth().clickable { onOpenMeal(meal.id) }
-                }
                 Column(
-                    mealModifier.padding(vertical = 5.dp),
+                    Modifier.fillMaxWidth().padding(vertical = 5.dp),
                     verticalArrangement = Arrangement.spacedBy(9.dp)
                 ) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -3381,25 +3387,26 @@ private fun WeeklyDayCard(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
-                        if (entries.isEmpty()) {
-                            TextButton(onClick = { onAddMissing(type, day) }) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Añadir")
-                            }
-                        }
                     }
                     if (entries.isNotEmpty()) {
-                        entries.forEach { (name, grams, category) ->
+                        entries.forEach { entry ->
                             Row(
                                 Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                SmallFoodCategoryBadge(category)
-                                Text(name, modifier = Modifier.weight(1f))
+                                SmallFoodCategoryBadge(entry.category)
+                                Text(entry.name, modifier = Modifier.weight(1f))
+                                if (entry.locked) {
+                                    Icon(
+                                        Icons.Default.Lock,
+                                        contentDescription = "Cantidad fijada por ti",
+                                        modifier = Modifier.size(17.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 Text(
-                                    "${formatDecimal(grams)} g",
+                                    "${formatDecimal(entry.grams)} g",
                                     fontWeight = FontWeight.SemiBold,
                                     textAlign = TextAlign.End
                                 )
@@ -4825,7 +4832,6 @@ private fun DishDetailScreen(
     onDelete: () -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
-    var choosingMeal by remember { mutableStateOf(false) }
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val totals = dish.nutrition(foodsById)
     val totalWeight = dish.totalWeightGrams()
@@ -4860,21 +4866,6 @@ private fun DishDetailScreen(
         }
     }
 
-    if (choosingMeal) {
-        AddToMealDialog(
-            meals = plannedMeals,
-            itemName = dish.name,
-            onChoose = {
-                onAddToMeal(it)
-                choosingMeal = false
-            },
-            onCreateNew = {
-                choosingMeal = false
-                onAddNewMeal()
-            },
-            onDismiss = { choosingMeal = false }
-        )
-    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -4961,6 +4952,12 @@ private fun DishDetailScreen(
                     ) {
                         if (food != null) SmallFoodCategoryBadge(food.category) else Spacer(Modifier.size(24.dp))
                         Text(food?.name ?: "Alimento eliminado", modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "Proporción bloqueada",
+                            modifier = Modifier.size(17.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         Text("${formatDecimal(ingredient.grams)} g")
                     }
                     if (index < dish.ingredients.lastIndex) HorizontalDivider()
@@ -4975,9 +4972,9 @@ private fun DishDetailScreen(
                 if (menuUsages.isEmpty()) {
                     Text("Este plato no está incluido en el menú de esta semana.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    menuUsages.forEachIndexed { index, (mealId, label, amount) ->
+                    menuUsages.forEachIndexed { index, (_, label, amount) ->
                         Row(
-                            Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 8.dp),
+                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(label, modifier = Modifier.weight(1f), maxLines = 2)
@@ -4985,11 +4982,6 @@ private fun DishDetailScreen(
                         }
                         if (index < menuUsages.lastIndex) HorizontalDivider()
                     }
-                }
-                OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Añadir a otra comida")
                 }
             }
         }
@@ -5001,9 +4993,9 @@ private fun DishDetailScreen(
                 if (nextMenuUsages.isEmpty()) {
                     Text("Este plato no está incluido en el menú de la semana que viene.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    nextMenuUsages.forEachIndexed { index, (mealId, label, amount) ->
+                    nextMenuUsages.forEachIndexed { index, (_, label, amount) ->
                         Row(
-                            Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 8.dp),
+                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(label, modifier = Modifier.weight(1f), maxLines = 2)
@@ -5011,11 +5003,6 @@ private fun DishDetailScreen(
                         }
                         if (index < nextMenuUsages.lastIndex) HorizontalDivider()
                     }
-                }
-                OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Añadir a otra comida")
                 }
             }
         }
@@ -5089,6 +5076,7 @@ private fun DishEditorScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val proportionsLocked = initial != null
     val parsedIngredients = ingredientAmounts.mapNotNull { (foodId, amount) ->
         parseDecimal(amount)?.takeIf { it in 0.1..5000.0 }?.let { DishIngredient(foodId, it) }
     }
@@ -5137,6 +5125,13 @@ private fun DishEditorScreen(
             singleLine = true
         )
         Text("Ingredientes del plato", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        if (proportionsLocked) {
+            Text(
+                "Las proporciones se fijaron al crear el plato. En el menú puede variar la cantidad total, pero todos los ingredientes escalan juntos.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         ingredientAmounts.forEach { (foodId, amount) ->
             val food = foodsById[foodId]
             if (food != null) {
@@ -5147,20 +5142,32 @@ private fun DishEditorScreen(
                 ) {
                     SmallFoodCategoryBadge(food.category)
                     Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    NumericField(
-                        "Gramos",
-                        amount,
-                        { ingredientAmounts = ingredientAmounts + (foodId to it) },
-                        Modifier.width(105.dp)
-                    )
-                    TextButton(onClick = { ingredientAmounts = ingredientAmounts - foodId }) { Text("Quitar") }
+                    if (proportionsLocked) {
+                        Text("${amount} g", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "Proporción bloqueada",
+                            modifier = Modifier.size(17.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        NumericField(
+                            "Gramos",
+                            amount,
+                            { ingredientAmounts = ingredientAmounts + (foodId to it) },
+                            Modifier.width(105.dp)
+                        )
+                        TextButton(onClick = { ingredientAmounts = ingredientAmounts - foodId }) { Text("Quitar") }
+                    }
                 }
             }
         }
-        OutlinedButton(onClick = { choosingFood = true }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Añadir ingrediente")
+        if (!proportionsLocked) {
+            OutlinedButton(onClick = { choosingFood = true }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Añadir ingrediente")
+            }
         }
         preview?.let { totals ->
             Text(
@@ -5612,7 +5619,6 @@ private fun FoodDetailScreen(
     onDelete: () -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
-    var choosingMeal by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     val similarFoods = FoodSimilarityEngine.findSimilar(food, foods)
     val menuUsages = remember(food.id, plannedMeals, dishes) {
@@ -5664,21 +5670,6 @@ private fun FoodDetailScreen(
         }
     }
 
-    if (choosingMeal) {
-        AddToMealDialog(
-            meals = plannedMeals,
-            itemName = food.name,
-            onChoose = {
-                onAddToMeal(it)
-                choosingMeal = false
-            },
-            onCreateNew = {
-                choosingMeal = false
-                onAddNewMeal()
-            },
-            onDismiss = { choosingMeal = false }
-        )
-    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -5769,9 +5760,9 @@ private fun FoodDetailScreen(
                 if (menuUsages.isEmpty()) {
                     Text("Este alimento no está incluido en el menú de esta semana.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    menuUsages.forEachIndexed { index, (mealId, label, amount) ->
+                    menuUsages.forEachIndexed { index, (_, label, amount) ->
                         Row(
-                            Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 8.dp),
+                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(label, modifier = Modifier.weight(1f), maxLines = 2)
@@ -5779,11 +5770,6 @@ private fun FoodDetailScreen(
                         }
                         if (index < menuUsages.lastIndex) HorizontalDivider()
                     }
-                }
-                OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Añadir a otra comida")
                 }
             }
         }
@@ -5795,9 +5781,9 @@ private fun FoodDetailScreen(
                 if (nextMenuUsages.isEmpty()) {
                     Text("Este alimento no está incluido en el menú de la semana que viene.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    nextMenuUsages.forEachIndexed { index, (mealId, label, amount) ->
+                    nextMenuUsages.forEachIndexed { index, (_, label, amount) ->
                         Row(
-                            Modifier.fillMaxWidth().clickable { onOpenMeal(mealId) }.padding(vertical = 8.dp),
+                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(label, modifier = Modifier.weight(1f), maxLines = 2)
@@ -5805,11 +5791,6 @@ private fun FoodDetailScreen(
                         }
                         if (index < nextMenuUsages.lastIndex) HorizontalDivider()
                     }
-                }
-                OutlinedButton(onClick = { choosingMeal = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Añadir a otra comida")
                 }
             }
         }
