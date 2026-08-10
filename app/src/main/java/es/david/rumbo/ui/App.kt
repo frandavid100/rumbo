@@ -1310,17 +1310,6 @@ private fun TodayPlanSection(
     }
     var optimizationPreview by remember { mutableStateOf<QuantityOptimizationResult?>(null) }
     var optimizationMessage by remember { mutableStateOf<String?>(null) }
-    var generationMessage by remember { mutableStateOf<String?>(null) }
-    generationMessage?.let { message ->
-        AlertDialog(
-            onDismissRequest = { generationMessage = null },
-            title = { Text("Generar semana") },
-            text = { Text(message) },
-            confirmButton = {
-                TextButton(onClick = { generationMessage = null }) { Text("Entendido") }
-            }
-        )
-    }
     optimizationPreview?.let { result ->
         QuantityOptimizationPreviewDialog(
             result = result,
@@ -2901,7 +2890,18 @@ private fun WeeklyPlannerScreen(
     }
     var optimizationPreview by remember { mutableStateOf<QuantityOptimizationResult?>(null) }
     var optimizationMessage by remember { mutableStateOf<String?>(null) }
+    var generationMessage by remember { mutableStateOf<String?>(null) }
 
+    generationMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { generationMessage = null },
+            title = { Text("Generar semana") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { generationMessage = null }) { Text("Entendido") }
+            }
+        )
+    }
     optimizationPreview?.let { result ->
         QuantityOptimizationPreviewDialog(
             result = result,
