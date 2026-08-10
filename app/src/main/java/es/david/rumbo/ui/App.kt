@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Grain
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.Person
@@ -3244,12 +3245,39 @@ private fun PlannedMealEditorScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
-                    Column(Modifier.weight(1f)) {
+                    Column(
+                        Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
+                            if (!draft.adjustable) {
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = "Cantidad fija",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Text(
+                                dish.name,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        val grams = parseDecimal(draft.grams)
+                        val calories = grams?.let { dish.nutritionForGrams(foodsById, it).calories }
                         Text(
-                            dish.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 2,
+                            calories?.let { "${formatDecimal(it)} kcal en esta cantidad" }
+                                ?: "Introduce una cantidad",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -3258,7 +3286,7 @@ private fun PlannedMealEditorScreen(
                     }
                     Box {
                         IconButton(onClick = { expandedDishMenuId = dishId }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones")
+                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones de ${dish.name}")
                         }
                         DropdownMenu(
                             expanded = expandedDishMenuId == dishId,
@@ -3285,7 +3313,9 @@ private fun PlannedMealEditorScreen(
                         }
                     }
                 }
-                HorizontalDivider()
+                if (itemAmounts.isNotEmpty() || dishId != dishAmounts.keys.lastOrNull()) {
+                    HorizontalDivider()
+                }
             }
         }
         itemAmounts.forEach { (foodId, draft) ->
@@ -3296,32 +3326,56 @@ private fun PlannedMealEditorScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SmallFoodCategoryBadge(food.category)
-                    Column(Modifier.weight(1f).clickable { onOpenFood(foodId) }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        Modifier.weight(1f).clickable { onOpenFood(foodId) },
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SmallFoodCategoryBadge(food.category)
+                            if (!draft.adjustable) {
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = "Cantidad fija",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                             Text(
                                 food.name,
                                 modifier = Modifier.weight(1f),
                                 style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 2,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             if (foodId in selectedForDish) {
                                 Icon(
                                     Icons.Default.Check,
-                                    contentDescription = "Seleccionado",
+                                    contentDescription = "Seleccionado para crear plato",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
+                        val grams = parseDecimal(draft.grams)
+                        val calories = grams?.let { food.calories * it / 100.0 }
+                        Text(
+                            calories?.let { "${formatDecimal(it)} kcal en esta cantidad" }
+                                ?: "Introduce una cantidad",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     CompactGramField(draft.grams) {
                         itemAmounts = itemAmounts + (foodId to draft.copy(grams = it))
                     }
                     Box {
                         IconButton(onClick = { expandedFoodMenuId = foodId }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones")
+                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones de ${food.name}")
                         }
                         DropdownMenu(
                             expanded = expandedFoodMenuId == foodId,
@@ -3370,7 +3424,9 @@ private fun PlannedMealEditorScreen(
                         }
                     }
                 }
-                HorizontalDivider()
+                if (foodId != itemAmounts.keys.lastOrNull()) {
+                    HorizontalDivider()
+                }
             }
         }
         OutlinedButton(onClick = { choosingElement = true }, modifier = Modifier.fillMaxWidth()) {
