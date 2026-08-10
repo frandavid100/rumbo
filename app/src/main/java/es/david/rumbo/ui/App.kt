@@ -339,6 +339,12 @@ fun RumboApp(repository: AppRepository) {
                             Text("Editar comida", fontWeight = FontWeight.SemiBold)
                         Screen.ADD_PLANNED_MEAL ->
                             Text("Nueva comida", fontWeight = FontWeight.SemiBold)
+                        Screen.ADD ->
+                            Text("Nueva medición", fontWeight = FontWeight.SemiBold)
+                        Screen.EDIT_MEASUREMENT ->
+                            Text("Editar medición", fontWeight = FontWeight.SemiBold)
+                        Screen.PROFILE ->
+                            Text(if (data.profile == null) "Nuevo perfil" else "Perfiles", fontWeight = FontWeight.SemiBold)
                         Screen.BODY_EXPLANATION, Screen.RECOMMENDATION_EXPLANATION ->
                             Text("Situación y objetivo", fontWeight = FontWeight.SemiBold)
                         Screen.PLANNER ->
@@ -901,6 +907,17 @@ private fun HomeScreen(
                 )
             }
         }
+        val missingWeight = effectiveGoal.weightKg == null
+        val missingWaist = effectiveGoal.waistCm == null
+        if (missingWeight || missingWaist) {
+            item {
+                MissingMeasurementCard(
+                    missingWeight = missingWeight,
+                    missingWaist = missingWaist,
+                    onAddMeasurement = onAddMeasurement
+                )
+            }
+        }
         item {
             TodayPlanSection(
                 meals = meals,
@@ -921,6 +938,38 @@ private fun HomeScreen(
                 profileId = profile?.id,
                 onOpenFoods = onOpenFoods
             )
+        }
+    }
+}
+
+@Composable
+private fun MissingMeasurementCard(
+    missingWeight: Boolean,
+    missingWaist: Boolean,
+    onAddMeasurement: () -> Unit
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                if (missingWeight) "Añade tu peso" else "Añade tu cintura",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            HorizontalDivider()
+            Text(
+                when {
+                    missingWeight && missingWaist ->
+                        "Añade una primera medición para que Rumbo pueda valorar tu situación."
+                    missingWeight ->
+                        "La cintura ya permite orientar el objetivo, pero con el peso también podremos calcular el IMC y las calorías que necesitas."
+                    else ->
+                        "El peso ya permite calcular las calorías, pero la cintura hará más precisa la valoración de la distribución abdominal."
+                },
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedButton(onClick = onAddMeasurement, modifier = Modifier.fillMaxWidth()) {
+                Text(if (missingWeight) "Añadir peso" else "Añadir cintura")
+            }
         }
     }
 }
@@ -2283,20 +2332,14 @@ private fun AddMeasurementScreen(
 ) {
     val isEditing = initial != null
     var date by rememberSaveable(initial?.id) { mutableStateOf(initial?.date ?: LocalDate.now()) }
-    var weight by rememberSaveable(initial?.id) {
-        mutableStateOf(initial?.weightKg?.let(::formatDecimal) ?: "")
-    }
-    var waist by rememberSaveable(initial?.id) {
-        mutableStateOf(initial?.waistCm?.let(::formatDecimal) ?: "")
-    }
+    var weight by rememberSaveable(initial?.id) { mutableStateOf(initial?.weightKg?.let(::formatDecimal) ?: "") }
+    var waist by rememberSaveable(initial?.id) { mutableStateOf(initial?.waistCm?.let(::formatDecimal) ?: "") }
     var activity by remember(initial?.id) { mutableStateOf(initial?.activity) }
     var compliance by remember(initial?.id) { mutableStateOf(initial?.compliance) }
     var goal by remember(initial?.id) { mutableStateOf(initial?.goal) }
     var error by rememberSaveable(initial?.id) { mutableStateOf<String?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
-    val inherited = RecommendationEngine.effectiveValues(
-        data.measurements.filterNot { it.id == initial?.id }
-    )
+    val inherited = RecommendationEngine.effectiveValues(data.measurements.filterNot { it.id == initial?.id })
 
     if (showDatePicker) {
         val initialMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
@@ -2316,64 +2359,71 @@ private fun AddMeasurementScreen(
     }
 
     Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            if (isEditing) "Editar entrada" else "Nueva medición",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.CalendarMonth, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Medición", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider()
+                OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NumericField("Peso (kg)", weight, { weight = it }, Modifier.weight(1f))
+                    NumericField("Cintura (cm)", waist, { waist = it }, Modifier.weight(1f))
+                }
+                Text(
+                    if (isEditing) "Deja vacío un dato si esta entrada no lo modificó."
+                    else "Puedes registrar solo uno. El otro conservará su último valor conocido.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                WaistMeasurementHelp()
+            }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            NumericField("Peso (kg)", weight, { weight = it }, Modifier.weight(1f))
-            NumericField("Cintura (cm)", waist, { waist = it }, Modifier.weight(1f))
-        }
-        Text(
-            if (isEditing) {
-                "Los campos vacíos indican que esta entrada no modificó ese dato."
-            } else {
-                "Puedes rellenar solo uno de los dos. Los valores vacíos no borran la última medición."
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
 
-        SelectorField(
-            label = "Actividad",
-            selectedLabel = activity?.label ?: "Usar la anterior · ${inherited.activity.label}",
-            options = ActivityLevel.entries,
-            optionLabel = { "${it.label} · ${it.description}" },
-            onSelect = { activity = it },
-            onClear = { activity = null }
-        )
-        SelectorField(
-            label = "Cumplimiento desde la medición anterior",
-            selectedLabel = compliance?.label ?: "Sin indicar",
-            options = DietCompliance.entries,
-            optionLabel = { it.label },
-            onSelect = { compliance = it },
-            onClear = { compliance = null }
-        )
-        if (isEditing) {
-            SelectorField(
-                label = "Cambio de objetivo",
-                selectedLabel = goal?.label ?: "Sin cambio",
-                options = WeightGoal.entries,
-                optionLabel = { it.label },
-                onSelect = { goal = it },
-                onClear = { goal = null }
-            )
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Contexto", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider()
+                SelectorField(
+                    label = "Actividad habitual",
+                    selectedLabel = activity?.label ?: "Mantener la anterior · \${inherited.activity.label}",
+                    options = ActivityLevel.entries,
+                    optionLabel = { "\${it.label} · \${it.description}" },
+                    onSelect = { activity = it },
+                    onClear = { activity = null }
+                )
+                SelectorField(
+                    label = "Cómo has seguido el plan",
+                    selectedLabel = compliance?.label ?: "Sin indicar",
+                    options = DietCompliance.entries,
+                    optionLabel = { it.label },
+                    onSelect = { compliance = it },
+                    onClear = { compliance = null }
+                )
+                Text(
+                    "Indica, desde la medición anterior, si comiste aproximadamente lo previsto o una cantidad distinta.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (isEditing) {
+                    SelectorField(
+                        label = "Cambio de objetivo",
+                        selectedLabel = goal?.label ?: "Sin cambio",
+                        options = WeightGoal.entries,
+                        optionLabel = { it.label },
+                        onSelect = { goal = it },
+                        onClear = { goal = null }
+                    )
+                }
+            }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-        Button(
+        OutlinedButton(
             onClick = {
                 val parsedWeight = parseDecimal(weight)
                 val parsedWaist = parseDecimal(waist)
@@ -2407,6 +2457,7 @@ private fun AddMeasurementScreen(
     }
 }
 
+@Composable
 @Composable
 private fun DeleteMeasurementDialog(
     measurement: Measurement,
@@ -5372,7 +5423,6 @@ private fun ProfileScreen(
     var sex by remember(editedProfile?.id, creating) { mutableStateOf(editedProfile?.sex ?: Sex.MALE) }
     var initialWeight by rememberSaveable(editedProfile?.id, creating) { mutableStateOf("") }
     var initialWaist by rememberSaveable(editedProfile?.id, creating) { mutableStateOf("") }
-    var initialGoal by remember(editedProfile?.id, creating) { mutableStateOf<WeightGoal?>(null) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingDelete by remember { mutableStateOf<UserProfile?>(null) }
     val needsBaseline = creating || requiresBaseline
@@ -5380,7 +5430,7 @@ private fun ProfileScreen(
     pendingDelete?.let { selected ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("¿Eliminar el perfil de ${selected.name}?") },
+            title = { Text("¿Eliminar el perfil de \${selected.name}?") },
             text = { Text("Se eliminarán también todas sus mediciones y recomendaciones. Esta acción no se puede deshacer.") },
             confirmButton = {
                 TextButton(onClick = {
@@ -5393,100 +5443,118 @@ private fun ProfileScreen(
     }
 
     Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            when {
-                isOnboarding -> "Configura tu primer perfil"
-                requiresBaseline -> "Completa tu perfil"
-                else -> "Perfiles"
-            },
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            when {
-                needsBaseline -> "Introduce también el peso, la cintura y el objetivo iniciales. Rumbo necesita los tres para ofrecer una pantalla principal útil desde el primer momento."
-                else -> "Si corriges estos datos, las recomendaciones se recalculan; tus mediciones originales no cambian."
-            },
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
         if (!isOnboarding && profiles.isNotEmpty()) {
-            profiles.forEach { listed ->
-                OutlinedButton(
-                    onClick = { onSwitch(listed.id) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        if (listed.id == profile?.id) Icons.Default.Check else Icons.Default.Person,
-                        contentDescription = null
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(vertical = 8.dp)) {
+                    Text(
+                        "Perfiles",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(listed.name, modifier = Modifier.weight(1f))
-                    if (listed.id == profile?.id) Text("Activo")
+                    HorizontalDivider()
+                    profiles.forEach { listed ->
+                        TextButton(
+                            onClick = { onSwitch(listed.id) },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                        ) {
+                            Icon(
+                                if (listed.id == profile?.id) Icons.Default.Check else Icons.Default.Person,
+                                contentDescription = null
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(listed.name, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+                            if (listed.id == profile?.id) Text("Activo")
+                        }
+                    }
+                    HorizontalDivider()
+                    TextButton(
+                        onClick = { creating = true },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                    ) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Añadir otro perfil", modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+                    }
                 }
             }
-            FilledTonalButton(
-                onClick = { creating = true },
-                modifier = Modifier.fillMaxWidth()
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.PersonAdd, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Añadir otro perfil")
+                Text(
+                    if (creating) "Datos personales" else "Datos de \${profile?.name}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                HorizontalDivider()
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(30) },
+                    label = { Text("Nombre del perfil") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NumericField("Altura (cm)", height, { height = it }, Modifier.weight(1f))
+                    OutlinedTextField(
+                        value = birthYear,
+                        onValueChange = { birthYear = it.filter(Char::isDigit).take(4) },
+                        label = { Text("Año de nacimiento") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                SelectorField(
+                    label = "Sexo usado para el cálculo",
+                    selectedLabel = sex.label,
+                    options = Sex.entries,
+                    optionLabel = { it.label },
+                    onSelect = { sex = it },
+                    onClear = null
+                )
             }
-            HorizontalDivider(Modifier.padding(vertical = 6.dp))
-            Text(
-                if (creating) "Nuevo perfil" else "Datos de ${profile?.name}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
         }
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it.take(30) },
-            label = { Text("Nombre del perfil") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        NumericField("Altura (cm)", height, { height = it }, Modifier.fillMaxWidth())
-        OutlinedTextField(
-            value = birthYear,
-            onValueChange = { birthYear = it.filter(Char::isDigit).take(4) },
-            label = { Text("Año de nacimiento") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        SelectorField(
-            label = "Sexo usado por la fórmula",
-            selectedLabel = sex.label,
-            options = Sex.entries,
-            optionLabel = { it.label },
-            onSelect = { sex = it },
-            onClear = null
-        )
+
         if (needsBaseline) {
-            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            Text("Situación inicial", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                NumericField("Peso (kg)", initialWeight, { initialWeight = it }, Modifier.weight(1f))
-                NumericField("Cintura (cm)", initialWaist, { initialWaist = it }, Modifier.weight(1f))
+            Card(Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "Primera medición",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    HorizontalDivider()
+                    Text(
+                        "Introduce el peso, la cintura o ambos. Con los dos indicadores podremos darte una valoración más precisa.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        NumericField("Peso (kg)", initialWeight, { initialWeight = it }, Modifier.weight(1f))
+                        NumericField("Cintura (cm)", initialWaist, { initialWaist = it }, Modifier.weight(1f))
+                    }
+                    WaistMeasurementHelp()
+                    Text(
+                        "Rumbo propondrá el objetivo que mejor encaje con esta medición. Después podrás cambiarlo desde la pantalla principal.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            SelectorField(
-                label = "Objetivo inicial",
-                selectedLabel = initialGoal?.label ?: "Selecciona un objetivo",
-                options = WeightGoal.entries,
-                optionLabel = { it.label },
-                onSelect = { initialGoal = it },
-                onClear = null
-            )
         }
+
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-        Button(
+        OutlinedButton(
             onClick = {
                 val candidate = UserProfile(
                     id = editedProfile?.id ?: System.currentTimeMillis(),
@@ -5499,9 +5567,12 @@ private fun ProfileScreen(
                 val parsedWaist = parseDecimal(initialWaist)
                 error = when {
                     !candidate.isValid() -> "Revisa el nombre, la altura y el año de nacimiento. La app está diseñada para personas adultas."
-                    needsBaseline && (parsedWeight == null || parsedWeight !in 30.0..350.0) -> "Introduce un peso válido entre 30 y 350 kg."
-                    needsBaseline && (parsedWaist == null || parsedWaist !in 35.0..250.0) -> "Introduce una cintura válida entre 35 y 250 cm."
-                    needsBaseline && initialGoal == null -> "Selecciona un objetivo inicial."
+                    needsBaseline && initialWeight.isNotBlank() && (parsedWeight == null || parsedWeight !in 30.0..350.0) ->
+                        "El peso debe estar entre 30 y 350 kg."
+                    needsBaseline && initialWaist.isNotBlank() && (parsedWaist == null || parsedWaist !in 35.0..250.0) ->
+                        "La cintura debe estar entre 35 y 250 cm."
+                    needsBaseline && parsedWeight == null && parsedWaist == null ->
+                        "Introduce al menos el peso o la cintura."
                     else -> null
                 }
                 if (error == null) {
@@ -5513,12 +5584,10 @@ private fun ProfileScreen(
                                 date = LocalDate.now(),
                                 weightKg = parsedWeight,
                                 waistCm = parsedWaist,
-                                goal = initialGoal
+                                goal = WeightGoal.AUTOMATIC
                             )
                         )
-                    } else {
-                        onSave(candidate)
-                    }
+                    } else onSave(candidate)
                     creating = false
                 }
             },
@@ -5538,17 +5607,27 @@ private fun ProfileScreen(
                 Text("Eliminar este perfil", color = MaterialTheme.colorScheme.error)
             }
         }
-
         if (!isOnboarding && creating) {
-            TextButton(onClick = { creating = false }, modifier = Modifier.fillMaxWidth()) {
-                Text("Cancelar")
-            }
+            TextButton(onClick = { creating = false }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
         }
-
     }
 }
 
 @Composable
+private fun WaistMeasurementHelp() {
+    val uriHandler = LocalUriHandler.current
+    TextButton(
+        onClick = {
+            uriHandler.openUri("https://www.nhs.uk/common-health-questions/lifestyle/why-is-my-waist-size-important/")
+        },
+        contentPadding = PaddingValues(horizontal = 0.dp)
+    ) {
+        Text("Cómo medir correctamente la cintura")
+    }
+}
+
+@Composable
+private fun CompactGramField@Composable
 private fun CompactGramField(value: String, onValueChange: (String) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
