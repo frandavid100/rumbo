@@ -223,21 +223,27 @@ object WeeklyMenuGenerator {
             type = slot.mealType,
             days = setOf(slot.day),
             items = filter { it.itemKind == PlannedItemKind.FOOD }.map { rule ->
+                val fixed = rule.fixedGrams[slot.mealType]
+                    ?.takeIf { slot in rule.fixedSlots }
+                val grams = fixed ?: rule.preferredGrams
                 PlannedFood(
                     rule.itemId,
-                    rule.preferredGrams,
-                    true,
-                    rule.preferredGrams * rule.minimumFactor,
-                    rule.preferredGrams * rule.maximumFactor
+                    grams,
+                    fixed == null,
+                    if (fixed == null) grams * rule.minimumFactor else grams,
+                    if (fixed == null) grams * rule.maximumFactor else grams
                 )
             },
             dishes = filter { it.itemKind == PlannedItemKind.DISH }.map { rule ->
+                val fixed = rule.fixedGrams[slot.mealType]
+                    ?.takeIf { slot in rule.fixedSlots }
+                val grams = fixed ?: rule.preferredGrams
                 PlannedDish(
                     rule.itemId,
-                    rule.preferredGrams,
-                    true,
-                    rule.preferredGrams * rule.minimumFactor,
-                    rule.preferredGrams * rule.maximumFactor
+                    grams,
+                    fixed == null,
+                    if (fixed == null) grams * rule.minimumFactor else grams,
+                    if (fixed == null) grams * rule.maximumFactor else grams
                 )
             }
         )
