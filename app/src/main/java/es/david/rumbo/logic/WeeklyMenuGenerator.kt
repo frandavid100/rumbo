@@ -81,7 +81,7 @@ object WeeklyMenuGenerator {
 
         val generatedTypes = MealType.entries.filter { type ->
             (mealShares[type] ?: defaultMealShares.getValue(type)) > 0.0 &&
-                (derivedRules.any { type in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER } ||
+                (derivedRules.any { type in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS } ||
                     fixedBySlot.keys.any { it.mealType == type })
         }.toSet()
         require(generatedTypes.isNotEmpty()) { "Indica al menos una comida en las reglas del menú." }
@@ -91,7 +91,8 @@ object WeeklyMenuGenerator {
         }
         slots.forEach { slot ->
             if (fixedBySlot[slot].isNullOrEmpty() && derivedRules.none {
-                    slot.mealType in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER
+                    slot.mealType in it.allowedMealTypes && slot.day in it.allowedDays &&
+                        it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
                 }) {
                 throw PlanningConflictException(
                     "No hay candidatos para ${slot.day.label.lowercase()} · ${slot.mealType.label.lowercase()}."
@@ -202,8 +203,8 @@ object WeeklyMenuGenerator {
     ): List<PlanningRule> {
         val chosen = fixed.distinctBy { it.itemKind to it.itemId }.toMutableList()
         val eligible = rules.filter {
-            slot.mealType in it.allowedMealTypes &&
-                it.frequency != PlanningFrequency.NEVER
+            slot.mealType in it.allowedMealTypes && slot.day in it.allowedDays &&
+                it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
         }
         val maximumItems = when (slot.mealType) {
             MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
@@ -270,7 +271,7 @@ object WeeklyMenuGenerator {
         foodRules: List<PlanningRule>,
         dishes: List<Dish>
     ): Map<PlanningSlot, List<PlanningRule>> = foodRules
-        .flatMap { rule -> rule.fixedSlots.map { it to rule } }
+        .flatMap { rule -> rule.requiredSlots().map { it to rule } }
         .groupBy({ it.first }, { it.second })
         .mapValues { (slot, required) ->
             val remaining = required.distinctBy { it.itemId }.toMutableList()
@@ -402,7 +403,8 @@ object WeeklyMenuGenerator {
         random: Random
     ): PlanningRule {
         val candidates = rules.filter {
-            slot.mealType in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER
+            slot.mealType in it.allowedMealTypes && slot.day in it.allowedDays &&
+                it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
         }
         if (candidates.isEmpty()) {
             throw PlanningConflictException(
