@@ -119,6 +119,8 @@ import es.david.rumbo.data.AppRepository
 import es.david.rumbo.logic.FoodSimilarityEngine
 import es.david.rumbo.logic.MealPlanEvaluator
 import es.david.rumbo.logic.MealQuantityOptimizer
+import es.david.rumbo.logic.NutrientKind
+import es.david.rumbo.logic.NutritionTolerancePolicy
 import es.david.rumbo.logic.PlanNutritionAssessment
 import es.david.rumbo.logic.QuantityOptimizationResult
 import es.david.rumbo.logic.RecommendationEngine
@@ -1499,19 +1501,19 @@ private data class MenuItemLine(
 @Composable
 private fun TodayNutritionSummary(assessment: PlanNutritionAssessment) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        NutritionPercentMetric(
+        NutritionAmountMetric(
             "Calorías", assessment.actual.calories, assessment.target.calories,
             Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
         )
-        NutritionPercentMetric(
+        NutritionAmountMetric(
             "Proteína", assessment.actual.proteinGrams, assessment.target.proteinGrams,
             foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN), Modifier.weight(1f)
         )
-        NutritionPercentMetric(
+        NutritionAmountMetric(
             "Hidratos", assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams,
             foodCategoryIcon(FoodCategory.CARBOHYDRATE), foodCategoryColor(FoodCategory.CARBOHYDRATE), Modifier.weight(1f)
         )
-        NutritionPercentMetric(
+        NutritionAmountMetric(
             "Grasa", assessment.actual.fatGrams, assessment.target.fatGrams,
             foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT), Modifier.weight(1f)
         )
@@ -1519,7 +1521,7 @@ private fun TodayNutritionSummary(assessment: PlanNutritionAssessment) {
 }
 
 @Composable
-private fun NutritionPercentMetric(
+private fun NutritionAmountMetric(
     label: String,
     actual: Double,
     target: Double,
@@ -1527,7 +1529,6 @@ private fun NutritionPercentMetric(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    val ratio = if (target > 0.0) actual / target else 0.0
     Row(
         modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -1536,7 +1537,7 @@ private fun NutritionPercentMetric(
         Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(4.dp))
         Text(
-            "${(ratio * 100).roundToInt()} %",
+            "${actual.roundToInt()}/${target.roundToInt()}",
             color = color,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
@@ -1550,16 +1551,10 @@ private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
         return "Faltan: ${assessment.missingMealTypes.joinToString { it.label.lowercase() }}."
     }
     if (!assessment.actual.isComplete) return "Faltan datos nutricionales para valorar el menú completo."
-    val nutrients = listOf(
-        Triple("calorías", assessment.actual.calories, assessment.target.calories),
-        Triple("proteína", assessment.actual.proteinGrams, assessment.target.proteinGrams),
-        Triple("hidratos", assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams),
-        Triple("grasa", assessment.actual.fatGrams, assessment.target.fatGrams)
-    )
-    val below = nutrients.filter { (_, actual, target) -> target > 0.0 && actual < target * 0.90 }
-        .map { it.first }
-    val above = nutrients.filter { (_, actual, target) -> target > 0.0 && actual > target * 1.10 }
-        .map { it.first }
+    val names = listOf("calorías", "proteína", "hidratos", "grasa")
+    val outside = assessment.evaluations.withIndex().filter { it.value.fit == TargetFit.OUTSIDE }
+    val below = outside.filter { it.value.difference < 0.0 }.map { names[it.index] }
+    val above = outside.filter { it.value.difference > 0.0 }.map { names[it.index] }
     if (below.isEmpty() && above.isEmpty()) return "El menú del día está bien ajustado a tus objetivos."
     return buildList {
         if (below.isNotEmpty()) add("Por debajo del objetivo: ${below.joinToString()}.")
@@ -3237,21 +3232,21 @@ private fun WeeklyNutritionSummary(assessments: List<PlanNutritionAssessment>) {
     val targetFat = assessments.sumOf { it.target.fatGrams }
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        NutritionPercentMetric(
+        NutritionAmountMetric(
             "Calorías", actualCalories, targetCalories,
             Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
         )
-        NutritionPercentMetric(
+        NutritionAmountMetric(
             "Proteína", actualProtein, targetProtein,
             foodCategoryIcon(FoodCategory.PROTEIN), foodCategoryColor(FoodCategory.PROTEIN), Modifier.weight(1f)
         )
-        NutritionPercentMetric(
+        NutritionAmountMetric(
             "Hidratos", actualCarbohydrates, targetCarbohydrates,
             foodCategoryIcon(FoodCategory.CARBOHYDRATE),
             foodCategoryColor(FoodCategory.CARBOHYDRATE),
             Modifier.weight(1f)
         )
-        NutritionPercentMetric(
+        NutritionAmountMetric(
             "Grasa", actualFat, targetFat,
             foodCategoryIcon(FoodCategory.FAT), foodCategoryColor(FoodCategory.FAT), Modifier.weight(1f)
         )
@@ -3275,22 +3270,31 @@ private fun weeklyAssessmentText(
     if (assessments.any { !it.actual.isComplete }) {
         return "Faltan datos nutricionales para valorar el menú semanal completo."
     }
+    val days = assessments.size.toDouble()
     val nutrients = listOf(
-        Triple("calorías", assessments.sumOf { it.actual.calories }, assessments.sumOf { it.target.calories }),
-        Triple("proteína", assessments.sumOf { it.actual.proteinGrams }, assessments.sumOf { it.target.proteinGrams }),
-        Triple(
-            "hidratos",
-            assessments.sumOf { it.actual.carbohydrateGrams },
-            assessments.sumOf { it.target.carbohydrateGrams }
-        ),
-        Triple("grasa", assessments.sumOf { it.actual.fatGrams }, assessments.sumOf { it.target.fatGrams })
+        Triple("calorías", NutrientKind.CALORIES, assessments.map { it.actual.calories to it.target.calories }),
+        Triple("proteína", NutrientKind.PROTEIN, assessments.map { it.actual.proteinGrams to it.target.proteinGrams }),
+        Triple("hidratos", NutrientKind.CARBOHYDRATES, assessments.map { it.actual.carbohydrateGrams to it.target.carbohydrateGrams }),
+        Triple("grasa", NutrientKind.FAT, assessments.map { it.actual.fatGrams to it.target.fatGrams })
     )
-    val below = nutrients.filter { (_, actual, target) -> target > 0.0 && actual < target * 0.90 }
+    val weeklyEvaluations = nutrients.map { (name, kind, values) ->
+        name to NutritionTolerancePolicy.evaluate(
+            kind,
+            values.sumOf { it.first } / days,
+            values.sumOf { it.second } / days
+        )
+    }
+    val below = weeklyEvaluations.filter { it.second.fit == TargetFit.OUTSIDE && it.second.difference < 0.0 }
         .map { it.first }
-    val above = nutrients.filter { (_, actual, target) -> target > 0.0 && actual > target * 1.10 }
+    val above = weeklyEvaluations.filter { it.second.fit == TargetFit.OUTSIDE && it.second.difference > 0.0 }
         .map { it.first }
+    val extremeDays = assessments.count { it.overall == TargetFit.OUTSIDE }
     if (below.isEmpty() && above.isEmpty()) {
-        return "El menú semanal está bien ajustado a tus objetivos."
+        return if (extremeDays == 0) {
+            "El menú semanal está bien ajustado a tus objetivos."
+        } else {
+            "El promedio semanal está bien ajustado, pero conviene revisar ${if (extremeDays == 1) "un día" else "$extremeDays días"}."
+        }
     }
     return buildList {
         if (below.isNotEmpty()) add("Por debajo del objetivo semanal: ${below.joinToString()}.")
