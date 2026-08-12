@@ -15,14 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Exportar código temporalmente
-        run: git archive --format=zip --output=rumbo-source.zip HEAD
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rumbo-source-temporal
-          path: rumbo-source.zip
-          retention-days: 1
-          if-no-files-found: error
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
