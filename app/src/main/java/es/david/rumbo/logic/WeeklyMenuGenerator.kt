@@ -209,7 +209,7 @@ object WeeklyMenuGenerator {
 
         while (chosen.size < maximumItems) {
             var candidates = eligible.filter { candidate ->
-                chosen.none { it.sameItem(candidate) } &&
+                chosen.none { it.sameItem(candidate) || it.overlaps(candidate, dishesById) } &&
                     !(candidate.itemKind == PlannedItemKind.DISH &&
                         chosen.any { it.itemKind == PlannedItemKind.DISH })
             }
@@ -315,6 +315,19 @@ object WeeklyMenuGenerator {
                     .sumOf { it.frequency.weight / alternatives(it) }
             }
         }
+    }
+
+    private fun PlanningRule.overlaps(
+        other: PlanningRule,
+        dishesById: Map<Long, Dish>
+    ): Boolean {
+        if (itemKind == PlannedItemKind.FOOD && other.itemKind == PlannedItemKind.DISH) {
+            return dishesById[other.itemId]?.ingredients?.any { it.foodId == itemId } == true
+        }
+        if (itemKind == PlannedItemKind.DISH && other.itemKind == PlannedItemKind.FOOD) {
+            return dishesById[itemId]?.ingredients?.any { it.foodId == other.itemId } == true
+        }
+        return false
     }
 
     private fun combinationError(
