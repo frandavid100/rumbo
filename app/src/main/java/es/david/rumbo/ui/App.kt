@@ -6,11 +6,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,8 +58,10 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.Card as MaterialCard
+import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -105,6 +109,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -170,6 +175,27 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
+
+@Composable
+private fun Card(
+    modifier: Modifier = Modifier,
+    shape: Shape = CardDefaults.shape,
+    colors: CardColors = CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+    ),
+    elevation: CardElevation = CardDefaults.cardElevation(),
+    border: BorderStroke? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    MaterialCard(
+        modifier = modifier,
+        shape = shape,
+        colors = colors,
+        elevation = elevation,
+        border = border,
+        content = content
+    )
+}
 
 private enum class Screen(val label: String, val icon: ImageVector, val inNavigation: Boolean = true) {
     HOME("Inicio", Icons.Default.Home),
@@ -2274,7 +2300,7 @@ private fun BodyExplanationScreen(
 
 @Composable
 private fun NarrativeSection(title: String, body: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -4648,6 +4674,10 @@ private fun FoodDishCatalogScreen(
                 modifier = Modifier.fillMaxWidth()
             ) { }
             Spacer(Modifier.height(8.dp))
+            scanMessage?.let {
+                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+            }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -4665,10 +4695,6 @@ private fun FoodDishCatalogScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            scanMessage?.let {
-                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-            }
             Box {
                 FilledTonalButton(
                     onClick = { addMenuExpanded = true },
@@ -5482,14 +5508,9 @@ private fun SmallFoodCategoryBadge(category: FoodCategory) {
     }
 }
 
-private fun foodCategoryColor(category: FoodCategory): Color = when (category) {
-    FoodCategory.CARBOHYDRATE -> Color(0xFF2563A6)
-    FoodCategory.FRUIT -> Color(0xFF9C3D78)
-    FoodCategory.FAT -> Color(0xFF9A6700)
-    FoodCategory.PROTEIN -> Color(0xFFD05A00)
-    FoodCategory.VEGETABLE -> Color(0xFF287A3D)
-    FoodCategory.OTHER -> Color(0xFF666B73)
-}
+@Composable
+private fun foodCategoryColor(category: FoodCategory): Color =
+    MaterialTheme.colorScheme.onSurfaceVariant
 
 private fun foodCategoryIcon(category: FoodCategory): ImageVector = when (category) {
     FoodCategory.CARBOHYDRATE -> Icons.Default.Grain
@@ -5551,19 +5572,19 @@ private fun FoodSecondaryNutritionStrip(food: Food) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         NutrientIconValue(
             Icons.Default.Circle, "Grasas saturadas", food.saturatedFatGrams, "g",
-            Color(0xFF8D4E2F), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.Cake, "Azúcares", food.sugarGrams, "g",
-            Color(0xFF9C3D78), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.Eco, "Fibra", food.fiberGrams, "g",
-            Color(0xFF287A3D), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.AcUnit, "Sal", food.saltGrams, "g",
-            Color(0xFF607D8B), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
     }
 }
