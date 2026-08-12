@@ -69,10 +69,14 @@ class MealQuantityOptimizerTest {
         )
         assertTrue(optimizedBreakfast.resolvedGrams(adjustableRice, WeekDay.MONDAY) in 40.0..250.0)
         assertTrue(optimizedBreakfast.resolvedGrams(adjustableRice, WeekDay.TUESDAY) in 40.0..250.0)
-        assertTrue(
-            abs(afterMonday.actual.calories - recommendation.calories) <
-                abs(beforeMonday.actual.calories - recommendation.calories)
+        fun worstDeviation(assessment: PlanNutritionAssessment): Double = maxOf(
+            abs(assessment.actual.calories - assessment.target.calories) / assessment.target.calories,
+            abs(assessment.actual.proteinGrams - assessment.target.proteinGrams) / assessment.target.proteinGrams,
+            abs(assessment.actual.carbohydrateGrams - assessment.target.carbohydrateGrams) /
+                assessment.target.carbohydrateGrams,
+            abs(assessment.actual.fatGrams - assessment.target.fatGrams) / assessment.target.fatGrams
         )
+        assertTrue(worstDeviation(afterMonday) < worstDeviation(beforeMonday))
         assertTrue(result.changes.none { it.label == peach.name })
     }
 
