@@ -1060,7 +1060,9 @@ private fun ProfileAvatar(profile: UserProfile?, size: androidx.compose.ui.unit.
     val bitmap by produceState<android.graphics.Bitmap?>(null, profile?.photoUri) {
         value = profile?.photoUri?.let { uri ->
             runCatching {
-                context.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use(android.graphics.BitmapFactory::decodeStream)
+                context.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use {
+                    android.graphics.BitmapFactory.decodeStream(it)
+                }
             }.getOrNull()
         }
     }
@@ -1249,6 +1251,8 @@ private fun HomeScreen(
             )
         }
     }
+}
+
 }
 
 @Composable
