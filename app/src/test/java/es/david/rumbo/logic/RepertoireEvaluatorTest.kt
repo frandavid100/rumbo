@@ -37,6 +37,7 @@ class RepertoireEvaluatorTest {
 
         assertEquals(1, result.metrics.availableFoods)
         assertEquals(1, result.coverage.single().alternatives)
+        assertTrue(result.reactivationFoodIds.contains(2L))
     }
 
     @Test
