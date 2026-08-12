@@ -174,7 +174,11 @@ object MealQuantityOptimizer {
                             food.fatGrams!! / 100.0
                         ),
                         step = food.unitAmount?.let { amount ->
-                            if (food.wholeUnitsOnly) amount else amount / food.unitDivisions.coerceAtLeast(1)
+                            when {
+                                food.wholeUnitsOnly -> amount
+                                food.unitDivisions > 1 -> amount / food.unitDivisions
+                                else -> null
+                            }
                         }
                     )
                 )
