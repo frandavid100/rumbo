@@ -5779,6 +5779,9 @@ private fun FoodEditorScreen(foods: List<Food>, initial: Food? = null, onSave: (
     var protein by rememberSaveable(initial?.id) { mutableStateOf(initial?.proteinGrams?.let(::formatDecimal).orEmpty()) }
     var fiber by rememberSaveable(initial?.id) { mutableStateOf(initial?.fiberGrams?.let(::formatDecimal).orEmpty()) }
     var linksText by rememberSaveable(initial?.id) { mutableStateOf(initial?.links?.joinToString("\n").orEmpty()) }
+    var unitName by rememberSaveable(initial?.id) { mutableStateOf(initial?.unitName.orEmpty()) }
+    var unitAmount by rememberSaveable(initial?.id) { mutableStateOf(initial?.unitAmount?.let(::formatDecimal).orEmpty()) }
+    var wholeUnitsOnly by rememberSaveable(initial?.id) { mutableStateOf(initial?.wholeUnitsOnly == true) }
     var error by rememberSaveable(initial?.id) { mutableStateOf<String?>(null) }
 
     Column(
@@ -5824,6 +5827,23 @@ private fun FoodEditorScreen(foods: List<Food>, initial: Food? = null, onSave: (
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Text("Unidades", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        OutlinedTextField(
+            value = unitName,
+            onValueChange = { unitName = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Nombre de la unidad (opcional)") },
+            placeholder = { Text("Vasito, huevo, loncha…") },
+            singleLine = true
+        )
+        NumericField("Gramos o ml por unidad", unitAmount, { unitAmount = it }, Modifier.fillMaxWidth())
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = wholeUnitsOnly,
+                onCheckedChange = { wholeUnitsOnly = it }
+            )
+            Text("Usar solo unidades completas")
+        }
         OutlinedTextField(
             value = linksText,
             onValueChange = { linksText = it },
@@ -5844,6 +5864,7 @@ private fun FoodEditorScreen(foods: List<Food>, initial: Food? = null, onSave: (
                 val values = listOf(calories, fat, carbohydrates, protein).map(::parseDecimal)
                 val parsedFiber = fiber.takeIf { it.isNotBlank() }?.let(::parseDecimal)
                 val parsedLinks = linksText.lines().map(String::trim).filter(String::isNotEmpty).distinct()
+                val parsedUnitAmount = unitAmount.takeIf { it.isNotBlank() }?.let(::parseDecimal)
                 error = when {
                     name.trim().isEmpty() -> "Introduce el nombre del alimento."
                     name.trim().length > 160 -> "El nombre no puede superar 160 caracteres."
@@ -5856,6 +5877,13 @@ private fun FoodEditorScreen(foods: List<Food>, initial: Food? = null, onSave: (
                         "Cada nutriente debe estar entre 0 y 100 g por cada 100 g."
                     parsedFiber != null && parsedFiber !in 0.0..100.0 ->
                         "La fibra debe estar entre 0 y 100 g por cada 100 g."
+                    unitName.isBlank() != unitAmount.isBlank() ->
+                        "Indica tanto el nombre de la unidad como su equivalencia."
+                    unitName.trim().length > 40 -> "El nombre de la unidad no puede superar 40 caracteres."
+                    unitAmount.isNotBlank() && (parsedUnitAmount == null || parsedUnitAmount !in 0.1..5000.0) ->
+                        "La equivalencia debe estar entre 0,1 y 5000 g o ml."
+                    wholeUnitsOnly && unitName.isBlank() ->
+                        "Define una unidad antes de exigir unidades completas."
                     parsedLinks.size > 10 -> "Solo se pueden guardar diez enlaces por alimento."
                     parsedLinks.any { it.length > 500 || (!it.startsWith("https://") && !it.startsWith("http://")) } ->
                         "Cada enlace debe comenzar por https:// o http://."
@@ -5872,7 +5900,10 @@ private fun FoodEditorScreen(foods: List<Food>, initial: Food? = null, onSave: (
                             carbohydrateGrams = values[2]!!,
                             proteinGrams = values[3]!!,
                             fiberGrams = parsedFiber,
-                            links = parsedLinks
+                            links = parsedLinks,
+                            unitName = unitName.trim().ifBlank { null },
+                            unitAmount = parsedUnitAmount,
+                            wholeUnitsOnly = wholeUnitsOnly
                         )
                     )
                 }
