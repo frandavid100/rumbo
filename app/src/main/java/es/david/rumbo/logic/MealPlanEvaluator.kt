@@ -19,6 +19,62 @@ enum class TargetFit {
     INCOMPLETE
 }
 
+enum class NutrientKind { CALORIES, PROTEIN, CARBOHYDRATES, FAT }
+
+data class NutrientTolerance(
+    val optimalLowerAbsolute: Double,
+    val optimalUpperAbsolute: Double,
+    val adequateLowerAbsolute: Double,
+    val adequateUpperAbsolute: Double,
+    val outsideLowerRelative: Double,
+    val outsideUpperRelative: Double
+)
+
+data class NutrientEvaluation(
+    val kind: NutrientKind,
+    val actual: Double,
+    val target: Double,
+    val fit: TargetFit,
+    val difference: Double,
+    val penalty: Double
+)
+
+/** Single source of truth for both menu scoring and user-facing assessment.
+ * Absolute dead bands prevent meaningless optimisation; relative outer bands
+ * keep the policy sensible for unusually small or large energy requirements.
+ */
+object NutritionTolerancePolicy {
+    private val tolerances = mapOf(
+        NutrientKind.CALORIES to NutrientTolerance(50.0, 50.0, 100.0, 100.0, .10, .10),
+        NutrientKind.PROTEIN to NutrientTolerance(10.0, 15.0, 20.0, 30.0, .25, .35),
+        NutrientKind.CARBOHYDRATES to NutrientTolerance(15.0, 15.0, 30.0, 30.0, .30, .30),
+        NutrientKind.FAT to NutrientTolerance(5.0, 5.0, 10.0, 10.0, .25, .20)
+    )
+
+    fun evaluate(kind: NutrientKind, actual: Double, target: Double): NutrientEvaluation {
+        if (target <= 0.0) {
+            val fit = if (actual == 0.0) TargetFit.ON_TARGET else TargetFit.OUTSIDE
+            return NutrientEvaluation(kind, actual, target, fit, actual, if (fit == TargetFit.ON_TARGET) 0.0 else 1.0)
+        }
+        val tolerance = checkNotNull(tolerances[kind])
+        val difference = actual - target
+        val magnitude = abs(difference)
+        val optimal = if (difference < 0) tolerance.optimalLowerAbsolute else tolerance.optimalUpperAbsolute
+        val adequate = if (difference < 0) tolerance.adequateLowerAbsolute else tolerance.adequateUpperAbsolute
+        val outer = target * if (difference < 0) tolerance.outsideLowerRelative else tolerance.outsideUpperRelative
+        val fit = when {
+            magnitude <= optimal -> TargetFit.ON_TARGET
+            magnitude <= maxOf(adequate, optimal) -> TargetFit.CLOSE
+            else -> TargetFit.OUTSIDE
+        }
+        // No nutritional advantage inside the optimal band. Beyond it, grow
+        // continuously so practical units and preferences can break ties.
+        val scale = maxOf(outer, adequate, 1.0)
+        val penalty = ((magnitude - optimal).coerceAtLeast(0.0) / scale).let { it * it }
+        return NutrientEvaluation(kind, actual, target, fit, difference, penalty)
+    }
+}
+
 data class NutritionTarget(
     val calories: Double,
     val proteinGrams: Double,
@@ -44,11 +100,17 @@ data class PlanNutritionAssessment(
 ) {
     val overall: TargetFit
         get() = if (missingMealTypes.isNotEmpty()) TargetFit.INCOMPLETE else fits.overall
+
+    val evaluations: List<NutrientEvaluation>
+        get() = listOf(
+            NutritionTolerancePolicy.evaluate(NutrientKind.CALORIES, actual.calories, target.calories),
+            NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, actual.proteinGrams, target.proteinGrams),
+            NutritionTolerancePolicy.evaluate(NutrientKind.CARBOHYDRATES, actual.carbohydrateGrams, target.carbohydrateGrams),
+            NutritionTolerancePolicy.evaluate(NutrientKind.FAT, actual.fatGrams, target.fatGrams)
+        )
 }
 
 object MealPlanEvaluator {
-    private const val ON_TARGET_TOLERANCE = 0.10
-    private const val CLOSE_TOLERANCE = 0.20
     private val mealShare = 1.0 / MealType.entries.size
 
     fun mealTarget(
@@ -133,22 +195,12 @@ object MealPlanEvaluator {
             actual = actual,
             target = target,
             fits = NutrientFits(
-                calories = fit(actual.calories, target.calories),
-                protein = fit(actual.proteinGrams, target.proteinGrams),
-                carbohydrates = fit(actual.carbohydrateGrams, target.carbohydrateGrams),
-                fat = fit(actual.fatGrams, target.fatGrams)
+                calories = NutritionTolerancePolicy.evaluate(NutrientKind.CALORIES, actual.calories, target.calories).fit,
+                protein = NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, actual.proteinGrams, target.proteinGrams).fit,
+                carbohydrates = NutritionTolerancePolicy.evaluate(NutrientKind.CARBOHYDRATES, actual.carbohydrateGrams, target.carbohydrateGrams).fit,
+                fat = NutritionTolerancePolicy.evaluate(NutrientKind.FAT, actual.fatGrams, target.fatGrams).fit
             )
         )
-    }
-
-    private fun fit(actual: Double, target: Double): TargetFit {
-        if (target <= 0.0) return if (actual == 0.0) TargetFit.ON_TARGET else TargetFit.OUTSIDE
-        val difference = abs(actual - target) / target
-        return when {
-            difference <= ON_TARGET_TOLERANCE -> TargetFit.ON_TARGET
-            difference <= CLOSE_TOLERANCE -> TargetFit.CLOSE
-            else -> TargetFit.OUTSIDE
-        }
     }
 
     private fun NutritionTarget.scaled(factor: Double) = NutritionTarget(

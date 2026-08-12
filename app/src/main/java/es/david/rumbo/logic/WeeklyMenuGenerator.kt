@@ -410,12 +410,20 @@ object WeeklyMenuGenerator {
 
     private fun deviation(day: WeekDay, assessment: PlanNutritionAssessment) = NutritionDeviation(
         day = day,
-        calories = relativeError(assessment.actual.calories, assessment.target.calories),
-        protein = relativeError(assessment.actual.proteinGrams, assessment.target.proteinGrams),
-        carbohydrates = relativeError(
-            assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams
-        ),
-        fat = relativeError(assessment.actual.fatGrams, assessment.target.fatGrams)
+        calories = NutritionTolerancePolicy.evaluate(
+            NutrientKind.CALORIES, assessment.actual.calories, assessment.target.calories
+        ).penalty,
+        protein = NutritionTolerancePolicy.evaluate(
+            NutrientKind.PROTEIN, assessment.actual.proteinGrams, assessment.target.proteinGrams
+        ).penalty,
+        carbohydrates = NutritionTolerancePolicy.evaluate(
+            NutrientKind.CARBOHYDRATES,
+            assessment.actual.carbohydrateGrams,
+            assessment.target.carbohydrateGrams
+        ).penalty,
+        fat = NutritionTolerancePolicy.evaluate(
+            NutrientKind.FAT, assessment.actual.fatGrams, assessment.target.fatGrams
+        ).penalty
     )
 
     private fun List<PlanningRule>.toMeal(slot: PlanningSlot, generation: Int): PlannedMeal {

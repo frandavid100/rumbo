@@ -60,8 +60,35 @@ class MealPlanEvaluatorTest {
         )
         assertEquals(
             TargetFit.OUTSIDE,
-            MealPlanEvaluator.assessMeal(meal(125.0), foods, emptyMap(), recommendation).overall
+            MealPlanEvaluator.assessMeal(meal(140.0), foods, emptyMap(), recommendation).overall
         )
+    }
+
+    @Test
+    fun trivialDifferencesShareTheOptimalBand() {
+        assertEquals(
+            TargetFit.ON_TARGET,
+            NutritionTolerancePolicy.evaluate(NutrientKind.CALORIES, 1985.0, 2000.0).fit
+        )
+        assertEquals(
+            TargetFit.ON_TARGET,
+            NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, 147.0, 150.0).fit
+        )
+        assertEquals(
+            0.0,
+            NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, 147.0, 150.0).penalty,
+            0.0
+        )
+    }
+
+    @Test
+    fun relevantProteinDeficitIsOutsideAndAsymmetric() {
+        val low = NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, 115.0, 150.0)
+        val equallyHigh = NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, 185.0, 150.0)
+
+        assertEquals(TargetFit.OUTSIDE, low.fit)
+        assertEquals(TargetFit.OUTSIDE, equallyHigh.fit)
+        org.junit.Assert.assertTrue(low.penalty > equallyHigh.penalty)
     }
 
     @Test
