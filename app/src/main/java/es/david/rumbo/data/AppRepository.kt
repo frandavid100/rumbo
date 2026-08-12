@@ -277,7 +277,7 @@ class AppRepository(context: Context) {
         }
         require(exists) { "El elemento configurado ya no existe" }
         val rules = active.planningRules.filterNot {
-            it.itemKind == rule.itemKind && it.itemId == rule.itemId
+            it.ruleId == rule.ruleId
         } + rule
         val repertoire = if (rule.itemKind == PlannedItemKind.FOOD) {
             active.repertoireFoodIds + rule.itemId
@@ -294,6 +294,14 @@ class AppRepository(context: Context) {
                 it.itemKind == kind && it.itemId == itemId
             })
         )
+    }
+
+    fun deletePlanningRule(ruleId: Long): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(current, active.copy(
+            planningRules = active.planningRules.filterNot { it.ruleId == ruleId }
+        ))
     }
 
     fun addToRepertoire(foodId: Long): AppData {
@@ -517,7 +525,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 15)
+        put("schemaVersion", 16)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -658,6 +666,7 @@ class AppRepository(context: Context) {
             put(JSONObject().apply {
                 put("itemKind", rule.itemKind.name)
                 put("itemId", rule.itemId)
+                put("ruleId", rule.ruleId)
                 put("allowedMealTypes", JSONArray().apply {
                     rule.allowedMealTypes.forEach { put(it.name) }
                 })
@@ -670,6 +679,7 @@ class AppRepository(context: Context) {
                     }
                 })
                 put("frequency", rule.frequency.name)
+                put("allowedDays", JSONArray().apply { rule.allowedDays.forEach { put(it.name) } })
                 put("isActive", rule.isActive)
                 put("preferredGrams", rule.preferredGrams)
                 put("minimumFactor", rule.minimumFactor)
@@ -915,6 +925,7 @@ class AppRepository(context: Context) {
             val item = array.getJSONObject(index)
             val allowed = item.optJSONArray("allowedMealTypes") ?: JSONArray()
             val fixed = item.optJSONArray("fixedSlots") ?: JSONArray()
+            val days = item.optJSONArray("allowedDays")
             add(
                 PlanningRule(
                     itemKind = PlannedItemKind.valueOf(item.getString("itemKind")),
@@ -937,9 +948,28 @@ class AppRepository(context: Context) {
                     isActive = item.optBoolean("isActive", true),
                     preferredGrams = item.optDouble("preferredGrams", 100.0),
                     minimumFactor = item.optDouble("minimumFactor", 0.5),
-                    maximumFactor = item.optDouble("maximumFactor", 1.5)
+                    maximumFactor = item.optDouble("maximumFactor", 1.5),
+                    ruleId = item.optLong("ruleId", item.getLong("itemId")),
+                    allowedDays = if (days == null) WeekDay.entries.toSet() else buildSet {
+                        for (i in 0 until days.length()) add(WeekDay.valueOf(days.getString(i)))
+                    }
                 )
             )
+        }
+    }.flatMap { rule ->
+        if (rule.fixedSlots.isEmpty()) listOf(rule) else buildList {
+            if (rule.frequency != PlanningFrequency.NEVER && rule.allowedMealTypes.isNotEmpty()) {
+                add(rule.copy(fixedSlots = emptySet()))
+            }
+            rule.fixedSlots.groupBy { it.mealType }.entries.forEachIndexed { index, (mealType, slots) ->
+                add(rule.copy(
+                    ruleId = rule.ruleId * 1000 + index + 1,
+                    allowedMealTypes = setOf(mealType),
+                    allowedDays = slots.mapTo(mutableSetOf()) { it.day },
+                    fixedSlots = emptySet(),
+                    frequency = PlanningFrequency.ALWAYS
+                ))
+            }
         }
     }
 
