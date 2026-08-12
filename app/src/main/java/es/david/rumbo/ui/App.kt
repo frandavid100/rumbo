@@ -338,6 +338,7 @@ fun RumboApp(repository: AppRepository) {
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 navigationIcon = {
@@ -899,12 +900,12 @@ private fun ProfileSwitcher(
     Box {
         IconButton(onClick = { expanded = true }) {
             Box(
-                Modifier.size(36.dp).background(profileColor(activeProfile?.id), CircleShape),
+                Modifier.size(36.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     activeProfile?.name?.trim()?.firstOrNull()?.uppercase() ?: "?",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -945,14 +946,6 @@ private fun ProfileSwitcher(
     }
 }
 
-private fun profileColor(id: Long?): Color {
-    val colors = listOf(
-        Color(0xFF455A64), Color(0xFF5D4037), Color(0xFF6A1B9A),
-        Color(0xFF1565C0), Color(0xFF00695C), Color(0xFFAD1457)
-    )
-    val index = (((id ?: 0L) % colors.size) + colors.size) % colors.size
-    return colors[index.toInt()]
-}
 
 @Composable
 private fun HomeScreen(
@@ -2274,7 +2267,7 @@ private fun BodyExplanationScreen(
 
 @Composable
 private fun NarrativeSection(title: String, body: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -4019,10 +4012,10 @@ private fun PlannedMealEditorScreen(
                             enabled = day !in occupiedDays,
                             label = { Text(day.shortLabel) },
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                selectedContainerColor = MaterialTheme.colorScheme.outlineVariant,
-                                labelColor = MaterialTheme.colorScheme.onSurface,
-                                selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
                             ),
                             modifier = Modifier.weight(1f)
                         )
@@ -5457,9 +5450,9 @@ private fun FoodListEntry(food: Food, onClick: () -> Unit) {
 
 @Composable
 private fun FoodCategoryBadge(category: FoodCategory) {
-    val color = foodCategoryColor(category)
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
     Box(
-        Modifier.size(40.dp).background(color.copy(alpha = 0.16f), CircleShape),
+        Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(foodCategoryIcon(category), contentDescription = category.label, tint = color)
@@ -5468,9 +5461,9 @@ private fun FoodCategoryBadge(category: FoodCategory) {
 
 @Composable
 private fun SmallFoodCategoryBadge(category: FoodCategory) {
-    val color = foodCategoryColor(category)
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
     Box(
-        Modifier.size(24.dp).background(color.copy(alpha = 0.16f), CircleShape),
+        Modifier.size(24.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -5482,14 +5475,9 @@ private fun SmallFoodCategoryBadge(category: FoodCategory) {
     }
 }
 
-private fun foodCategoryColor(category: FoodCategory): Color = when (category) {
-    FoodCategory.CARBOHYDRATE -> Color(0xFF2563A6)
-    FoodCategory.FRUIT -> Color(0xFF9C3D78)
-    FoodCategory.FAT -> Color(0xFF9A6700)
-    FoodCategory.PROTEIN -> Color(0xFFD05A00)
-    FoodCategory.VEGETABLE -> Color(0xFF287A3D)
-    FoodCategory.OTHER -> Color(0xFF666B73)
-}
+@Composable
+private fun foodCategoryColor(category: FoodCategory): Color =
+    MaterialTheme.colorScheme.onSurface
 
 private fun foodCategoryIcon(category: FoodCategory): ImageVector = when (category) {
     FoodCategory.CARBOHYDRATE -> Icons.Default.Grain
@@ -5551,19 +5539,19 @@ private fun FoodSecondaryNutritionStrip(food: Food) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         NutrientIconValue(
             Icons.Default.Circle, "Grasas saturadas", food.saturatedFatGrams, "g",
-            Color(0xFF8D4E2F), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.Cake, "Azúcares", food.sugarGrams, "g",
-            Color(0xFF9C3D78), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.Eco, "Fibra", food.fiberGrams, "g",
-            Color(0xFF287A3D), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.AcUnit, "Sal", food.saltGrams, "g",
-            Color(0xFF607D8B), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
     }
 }
