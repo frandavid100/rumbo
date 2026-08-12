@@ -16,6 +16,7 @@ import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.nutrition
 import es.david.rumbo.model.nutritionForGrams
 import es.david.rumbo.model.resolvedGrams
+import es.david.rumbo.model.totalWeightGrams
 import java.util.Random
 import kotlin.math.abs
 import kotlin.math.pow
@@ -54,23 +55,30 @@ object WeeklyMenuGenerator {
         mealShares: Map<MealType, Double> = defaultMealShares,
         seed: Long = System.currentTimeMillis()
     ): GeneratedWeeklyMenu {
-        require(rules.isNotEmpty()) { "Añade al menos un alimento o plato al menú." }
-        require(rules.all { it.isValid() }) { "Hay reglas de planificación incompletas." }
-        require(rules.all { rule ->
-            when (rule.itemKind) {
-                PlannedItemKind.FOOD -> foodsById[rule.itemId]?.hasComparableNutrition() == true
-                PlannedItemKind.DISH -> dishesById[rule.itemId]?.nutrition(foodsById)?.isComplete == true
+        val foodRules = rules.filter { it.itemKind == PlannedItemKind.FOOD }
+        require(foodRules.isNotEmpty()) { "Añade al menos un alimento al menú." }
+        require(foodRules.all { it.isValid() }) { "Hay reglas de planificación incompletas." }
+        require(foodRules.all { foodsById[it.itemId]?.hasComparableNutrition() == true }) {
+            "Todos los alimentos seleccionados necesitan datos nutricionales completos."
+        }
+        val usableDishes = dishesById.values.filter { it.nutrition(foodsById).isComplete }
+        val derivedRules = foodRules + usableDishes.mapNotNull { dish ->
+            val ingredientRules = foodRules.filter { rule ->
+                dish.ingredients.any { it.foodId == rule.itemId } && rule.allowedMealTypes.isNotEmpty()
             }
-        }) { "Todos los elementos seleccionados necesitan datos nutricionales completos." }
-
-        val fixedBySlot = rules
-            .flatMap { rule -> rule.fixedSlots.map { it to rule } }
-            .groupBy({ it.first }, { it.second })
-            .mapValues { (_, values) -> values.distinctBy { it.itemKind to it.itemId } }
+            if (ingredientRules.isEmpty()) null else PlanningRule(
+                itemKind = PlannedItemKind.DISH,
+                itemId = dish.id,
+                allowedMealTypes = ingredientRules.flatMapTo(mutableSetOf()) { it.allowedMealTypes },
+                frequency = PlanningFrequency.NORMAL,
+                preferredGrams = dish.totalWeightGrams().coerceAtLeast(1.0)
+            )
+        }
+        val fixedBySlot = resolveFixedSlots(foodRules, usableDishes)
 
         val generatedTypes = MealType.entries.filter { type ->
             (mealShares[type] ?: defaultMealShares.getValue(type)) > 0.0 &&
-                (rules.any { type in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER } ||
+                (derivedRules.any { type in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER } ||
                     fixedBySlot.keys.any { it.mealType == type })
         }.toSet()
         require(generatedTypes.isNotEmpty()) { "Indica al menos una comida en las reglas del menú." }
@@ -79,7 +87,7 @@ object WeeklyMenuGenerator {
             generatedTypes.map { type -> PlanningSlot(day, type) }
         }
         slots.forEach { slot ->
-            if (fixedBySlot[slot].isNullOrEmpty() && rules.none {
+            if (fixedBySlot[slot].isNullOrEmpty() && derivedRules.none {
                     slot.mealType in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER
                 }) {
                 throw PlanningConflictException(
@@ -105,7 +113,8 @@ object WeeklyMenuGenerator {
                 assignments[slot] = completeSlot(
                     slot = slot,
                     fixed = fixedBySlot[slot].orEmpty(),
-                    rules = rules,
+                    rules = derivedRules,
+                    foodRules = foodRules,
                     assigned = assignments,
                     history = recent,
                     random = random,
@@ -179,6 +188,7 @@ object WeeklyMenuGenerator {
         slot: PlanningSlot,
         fixed: List<PlanningRule>,
         rules: List<PlanningRule>,
+        foodRules: List<PlanningRule>,
         assigned: Map<PlanningSlot, List<PlanningRule>>,
         history: List<MenuHistoryEntry>,
         random: Random,
@@ -199,7 +209,7 @@ object WeeklyMenuGenerator {
 
         while (chosen.size < maximumItems) {
             var candidates = eligible.filter { candidate ->
-                chosen.none { it.sameItem(candidate) } &&
+                chosen.none { it.sameItem(candidate) || it.overlaps(candidate, dishesById) } &&
                     !(candidate.itemKind == PlannedItemKind.DISH &&
                         chosen.any { it.itemKind == PlannedItemKind.DISH })
             }
@@ -232,7 +242,9 @@ object WeeklyMenuGenerator {
                 val recentCount = history.count {
                     it.itemKind == candidate.itemKind && it.itemId == candidate.itemId
                 }
-                val frequencyBonus = kotlin.math.ln(candidate.frequency.weight + 1.0) * 0.10
+                val frequencyBonus = kotlin.math.ln(
+                    preferenceWeight(candidate, slot, foodRules, dishesById) + 1.0
+                ) * 0.10
                 val varietyBonus = if (
                     candidate.itemKind == PlannedItemKind.FOOD &&
                     chosen.none {
@@ -249,6 +261,73 @@ object WeeklyMenuGenerator {
             chosen += best.first
         }
         return chosen
+    }
+
+    private fun resolveFixedSlots(
+        foodRules: List<PlanningRule>,
+        dishes: List<Dish>
+    ): Map<PlanningSlot, List<PlanningRule>> = foodRules
+        .flatMap { rule -> rule.fixedSlots.map { it to rule } }
+        .groupBy({ it.first }, { it.second })
+        .mapValues { (slot, required) ->
+            val remaining = required.distinctBy { it.itemId }.toMutableList()
+            val selected = mutableListOf<PlanningRule>()
+            while (true) {
+                val best = dishes.map { dish ->
+                    dish to remaining.count { rule ->
+                        slot.mealType in rule.allowedMealTypes &&
+                            dish.ingredients.any { it.foodId == rule.itemId }
+                    }
+                }.maxByOrNull { it.second }?.takeIf { it.second >= 2 } ?: break
+                val covered = remaining.filter { rule ->
+                    best.first.ingredients.any { it.foodId == rule.itemId }
+                }
+                selected += PlanningRule(
+                    itemKind = PlannedItemKind.DISH,
+                    itemId = best.first.id,
+                    allowedMealTypes = setOf(slot.mealType),
+                    fixedSlots = setOf(slot),
+                    frequency = PlanningFrequency.FREQUENT,
+                    preferredGrams = best.first.totalWeightGrams().coerceAtLeast(1.0)
+                )
+                remaining.removeAll(covered)
+            }
+            selected + remaining
+        }
+
+    private fun preferenceWeight(
+        candidate: PlanningRule,
+        slot: PlanningSlot,
+        foodRules: List<PlanningRule>,
+        dishesById: Map<Long, Dish>
+    ): Double {
+        fun alternatives(rule: PlanningRule): Int = 1 + dishesById.values.count { dish ->
+            dish.ingredients.any { it.foodId == rule.itemId } &&
+                slot.mealType in rule.allowedMealTypes
+        }
+        return when (candidate.itemKind) {
+            PlannedItemKind.FOOD -> foodRules.firstOrNull { it.itemId == candidate.itemId }
+                ?.let { it.frequency.weight / alternatives(it) } ?: 0.0
+            PlannedItemKind.DISH -> {
+                val ingredientIds = dishesById[candidate.itemId]?.ingredients?.mapTo(mutableSetOf()) { it.foodId }
+                    .orEmpty()
+                foodRules.filter { it.itemId in ingredientIds && slot.mealType in it.allowedMealTypes }
+                    .sumOf { it.frequency.weight / alternatives(it) }
+            }
+        }
+    }
+
+    private fun PlanningRule.overlaps(
+        other: PlanningRule,
+        dishesById: Map<Long, Dish>
+    ): Boolean {
+        if (itemKind == PlannedItemKind.FOOD && other.itemKind == PlannedItemKind.DISH) {
+            return dishesById[other.itemId]?.ingredients?.any { it.foodId == itemId } == true
+        }
+        if (itemKind == PlannedItemKind.DISH && other.itemKind == PlannedItemKind.FOOD) {
+            return dishesById[itemId]?.ingredients?.any { it.foodId == other.itemId } == true
+        }
+        return false
     }
 
     private fun combinationError(
