@@ -57,8 +57,9 @@ object WeeklyMenuGenerator {
             .mapValues { (_, values) -> values.distinctBy { it.itemKind to it.itemId } }
 
         val generatedTypes = MealType.entries.filter { type ->
-            rules.any { type in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER } ||
-                fixedBySlot.keys.any { it.mealType == type }
+            (mealShares[type] ?: defaultMealShares.getValue(type)) > 0.0 &&
+                (rules.any { type in it.allowedMealTypes && it.frequency != PlanningFrequency.NEVER } ||
+                    fixedBySlot.keys.any { it.mealType == type })
         }.toSet()
         require(generatedTypes.isNotEmpty()) { "Indica al menos una comida en las reglas del menú." }
 
@@ -77,7 +78,10 @@ object WeeklyMenuGenerator {
 
         val generation = (history.maxOfOrNull { it.generation } ?: 0) + 1
         val recent = history.filter { it.generation >= generation - HISTORY_GENERATIONS }
-        val preserved = currentMeals.filterNot { it.type in generatedTypes }
+        val skippedTypes = MealType.entries.filterTo(mutableSetOf()) { type ->
+            (mealShares[type] ?: defaultMealShares.getValue(type)) <= 0.0
+        }
+        val preserved = currentMeals.filterNot { it.type in generatedTypes || it.type in skippedTypes }
         var bestMeals: List<PlannedMeal>? = null
         var bestAssignments: Map<PlanningSlot, List<PlanningRule>>? = null
         var bestScore = Double.POSITIVE_INFINITY
@@ -121,8 +125,8 @@ object WeeklyMenuGenerator {
         }
 
         val assignments = bestAssignments ?: throw PlanningConflictException(
-            "Las cantidades fijas y los mínimos configurados no permiten generar un menú seguro. " +
-                "Reduce alguna cantidad fija o amplía el margen de ajuste."
+            "Los alimentos disponibles no permiten generar un menú dentro de los márgenes nutricionales. " +
+                "Añade alimentos complementarios o amplía su margen de ajuste."
         )
         val entriesPerGeneration = assignments.values.sumOf { it.size }.coerceAtLeast(1)
         val newHistory = (recent + assignments.flatMap { (slot, assignedRules) ->
@@ -256,8 +260,7 @@ object WeeklyMenuGenerator {
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>
     ): MealVector {
-        val grams = fixedGrams[slot.mealType]?.takeIf { slot in fixedSlots }
-            ?: preferredGrams * minimumFactor
+        val grams = preferredGrams * minimumFactor
         return when (itemKind) {
         PlannedItemKind.FOOD -> {
             val food = foodsById[itemId]
@@ -413,27 +416,23 @@ object WeeklyMenuGenerator {
             type = slot.mealType,
             days = setOf(slot.day),
             items = filter { it.itemKind == PlannedItemKind.FOOD }.map { rule ->
-                val fixed = rule.fixedGrams[slot.mealType]
-                    ?.takeIf { slot in rule.fixedSlots }
-                val grams = fixed ?: rule.preferredGrams
+                val grams = rule.preferredGrams
                 PlannedFood(
                     rule.itemId,
                     grams,
-                    fixed == null,
-                    if (fixed == null) grams * rule.minimumFactor else grams,
-                    if (fixed == null) grams * rule.maximumFactor else grams
+                    true,
+                    grams * rule.minimumFactor,
+                    grams * rule.maximumFactor
                 )
             },
             dishes = filter { it.itemKind == PlannedItemKind.DISH }.map { rule ->
-                val fixed = rule.fixedGrams[slot.mealType]
-                    ?.takeIf { slot in rule.fixedSlots }
-                val grams = fixed ?: rule.preferredGrams
+                val grams = rule.preferredGrams
                 PlannedDish(
                     rule.itemId,
                     grams,
-                    fixed == null,
-                    if (fixed == null) grams * rule.minimumFactor else grams,
-                    if (fixed == null) grams * rule.maximumFactor else grams
+                    true,
+                    grams * rule.minimumFactor,
+                    grams * rule.maximumFactor
                 )
             }
         )
