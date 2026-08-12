@@ -71,7 +71,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -1030,8 +1029,6 @@ private fun HomeScreen(
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onOpenFoods: () -> Unit,
-    onOpenFood: (Long) -> Unit,
-    onOpenDish: (Long) -> Unit,
     onAddMissingMeal: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
 ) {
@@ -1449,6 +1446,8 @@ private fun TodayPlanSection(
     recommendation: es.david.rumbo.model.Recommendation?,
     onOpenPlanner: () -> Unit,
     onOpenMeal: (Long) -> Unit,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
     onAddMissing: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
 ) {
