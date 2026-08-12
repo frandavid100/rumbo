@@ -26,7 +26,7 @@ class RepertoireEvaluatorTest {
         val result = RepertoireEvaluator.evaluate(
             rules = listOf(
                 rule(1),
-                rule(2, PlanningFrequency.NEVER),
+                rule(2).copy(isActive = false),
                 rule(3).copy(allowedMealTypes = emptySet())
             ),
             foodsById = foods,
