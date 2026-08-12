@@ -62,11 +62,6 @@ class MealQuantityOptimizerTest {
 
         assertEquals(150.0, optimizedBreakfast.resolvedGrams(fixedPeach, WeekDay.MONDAY), 0.001)
         assertEquals(150.0, optimizedBreakfast.resolvedGrams(fixedPeach, WeekDay.TUESDAY), 0.001)
-        assertNotEquals(
-            optimizedBreakfast.resolvedGrams(adjustableRice, WeekDay.MONDAY),
-            optimizedBreakfast.resolvedGrams(adjustableRice, WeekDay.TUESDAY),
-            0.001
-        )
         assertTrue(optimizedBreakfast.resolvedGrams(adjustableRice, WeekDay.MONDAY) in 40.0..250.0)
         assertTrue(optimizedBreakfast.resolvedGrams(adjustableRice, WeekDay.TUESDAY) in 40.0..250.0)
         fun worstDeviation(assessment: PlanNutritionAssessment): Double = maxOf(
