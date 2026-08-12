@@ -147,6 +147,7 @@ data class PlanningRule(
     val allowedMealTypes: Set<MealType>,
     val fixedSlots: Set<PlanningSlot> = emptySet(),
     val frequency: PlanningFrequency = PlanningFrequency.NORMAL,
+    val isActive: Boolean = true,
     val preferredGrams: Double,
     val minimumFactor: Double = 0.5,
     val maximumFactor: Double = 1.5
@@ -420,6 +421,8 @@ data class ProfileData(
     val measurements: List<Measurement> = emptyList(),
     val plannedMeals: List<PlannedMeal> = emptyList(),
     val planningRules: List<PlanningRule> = emptyList(),
+    val repertoireFoodIds: Set<Long> = planningRules
+        .filter { it.itemKind == PlannedItemKind.FOOD }.mapTo(mutableSetOf()) { it.itemId },
     val menuHistory: List<MenuHistoryEntry> = emptyList()
 )
 
