@@ -1,5 +1,14 @@
 # Historial de cambios
 
+## 0.42.0
+
+- Interpreta calorías y macronutrientes mediante tolerancias propias y evita perseguir el 100 % exacto.
+- Comparte la misma valoración entre el optimizador y la interfaz, con zonas óptimas sin penalización.
+- Muestra cantidades reales y explicaciones semánticas en lugar de porcentajes como juicio principal.
+- Programa únicamente alimentos y deriva automáticamente los platos que pueden satisfacer esas preferencias.
+- Reparte el peso de cada alimento entre su uso directo y las recetas compatibles sin inflar su frecuencia.
+- Permite que un plato satisfaga varias reglas fijas sin duplicar después sus ingredientes.
+
 ## 0.41.0
 
 - Elimina las cantidades bloqueadas y los candados de alimentos: una presencia fija ya no fija sus gramos.
