@@ -60,13 +60,20 @@ data class RepertoireMetrics(
  */
 object RepertoireEvaluator {
     private val seeds = listOf(11L, 97L, 313L, 997L)
+    private val defaultShares = mapOf(
+        MealType.BREAKFAST to .20,
+        MealType.MORNING_SNACK to .10,
+        MealType.LUNCH to .35,
+        MealType.AFTERNOON_SNACK to .10,
+        MealType.DINNER to .25
+    )
 
     fun evaluate(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
-        mealShares: Map<MealType, Double> = defaultMealShares,
+        mealShares: Map<MealType, Double> = defaultShares,
         thresholds: RepertoireThresholds = RepertoireThresholds()
     ): RepertoireAssessment {
         val activeRules = rules.filter {
@@ -75,7 +82,7 @@ object RepertoireEvaluator {
                 foodsById[it.itemId]?.hasComparableNutrition() == true
         }
         val activeFoods = activeRules.mapNotNull { foodsById[it.itemId] }.distinctBy { it.id }
-        val coverage = MealType.entries.filter { (mealShares[it] ?: defaultMealShares.getValue(it)) > 0.0 }
+        val coverage = MealType.entries.filter { (mealShares[it] ?: defaultShares.getValue(it)) > 0.0 }
             .map { type ->
                 MealCoverage(type, activeRules.count { type in it.allowedMealTypes })
             }
