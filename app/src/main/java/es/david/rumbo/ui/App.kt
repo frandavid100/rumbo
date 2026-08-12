@@ -5211,7 +5211,6 @@ private fun DishDetailScreen(
     onOpenMeal: (Long) -> Unit,
     onAddToMeal: (Long) -> Unit,
     onAddNewMeal: () -> Unit,
-    onAddDish: () -> Unit,
     planningRule: PlanningRule?,
     onSavePlanningRule: (PlanningRule) -> Unit,
     onDeletePlanningRule: () -> Unit,
@@ -5446,7 +5445,7 @@ private fun DishEditorScreen(
         mutableStateOf(
             initial?.ingredients?.associate { it.foodId to formatDecimal(it.grams) }
                 ?: initialFoodId?.let { mapOf(it to "100") }
-                ?: emptyMap()
+                ?: emptyMap<Long, String>()
         )
     }
     var choosingFood by remember { mutableStateOf(false) }
@@ -5979,6 +5978,7 @@ private fun FoodDetailScreen(
     onOpenMeal: (Long) -> Unit,
     onAddToMeal: (Long) -> Unit,
     onAddNewMeal: () -> Unit,
+    onAddDish: () -> Unit,
     planningRules: List<PlanningRule>,
     onSavePlanningRule: (PlanningRule) -> Unit,
     onDeletePlanningRule: (Long) -> Unit,
