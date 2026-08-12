@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the bundled food catalogue from AESAN's open 2022 workbook."""
+"""Build Rumbo's compact Mercadona catalogue from AESAN's open workbook."""
 
 from __future__ import annotations
 
@@ -114,18 +114,24 @@ def build(workbook: Path, output: Path) -> tuple[int, int]:
             manufacturer = normalized(row[column["Fabricante"]])
             brand = text(row[column["Marca"]])
             subbrand = normalized(row[column["Submarca"]])
-            retailer = (
-                "Mercadona" if "mercadona" in manufacturer or "hacendado" in subbrand or
-                "hacendado" in normalized(brand) else None
-            )
+            brand_key = normalized(brand)
+            retailer = "Mercadona" if (
+                "mercadona" in manufacturer or
+                any(label in f"{brand_key} {subbrand}" for label in (
+                    "hacendado", "bosque verde", "deliplus", "compy"
+                ))
+            ) else None
             nutrients = {
                 "k": number(row[column["EnergiaKC"]]),
                 "f": number(row[column["Grasas"]]),
                 "c": number(row[column["Carbohidratos"]]),
                 "p": number(row[column["Proteínas"]]),
             }
-            if all(value is not None for value in nutrients.values()):
-                complete += 1
+            # Rumbo needs all four values to plan a meal. The former import
+            # bundled every retailer and many incomplete rows (~29k products).
+            if retailer != "Mercadona" or any(value is None for value in nutrients.values()):
+                continue
+            complete += 1
             item = {
                 "i": AESAN_ID_OFFSET + int(ean),
                 "n": name,
@@ -141,7 +147,7 @@ def build(workbook: Path, output: Path) -> tuple[int, int]:
                 "sat": number(row[column["GrasasSat"]]),
                 "su": number(row[column["Azúcares"]]),
                 "sa": number(row[column["Sal"]]),
-                "ret": retailer,
+                "ret": "Mercadona",
             }
             target.write(json.dumps(item, ensure_ascii=False, separators=(",", ":")) + "\n")
             total += 1
@@ -158,7 +164,7 @@ def main() -> None:
     args = parser.parse_args()
     download_if_needed(args.workbook)
     total, complete = build(args.workbook, args.output)
-    print(f"Imported {total} products ({complete} with complete core nutrition) from {SOURCE_PAGE}")
+    print(f"Imported {total} Mercadona products with complete core nutrition from {SOURCE_PAGE}")
 
 
 if __name__ == "__main__":

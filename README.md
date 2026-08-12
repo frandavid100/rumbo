@@ -13,27 +13,43 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Propone automáticamente un objetivo coherente con los últimos indicadores y explica el criterio aplicado.
 - Permite varios perfiles con historiales completamente separados.
 - Ordena Inicio como una secuencia: evolución corporal, objetivo recomendado, objetivo elegido, calorías/macros e historial.
+- Organiza Inicio en tres tarjetas pulsables: situación corporal con objetivo y nutrición, menú de hoy y lista de la compra.
+- Resume IMC y cintura/altura en una única escala de cinco franjas iguales; las gráficas y el historial quedan en la explicación detallada.
+- Permite elegir «Automático» para que el objetivo aplicado siga siempre la recomendación corporal vigente.
+- Muestra el cumplimiento diario de calorías y macros en una cuadrícula compacta de porcentajes con iconos y colores propios.
+- Permite completar comidas ausentes y ajustar las cantidades del día directamente desde Inicio.
 - Evita tarjetas y encabezados redundantes en Inicio; usa espacio y divisores para separar la información.
 - Muestra un historial compacto; al tocar una entrada abre todos sus detalles y permite editarla o eliminarla.
 - Añade una pestaña «Alimentos» con búsqueda por nombre, categoría, marca, comercio o EAN.
 - Permite filtrar el catálogo por tipo nutricional y por comercio identificado.
 - Añade un planificador semanal por perfil: cada comida se crea una vez y se asigna a varios días.
 - Permite alternar entre el plan semanal, el de hoy y el de cualquier día concreto.
+- Permite crear directamente cualquier comida ausente con su tipo y día ya seleccionados.
 - Guarda ingredientes y cantidades, calcula los macros de cada comida e impide solapamientos del mismo tipo y día.
+- Permite marcar cada alimento o plato como fijo o ajustable y definir para estos últimos un intervalo de gramos.
+- Ajusta de forma explícita las cantidades variables para aproximar calorías y macros del día completo, mostrando una vista previa antes de guardar.
+- Una comida puede reutilizarse durante la semana sin bloquear el ajuste: los elementos fijos conservan exactamente sus gramos y los ajustables se resuelven por día.
+- Añade una pestaña «Platos» con combinaciones de ingredientes compartidas por todos los perfiles.
+- Cada plato tiene una ficha con su composición nutricional total y por 100 g, y un icono según el macro que aporta más energía.
+- Los platos se incorporan al plan y se reparten por gramos, no mediante raciones abstractas.
+- Unifica la búsqueda de platos y alimentos al editar una comida.
+- En los selectores aparecen primero los platos y alimentos que ya se utilizan en alguna comida o receta.
+- Permite seleccionar varios alimentos de una comida y convertirlos inmediatamente en un plato reutilizable.
+- Descompone los platos en sus ingredientes al calcular calorías, macros y lista de la compra.
 - Compara calorías y macros de cada toma con el 20 % de la recomendación diaria y los totales de cada día con el 100 %.
 - Distingue entre objetivo alcanzado, próximo, fuera de rango y plan incompleto, mostrando cada nutriente por separado.
 - Calcula una lista de la compra semanal con los gramos acumulados de cada alimento planificado.
-- Incluye los 52 alimentos de la hoja «Dieta» y 29.113 productos con EAN únicos de la base abierta de AESAN de 2022.
-- Conserva también los registros incompletos y muestra claramente los nutrientes que AESAN no proporciona.
+- Incluye los 52 alimentos iniciales y un catálogo compacto de productos de Mercadona con EAN y datos nutricionales completos.
+- Excluye productos de otros comercios y fichas sin los cuatro valores necesarios para planificar menús.
 - Muestra marca, familia, subcategoría, denominación legal, ingredientes, grasas saturadas, azúcares, sal, EAN y procedencia cuando figuran en la fuente.
-- Identifica 1.436 referencias de Mercadona a partir de la marca o del fabricante declarados en AESAN.
+- Identifica las referencias de Mercadona a partir de la marca o del fabricante declarados en AESAN.
 - Permite consultar, crear, editar y eliminar alimentos; el catálogo es común a todos los perfiles.
 - Conserva en las copias de seguridad las altas, ediciones y eliminaciones del usuario; el catálogo público ya viaja dentro de la aplicación y no se duplica en cada copia.
 - Identifica cada categoría mediante un icono y un color estables.
 - Admite hasta diez enlaces por alimento; todos los alimentos iniciales incluyen al menos un acceso a Mercadona.
 - Propone hasta cinco sustitutos de la misma subcategoría culinaria cuando calorías y macros por 100 g son suficientemente próximos.
 - Mantiene las explicaciones detalladas en pantallas separadas para simplificar la vista principal.
-- Usa un botón flotante para añadir mediciones y registra con fecha los cambios de objetivo.
+- Incluye un botón «Añadir medición» inequívoco en la tarjeta corporal y registra con fecha los cambios de objetivo.
 - Explica el cálculo energético en lenguaje natural y con los límites realmente aplicados.
 - Ajusta gradualmente la estimación cuando existen al menos 21 días de historial fiable.
 - Usa peso y cintura como señales distintas; si se contradicen, mantiene y observa.
@@ -41,6 +57,7 @@ Aplicación Android nativa y local para registrar peso, cintura y contexto diet�
 - Calcula proteína, hidratos y grasa a partir de la recomendación actual.
 - Exporta e importa todos los datos en JSON.
 - No usa Internet, cuentas, anuncios ni analítica.
+- Respeta el gesto Atrás en las pantallas secundarias y mantiene fluida la búsqueda del catálogo mediante un índice precalculado y consulta diferida.
 
 ## Compilar
 
@@ -52,17 +69,18 @@ Requisitos: Android Studio compatible con AGP 8.13, JDK 17 y Android SDK 36.
 
 El APK de depuración se genera en `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Regenerar el catálogo AESAN
+## Regenerar el catálogo de Mercadona
 
-El APK publicado incluye el catálogo transformado. El repositorio no versiona
-esa copia generada: para crearla desde el libro oficial de AESAN:
+El APK publicado incluye un subconjunto nutricional de Mercadona. El repositorio
+no versiona esa copia generada: para crearla desde el libro oficial de AESAN:
 
 1. Instala Python 3 y ejecuta `python3 -m pip install -r tools/requirements.txt`.
 2. Ejecuta `python3 tools/import_aesan.py` desde la raíz del proyecto.
 
-El importador descarga el libro oficial, conserva un registro por EAN y no
-modifica los valores nutricionales publicados por AESAN. Debe ejecutarse antes
-de compilar una copia recién clonada del repositorio.
+El importador descarga el libro oficial, conserva un registro completo por EAN
+solo cuando la marca o el fabricante permiten atribuirlo a Mercadona y no modifica
+los valores nutricionales publicados. Debe ejecutarse antes de compilar una copia
+recién clonada del repositorio.
 
 ## Criterio de cálculo
 
@@ -73,6 +91,8 @@ El ajuste histórico requiere cuatro pesos, 21 días de intervalo y al menos tre
 Esta aplicación ofrece una estimación orientativa, no sustituye una valoración sanitaria individual.
 
 En el planificador, el ajuste por comida es un objetivo práctico: cada una de las cinco tomas recibe el 20 % de la recomendación diaria. Verde significa una desviación máxima del 10 %, amarillo hasta el 20 % y rojo una desviación superior. Esta comparación solo evalúa energía y macronutrientes; no certifica por sí sola la calidad nutricional completa de una comida.
+
+El ajuste automático de gramos se inicia únicamente al pulsar «Ajustar cantidades». Optimiza cada día completo dando prioridad a energía y proteína, mantiene la grasa dentro de un margen razonable y utiliza los hidratos como componente más flexible. Nunca modifica elementos fijos ni rebasa los mínimos y máximos indicados; si no existe una solución exacta, presenta la combinación más próxima para que el usuario decida si la aplica.
 
 ## Licencia
 

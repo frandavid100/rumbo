@@ -31,16 +31,16 @@ class RecommendationEngineTest {
         )
 
         assertNotNull(recommendation)
-        assertEquals(2125, recommendation!!.calories)
+        assertEquals(1900, recommendation!!.calories)
         assertEquals(158, recommendation.proteinGrams)
-        assertEquals(241, recommendation.carbohydrateGrams)
-        assertEquals(59, recommendation.fatGrams)
+        assertEquals(198, recommendation.carbohydrateGrams)
+        assertEquals(53, recommendation.fatGrams)
         assertNotNull(recommendation.calculation)
         val calculation = recommendation.calculation
         assertEquals(1707.25, calculation!!.restingCalories, 0.01)
         assertEquals(2347.47, calculation.maintenanceCalories, 0.01)
-        assertEquals(-0.20775, calculation.appliedWeeklyRateKg, 0.00001)
-        assertEquals(-228.53, calculation.goalAdjustmentCalories, 0.01)
+        assertEquals(-0.4155, calculation.appliedWeeklyRateKg, 0.00001)
+        assertEquals(-457.05, calculation.goalAdjustmentCalories, 0.01)
         assertTrue(recommendation.reason.startsWith("Estimación inicial"))
         assertTrue(!recommendation.reason.startsWith("2125"))
     }
@@ -102,8 +102,9 @@ class RecommendationEngineTest {
         val result = RecommendationEngine.recommendGoal(profile, history)
 
         assertEquals(WeightGoal.LOSE_SLOWLY, result.goal)
-        assertTrue(result.explanation.contains("IMC"))
-        assertTrue(result.explanation.contains("cintura/altura"))
+        assertTrue(result.explanation.contains("0,4 kg"))
+        assertTrue(result.explanation.contains("0,5 %"))
+        assertTrue(result.explanation.contains("cintura"))
     }
 
     @Test
@@ -187,6 +188,34 @@ class RecommendationEngineTest {
     }
 
     @Test
+    fun manualWeeklyRateIsPreservedButEnergySafetyLimitIsReported() {
+        val recommendation = RecommendationEngine.recommend(
+            profile,
+            emptyList(),
+            Measurement(
+                id = 1,
+                date = LocalDate.of(2026, 8, 9),
+                weightKg = 83.0,
+                waistCm = 91.0,
+                activity = ActivityLevel.LIGHT,
+                goal = WeightGoal.LOSE_SLOWLY,
+                weeklyRateKg = -10.0
+            )
+        )
+
+        assertNotNull(recommendation)
+        assertTrue(recommendation!!.isSafetyLimited)
+        assertTrue(recommendation.calculation!!.appliedWeeklyRateKg > -10.0)
+        assertEquals(
+            -10.0,
+            RecommendationEngine.effectiveValues(
+                listOf(Measurement(id = 1, date = LocalDate.of(2026, 8, 9), goal = WeightGoal.LOSE_SLOWLY, weeklyRateKg = -10.0))
+            ).weeklyRateKg!!,
+            0.0
+        )
+    }
+
+    @Test
     fun regressionUsesActualMeasurementDates() {
         val points = listOf(
             LocalDate.of(2026, 7, 1) to 83.0,
@@ -197,5 +226,33 @@ class RecommendationEngineTest {
 
         val weeklyRate = RecommendationEngine.regressionWeeklyRate(points)
         assertEquals(-0.2, weeklyRate, 0.04)
+    }
+
+    @Test
+    fun publicWeeklyRateMatchesTheGoalLimits() {
+        assertEquals(-0.415, RecommendationEngine.weeklyRateFor(WeightGoal.LOSE_SLOWLY, 83.0)!!, 0.001)
+        assertEquals(0.0, RecommendationEngine.weeklyRateFor(WeightGoal.MAINTAIN, 83.0)!!, 0.001)
+        assertNull(RecommendationEngine.weeklyRateFor(WeightGoal.AUTOMATIC, 83.0))
+        assertNull(RecommendationEngine.weeklyRateFor(WeightGoal.GAIN_SLOWLY, null))
+    }
+
+    @Test
+    fun automaticGoalAppliesTheCurrentRecommendedGoal() {
+        val recommendation = RecommendationEngine.recommend(
+            profile,
+            emptyList(),
+            Measurement(
+                id = 1,
+                date = LocalDate.of(2026, 8, 7),
+                weightKg = 83.1,
+                waistCm = 91.0,
+                activity = ActivityLevel.LIGHT,
+                goal = WeightGoal.AUTOMATIC
+            )
+        )
+
+        assertNotNull(recommendation)
+        assertEquals(1900, recommendation!!.calories)
+        assertEquals(-0.4155, recommendation.calculation!!.appliedWeeklyRateKg, 0.00001)
     }
 }

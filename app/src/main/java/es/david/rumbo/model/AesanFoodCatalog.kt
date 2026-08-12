@@ -4,7 +4,7 @@ import android.content.Context
 import org.json.JSONObject
 import java.util.zip.GZIPInputStream
 
-object AesanFoodCatalog {
+object MercadonaFoodCatalog {
     private const val SOURCE_PAGE =
         "https://www.aesan.gob.es/AECOSAN/web/seguridad_alimentaria/subseccion/alimentosBebidas.htm"
 
@@ -36,7 +36,7 @@ object AesanFoodCatalog {
             sugarGrams = item.optionalDouble("su"),
             saltGrams = item.optionalDouble("sa"),
             retailer = item.optionalString("ret"),
-            source = "AESAN · datos de 2022"
+            source = "Mercadona · declaración nutricional recopilada por AESAN (2022)"
         )
     }
 
