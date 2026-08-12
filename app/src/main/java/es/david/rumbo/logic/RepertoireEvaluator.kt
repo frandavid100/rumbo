@@ -79,12 +79,12 @@ object RepertoireEvaluator {
     ): RepertoireAssessment {
         val activeRules = rules.filter {
             it.itemKind == PlannedItemKind.FOOD &&
-                it.frequency != PlanningFrequency.NEVER && it.isValid() &&
+                it.isActive && it.frequency != PlanningFrequency.NEVER && it.isValid() &&
                 foodsById[it.itemId]?.hasComparableNutrition() == true
         }
         val activeFoods = activeRules.mapNotNull { foodsById[it.itemId] }.distinctBy { it.id }
         val inactiveFoods = rules.filter {
-            it.itemKind == PlannedItemKind.FOOD && it.frequency == PlanningFrequency.NEVER
+            it.itemKind == PlannedItemKind.FOOD && !it.isActive
         }.mapNotNull { foodsById[it.itemId] }.distinctBy { it.id }
         val coverage = MealType.entries.filter { (mealShares[it] ?: defaultShares.getValue(it)) > 0.0 }
             .map { type ->

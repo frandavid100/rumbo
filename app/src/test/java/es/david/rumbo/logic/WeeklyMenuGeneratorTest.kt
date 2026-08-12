@@ -249,6 +249,31 @@ class WeeklyMenuGeneratorTest {
         assertTrue(result.diagnostics.all { it.worst > 0.0 })
     }
 
+    @Test
+    fun inactiveFoodAndDishesContainingItAreNotGenerated() {
+        val dish = Dish(
+            id = 50,
+            name = "Pollo con arroz",
+            ingredients = listOf(DishIngredient(1, 100.0), DishIngredient(2, 100.0))
+        )
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                rule(1, setOf(MealType.LUNCH)),
+                rule(2, setOf(MealType.LUNCH)).copy(isActive = false)
+            ),
+            history = emptyList(),
+            foodsById = foods.associateBy { it.id },
+            dishesById = mapOf(dish.id to dish),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith { if (it == MealType.LUNCH) 1.0 else 0.0 },
+            seed = 41
+        )
+
+        assertTrue(result.meals.flatMap { it.items }.none { it.foodId == 2L })
+        assertTrue(result.meals.flatMap { it.dishes }.none { it.dishId == dish.id })
+    }
+
     private fun rule(
         id: Long,
         types: Set<MealType>,

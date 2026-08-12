@@ -59,6 +59,7 @@ class AppRepository(context: Context) {
             measurements = recalculate(profile, existing?.measurements.orEmpty()),
             plannedMeals = existing?.plannedMeals.orEmpty(),
             planningRules = existing?.planningRules.orEmpty(),
+            repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
             menuHistory = existing?.menuHistory.orEmpty()
         )
         val profiles = if (existing == null) {
@@ -82,6 +83,7 @@ class AppRepository(context: Context) {
             measurements = recalculate(profile, source),
             plannedMeals = existing?.plannedMeals.orEmpty(),
             planningRules = existing?.planningRules.orEmpty(),
+            repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
             menuHistory = existing?.menuHistory.orEmpty()
         )
         val profiles = if (existing == null) {
@@ -277,7 +279,10 @@ class AppRepository(context: Context) {
         val rules = active.planningRules.filterNot {
             it.itemKind == rule.itemKind && it.itemId == rule.itemId
         } + rule
-        return updateActive(current, active.copy(planningRules = rules))
+        val repertoire = if (rule.itemKind == PlannedItemKind.FOOD) {
+            active.repertoireFoodIds + rule.itemId
+        } else active.repertoireFoodIds
+        return updateActive(current, active.copy(planningRules = rules, repertoireFoodIds = repertoire))
     }
 
     fun deletePlanningRule(kind: PlannedItemKind, itemId: Long): AppData {
@@ -289,6 +294,33 @@ class AppRepository(context: Context) {
                 it.itemKind == kind && it.itemId == itemId
             })
         )
+    }
+
+    fun addToRepertoire(foodId: Long): AppData {
+        val current = load()
+        require(current.foods.any { it.id == foodId }) { "El alimento ya no existe" }
+        val active = current.activeProfileData ?: return current
+        return updateActive(current, active.copy(repertoireFoodIds = active.repertoireFoodIds + foodId))
+    }
+
+    fun removeFromRepertoire(foodId: Long): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(current, active.copy(
+            repertoireFoodIds = active.repertoireFoodIds - foodId,
+            planningRules = active.planningRules.filterNot {
+                it.itemKind == PlannedItemKind.FOOD && it.itemId == foodId
+            }
+        ))
+    }
+
+    fun setRepertoireFoodActive(foodId: Long, isActive: Boolean): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        require(foodId in active.repertoireFoodIds) { "El alimento no pertenece al repertorio" }
+        return updateActive(current, active.copy(planningRules = active.planningRules.map {
+            if (it.itemKind == PlannedItemKind.FOOD && it.itemId == foodId) it.copy(isActive = isActive) else it
+        }))
     }
 
     fun applyGeneratedMenu(
@@ -363,6 +395,7 @@ class AppRepository(context: Context) {
                         PlannedItemKind.DISH -> rule.itemId in dishIds
                     }
                 },
+                repertoireFoodIds = profileData.repertoireFoodIds.filterTo(mutableSetOf()) { it in foodIds },
                 menuHistory = profileData.menuHistory.filter { entry ->
                     when (entry.itemKind) {
                         PlannedItemKind.FOOD -> entry.itemId in foodIds
@@ -426,6 +459,9 @@ class AppRepository(context: Context) {
                     PlannedItemKind.DISH -> rule.itemId in dishIds
                 }
             }) { "Hay reglas para elementos inexistentes" }
+            require(profileData.repertoireFoodIds.all { it in foodIds }) {
+                "Hay alimentos inexistentes en el repertorio"
+            }
             require(PlanWeek.entries.all { week ->
                 MealType.entries.all { type ->
                     val days = meals.filter {
@@ -448,7 +484,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 14)
+        put("schemaVersion", 15)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -457,6 +493,9 @@ class AppRepository(context: Context) {
                     put("measurements", encodeMeasurements(profileData.measurements))
                     put("plannedMeals", encodePlannedMeals(profileData.plannedMeals))
                     put("planningRules", encodePlanningRules(profileData.planningRules))
+                    put("repertoireFoodIds", JSONArray().apply {
+                        profileData.repertoireFoodIds.forEach(::put)
+                    })
                     put("menuHistory", encodeMenuHistory(profileData.menuHistory))
                 })
             }
@@ -598,6 +637,7 @@ class AppRepository(context: Context) {
                     }
                 })
                 put("frequency", rule.frequency.name)
+                put("isActive", rule.isActive)
                 put("preferredGrams", rule.preferredGrams)
                 put("minimumFactor", rule.minimumFactor)
                 put("maximumFactor", rule.maximumFactor)
@@ -654,6 +694,10 @@ class AppRepository(context: Context) {
                                 schemaVersion
                             ),
                             planningRules = decodePlanningRules(item.optJSONArray("planningRules") ?: JSONArray()),
+                            repertoireFoodIds = item.optJSONArray("repertoireFoodIds")?.let(::decodeIds)
+                                ?: decodePlanningRules(item.optJSONArray("planningRules") ?: JSONArray())
+                                    .filter { it.itemKind == PlannedItemKind.FOOD }
+                                    .mapTo(mutableSetOf()) { it.itemId },
                             menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray())
                         )
                     )
@@ -857,6 +901,7 @@ class AppRepository(context: Context) {
                         }
                     },
                     frequency = PlanningFrequency.valueOf(item.optString("frequency", PlanningFrequency.NORMAL.name)),
+                    isActive = item.optBoolean("isActive", true),
                     preferredGrams = item.optDouble("preferredGrams", 100.0),
                     minimumFactor = item.optDouble("minimumFactor", 0.5),
                     maximumFactor = item.optDouble("maximumFactor", 1.5)

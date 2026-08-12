@@ -55,13 +55,16 @@ object WeeklyMenuGenerator {
         mealShares: Map<MealType, Double> = defaultMealShares,
         seed: Long = System.currentTimeMillis()
     ): GeneratedWeeklyMenu {
-        val foodRules = rules.filter { it.itemKind == PlannedItemKind.FOOD }
+        val foodRules = rules.filter { it.itemKind == PlannedItemKind.FOOD && it.isActive }
         require(foodRules.isNotEmpty()) { "Añade al menos un alimento al menú." }
         require(foodRules.all { it.isValid() }) { "Hay reglas de planificación incompletas." }
         require(foodRules.all { foodsById[it.itemId]?.hasComparableNutrition() == true }) {
             "Todos los alimentos seleccionados necesitan datos nutricionales completos."
         }
-        val usableDishes = dishesById.values.filter { it.nutrition(foodsById).isComplete }
+        val activeFoodIds = foodRules.mapTo(mutableSetOf()) { it.itemId }
+        val usableDishes = dishesById.values.filter { dish ->
+            dish.nutrition(foodsById).isComplete && dish.ingredients.all { it.foodId in activeFoodIds }
+        }
         val derivedRules = foodRules + usableDishes.mapNotNull { dish ->
             val ingredientRules = foodRules.filter { rule ->
                 dish.ingredients.any { it.foodId == rule.itemId } && rule.allowedMealTypes.isNotEmpty()
