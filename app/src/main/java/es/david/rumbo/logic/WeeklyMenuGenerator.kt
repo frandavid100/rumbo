@@ -18,6 +18,7 @@ import es.david.rumbo.model.nutritionForGrams
 import es.david.rumbo.model.resolvedGrams
 import java.util.Random
 import kotlin.math.abs
+import kotlin.math.pow
 
 data class GeneratedWeeklyMenu(
     val meals: List<PlannedMeal>,
