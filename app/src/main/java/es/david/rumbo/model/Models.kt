@@ -375,7 +375,10 @@ data class Food(
     val sugarGrams: Double? = null,
     val saltGrams: Double? = null,
     val retailer: String? = null,
-    val source: String? = null
+    val source: String? = null,
+    val unitName: String? = null,
+    val unitAmount: Double? = null,
+    val wholeUnitsOnly: Boolean = false
 ) {
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 160 &&
         validCalories(calories) && validNutrient(fatGrams) &&
@@ -385,6 +388,8 @@ data class Food(
         (barcode == null || barcode.length in 8..14) && brand.validText(100) && family.validText(180) &&
         subcategory.validText(140) && legalName.validText(600) &&
         ingredients.validText(5000) && retailer.validText(100) && source.validText(100) &&
+        unitName.validText(40) && (unitAmount == null || unitAmount in 0.1..5000.0) &&
+        (!wholeUnitsOnly || unitName?.isNotBlank() == true && unitAmount != null) &&
         links.size <= 10 &&
         links.distinct().size == links.size && links.all {
             it.length <= 500 && (it.startsWith("https://") || it.startsWith("http://"))
