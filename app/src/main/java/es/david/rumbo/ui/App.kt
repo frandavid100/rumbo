@@ -166,6 +166,15 @@ import es.david.rumbo.model.resolvedGrams
 import es.david.rumbo.model.sanitizedDayAmounts
 import es.david.rumbo.model.totalWeightGrams
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 @Composable
 private fun Card(
@@ -187,15 +196,6 @@ private fun Card(
         content = content
     )
 }
-import kotlinx.coroutines.delay
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import kotlin.math.abs
-import kotlin.math.pow
-import kotlin.math.roundToInt
 
 private enum class Screen(val label: String, val icon: ImageVector, val inNavigation: Boolean = true) {
     HOME("Inicio", Icons.Default.Home),
