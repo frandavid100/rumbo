@@ -89,7 +89,7 @@ object RepertoireEvaluator {
         val coverage = MealType.entries.filter { (mealShares[it] ?: defaultShares.getValue(it)) > 0.0 }
             .map { type ->
                 MealCoverage(type, activeRules.count { rule ->
-                    type in rule.allowedMealTypes || rule.fixedSlots.any { it.mealType == type }
+                    type in rule.allowedMealTypes || rule.requiredSlots().any { it.mealType == type }
                 })
             }
         val vegetableGroups = activeFoods.filter { it.category == FoodCategory.VEGETABLE }
