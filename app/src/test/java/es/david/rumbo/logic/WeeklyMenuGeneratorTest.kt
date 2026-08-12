@@ -274,6 +274,37 @@ class WeeklyMenuGeneratorTest {
         assertTrue(result.meals.flatMap { it.dishes }.none { it.dishId == dish.id })
     }
 
+    @Test
+    fun unifiedAlwaysAndFlexibleRulesRespectTheirDays() {
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                rule(1, setOf(MealType.LUNCH)).copy(
+                    ruleId = 101,
+                    frequency = PlanningFrequency.ALWAYS,
+                    allowedDays = setOf(WeekDay.TUESDAY)
+                ),
+                rule(2, setOf(MealType.LUNCH)).copy(
+                    ruleId = 102,
+                    frequency = PlanningFrequency.OCCASIONAL,
+                    allowedDays = setOf(WeekDay.MONDAY)
+                ),
+                rule(4, setOf(MealType.LUNCH)).copy(ruleId = 103)
+            ),
+            history = emptyList(),
+            foodsById = foods.associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith { if (it == MealType.LUNCH) 1.0 else 0.0 },
+            seed = 51
+        )
+
+        val tuesday = result.meals.single { it.type == MealType.LUNCH && WeekDay.TUESDAY in it.days }
+        assertTrue(tuesday.items.any { it.foodId == 1L })
+        val nonMondayMeals = result.meals.filterNot { WeekDay.MONDAY in it.days }
+        assertTrue(nonMondayMeals.flatMap { it.items }.none { it.foodId == 2L })
+    }
+
     private fun rule(
         id: Long,
         types: Set<MealType>,
