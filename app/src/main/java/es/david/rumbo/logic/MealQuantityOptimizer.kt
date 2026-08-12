@@ -12,6 +12,7 @@ import es.david.rumbo.model.nutrition
 import es.david.rumbo.model.nutritionForGrams
 import es.david.rumbo.model.resolvedGrams
 import es.david.rumbo.model.sanitizedDayAmounts
+import es.david.rumbo.model.totalWeightGrams
 import kotlin.math.abs
 import kotlin.math.round
 import kotlin.math.ceil
@@ -209,7 +210,7 @@ object MealQuantityOptimizer {
             return a
         }
         fun lcm(a: Long, b: Long): Long = (a / gcd(a, b) * b).coerceAtMost(50_000L)
-        return tenths.reduce(::lcm) / 10.0
+        return tenths.reduce { accumulated, value -> lcm(accumulated, value) } / 10.0
     }
 
     private fun applyDayAmounts(
