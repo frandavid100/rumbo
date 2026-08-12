@@ -606,7 +606,7 @@ fun RumboApp(repository: AppRepository) {
                     recommendation = currentRecommendation,
                     mealShares = mealShares,
                     onSaveRule = { data = repository.savePlanningRule(it) },
-                    onDeleteRule = { kind, id -> data = repository.deletePlanningRule(kind, id) },
+                    onDeleteRule = { ruleId -> data = repository.deletePlanningRule(ruleId) },
                     onAddToRepertoire = { data = repository.addToRepertoire(it) },
                     onRemoveFromRepertoire = { data = repository.removeFromRepertoire(it) },
                     onSetActive = { id, active -> data = repository.setRepertoireFoodActive(id, active) },
@@ -2658,6 +2658,43 @@ private fun PlanningRuleCards(
     onSave: (PlanningRule) -> Unit,
     onDelete: () -> Unit
 ) {
+    var editingUnifiedRule by remember(itemKind, itemId, rule?.ruleId) { mutableStateOf(false) }
+    if (editingUnifiedRule) {
+        PlanningRuleDialog(
+            name = "Regla de planificación",
+            initial = rule ?: PlanningRule(
+                itemKind, itemId, MealType.entries.toSet(),
+                frequency = PlanningFrequency.NORMAL,
+                preferredGrams = defaultGrams,
+                ruleId = System.currentTimeMillis()
+            ),
+            onSave = { onSave(it); editingUnifiedRule = false },
+            onDelete = rule?.let { { onDelete(); editingUnifiedRule = false } },
+            onDismiss = { editingUnifiedRule = false }
+        )
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Planificación", style = MaterialTheme.typography.titleLarge)
+            HorizontalDivider()
+            if (rule == null) {
+                Text("Sin reglas. Rumbo no utilizará este alimento automáticamente.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Text("${rule.frequency.label} · ${rule.allowedMealTypes.joinToString { it.label }}")
+                Text(
+                    if (rule.allowedDays.size == WeekDay.entries.size) "Cualquier día"
+                    else rule.allowedDays.joinToString { it.label },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            TextButton(onClick = { editingUnifiedRule = true }) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text(if (rule == null) "Añadir regla" else "Editar regla")
+            }
+        }
+    }
+    return
     var editingFixedType by remember(itemKind, itemId) { mutableStateOf<MealType?>(null) }
     val base = rule ?: PlanningRule(
         itemKind = itemKind,
@@ -2798,7 +2835,7 @@ private fun AutomaticPlanningScreen(
     recommendation: es.david.rumbo.model.Recommendation?,
     mealShares: Map<MealType, Double>,
     onSaveRule: (PlanningRule) -> Unit,
-    onDeleteRule: (PlannedItemKind, Long) -> Unit,
+    onDeleteRule: (Long) -> Unit,
     onAddToRepertoire: (Long) -> Unit,
     onRemoveFromRepertoire: (Long) -> Unit,
     onSetActive: (Long, Boolean) -> Unit,
@@ -2806,7 +2843,7 @@ private fun AutomaticPlanningScreen(
 ) {
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val foodRules = remember(rules) { rules.filter { it.itemKind == PlannedItemKind.FOOD } }
-    val rulesByFoodId = remember(foodRules) { foodRules.associateBy { it.itemId } }
+    val rulesByFoodId = remember(foodRules) { foodRules.groupBy { it.itemId } }
     val candidates = remember(foods) {
         foods.filter { it.hasComparableNutrition() }.map { food ->
             PlanningCandidate(PlannedItemKind.FOOD, food.id, food.name, 100.0)
@@ -2873,11 +2910,11 @@ private fun AutomaticPlanningScreen(
                 onSaveRule(it)
                 editing = null
             },
-            onDelete = foodRules.any { it.itemId == rule.itemId }
+            onDelete = foodRules.any { it.ruleId == rule.ruleId }
                 .takeIf { it }
                 ?.let {
                     {
-                        onDeleteRule(rule.itemKind, rule.itemId)
+                        onDeleteRule(rule.ruleId)
                         editing = null
                     }
                 },
@@ -2941,12 +2978,12 @@ private fun AutomaticPlanningScreen(
             .filter { it.id in repertoireFoodIds }
             .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
             .filter { food ->
-                val rule = rulesByFoodId[food.id]
+                val foodRulesForItem = rulesByFoodId[food.id].orEmpty()
                 when (repertoireFilter) {
                     RepertoireFilter.ALL -> true
-                    RepertoireFilter.ACTIVE -> rule?.isActive == true
-                    RepertoireFilter.INACTIVE -> rule?.isActive == false
-                    RepertoireFilter.PENDING -> rule == null
+                    RepertoireFilter.ACTIVE -> foodRulesForItem.any { it.isActive }
+                    RepertoireFilter.INACTIVE -> foodRulesForItem.isNotEmpty() && foodRulesForItem.none { it.isActive }
+                    RepertoireFilter.PENDING -> foodRulesForItem.isEmpty()
                 }
             }.sortedBy { it.name.lowercase() }.toList()
 
@@ -2960,7 +2997,8 @@ private fun AutomaticPlanningScreen(
             }
         } else {
             items(repertoireFoods, key = { "repertoire_${it.id}" }) { food ->
-                val rule = rulesByFoodId[food.id]
+                val itemRules = rulesByFoodId[food.id].orEmpty()
+                val rule = itemRules.firstOrNull()
                 var actionsExpanded by remember { mutableStateOf(false) }
                 Card(
                     Modifier.fillMaxWidth().clickable {
@@ -2985,13 +3023,7 @@ private fun AutomaticPlanningScreen(
                             Text(
                                 if (rule == null) "Pendiente de configurar" else if (!rule.isActive) {
                                     "Inactivo · conserva su configuración"
-                                } else buildList {
-                                    add(rule.allowedMealTypes.joinToString(" y ") { it.label.lowercase() })
-                                    add(rule.frequency.label.lowercase())
-                                    if (rule.fixedSlots.isNotEmpty()) {
-                                        add("${rule.fixedSlots.size} huecos fijos")
-                                    }
-                                }.joinToString(" · "),
+                                } else "${itemRules.size} regla(s) · " + itemRules.joinToString { it.frequency.label },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -3014,6 +3046,24 @@ private fun AutomaticPlanningScreen(
                                 Icon(Icons.Default.MoreVert, contentDescription = "Más acciones")
                             }
                             DropdownMenu(expanded = actionsExpanded, onDismissRequest = { actionsExpanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Añadir regla") },
+                                    onClick = {
+                                        actionsExpanded = false
+                                        editing = PlanningRule(
+                                            PlannedItemKind.FOOD, food.id,
+                                            setOf(MealType.LUNCH, MealType.DINNER),
+                                            preferredGrams = 100.0,
+                                            ruleId = System.currentTimeMillis()
+                                        )
+                                    }
+                                )
+                                itemRules.forEachIndexed { index, existingRule ->
+                                    DropdownMenuItem(
+                                        text = { Text("Editar regla ${index + 1}: ${existingRule.frequency.label}") },
+                                        onClick = { actionsExpanded = false; editing = existingRule }
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("Sustituir producto") },
                                     onClick = { actionsExpanded = false; replacingFood = food }
@@ -3120,13 +3170,15 @@ private fun PlanningRuleDialog(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
-    var lunch by remember(initial) { mutableStateOf(MealType.LUNCH in initial.allowedMealTypes) }
-    var dinner by remember(initial) { mutableStateOf(MealType.DINNER in initial.allowedMealTypes) }
-    var frequency by remember(initial) { mutableStateOf(initial.frequency) }
-    var preferred by rememberSaveable(initial) { mutableStateOf(formatDecimal(initial.preferredGrams)) }
-    var minimum by rememberSaveable(initial) { mutableStateOf(formatDecimal(initial.minimumFactor)) }
-    var maximum by rememberSaveable(initial) { mutableStateOf(formatDecimal(initial.maximumFactor)) }
-    var fixedSlots by remember(initial) { mutableStateOf(initial.fixedSlots) }
+    var meals by remember(initial) { mutableStateOf(initial.allowedMealTypes) }
+    var days by remember(initial) { mutableStateOf(initial.allowedDays) }
+    var frequency by remember(initial) {
+        mutableStateOf(when (initial.frequency) {
+            PlanningFrequency.ALWAYS -> PlanningFrequency.ALWAYS
+            PlanningFrequency.OCCASIONAL -> PlanningFrequency.OCCASIONAL
+            else -> PlanningFrequency.NORMAL
+        })
+    }
     var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
@@ -3138,73 +3190,42 @@ private fun PlanningRuleDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
+                    Text("Frecuencia", fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(PlanningFrequency.ALWAYS, PlanningFrequency.NORMAL, PlanningFrequency.OCCASIONAL).forEach { option ->
+                            FilterChip(selected = frequency == option, onClick = { frequency = option }, label = { Text(option.label) })
+                        }
+                    }
+                }
+                item {
                     Text("Puede aparecer en", fontWeight = FontWeight.SemiBold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = lunch,
-                            onClick = {
-                                lunch = !lunch
-                                if (!lunch) fixedSlots = fixedSlots.filterNot {
-                                    it.mealType == MealType.LUNCH
-                                }.toSet()
-                            },
-                            label = { Text("Comida") }
-                        )
-                        FilterChip(
-                            selected = dinner,
-                            onClick = {
-                                dinner = !dinner
-                                if (!dinner) fixedSlots = fixedSlots.filterNot {
-                                    it.mealType == MealType.DINNER
-                                }.toSet()
-                            },
-                            label = { Text("Cena") }
-                        )
+                    MealType.entries.chunked(3).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            row.forEach { type ->
+                                FilterChip(
+                                    selected = type in meals,
+                                    onClick = { meals = if (type in meals) meals - type else meals + type },
+                                    label = { Text(type.label) }
+                                )
+                            }
+                        }
                     }
                 }
                 item {
-                    SelectorField(
-                        label = "Aparición adicional",
-                        selectedLabel = frequency.label,
-                        options = PlanningFrequency.entries,
-                        optionLabel = { it.label },
-                        onSelect = { frequency = it },
-                        onClear = null
+                    Text("Días", fontWeight = FontWeight.SemiBold)
+                    FilterChip(
+                        selected = days.size == WeekDay.entries.size,
+                        onClick = { days = WeekDay.entries.toSet() },
+                        label = { Text("Cualquier día") }
                     )
-                }
-                item {
-                    Text("Cantidad habitual y límites", fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "Rumbo conservará las proporciones de los platos y moverá la ración dentro de estos factores.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    NumericField("Cantidad habitual (g)", preferred, { preferred = it }, Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NumericField("Mínimo ×", minimum, { minimum = it }, Modifier.weight(1f))
-                        NumericField("Máximo ×", maximum, { maximum = it }, Modifier.weight(1f))
-                    }
-                }
-                if (lunch) {
-                    item {
-                        FixedDayRow(
-                            label = "Días fijos en la comida",
-                            type = MealType.LUNCH,
-                            selected = fixedSlots,
-                            onChange = { fixedSlots = it }
-                        )
-                    }
-                }
-                if (dinner) {
-                    item {
-                        FixedDayRow(
-                            label = "Días fijos en la cena",
-                            type = MealType.DINNER,
-                            selected = fixedSlots,
-                            onChange = { fixedSlots = it }
-                        )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        WeekDay.entries.forEach { day ->
+                            FilterChip(
+                                selected = day in days,
+                                onClick = { days = if (day in days) days - day else days + day },
+                                label = { Text(day.shortLabel) }
+                            )
+                        }
                     }
                 }
                 error?.let { message ->
@@ -3214,20 +3235,17 @@ private fun PlanningRuleDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                val allowed = buildSet {
-                    if (lunch) add(MealType.LUNCH)
-                    if (dinner) add(MealType.DINNER)
-                }
                 val draft = initial.copy(
-                    allowedMealTypes = allowed,
-                    fixedSlots = fixedSlots.filter { it.mealType in allowed }.toSet(),
+                    allowedMealTypes = meals,
+                    allowedDays = days,
+                    fixedSlots = emptySet(),
                     frequency = frequency,
-                    preferredGrams = parseDecimal(preferred) ?: 0.0,
-                    minimumFactor = parseDecimal(minimum) ?: 0.0,
-                    maximumFactor = parseDecimal(maximum) ?: 0.0
+                    preferredGrams = 100.0,
+                    minimumFactor = 0.1,
+                    maximumFactor = 5.0
                 )
                 if (draft.isValid()) onSave(draft)
-                else error = "Selecciona comida o cena y revisa la cantidad y los límites."
+                else error = "Selecciona al menos una comida y un día."
             }) { Text("Guardar") }
         },
         dismissButton = {
