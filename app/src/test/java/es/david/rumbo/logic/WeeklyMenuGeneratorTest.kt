@@ -2,6 +2,8 @@ package es.david.rumbo.logic
 
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
+import es.david.rumbo.model.Dish
+import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
@@ -110,6 +112,33 @@ class WeeklyMenuGeneratorTest {
             it.type == MealType.LUNCH && WeekDay.MONDAY in it.days
         }
         assertEquals(setOf(1L, 2L), mondayLunch.items.map { it.foodId }.toSet())
+    }
+
+    @Test
+    fun oneDishCanSatisfyTwoFixedFoodRules() {
+        val slot = PlanningSlot(WeekDay.MONDAY, MealType.LUNCH)
+        val dish = Dish(
+            id = 20,
+            name = "Pollo con arroz",
+            ingredients = listOf(DishIngredient(1, 150.0), DishIngredient(2, 100.0))
+        )
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                rule(1, setOf(MealType.LUNCH), fixed = setOf(slot)),
+                rule(2, setOf(MealType.LUNCH), fixed = setOf(slot))
+            ),
+            history = emptyList(),
+            foodsById = foods.associateBy { it.id },
+            dishesById = mapOf(dish.id to dish),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith { if (it == MealType.LUNCH) 1.0 else 0.0 },
+            seed = 42
+        )
+
+        val mondayLunch = result.meals.single { WeekDay.MONDAY in it.days }
+        assertEquals(listOf(20L), mondayLunch.dishes.map { it.dishId })
+        assertTrue(mondayLunch.items.isEmpty())
     }
 
     @Test

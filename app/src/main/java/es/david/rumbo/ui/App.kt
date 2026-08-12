@@ -2753,15 +2753,9 @@ private fun AutomaticPlanningScreen(
     onDeleteRule: (PlannedItemKind, Long) -> Unit
 ) {
     val foodsById = remember(foods) { foods.associateBy { it.id } }
-    val candidates = remember(foods, dishes) {
-        dishes.map { dish ->
-            PlanningCandidate(
-                PlannedItemKind.DISH,
-                dish.id,
-                dish.name,
-                dish.totalWeightGrams().coerceAtLeast(100.0)
-            )
-        } + foods.filter { it.hasComparableNutrition() }.map { food ->
+    val foodRules = remember(rules) { rules.filter { it.itemKind == PlannedItemKind.FOOD } }
+    val candidates = remember(foods) {
+        foods.filter { it.hasComparableNutrition() }.map { food ->
             PlanningCandidate(PlannedItemKind.FOOD, food.id, food.name, 100.0)
         }
     }
@@ -2778,7 +2772,7 @@ private fun AutomaticPlanningScreen(
                 onSaveRule(it)
                 editing = null
             },
-            onDelete = rules.any { it.itemKind == rule.itemKind && it.itemId == rule.itemId }
+            onDelete = foodRules.any { it.itemId == rule.itemId }
                 .takeIf { it }
                 ?.let {
                     {
@@ -2802,7 +2796,7 @@ private fun AutomaticPlanningScreen(
                         "Elige qué sueles comer y establece cuándo puede usarlo Rumbo. La generación se limita a comidas y cenas.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (rules.isEmpty()) {
+                    if (foodRules.isEmpty()) {
                         Text(
                             "Añade suficientes alternativas para cubrir tanto comidas como cenas.",
                             fontWeight = FontWeight.SemiBold
@@ -2812,7 +2806,7 @@ private fun AutomaticPlanningScreen(
             }
         }
 
-        if (rules.isNotEmpty()) {
+        if (foodRules.isNotEmpty()) {
             item {
                 Text(
                     "Elementos configurados",
@@ -2820,7 +2814,7 @@ private fun AutomaticPlanningScreen(
                     fontWeight = FontWeight.SemiBold
                 )
             }
-            items(rules, key = { "rule_${it.itemKind}_${it.itemId}" }) { rule ->
+            items(foodRules, key = { "rule_${it.itemKind}_${it.itemId}" }) { rule ->
                 val candidate = candidates.firstOrNull {
                     it.kind == rule.itemKind && it.id == rule.itemId
                 }
@@ -2833,8 +2827,7 @@ private fun AutomaticPlanningScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(
-                            if (rule.itemKind == PlannedItemKind.DISH) Icons.Default.Restaurant
-                            else foodCategoryIcon(foodsById[rule.itemId]?.category ?: FoodCategory.OTHER),
+                            foodCategoryIcon(foodsById[rule.itemId]?.category ?: FoodCategory.OTHER),
                             contentDescription = null
                         )
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -2867,13 +2860,13 @@ private fun AutomaticPlanningScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it.take(80) },
-                label = { Text("Buscar alimento o plato") },
+                label = { Text("Buscar alimento") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        val configuredKeys = rules.mapTo(mutableSetOf()) { it.itemKind to it.itemId }
+        val configuredKeys = foodRules.mapTo(mutableSetOf()) { it.itemKind to it.itemId }
         val visible = candidates.asSequence()
             .filterNot { (it.kind to it.id) in configuredKeys }
             .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
@@ -4864,15 +4857,6 @@ private fun DishDetailScreen(
                 )
             }
         }
-
-        PlanningRuleCards(
-            itemKind = PlannedItemKind.DISH,
-            itemId = dish.id,
-            defaultGrams = totalWeight.coerceAtLeast(100.0),
-            rule = planningRule,
-            onSave = onSavePlanningRule,
-            onDelete = onDeletePlanningRule
-        )
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
