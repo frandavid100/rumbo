@@ -71,7 +71,6 @@ class WeeklyMenuGeneratorTest {
                     itemId = 2,
                     allowedMealTypes = setOf(MealType.BREAKFAST),
                     fixedSlots = setOf(mondayBreakfast),
-                    fixedGrams = mapOf(MealType.BREAKFAST to 110.0),
                     frequency = PlanningFrequency.NORMAL,
                     preferredGrams = 110.0
                 ),
@@ -132,7 +131,43 @@ class WeeklyMenuGeneratorTest {
     }
 
     @Test
-    fun fixedQuantityIsAppliedOnlyToItsMealType() {
+    fun zeroCalorieShareSkipsSnackAndRemovesItsPreviousPlan() {
+        val previousSnack = es.david.rumbo.model.PlannedMeal(
+            id = 99,
+            type = MealType.MORNING_SNACK,
+            days = setOf(WeekDay.MONDAY),
+            items = listOf(es.david.rumbo.model.PlannedFood(2, 100.0, true, 50.0, 200.0))
+        )
+        val shares = mapOf(
+            MealType.BREAKFAST to 0.30,
+            MealType.MORNING_SNACK to 0.0,
+            MealType.LUNCH to 0.40,
+            MealType.AFTERNOON_SNACK to 0.0,
+            MealType.DINNER to 0.30
+        )
+
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = listOf(previousSnack),
+            rules = listOf(
+                rule(2, setOf(MealType.BREAKFAST, MealType.MORNING_SNACK)),
+                rule(1, setOf(MealType.LUNCH)),
+                rule(3, setOf(MealType.DINNER))
+            ),
+            history = emptyList(),
+            foodsById = foods.associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = shares,
+            seed = 10
+        )
+
+        assertTrue(result.meals.none {
+            it.type == MealType.MORNING_SNACK || it.type == MealType.AFTERNOON_SNACK
+        })
+    }
+
+    @Test
+    fun fixedPresenceNeverLocksTheGeneratedQuantity() {
         val lunch = PlanningSlot(WeekDay.MONDAY, MealType.MORNING_SNACK)
         val dinner = PlanningSlot(WeekDay.MONDAY, MealType.DINNER)
         val result = WeeklyMenuGenerator.generate(
@@ -143,7 +178,6 @@ class WeeklyMenuGeneratorTest {
                     itemId = 2,
                     allowedMealTypes = emptySet(),
                     fixedSlots = setOf(lunch, dinner),
-                    fixedGrams = mapOf(MealType.MORNING_SNACK to 90.0),
                     frequency = PlanningFrequency.NEVER,
                     preferredGrams = 150.0
                 ),
@@ -162,8 +196,7 @@ class WeeklyMenuGeneratorTest {
         val dinnerItem = result.meals.single {
             it.type == MealType.DINNER && WeekDay.MONDAY in it.days
         }.items.single { it.foodId == 2L }
-        assertEquals(90.0, snackItem.grams, 0.001)
-        assertTrue(!snackItem.adjustable)
+        assertTrue(snackItem.adjustable)
         assertTrue(dinnerItem.adjustable)
     }
 
