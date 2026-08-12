@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Grain
@@ -253,6 +254,7 @@ fun RumboApp(repository: AppRepository) {
     var draftMealDayName by rememberSaveable { mutableStateOf<String?>(null) }
     var draftFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftDishId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var draftDishFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
     var foodReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var dishReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     val screen = Screen.valueOf(screenName)
@@ -288,6 +290,12 @@ fun RumboApp(repository: AppRepository) {
                 Screen.PLANNER.name
             screen == Screen.EDIT_DISH && selectedDishId != null -> Screen.DISH_DETAIL.name
             screen == Screen.DISH_DETAIL && dishReturnScreenName != null -> {
+                val destination = dishReturnScreenName!!
+                dishReturnScreenName = null
+                destination
+            }
+            screen == Screen.ADD_DISH && dishReturnScreenName != null -> {
+                draftDishFoodId = null
                 val destination = dishReturnScreenName!!
                 dishReturnScreenName = null
                 destination
@@ -708,9 +716,11 @@ fun RumboApp(repository: AppRepository) {
                 }
                 screen == Screen.ADD_DISH -> DishEditorScreen(
                     foods = data.foods,
+                    initialFoodId = draftDishFoodId,
                     preferredFoodIds = preferredFoodIds,
                     onSave = {
                         data = repository.saveDish(it)
+                        draftDishFoodId = null
                         selectedDishId = it.id
                         screenName = Screen.DISH_DETAIL.name
                     }
@@ -813,7 +823,11 @@ fun RumboApp(repository: AppRepository) {
                         screenName = Screen.DISH_DETAIL.name
                     },
                     onAddFood = { screenName = Screen.ADD_FOOD.name },
-                    onAddDish = { screenName = Screen.ADD_DISH.name }
+                    onAddDish = {
+                        draftDishFoodId = null
+                        dishReturnScreenName = null
+                        screenName = Screen.ADD_DISH.name
+                    }
                 )
                 screen == Screen.ADD_FOOD -> FoodEditorScreen(
                     foods = data.foods,
@@ -869,6 +883,11 @@ fun RumboApp(repository: AppRepository) {
                                 draftMealTypeName = null
                                 draftMealDayName = null
                                 screenName = Screen.ADD_PLANNED_MEAL.name
+                            },
+                            onAddDish = {
+                                draftDishFoodId = food.id
+                                dishReturnScreenName = Screen.FOOD_DETAIL.name
+                                screenName = Screen.ADD_DISH.name
                             },
                             planningRules = data.activeProfileData?.planningRules?.filter {
                                 it.itemKind == PlannedItemKind.FOOD && it.itemId == food.id
@@ -5192,6 +5211,7 @@ private fun DishDetailScreen(
     onOpenMeal: (Long) -> Unit,
     onAddToMeal: (Long) -> Unit,
     onAddNewMeal: () -> Unit,
+    onAddDish: () -> Unit,
     planningRule: PlanningRule?,
     onSavePlanningRule: (PlanningRule) -> Unit,
     onDeletePlanningRule: () -> Unit,
@@ -5416,13 +5436,18 @@ private fun AddToMealDialog(
 private fun DishEditorScreen(
     foods: List<Food>,
     initial: Dish? = null,
+    initialFoodId: Long? = null,
     preferredFoodIds: Set<Long>,
     onSave: (Dish) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
     var name by rememberSaveable(initial?.id) { mutableStateOf(initial?.name.orEmpty()) }
-    var ingredientAmounts by remember(initial?.id) {
-        mutableStateOf(initial?.ingredients?.associate { it.foodId to formatDecimal(it.grams) }.orEmpty())
+    var ingredientAmounts by remember(initial?.id, initialFoodId) {
+        mutableStateOf(
+            initial?.ingredients?.associate { it.foodId to formatDecimal(it.grams) }
+                ?: initialFoodId?.let { mapOf(it to "100") }
+                ?: emptyMap()
+        )
     }
     var choosingFood by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -6100,7 +6125,11 @@ private fun FoodDetailScreen(
                 HorizontalDivider()
                 if (food.unitName.isNullOrBlank() || food.unitAmount == null) {
                     Text("Sin unidad configurada", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = { editingUnit = true }) { Text("Añadir unidad") }
+                    TextButton(onClick = { editingUnit = true }) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Añadir unidad")
+                    }
                 } else {
                     Text("1 ${food.unitName} = ${formatDecimal(food.unitAmount)} g o ml")
                     Text(
@@ -6108,7 +6137,11 @@ private fun FoodDetailScreen(
                         else "Puede dividirse en ${food.unitDivisions} partes",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    TextButton(onClick = { editingUnit = true }) { Text("Editar") }
+                    TextButton(onClick = { editingUnit = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Editar")
+                    }
                 }
             }
         }
@@ -6138,6 +6171,11 @@ private fun FoodDetailScreen(
                         }
                         if (index < containingDishes.lastIndex) HorizontalDivider()
                     }
+                }
+                TextButton(onClick = onAddDish) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Añadir un plato")
                 }
             }
         }
@@ -6174,8 +6212,8 @@ private fun FoodUnitDialog(
     var unitName by rememberSaveable(food.id) { mutableStateOf(food.unitName.orEmpty()) }
     var unitPlural by rememberSaveable(food.id) { mutableStateOf(food.unitPlural.orEmpty()) }
     var unitAmount by rememberSaveable(food.id) { mutableStateOf(food.unitAmount?.let(::formatDecimal).orEmpty()) }
-    var wholeOnly by rememberSaveable(food.id) { mutableStateOf(food.wholeUnitsOnly) }
-    var divisions by rememberSaveable(food.id) { mutableStateOf(food.unitDivisions.toString()) }
+    var allowDividing by rememberSaveable(food.id) { mutableStateOf(!food.wholeUnitsOnly) }
+    var divisions by rememberSaveable(food.id) { mutableStateOf(food.unitDivisions.takeIf { it > 1 }?.toString() ?: "2") }
     var gender by rememberSaveable(food.id) { mutableStateOf(food.unitGender) }
     var error by remember { mutableStateOf<String?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -6186,16 +6224,20 @@ private fun FoodUnitDialog(
                     onValueChange = { unitName = it.take(40) },
                     label = { Text("Singular") },
                     placeholder = { Text("vasito, huevo, lata…") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(unitPlural, { unitPlural = it.take(40) }, Modifier.fillMaxWidth(), label = { Text("Plural") }, placeholder = { Text("vasitos, huevos, latas…") }, singleLine = true)
                 NumericField("Gramos o ml por unidad", unitAmount, { unitAmount = it }, Modifier.fillMaxWidth())
                 SelectorField("Género gramatical", if (gender == "FEMININE") "Femenino" else "Masculino", listOf("MASCULINE", "FEMININE"), { if (it == "FEMININE") "Femenino" else "Masculino" }, { gender = it }, null)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = wholeOnly, onCheckedChange = { wholeOnly = it })
-                    Text("Usar solo unidades completas")
+                Row(
+                    Modifier.fillMaxWidth().clickable { allowDividing = !allowDividing },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = allowDividing, onCheckedChange = { allowDividing = it })
+                    Text("Permitir dividirlo")
                 }
-                if (!wholeOnly) NumericField("Partes en que puede dividirse", divisions, { divisions = it }, Modifier.fillMaxWidth())
+                if (allowDividing) NumericField("¿En cuántas partes?", divisions, { divisions = it }, Modifier.fillMaxWidth())
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Button(onClick = {
                 val amount = unitAmount.takeIf { it.isNotBlank() }?.let(::parseDecimal)
@@ -6204,8 +6246,8 @@ private fun FoodUnitDialog(
                     unitName.isBlank() != unitAmount.isBlank() -> "Indica el nombre y la equivalencia."
                     unitName.isNotBlank() && unitPlural.isBlank() -> "Indica también el plural."
                     amount != null && amount !in 0.1..5000.0 -> "La equivalencia debe estar entre 0,1 y 5.000."
-                    wholeOnly && unitName.isBlank() -> "Configura una unidad antes de exigir unidades completas."
-                    !wholeOnly && (parsedDivisions == null || parsedDivisions !in 2..100) -> "Indica entre 2 y 100 partes."
+                    allowDividing && unitName.isBlank() -> "Configura una unidad antes de permitir dividirla."
+                    allowDividing && (parsedDivisions == null || parsedDivisions !in 2..100) -> "Indica entre 2 y 100 partes."
                     else -> null
                 }
                 if (error == null) onSave(food.copy(
@@ -6213,8 +6255,8 @@ private fun FoodUnitDialog(
                     unitPlural = unitPlural.trim().ifBlank { null },
                     unitGender = gender,
                     unitAmount = amount,
-                    wholeUnitsOnly = wholeOnly && unitName.isNotBlank(),
-                    unitDivisions = if (wholeOnly) 1 else parsedDivisions!!
+                    wholeUnitsOnly = !allowDividing && unitName.isNotBlank(),
+                    unitDivisions = if (allowDividing) parsedDivisions!! else 1
                 ))
             }, Modifier.fillMaxWidth()) { Text("Guardar") }
                 if (!food.unitName.isNullOrBlank()) {
@@ -6906,38 +6948,41 @@ private fun NumericField(
 @Composable
 private fun <T> SelectorField(
     label: String,
-    selectedLabel: String,    options: List<T>,
+    selectedLabel: String,
+    options: List<T>,
     optionLabel: (T) -> String,
     onSelect: (T) -> Unit,
     onClear: (() -> Unit)?
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge)
-        Box(Modifier.fillMaxWidth()) {
-            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(selectedLabel, modifier = Modifier.weight(1f))
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            if (onClear != null) {
+                DropdownMenuItem(
+                    text = { Text("Usar valor anterior / sin indicar") },
+                    onClick = {
+                        onClear()
+                        expanded = false
+                    }
+                )
+                HorizontalDivider()
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                if (onClear != null) {
-                    DropdownMenuItem(
-                        text = { Text("Usar valor anterior / sin indicar") },
-                        onClick = {
-                            onClear()
-                            expanded = false
-                        }
-                    )
-                    HorizontalDivider()
-                }
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(optionLabel(option)) },
-                        onClick = {
-                            onSelect(option)
-                            expanded = false
-                        }
-                    )
-                }
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(optionLabel(option)) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    }
+                )
             }
         }
     }
