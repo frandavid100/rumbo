@@ -525,7 +525,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 17)
+        put("schemaVersion", 18)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -556,6 +556,7 @@ class AppRepository(context: Context) {
         put("heightCm", profile.heightCm)
         put("birthYear", profile.birthYear)
         put("sex", profile.sex.name)
+        profile.photoUri?.let { put("photoUri", it) }
     }
 
     private fun encodeMeasurements(measurements: List<Measurement>): JSONArray = JSONArray().apply {
@@ -776,7 +777,8 @@ class AppRepository(context: Context) {
         name = json.getString("name"),
         heightCm = json.getDouble("heightCm"),
         birthYear = json.getInt("birthYear"),
-        sex = Sex.valueOf(json.getString("sex"))
+        sex = Sex.valueOf(json.getString("sex")),
+        photoUri = json.optString("photoUri").takeIf { it.isNotBlank() }
     )
 
     private fun decodeMeasurements(array: JSONArray): List<Measurement> = buildList {
