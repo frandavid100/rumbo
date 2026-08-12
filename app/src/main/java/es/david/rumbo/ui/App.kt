@@ -852,8 +852,11 @@ fun RumboApp(repository: AppRepository) {
                             },
                             onSavePlanningRule = { data = repository.savePlanningRule(it) },
                             onDeletePlanningRule = {
-                                data = repository.deletePlanningRule(PlannedItemKind.FOOD, food.id)
+                                data.activeProfileData?.planningRules?.firstOrNull {
+                                    it.itemKind == PlannedItemKind.FOOD && it.itemId == food.id
+                                }?.let { data = repository.deletePlanningRule(it.ruleId) }
                             },
+                            onSaveFood = { data = repository.saveFood(it) },
                             onEdit = { screenName = Screen.EDIT_FOOD.name },
                             onDelete = {
                                 data = repository.deleteFood(food.id)
@@ -1706,8 +1709,19 @@ private fun HomeShoppingEntry(
             modifier = Modifier.size(32.dp)
         )
         Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Text("${formatDecimal(grams)} g", fontWeight = FontWeight.SemiBold)
+        Text(foodAmountLabel(food, grams), fontWeight = FontWeight.SemiBold)
     }
+}
+
+private fun foodAmountLabel(food: Food, grams: Double): String {
+    val unitAmount = food.unitAmount
+    val unitName = food.unitName
+    if (unitAmount == null || unitAmount <= 0.0 || unitName.isNullOrBlank()) {
+        return "${formatDecimal(grams)} g"
+    }
+    val units = grams / unitAmount
+    val natural = if (food.wholeUnitsOnly) units.roundToInt().toString() else formatDecimal(units)
+    return "$natural $unitName · ${formatDecimal(grams)} g"
 }
 
 @Composable
@@ -5902,10 +5916,12 @@ private fun FoodDetailScreen(
     planningRule: PlanningRule?,
     onSavePlanningRule: (PlanningRule) -> Unit,
     onDeletePlanningRule: () -> Unit,
+    onSaveFood: (Food) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    var editingUnit by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     val similarFoods = FoodSimilarityEngine.findSimilar(food, foods)
     val menuUsages = remember(food.id, plannedMeals, dishes) {
@@ -5968,6 +5984,13 @@ private fun FoodDetailScreen(
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } }
         )
     }
+    if (editingUnit) {
+        FoodUnitDialog(
+            food = food,
+            onSave = { onSaveFood(it); editingUnit = false },
+            onDismiss = { editingUnit = false }
+        )
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -6026,6 +6049,24 @@ private fun FoodDetailScreen(
                         }
                         if (index < food.links.lastIndex) HorizontalDivider()
                     }
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Unidades", style = MaterialTheme.typography.titleLarge)
+                HorizontalDivider()
+                if (food.unitName.isNullOrBlank() || food.unitAmount == null) {
+                    Text("Sin unidad configurada", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = { editingUnit = true }) { Text("Añadir unidad") }
+                } else {
+                    Text("1 ${food.unitName} = ${formatDecimal(food.unitAmount)} g o ml")
+                    Text(
+                        if (food.wholeUnitsOnly) "Solo unidades completas" else "Se pueden utilizar fracciones",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(onClick = { editingUnit = true }) { Text("Editar") }
                 }
             }
         }
@@ -6103,6 +6144,65 @@ private fun FoodDetailScreen(
         }
 
     }
+}
+
+@Composable
+private fun FoodUnitDialog(
+    food: Food,
+    onSave: (Food) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var unitName by rememberSaveable(food.id) { mutableStateOf(food.unitName.orEmpty()) }
+    var unitAmount by rememberSaveable(food.id) { mutableStateOf(food.unitAmount?.let(::formatDecimal).orEmpty()) }
+    var wholeOnly by rememberSaveable(food.id) { mutableStateOf(food.wholeUnitsOnly) }
+    var error by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Unidades de ${food.name}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = unitName,
+                    onValueChange = { unitName = it.take(40) },
+                    label = { Text("Nombre de la unidad") },
+                    placeholder = { Text("vasito, huevo, lata…") },
+                    singleLine = true
+                )
+                NumericField("Gramos o ml por unidad", unitAmount, { unitAmount = it }, Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = wholeOnly, onCheckedChange = { wholeOnly = it })
+                    Text("Usar solo unidades completas")
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val amount = unitAmount.takeIf { it.isNotBlank() }?.let(::parseDecimal)
+                error = when {
+                    unitName.isBlank() != unitAmount.isBlank() -> "Indica tanto el nombre como la equivalencia."
+                    amount != null && amount !in 0.1..5000.0 -> "La equivalencia debe estar entre 0,1 y 5.000."
+                    wholeOnly && unitName.isBlank() -> "Configura una unidad antes de exigir unidades completas."
+                    else -> null
+                }
+                if (error == null) onSave(food.copy(
+                    unitName = unitName.trim().ifBlank { null },
+                    unitAmount = amount,
+                    wholeUnitsOnly = wholeOnly && unitName.isNotBlank()
+                ))
+            }) { Text("Guardar") }
+        },
+        dismissButton = {
+            Row {
+                if (!food.unitName.isNullOrBlank()) {
+                    TextButton(onClick = { onSave(food.copy(unitName = null, unitAmount = null, wholeUnitsOnly = false)) }) {
+                        Text("Quitar unidad", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        }
+    )
 }
 
 private fun linkLabel(link: String): String = runCatching {
