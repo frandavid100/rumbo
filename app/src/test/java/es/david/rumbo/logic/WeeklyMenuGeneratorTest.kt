@@ -200,6 +200,26 @@ class WeeklyMenuGeneratorTest {
         assertTrue(dinnerItem.adjustable)
     }
 
+    @Test
+    fun nutritionallyImperfectWeekReturnsBestAvailableMenuInsteadOfFailure() {
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(rule(5, setOf(MealType.BREAKFAST))),
+            history = emptyList(),
+            foodsById = foods.associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith {
+                if (it == MealType.BREAKFAST) 1.0 else 0.0
+            },
+            seed = 31
+        )
+
+        assertEquals(7, result.meals.size)
+        assertEquals(7, result.diagnostics.size)
+        assertTrue(result.diagnostics.all { it.worst > 0.0 })
+    }
+
     private fun rule(
         id: Long,
         types: Set<MealType>,
