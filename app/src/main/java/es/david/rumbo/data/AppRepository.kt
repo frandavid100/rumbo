@@ -594,9 +594,6 @@ class AppRepository(context: Context) {
                         })
                     }
                 })
-                put("fixedGrams", JSONObject().apply {
-                    rule.fixedGrams.forEach { (type, grams) -> put(type.name, grams) }
-                })
                 put("frequency", rule.frequency.name)
                 put("preferredGrams", rule.preferredGrams)
                 put("minimumFactor", rule.minimumFactor)
@@ -851,14 +848,6 @@ class AppRepository(context: Context) {
                                     MealType.valueOf(slot.getString("mealType"))
                                 )
                             )
-                        }
-                    },
-                    fixedGrams = buildMap {
-                        val amounts = item.optJSONObject("fixedGrams")
-                        if (amounts != null) {
-                            amounts.keys().forEach { key ->
-                                put(MealType.valueOf(key), amounts.getDouble(key))
-                            }
                         }
                     },
                     frequency = PlanningFrequency.valueOf(item.optString("frequency", PlanningFrequency.NORMAL.name)),
