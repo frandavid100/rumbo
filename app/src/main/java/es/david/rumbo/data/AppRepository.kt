@@ -323,6 +323,39 @@ class AppRepository(context: Context) {
         }))
     }
 
+    fun replaceRepertoireFood(oldFoodId: Long, newFoodId: Long): AppData {
+        require(oldFoodId != newFoodId) { "Elige un producto diferente" }
+        val current = load()
+        require(current.foods.any { it.id == newFoodId }) { "El alimento sustituto ya no existe" }
+        val active = current.activeProfileData ?: return current
+        require(oldFoodId in active.repertoireFoodIds) { "El alimento no pertenece al repertorio" }
+        val updatedProfile = active.copy(
+            repertoireFoodIds = active.repertoireFoodIds - oldFoodId + newFoodId,
+            planningRules = active.planningRules.filterNot {
+                it.itemKind == PlannedItemKind.FOOD && it.itemId == newFoodId
+            }.map {
+                if (it.itemKind == PlannedItemKind.FOOD && it.itemId == oldFoodId) {
+                    it.copy(itemId = newFoodId)
+                } else it
+            }
+        )
+        val dishes = current.dishes.map { dish ->
+            if (dish.ingredients.none { it.foodId == oldFoodId }) dish else dish.copy(
+                ingredients = dish.ingredients.map { ingredient ->
+                    if (ingredient.foodId == oldFoodId) ingredient.copy(foodId = newFoodId) else ingredient
+                }.groupBy { it.foodId }.map { (foodId, entries) ->
+                    entries.first().copy(grams = entries.sumOf { it.grams })
+                }
+            )
+        }
+        return persistAndReturn(current.copy(
+            dishes = dishes,
+            profiles = current.profiles.map {
+                if (it.profile.id == updatedProfile.profile.id) updatedProfile else it
+            }
+        ))
+    }
+
     fun applyGeneratedMenu(
         result: GeneratedWeeklyMenu,
         planWeek: PlanWeek = PlanWeek.CURRENT
