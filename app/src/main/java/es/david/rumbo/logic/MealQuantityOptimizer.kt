@@ -14,6 +14,8 @@ import es.david.rumbo.model.resolvedGrams
 import es.david.rumbo.model.sanitizedDayAmounts
 import kotlin.math.abs
 import kotlin.math.round
+import kotlin.math.ceil
+import kotlin.math.floor
 
 data class QuantityChange(
     val day: WeekDay,
@@ -53,7 +55,8 @@ object MealQuantityOptimizer {
         val minimum: Double,
         val maximum: Double,
         val initial: Double,
-        val perGram: Vector
+        val perGram: Vector,
+        val step: Double? = null
     )
 
     fun optimize(
@@ -107,7 +110,16 @@ object MealQuantityOptimizer {
                         val right = high - (high - low) / 3.0
                         if (combinedScore(left) <= combinedScore(right)) high = right else low = left
                     }
-                    val best = ((low + high) / 2.0).coerceIn(variable.minimum, variable.maximum)
+                    val continuousBest = ((low + high) / 2.0).coerceIn(variable.minimum, variable.maximum)
+                    val best = variable.step?.let { step ->
+                        val first = ceil(variable.minimum / step).toLong()
+                        val last = floor(variable.maximum / step).toLong()
+                        if (first > last) continuousBest else {
+                            val center = round(continuousBest / step).toLong().coerceIn(first, last)
+                            ((center - 2)..(center + 2)).filter { it in first..last }
+                                .minByOrNull { combinedScore(it * step) }!! * step
+                        }
+                    } ?: continuousBest
                     amounts[index] = best
                     actual = withoutCurrent + variable.perGram * best
                     mealActual[variable.mealId] = mealWithoutCurrent + variable.perGram * best
@@ -115,7 +127,10 @@ object MealQuantityOptimizer {
             }
 
             val rounded = amounts.mapIndexed { index, amount ->
-                round(amount).coerceIn(variables[index].minimum, variables[index].maximum)
+                variables[index].step?.let { step -> round(amount / step) * step }
+                    ?: round(amount)
+            }.mapIndexed { index, amount ->
+                amount.coerceIn(variables[index].minimum, variables[index].maximum)
             }
             optimizedMeals = applyDayAmounts(optimizedMeals, day, variables, rounded)
             val after = MealPlanEvaluator.assessDay(
@@ -156,7 +171,8 @@ object MealQuantityOptimizer {
                             food.proteinGrams!! / 100.0,
                             food.carbohydrateGrams!! / 100.0,
                             food.fatGrams!! / 100.0
-                        )
+                        ),
+                        step = food.unitAmount.takeIf { food.wholeUnitsOnly }
                     )
                 )
             }
@@ -167,11 +183,33 @@ object MealQuantityOptimizer {
                     Variable(
                         meal.id, meal.type, item.dishId, true, dish.name,
                         item.minimumGrams, item.maximumGrams, meal.resolvedGrams(item, day),
-                        perGram.toVector()
+                        perGram.toVector(),
+                        step = dish.wholeUnitStep(foodsById)
                     )
                 )
             }
         }
+    }
+
+    private fun Dish.wholeUnitStep(foodsById: Map<Long, Food>): Double? {
+        val total = totalWeightGrams()
+        if (total <= 0.0) return null
+        val steps = ingredients.mapNotNull { ingredient ->
+            val food = foodsById[ingredient.foodId]
+            val unit = food?.unitAmount
+            if (food?.wholeUnitsOnly == true && unit != null) unit * total / ingredient.grams else null
+        }
+        if (steps.isEmpty()) return null
+        // Recipes keep fixed proportions. Find the smallest 0.1 g dish increment
+        // that makes every indivisible ingredient an integer number of units.
+        val tenths = steps.map { round(it * 10.0).toLong().coerceAtLeast(1L) }
+        fun gcd(a0: Long, b0: Long): Long {
+            var a = a0; var b = b0
+            while (b != 0L) { val r = a % b; a = b; b = r }
+            return a
+        }
+        fun lcm(a: Long, b: Long): Long = (a / gcd(a, b) * b).coerceAtMost(50_000L)
+        return tenths.reduce(::lcm) / 10.0
     }
 
     private fun applyDayAmounts(
