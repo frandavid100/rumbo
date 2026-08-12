@@ -240,21 +240,16 @@ object MealQuantityOptimizer {
 
     private fun score(actual: Vector, target: NutritionTarget): Double {
         fun relative(actualValue: Double, targetValue: Double): Double =
-            if (targetValue <= 0.0) 0.0 else (actualValue - targetValue) / targetValue
+            if (targetValue <= 0.0) 0.0 else abs(actualValue - targetValue) / targetValue
 
-        val calories = relative(actual.calories, target.calories)
-        val protein = relative(actual.protein, target.proteinGrams)
-        val carbohydrates = relative(actual.carbohydrates, target.carbohydrateGrams)
-        val fatRatio = if (target.fatGrams <= 0.0) 1.0 else actual.fat / target.fatGrams
-        val fatOutsideBand = when {
-            fatRatio < 0.90 -> fatRatio - 0.90
-            fatRatio > 1.10 -> fatRatio - 1.10
-            else -> 0.0
-        }
-        return 5.0 * calories * calories +
-            (if (protein < 0.0) 5.0 else 2.0) * protein * protein +
-            carbohydrates * carbohydrates +
-            2.0 * fatOutsideBand * fatOutsideBand
+        val errors = listOf(
+            relative(actual.calories, target.calories),
+            relative(actual.protein, target.proteinGrams),
+            relative(actual.carbohydrates, target.carbohydrateGrams),
+            relative(actual.fat, target.fatGrams)
+        )
+        val weightedTotal = errors[0] * 1.25 + errors[1] * 1.15 + errors[2] + errors[3]
+        return errors.maxOrNull()!! * 1_000.0 + weightedTotal
     }
 
     private fun NutritionTotals.toVector() = Vector(
