@@ -600,12 +600,17 @@ fun RumboApp(repository: AppRepository) {
                 )
                 screen == Screen.AUTO_PLANNING -> AutomaticPlanningScreen(
                     rules = data.activeProfileData?.planningRules.orEmpty(),
+                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     foods = data.foods,
                     dishes = data.dishes,
                     recommendation = currentRecommendation,
                     mealShares = mealShares,
                     onSaveRule = { data = repository.savePlanningRule(it) },
-                    onDeleteRule = { kind, id -> data = repository.deletePlanningRule(kind, id) }
+                    onDeleteRule = { kind, id -> data = repository.deletePlanningRule(kind, id) },
+                    onAddToRepertoire = { data = repository.addToRepertoire(it) },
+                    onRemoveFromRepertoire = { data = repository.removeFromRepertoire(it) },
+                    onSetActive = { id, active -> data = repository.setRepertoireFoodActive(id, active) },
+                    onReplace = { oldId, newId -> data = repository.replaceRepertoireFood(oldId, newId) }
                 )
                 screen == Screen.ADD_PLANNED_MEAL -> PlannedMealEditorScreen(
                     foods = data.foods,
@@ -778,6 +783,7 @@ fun RumboApp(repository: AppRepository) {
                     foods = data.foods,
                     dishes = data.dishes,
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     onOpenFood = {
                         selectedFoodId = it
                         foodReturnScreenName = null
@@ -2786,15 +2792,21 @@ private fun PlanningRuleCards(
 @Composable
 private fun AutomaticPlanningScreen(
     rules: List<PlanningRule>,
+    repertoireFoodIds: Set<Long>,
     foods: List<Food>,
     dishes: List<Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
     mealShares: Map<MealType, Double>,
     onSaveRule: (PlanningRule) -> Unit,
-    onDeleteRule: (PlannedItemKind, Long) -> Unit
+    onDeleteRule: (PlannedItemKind, Long) -> Unit,
+    onAddToRepertoire: (Long) -> Unit,
+    onRemoveFromRepertoire: (Long) -> Unit,
+    onSetActive: (Long, Boolean) -> Unit,
+    onReplace: (Long, Long) -> Unit
 ) {
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val foodRules = remember(rules) { rules.filter { it.itemKind == PlannedItemKind.FOOD } }
+    val rulesByFoodId = remember(foodRules) { foodRules.associateBy { it.itemId } }
     val candidates = remember(foods) {
         foods.filter { it.hasComparableNutrition() }.map { food ->
             PlanningCandidate(PlannedItemKind.FOOD, food.id, food.name, 100.0)
@@ -2817,7 +2829,39 @@ private fun AutomaticPlanningScreen(
         }
     }
     var query by rememberSaveable { mutableStateOf("") }
+    var repertoireFilter by rememberSaveable { mutableStateOf(RepertoireFilter.ALL) }
     var editing by remember { mutableStateOf<PlanningRule?>(null) }
+    var removingFood by remember { mutableStateOf<Food?>(null) }
+    var replacingFood by remember { mutableStateOf<Food?>(null) }
+    var replacementQuery by rememberSaveable { mutableStateOf("") }
+
+    removingFood?.let { food ->
+        val relatedDishes = dishes.count { dish -> dish.ingredients.any { it.foodId == food.id } }
+        AlertDialog(
+            onDismissRequest = { removingFood = null },
+            title = { Text("¿Eliminar ${food.name} del repertorio?") },
+            text = { Text(if (relatedDishes == 0) "Perderás su configuración personal. El producto seguirá en el catálogo." else "Se usa en $relatedDishes plato(s). Perderás su configuración y esos platos dejarán de poder generarse.") },
+            confirmButton = { TextButton(onClick = { onRemoveFromRepertoire(food.id); removingFood = null }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { removingFood = null }) { Text("Cancelar") } }
+        )
+    }
+    replacingFood?.let { oldFood ->
+        AlertDialog(
+            onDismissRequest = { replacingFood = null; replacementQuery = "" },
+            title = { Text("Sustituir ${oldFood.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Se conservarán sus reglas y estado. Revisa después las unidades del nuevo formato.")
+                    OutlinedTextField(replacementQuery, { replacementQuery = it.take(80) }, label = { Text("Buscar sustituto") }, singleLine = true)
+                    foods.asSequence().filter { it.id != oldFood.id && replacementQuery.isNotBlank() && it.name.contains(replacementQuery, true) }.take(6).forEach { candidate ->
+                        TextButton(onClick = { onReplace(oldFood.id, candidate.id); replacingFood = null; replacementQuery = "" }) { Text(candidate.name) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { replacingFood = null; replacementQuery = "" }) { Text("Cancelar") } }
+        )
+    }
 
     editing?.let { rule ->
         val name = candidates.firstOrNull { it.kind == rule.itemKind && it.id == rule.itemId }?.name
@@ -2872,20 +2916,60 @@ private fun AutomaticPlanningScreen(
             }
         }
 
-        if (foodRules.isNotEmpty()) {
+        item {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it.take(80) },
+                label = { Text("Buscar en mi repertorio") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RepertoireFilter.entries.forEach { option ->
+                    FilterChip(
+                        selected = repertoireFilter == option,
+                        onClick = { repertoireFilter = option },
+                        label = { Text(option.label) }
+                    )
+                }
+            }
+        }
+
+        val repertoireFoods = foods.asSequence()
+            .filter { it.id in repertoireFoodIds }
+            .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+            .filter { food ->
+                val rule = rulesByFoodId[food.id]
+                when (repertoireFilter) {
+                    RepertoireFilter.ALL -> true
+                    RepertoireFilter.ACTIVE -> rule?.isActive == true
+                    RepertoireFilter.INACTIVE -> rule?.isActive == false
+                    RepertoireFilter.PENDING -> rule == null
+                }
+            }.sortedBy { it.name.lowercase() }.toList()
+
+        if (repertoireFoods.isEmpty()) {
             item {
                 Text(
-                    "Elementos configurados",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    if (repertoireFoodIds.isEmpty()) "Tu repertorio todavía está vacío."
+                    else "No hay alimentos con estos criterios.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            items(foodRules, key = { "rule_${it.itemKind}_${it.itemId}" }) { rule ->
-                val candidate = candidates.firstOrNull {
-                    it.kind == rule.itemKind && it.id == rule.itemId
-                }
+        } else {
+            items(repertoireFoods, key = { "repertoire_${it.id}" }) { food ->
+                val rule = rulesByFoodId[food.id]
+                var actionsExpanded by remember { mutableStateOf(false) }
                 Card(
-                    Modifier.fillMaxWidth().clickable { editing = rule }
+                    Modifier.fillMaxWidth().clickable {
+                        editing = rule ?: PlanningRule(
+                            PlannedItemKind.FOOD, food.id,
+                            setOf(MealType.LUNCH, MealType.DINNER),
+                            preferredGrams = 100.0
+                        )
+                    }
                 ) {
                     Row(
                         Modifier.padding(16.dp),
@@ -2893,13 +2977,15 @@ private fun AutomaticPlanningScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(
-                            foodCategoryIcon(foodsById[rule.itemId]?.category ?: FoodCategory.OTHER),
+                            foodCategoryIcon(food.category),
                             contentDescription = null
                         )
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text(candidate?.name ?: "Elemento", style = MaterialTheme.typography.bodyLarge)
+                            Text(food.name, style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                buildList {
+                                if (rule == null) "Pendiente de configurar" else if (!rule.isActive) {
+                                    "Inactivo · conserva su configuración"
+                                } else buildList {
                                     add(rule.allowedMealTypes.joinToString(" y ") { it.label.lowercase() })
                                     add(rule.frequency.label.lowercase())
                                     if (rule.fixedSlots.isNotEmpty()) {
@@ -2910,7 +2996,34 @@ private fun AutomaticPlanningScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Editar")
+                        if (rule == null) {
+                            TextButton(onClick = {
+                                editing = PlanningRule(
+                                    PlannedItemKind.FOOD, food.id,
+                                    setOf(MealType.LUNCH, MealType.DINNER),
+                                    preferredGrams = 100.0
+                                )
+                            }) { Text("Configurar") }
+                        } else {
+                            TextButton(onClick = { onSetActive(food.id, !rule.isActive) }) {
+                                Text(if (rule.isActive) "Desactivar" else "Activar")
+                            }
+                        }
+                        Box {
+                            IconButton(onClick = { actionsExpanded = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Más acciones")
+                            }
+                            DropdownMenu(expanded = actionsExpanded, onDismissRequest = { actionsExpanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Sustituir producto") },
+                                    onClick = { actionsExpanded = false; replacingFood = food }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Eliminar del repertorio") },
+                                    onClick = { actionsExpanded = false; removingFood = food }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -2923,33 +3036,19 @@ private fun AutomaticPlanningScreen(
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it.take(80) },
-                label = { Text("Buscar alimento") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Text("Elige un producto para guardarlo como pendiente y configurarlo después.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        val configuredKeys = foodRules.mapTo(mutableSetOf()) { it.itemKind to it.itemId }
         val visible = candidates.asSequence()
-            .filterNot { (it.kind to it.id) in configuredKeys }
-            .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
-            .take(30)
+            .filterNot { it.id in repertoireFoodIds }
+            .take(12)
             .toList()
         items(visible, key = { "candidate_${it.kind}_${it.id}" }) { candidate ->
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clickable {
-                        editing = PlanningRule(
-                            itemKind = candidate.kind,
-                            itemId = candidate.id,
-                            allowedMealTypes = setOf(MealType.LUNCH, MealType.DINNER),
-                            frequency = PlanningFrequency.NORMAL,
-                            preferredGrams = candidate.defaultGrams
-                        )
+                        onAddToRepertoire(candidate.id)
                     }
                     .padding(horizontal = 8.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -4639,6 +4738,9 @@ private fun MealItemPickerDialog(
 
 private enum class CatalogFilter { ALL, FOODS, DISHES }
 private enum class CatalogMode { SEARCH, REPERTOIRE }
+private enum class RepertoireFilter(val label: String) {
+    ALL("Todos"), ACTIVE("Activos"), INACTIVE("Inactivos"), PENDING("Pendientes")
+}
 
 private data class CatalogEntry(
     val id: Long,
@@ -4651,6 +4753,7 @@ private fun FoodDishCatalogScreen(
     foods: List<Food>,
     dishes: List<Dish>,
     planningRules: List<PlanningRule>,
+    repertoireFoodIds: Set<Long>,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onAddFood: () -> Unit,
@@ -4664,9 +4767,6 @@ private fun FoodDishCatalogScreen(
     var scanMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val foodsById = remember(foods) { foods.associateBy { it.id } }
-    val repertoireFoodIds = remember(planningRules) {
-        planningRules.filter { it.itemKind == PlannedItemKind.FOOD }.mapTo(mutableSetOf()) { it.itemId }
-    }
 
     LaunchedEffect(query) {
         if (query.isNotBlank()) delay(200)
