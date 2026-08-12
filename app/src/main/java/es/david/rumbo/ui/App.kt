@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -76,6 +77,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -123,6 +126,7 @@ import es.david.rumbo.logic.NutrientKind
 import es.david.rumbo.logic.NutritionTolerancePolicy
 import es.david.rumbo.logic.PlanNutritionAssessment
 import es.david.rumbo.logic.QuantityOptimizationResult
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import es.david.rumbo.logic.RecommendationEngine
 import es.david.rumbo.logic.TargetFit
 import es.david.rumbo.logic.WeeklyMenuGenerator
@@ -4540,6 +4544,8 @@ private fun FoodDishCatalogScreen(
     var normalizedQuery by remember { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var addMenuExpanded by remember { mutableStateOf(false) }
+    var scanMessage by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
     val foodsById = remember(foods) { foods.associateBy { it.id } }
 
     LaunchedEffect(query) {
@@ -4557,7 +4563,7 @@ private fun FoodDishCatalogScreen(
                             food.subcategory, food.retailer, food.barcode
                         ).joinToString(" ")
                     )
-                    if (normalizedQuery.isBlank() || searchable.contains(normalizedQuery)) {
+                    if (normalizedQuery.isNotBlank() && searchable.contains(normalizedQuery)) {
                         add(CatalogEntry(food.id, food.name, false))
                     }
                 }
@@ -4568,26 +4574,55 @@ private fun FoodDishCatalogScreen(
                     val searchable = normalizeSearch(
                         (listOf(dish.name) + ingredientNames).joinToString(" ")
                     )
-                    if (normalizedQuery.isBlank() || searchable.contains(normalizedQuery)) {
+                    if (normalizedQuery.isNotBlank() && searchable.contains(normalizedQuery)) {
                         add(CatalogEntry(dish.id, dish.name, true))
                     }
                 }
             }
-        }.sortedWith(compareBy<CatalogEntry> { it.name.lowercase() }.thenBy { it.isDish })
+        }.sortedWith(
+            compareBy<CatalogEntry> { !normalizeSearch(it.name).startsWith(normalizedQuery) }
+                .thenBy { it.name.length }
+                .thenBy { it.name.lowercase() }
+                .thenBy { it.isDish }
+        )
     }
 
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 32.dp)
     ) {
         item {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar alimentos y platos") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true
-            )
+            SearchBar(
+                inputField = {
+                    SearchBarDefaults.InputField(
+                        query = query,
+                        onQueryChange = { query = it },
+                        onSearch = { },
+                        expanded = false,
+                        onExpandedChange = { },
+                        placeholder = { Text("Buscar alimentos y platos") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                scanMessage = null
+                                GmsBarcodeScanning.getClient(context).startScan()
+                                    .addOnSuccessListener { barcode ->
+                                        val value = barcode.rawValue.orEmpty()
+                                        val food = foods.firstOrNull { it.barcode == value }
+                                        if (food != null) onOpenFood(food.id) else {
+                                            query = value
+                                            scanMessage = "No encuentro este producto en tus supermercados. Puedes buscarlo por nombre o añadirlo manualmente."
+                                        }
+                                    }
+                            }) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Escanear código de barras")
+                            }
+                        }
+                    )
+                },
+                expanded = false,
+                onExpandedChange = { },
+                modifier = Modifier.fillMaxWidth()
+            ) { }
             Spacer(Modifier.height(8.dp))
             Row(
                 Modifier.fillMaxWidth(),
@@ -4606,6 +4641,10 @@ private fun FoodDishCatalogScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
+            scanMessage?.let {
+                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+            }
             Box {
                 FilledTonalButton(
                     onClick = { addMenuExpanded = true },
@@ -4673,7 +4712,15 @@ private fun FoodDishCatalogScreen(
             if (entry != entries.lastOrNull()) HorizontalDivider()
         }
 
-        if (entries.isEmpty()) {
+        if (normalizedQuery.isBlank()) {
+            item {
+                Text(
+                    "Escribe el nombre de un alimento o plato, o escanea su código de barras.",
+                    modifier = Modifier.padding(vertical = 24.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (entries.isEmpty()) {
             item {
                 Text(
                     if (foods.isEmpty() && dishes.isEmpty()) {
@@ -4835,9 +4882,9 @@ private fun DishDetailScreen(
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
-                NutritionLine("Proteínas", totals.proteinGrams, Color(0xFFC62828))
-                NutritionLine("Carbohidratos", totals.carbohydrateGrams, Color(0xFF2563A6))
-                NutritionLine("Grasas", totals.fatGrams, Color(0xFF9A6700))
+                NutritionLine("Proteínas", totals.proteinGrams, MaterialTheme.colorScheme.onSurface)
+                NutritionLine("Carbohidratos", totals.carbohydrateGrams, MaterialTheme.colorScheme.onSurface)
+                NutritionLine("Grasas", totals.fatGrams, MaterialTheme.colorScheme.onSurface)
                 NutritionLine("Fibra", totals.fiberGrams)
                 if (!totals.isComplete) {
                     Text(
@@ -5460,15 +5507,15 @@ private fun FoodPrimaryNutritionStrip(food: Food) {
         )
         NutrientIconValue(
             Icons.Default.FitnessCenter, "Proteínas", food.proteinGrams, "g",
-            Color(0xFFC62828), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.Grain, "Carbohidratos", food.carbohydrateGrams, "g",
-            Color(0xFF2563A6), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.Opacity, "Grasas", food.fatGrams, "g",
-            Color(0xFF9A6700), Modifier.weight(1f)
+            MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
         )
     }
 }

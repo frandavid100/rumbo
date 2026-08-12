@@ -1,14 +1,15 @@
 package es.david.rumbo.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Shapes
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import android.os.Build
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
 private val AppBackground = Color(0xFFF3F3F3)
 private val CardWhite = Color(0xFFFFFFFF)
@@ -57,17 +58,19 @@ private val DarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF29292D)
 )
 
-private val RumboShapes = Shapes(
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(20.dp),
-    large = RoundedCornerShape(28.dp)
-)
 
 @Composable
 fun RumboTheme(content: @Composable () -> Unit) {
+    val darkTheme = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val colors = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && darkTheme -> dynamicDarkColorScheme(context)
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
+        darkTheme -> DarkColors
+        else -> LightColors
+    }
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
-        shapes = RumboShapes,
+        colorScheme = colors,
         content = content
     )
 }
