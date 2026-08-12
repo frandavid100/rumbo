@@ -37,7 +37,8 @@ data class UserProfile(
     val name: String,
     val heightCm: Double,
     val birthYear: Int,
-    val sex: Sex
+    val sex: Sex,
+    val photoUri: String? = null
 ) {
     fun isValid(currentYear: Int = LocalDate.now().year): Boolean =
         id > 0 && name.trim().isNotEmpty() && name.length <= 30 &&
