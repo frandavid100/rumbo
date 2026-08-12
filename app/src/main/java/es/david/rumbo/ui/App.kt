@@ -4571,7 +4571,7 @@ private fun FoodDishCatalogScreen(
     var normalizedQuery by remember { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var mode by rememberSaveable { mutableStateOf(CatalogMode.SEARCH) }
-    var addMenuExpanded by remember { mutableStateOf(false) }
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var scanMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val foodsById = remember(foods) { foods.associateBy { it.id } }
@@ -4624,14 +4624,19 @@ private fun FoodDishCatalogScreen(
         )
     }
 
-    LazyColumn(
-        contentPadding = PaddingValues(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 32.dp)
-    ) {
-        item {
+    BackHandler(enabled = searchExpanded) { searchExpanded = false }
+
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxSize().padding(start = 20.dp, top = 16.dp, end = 20.dp)
+        ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = mode == CatalogMode.SEARCH,
-                    onClick = { mode = CatalogMode.SEARCH },
+                    onClick = {
+                        mode = CatalogMode.SEARCH
+                        searchExpanded = true
+                    },
                     label = { Text("Buscar") }
                 )
                 FilterChip(
@@ -4647,10 +4652,21 @@ private fun FoodDishCatalogScreen(
                         query = query,
                         onQueryChange = { query = it },
                         onSearch = { },
-                        expanded = false,
-                        onExpandedChange = { },
+                        expanded = searchExpanded,
+                        onExpandedChange = {
+                            searchExpanded = it
+                            if (it) mode = CatalogMode.SEARCH
+                        },
                         placeholder = { Text("Buscar alimentos y platos") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        leadingIcon = {
+                            if (searchExpanded) {
+                                IconButton(onClick = { searchExpanded = false }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Salir de la búsqueda")
+                                }
+                            } else {
+                                Icon(Icons.Default.Search, contentDescription = null)
+                            }
+                        },
                         trailingIcon = {
                             IconButton(onClick = {
                                 scanMessage = null
@@ -4669,73 +4685,107 @@ private fun FoodDishCatalogScreen(
                         }
                     )
                 },
-                expanded = false,
-                onExpandedChange = { },
+                expanded = searchExpanded,
+                onExpandedChange = {
+                    searchExpanded = it
+                    if (it) mode = CatalogMode.SEARCH
+                },
                 modifier = Modifier.fillMaxWidth()
-            ) { }
-            Spacer(Modifier.height(8.dp))
-            scanMessage?.let {
-                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-            }
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(
-                    CatalogFilter.ALL to "Todos",
-                    CatalogFilter.FOODS to "Alimentos",
-                    CatalogFilter.DISHES to "Platos"
-                ).forEach { (option, label) ->
-                    FilterChip(
-                        selected = filter == option,
-                        onClick = { filter = option },
-                        label = { Text(label) }
+                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                    CatalogFilterChips(filter = filter, onFilterChange = { filter = it })
+                    scanMessage?.let {
+                        Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    CatalogEntries(
+                        entries = entries,
+                        foods = foods,
+                        foodsById = foodsById,
+                        dishes = dishes,
+                        repertoireFoodIds = repertoireFoodIds,
+                        mode = CatalogMode.SEARCH,
+                        normalizedQuery = normalizedQuery,
+                        onOpenFood = onOpenFood,
+                        onOpenDish = onOpenDish,
+                        onAddFood = onAddFood,
+                        onAddDish = onAddDish,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Box {
-                FilledTonalButton(
-                    onClick = { addMenuExpanded = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Añadir")
-                }
-                DropdownMenu(
-                    expanded = addMenuExpanded,
-                    onDismissRequest = { addMenuExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Añadir alimento") },
-                        onClick = {
-                            addMenuExpanded = false
-                            onAddFood()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Crear plato") },
-                        onClick = {
-                            addMenuExpanded = false
-                            onAddDish()
-                        }
-                    )
-                }
+            if (mode == CatalogMode.REPERTOIRE) {
+                CatalogFilterChips(filter = filter, onFilterChange = { filter = it })
+                CatalogEntries(
+                    entries = entries,
+                    foods = foods,
+                    foodsById = foodsById,
+                    dishes = dishes,
+                    repertoireFoodIds = repertoireFoodIds,
+                    mode = mode,
+                    normalizedQuery = normalizedQuery,
+                    onOpenFood = onOpenFood,
+                    onOpenDish = onOpenDish,
+                    onAddFood = onAddFood,
+                    onAddDish = onAddDish,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                Text(
+                    "Toca la barra para buscar por nombre o escanear un código.",
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Spacer(Modifier.height(12.dp))
         }
+    }
+}
 
+@Composable
+private fun CatalogFilterChips(
+    filter: CatalogFilter,
+    onFilterChange: (CatalogFilter) -> Unit
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(
+            CatalogFilter.ALL to "Todos",
+            CatalogFilter.FOODS to "Alimentos",
+            CatalogFilter.DISHES to "Platos"
+        ).forEach { (option, label) ->
+            FilterChip(
+                selected = filter == option,
+                onClick = { onFilterChange(option) },
+                label = { Text(label) }
+            )
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+}
+
+@Composable
+private fun CatalogEntries(
+    entries: List<CatalogEntry>,
+    foods: List<Food>,
+    foodsById: Map<Long, Food>,
+    dishes: List<Dish>,
+    repertoireFoodIds: Set<Long>,
+    mode: CatalogMode,
+    normalizedQuery: String,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
+    onAddFood: () -> Unit,
+    onAddDish: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var addMenuExpanded by remember { mutableStateOf(false) }
+    LazyColumn(modifier = modifier, contentPadding = PaddingValues(bottom = 32.dp)) {
         items(entries, key = { "${if (it.isDish) "dish" else "food"}_${it.id}" }) { entry ->
             if (entry.isDish) {
                 val dish = dishes.firstOrNull { it.id == entry.id } ?: return@items
                 val totals = dish.nutrition(foodsById)
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenDish(dish.id) }
-                        .padding(vertical = 10.dp),
+                    Modifier.fillMaxWidth().clickable { onOpenDish(dish.id) }.padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -4749,8 +4799,7 @@ private fun FoodDishCatalogScreen(
                         )
                     }
                     Text(
-                        if (totals.isComplete) "${formatDecimal(totals.calories)}\nkcal"
-                        else "datos\nincompletos",
+                        if (totals.isComplete) "${formatDecimal(totals.calories)}\nkcal" else "datos\nincompletos",
                         textAlign = TextAlign.End,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -4780,9 +4829,37 @@ private fun FoodDishCatalogScreen(
                     } else {
                         "No hay resultados con estos criterios."
                     },
-                    modifier = Modifier.padding(vertical = 24.dp),
+                    modifier = Modifier.padding(top = 24.dp, bottom = 12.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (mode == CatalogMode.SEARCH) {
+                    Box {
+                        FilledTonalButton(onClick = { addMenuExpanded = true }) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                                Text("Añadir manualmente")
+                        }
+                        DropdownMenu(
+                            expanded = addMenuExpanded,
+                            onDismissRequest = { addMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Añadir alimento") },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    onAddFood()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Crear plato") },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    onAddDish()
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
