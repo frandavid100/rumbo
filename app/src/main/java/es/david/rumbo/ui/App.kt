@@ -1043,20 +1043,13 @@ private fun HomeScreen(
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
         .filter { it.planWeek == PlanWeek.CURRENT }
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
 
-    LazyColumn(
-        contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            HomeCatalogSearch(
-                foods = data.foods,
-                dishes = data.dishes,
-                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                onOpenFood = onOpenFood,
-                onOpenDish = onOpenDish
-            )
-        }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            contentPadding = PaddingValues(start = 16.dp, top = 92.dp, end = 16.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
         if (assessment != null && recommendedGoal != null) {
             item {
                 BodyGoalNutritionCard(
@@ -1097,15 +1090,25 @@ private fun HomeScreen(
                 onApplyAdjustedMeals = onApplyAdjustedMeals
             )
         }
-        item {
-            HomeShoppingSection(
-                meals = meals,
-                foodsById = foodsById,
-                dishesById = dishesById,
-                profileId = profile?.id,
-                onOpenFoods = onOpenFoods
-            )
+            item {
+                HomeShoppingSection(
+                    meals = meals,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    profileId = profile?.id,
+                    onOpenFoods = onOpenFoods
+                )
+            }
         }
+        HomeCatalogSearch(
+            foods = data.foods,
+            dishes = data.dishes,
+            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+            expanded = searchExpanded,
+            onExpandedChange = { searchExpanded = it },
+            onOpenFood = onOpenFood,
+            onOpenDish = onOpenDish
+        )
     }
 }
 
@@ -4718,10 +4721,10 @@ private data class CatalogEntry(
 @Composable
 private fun HomeCatalogSearch(
     foods: List<Food>, dishes: List<Dish>, repertoireFoodIds: Set<Long>,
+    expanded: Boolean, onExpandedChange: (Boolean) -> Unit,
     onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    var expanded by rememberSaveable { mutableStateOf(false) }
     var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var scanMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
@@ -4741,7 +4744,7 @@ private fun HomeCatalogSearch(
             }
         }.sortedBy { it.name.lowercase() }
     }
-    BackHandler(enabled = expanded) { expanded = false }
+    BackHandler(enabled = expanded) { onExpandedChange(false) }
     SearchBar(
         inputField = {
             SearchBarDefaults.InputField(
@@ -4749,10 +4752,10 @@ private fun HomeCatalogSearch(
                 onQueryChange = { query = it },
                 onSearch = {},
                 expanded = expanded,
-                onExpandedChange = { expanded = it },
+                onExpandedChange = onExpandedChange,
                 placeholder = { Text("Buscar alimentos y platos") },
                 leadingIcon = {
-                    if (expanded) IconButton(onClick = { expanded = false }) {
+                    if (expanded) IconButton(onClick = { onExpandedChange(false) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
                     } else Icon(Icons.Default.Search, null)
                 },
@@ -4768,7 +4771,10 @@ private fun HomeCatalogSearch(
                     }) { Icon(Icons.Default.QrCodeScanner, "Escanear código de barras") }
                 }
             )
-        }, expanded = expanded, onExpandedChange = { expanded = it }, modifier = Modifier.fillMaxWidth()
+        },
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        modifier = if (expanded) Modifier.fillMaxSize() else Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             CatalogFilterChips(filter) { filter = it }
