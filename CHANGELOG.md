@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.41.0
+
+- Elimina las cantidades bloqueadas y los candados de alimentos: una presencia fija ya no fija sus gramos.
+- Permite omitir almuerzo y merienda asignándoles un 0 % de las calorías.
+- Hace reproducible la compilación con una copia local verificable del catálogo nutricional de Mercadona.
+
 ## 0.40.0
 
 - Construye cada comida desde sus cantidades fijas y comprueba el margen restante antes de añadir otros elementos.
