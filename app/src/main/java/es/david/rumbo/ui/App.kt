@@ -24,11 +24,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -75,6 +83,10 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,6 +108,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -384,20 +397,9 @@ fun RumboApp(repository: AppRepository) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            if (screen != Screen.HOME && screen !in setOf(Screen.ADD, Screen.EDIT_MEASUREMENT)) TopAppBar(
                 navigationIcon = {
-                    if (profileReady && screen == Screen.HOME && data.profile != null) {
-                        ProfileSwitcher(
-                            profiles = data.profiles.map { it.profile },
-                            activeProfile = data.profile,
-                            onSelect = {
-                                data = repository.switchProfile(it)
-                                screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
-                            },
-                            onManage = { screenName = Screen.PROFILE.name },
-                            onSettings = { screenName = Screen.SETTINGS.name }
-                        )
-                    } else if (!screen.inNavigation) {
+                    if (!screen.inNavigation) {
                         IconButton(onClick = navigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                         }
@@ -486,7 +488,13 @@ fun RumboApp(repository: AppRepository) {
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            screenStateHolder.SaveableStateProvider(screenName) {
+            AnimatedContent(
+                targetState = screenName,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "Navegación"
+            ) { animatedScreenName ->
+            val screen = Screen.valueOf(animatedScreenName)
+            screenStateHolder.SaveableStateProvider(animatedScreenName) {
             when {
                 !profileReady -> ProfileScreen(
                     profile = data.profile,
@@ -509,6 +517,12 @@ fun RumboApp(repository: AppRepository) {
                 )
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
+                    onSwitchProfile = {
+                        data = repository.switchProfile(it)
+                        screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
+                    },
+                    onManageProfiles = { screenName = Screen.PROFILE.name },
+                    onOpenSettings = { screenName = Screen.SETTINGS.name },
                     onGoalChange = { data = repository.setWeeklyRate(it) },
                     onAddMeasurement = { screenName = Screen.ADD.name },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
@@ -547,6 +561,7 @@ fun RumboApp(repository: AppRepository) {
                 )
                 screen == Screen.ADD -> AddMeasurementScreen(
                     data = data,
+                    onDismiss = { screenName = Screen.HOME.name },
                     onSave = {
                         data = repository.addMeasurement(it)
                         screenName = Screen.HOME.name
@@ -576,6 +591,7 @@ fun RumboApp(repository: AppRepository) {
                         AddMeasurementScreen(
                             data = data,
                             initial = measurement,
+                            onDismiss = { screenName = Screen.MEASUREMENT_DETAIL.name },
                             onSave = {
                                 data = repository.addMeasurement(it)
                                 screenName = Screen.MEASUREMENT_DETAIL.name
@@ -966,6 +982,7 @@ fun RumboApp(repository: AppRepository) {
                     )
             }
             }
+            }
         }
     }
 }
@@ -976,13 +993,14 @@ private fun ProfileSwitcher(
     activeProfile: UserProfile?,
     onSelect: (Long) -> Unit,
     onManage: () -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    avatarSize: Int = 36
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
             Box(
-                Modifier.size(36.dp).background(profileColor(activeProfile?.id), CircleShape),
+                Modifier.size(avatarSize.dp).background(profileColor(activeProfile?.id), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -1040,6 +1058,9 @@ private fun profileColor(id: Long?): Color {
 @Composable
 private fun HomeScreen(
     data: AppData,
+    onSwitchProfile: (Long) -> Unit,
+    onManageProfiles: () -> Unit,
+    onOpenSettings: () -> Unit,
     onGoalChange: (Double?) -> Unit,
     onAddMeasurement: () -> Unit,
     onExplainBody: () -> Unit,
@@ -1066,14 +1087,19 @@ private fun HomeScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var searchMessage by remember { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
+    val searchBarVisible by remember {
+        derivedStateOf { !listState.canScrollBackward || !listState.lastScrolledForward }
+    }
 
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-        item {
-            HomeCatalogSearch(
+        Column(Modifier.fillMaxSize()) {
+            AnimatedVisibility(
+                visible = searchBarVisible,
+                enter = slideInVertically { -it } + fadeIn(),
+                exit = slideOutVertically { -it } + fadeOut()
+            ) {
+                HomeCatalogSearch(
                 foods = data.foods,
                 dishes = data.dishes,
                 repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
@@ -1086,9 +1112,26 @@ private fun HomeScreen(
                 expanded = false,
                 onExpandedChange = { if (it) searchExpanded = true },
                 onOpenFood = onOpenFood,
-                onOpenDish = onOpenDish
-            )
-        }
+                onOpenDish = onOpenDish,
+                trailingContent = {
+                    ProfileSwitcher(
+                        profiles = data.profiles.map { it.profile },
+                        activeProfile = data.profile,
+                        onSelect = onSwitchProfile,
+                        onManage = onManageProfiles,
+                        onSettings = onOpenSettings,
+                        avatarSize = 40
+                    )
+                },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
         if (assessment != null && recommendedGoal != null) {
             item {
                 BodyGoalNutritionCard(
@@ -1139,6 +1182,7 @@ private fun HomeScreen(
                 )
             }
         }
+        }
         if (searchExpanded) {
             HomeCatalogSearch(
                 foods = data.foods,
@@ -1153,7 +1197,17 @@ private fun HomeScreen(
                 expanded = true,
                 onExpandedChange = { searchExpanded = it },
                 onOpenFood = onOpenFood,
-                onOpenDish = onOpenDish
+                onOpenDish = onOpenDish,
+                trailingContent = {
+                    ProfileSwitcher(
+                        profiles = data.profiles.map { it.profile },
+                        activeProfile = data.profile,
+                        onSelect = onSwitchProfile,
+                        onManage = onManageProfiles,
+                        onSettings = onOpenSettings,
+                        avatarSize = 40
+                    )
+                }
             )
         }
     }
@@ -1214,11 +1268,12 @@ private fun BodyGoalNutritionCard(
         chosenWeeklyRate ?: RecommendationEngine.weeklyRateFor(goal, weightKg) ?: 0.0
     }
     if (choosingGoal) {
-        AlertDialog(
-            onDismissRequest = { choosingGoal = false },
-            title = { Text("Cambiar objetivo semanal") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ModalBottomSheet(onDismissRequest = { choosingGoal = false }) {
+                Column(
+                    Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Cambiar objetivo semanal", style = MaterialTheme.typography.headlineSmall)
                     Text("Rumbo recomienda ${weeklyRateAction(recommendedRate)} cada semana.")
                     OutlinedButton(
                         onClick = {
@@ -1235,17 +1290,14 @@ private fun BodyGoalNutritionCard(
                     }
                     HorizontalDivider()
                     Text("Elegir una cifra manual", fontWeight = FontWeight.SemiBold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = manualDirection < 0.0,
-                            onClick = { manualDirection = -1.0 },
-                            label = { Text("Perder") }
-                        )
-                        FilterChip(
-                            selected = manualDirection > 0.0,
-                            onClick = { manualDirection = 1.0 },
-                            label = { Text("Ganar") }
-                        )
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        listOf(-1.0 to "Perder", 1.0 to "Ganar").forEachIndexed { index, (value, label) ->
+                            SegmentedButton(
+                                selected = manualDirection == value,
+                                onClick = { manualDirection = value },
+                                shape = SegmentedButtonDefaults.itemShape(index, 2)
+                            ) { Text(label) }
+                        }
                     }
                     OutlinedTextField(
                         value = manualMagnitude,
@@ -1268,10 +1320,7 @@ private fun BodyGoalNutritionCard(
                     manualError?.let {
                         Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
+                    Button(onClick = {
                     val magnitude = parseDecimal(manualMagnitude)
                     if (magnitude == null || !magnitude.isFinite() || magnitude < 0.0) {
                         manualError = "Introduce una cifra numérica válida."
@@ -1279,12 +1328,11 @@ private fun BodyGoalNutritionCard(
                         onGoalChange(if (magnitude == 0.0) 0.0 else magnitude * manualDirection)
                         choosingGoal = false
                     }
-                }) { Text("Usar esta cifra") }
-            },
-            dismissButton = {
-                TextButton(onClick = { choosingGoal = false }) { Text("Cancelar") }
-            }
-        )
+                    }, Modifier.fillMaxWidth()) { Text("Usar esta cifra") }
+                    TextButton(onClick = { choosingGoal = false }, Modifier.fillMaxWidth()) { Text("Cancelar") }
+                    Spacer(Modifier.height(16.dp))
+                }
+        }
     }
     Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2559,6 +2607,7 @@ private fun DetailLine(label: String, value: String) {
 private fun AddMeasurementScreen(
     data: AppData,
     initial: Measurement? = null,
+    onDismiss: () -> Unit,
     onSave: (Measurement) -> Unit
 ) {
     val isEditing = initial != null
@@ -2589,10 +2638,12 @@ private fun AddMeasurementScreen(
         ) { DatePicker(pickerState) }
     }
 
+    ModalBottomSheet(onDismissRequest = onDismiss) {
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        Text(if (isEditing) "Editar medición" else "Nueva medición", style = MaterialTheme.typography.headlineSmall)
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Medición", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -2622,9 +2673,9 @@ private fun AddMeasurementScreen(
                 HorizontalDivider()
                 SelectorField(
                     label = "Actividad habitual",
-                    selectedLabel = activity?.label ?: "Mantener la anterior · \${inherited.activity.label}",
+                    selectedLabel = activity?.label ?: "Mantener la anterior · ${inherited.activity.label}",
                     options = ActivityLevel.entries,
-                    optionLabel = { "\${it.label} · \${it.description}" },
+                    optionLabel = { "${it.label} · ${it.description}" },
                     onSelect = { activity = it },
                     onClear = { activity = null }
                 )
@@ -2654,7 +2705,7 @@ private fun AddMeasurementScreen(
             }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-        OutlinedButton(
+        Button(
             onClick = {
                 val parsedWeight = parseDecimal(weight)
                 val parsedWaist = parseDecimal(waist)
@@ -2684,7 +2735,9 @@ private fun AddMeasurementScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (isEditing) "Guardar cambios" else "Guardar y recalcular") }
-        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+        Spacer(Modifier.height(24.dp))
+    }
     }
 }
 
@@ -4772,7 +4825,9 @@ private fun HomeCatalogSearch(
     filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     expanded: Boolean, onExpandedChange: (Boolean) -> Unit,
-    onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit
+    onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit,
+    trailingContent: @Composable () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val normalized = normalizeSearch(query)
@@ -4792,39 +4847,55 @@ private fun HomeCatalogSearch(
         }.sortedBy { it.name.lowercase() }
     }
     BackHandler(enabled = expanded) { onExpandedChange(false) }
-    SearchBar(
+    val scan = {
+        GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
+            val value = barcode.rawValue.orEmpty()
+            foods.firstOrNull { it.barcode == value }?.let { onOpenFood(it.id) } ?: run {
+                onQueryChange(value)
+                onScanMessageChange("No encuentro este producto en tus supermercados.")
+            }
+        }
+        Unit
+    }
+    val input: @Composable () -> Unit = {
+        SearchBarDefaults.InputField(
+            query = query,
+            onQueryChange = onQueryChange,
+            onSearch = {},
+            expanded = expanded,
+            onExpandedChange = onExpandedChange,
+            placeholder = { Text("Buscar alimentos y platos") },
+            leadingIcon = {
+                if (expanded) IconButton(onClick = { onExpandedChange(false) }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
+                } else Icon(Icons.Default.Search, null)
+            },
+            trailingIcon = trailingContent
+        )
+    }
+    if (!expanded) SearchBar(
         inputField = {
-            SearchBarDefaults.InputField(
-                query = query,
-                onQueryChange = onQueryChange,
-                onSearch = {},
-                expanded = expanded,
-                onExpandedChange = onExpandedChange,
-                placeholder = { Text("Buscar alimentos y platos") },
-                leadingIcon = {
-                    if (expanded) IconButton(onClick = { onExpandedChange(false) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
-                    } else Icon(Icons.Default.Search, null)
-                },
-                trailingIcon = {
-                    IconButton(onClick = {
-                        GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
-                            val value = barcode.rawValue.orEmpty()
-                            foods.firstOrNull { it.barcode == value }?.let { onOpenFood(it.id) } ?: run {
-                                onQueryChange(value)
-                                onScanMessageChange("No encuentro este producto en tus supermercados.")
-                            }
-                        }
-                    }) { Icon(Icons.Default.QrCodeScanner, "Escanear código de barras") }
-                }
-            )
+            input()
         },
-        expanded = expanded,
+        expanded = false,
         onExpandedChange = onExpandedChange,
-        modifier = if (expanded) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
-    ) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        modifier = modifier.fillMaxWidth()
+    ) {}
+    else Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+        Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
+            SearchBar(
+                inputField = { input() },
+                expanded = false,
+                onExpandedChange = onExpandedChange,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) {}
+            Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             CatalogFilterChips(filter, onFilterChange)
+            TextButton(onClick = scan) {
+                Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Escanear código de barras")
+            }
             if (query.isBlank()) Text(
                 "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
                 Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -4835,6 +4906,7 @@ private fun HomeCatalogSearch(
                 if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
                 normalized, onOpenFood, onOpenDish, {}, {}, Modifier.weight(1f)
             )
+            }
         }
     }
 }
@@ -5967,6 +6039,15 @@ private fun SimilarFoodEntry(food: Food, onClick: () -> Unit) {
     }
 }
 
+private data class FoodUnitDefinition(
+    val singular: String,
+    val plural: String,
+    val gender: String,
+    val amount: Double
+) {
+    val label: String get() = "$singular · ${formatDecimal(amount)} g o ml"
+}
+
 @Composable
 private fun FoodDetailScreen(
     food: Food,
@@ -5988,6 +6069,27 @@ private fun FoodDetailScreen(
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
     var editingUnit by remember { mutableStateOf(false) }
+    var creatingUnit by remember { mutableStateOf(false) }
+    var unitDraft by remember(food.id, food.unitName, food.unitAmount) {
+        mutableStateOf(
+            if (!food.unitName.isNullOrBlank() && food.unitAmount != null) FoodUnitDefinition(
+                food.unitName, food.unitPlural ?: food.unitName, food.unitGender, food.unitAmount
+            ) else null
+        )
+    }
+    var allowDividing by remember(food.id, food.wholeUnitsOnly) { mutableStateOf(!food.wholeUnitsOnly) }
+    var unitDivisions by remember(food.id, food.unitDivisions) {
+        mutableStateOf(food.unitDivisions.takeIf { it > 1 }?.toString() ?: "2")
+    }
+    var unitError by remember { mutableStateOf<String?>(null) }
+    val availableUnits = remember(foods) {
+        foods.mapNotNull { candidate ->
+            val singular = candidate.unitName ?: return@mapNotNull null
+            val amount = candidate.unitAmount ?: return@mapNotNull null
+            FoodUnitDefinition(singular, candidate.unitPlural ?: singular, candidate.unitGender, amount)
+        }.distinctBy { listOf(it.singular, it.plural, it.gender, it.amount.toString()) }
+            .sortedBy { it.singular.lowercase() }
+    }
     val uriHandler = LocalUriHandler.current
     val similarFoods = FoodSimilarityEngine.findSimilar(food, foods)
     val menuUsages = remember(food.id, plannedMeals, dishes) {
@@ -6050,11 +6152,15 @@ private fun FoodDetailScreen(
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } }
         )
     }
-    if (editingUnit) {
-        FoodUnitDialog(
-            food = food,
-            onSave = { onSaveFood(it); editingUnit = false },
-            onDismiss = { editingUnit = false }
+    if (creatingUnit) {
+        NewFoodUnitDialog(
+            foodName = food.name,
+            onCreate = {
+                unitDraft = it
+                creatingUnit = false
+                editingUnit = true
+            },
+            onDismiss = { creatingUnit = false }
         )
     }
 
@@ -6123,7 +6229,51 @@ private fun FoodDetailScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Unidades", style = MaterialTheme.typography.titleLarge)
                 HorizontalDivider()
-                if (food.unitName.isNullOrBlank() || food.unitAmount == null) {
+                if (editingUnit) {
+                    UnitDefinitionField(
+                        selected = unitDraft,
+                        options = availableUnits,
+                        onSelect = { unitDraft = it; unitError = null },
+                        onCreateNew = { creatingUnit = true }
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().clickable { allowDividing = !allowDividing },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(allowDividing, { allowDividing = it })
+                        Text("Permitir dividirlo")
+                    }
+                    if (allowDividing) NumericField(
+                        "¿En cuántas partes?", unitDivisions, { unitDivisions = it }, Modifier.fillMaxWidth()
+                    )
+                    unitError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    Button(onClick = {
+                        val definition = unitDraft
+                        val divisions = unitDivisions.toIntOrNull()
+                        unitError = when {
+                            definition == null -> "Elige una unidad o crea una nueva."
+                            allowDividing && (divisions == null || divisions !in 2..100) -> "Indica entre 2 y 100 partes."
+                            else -> null
+                        }
+                        if (unitError == null && definition != null) {
+                            onSaveFood(food.copy(
+                                unitName = definition.singular,
+                                unitPlural = definition.plural,
+                                unitGender = definition.gender,
+                                unitAmount = definition.amount,
+                                wholeUnitsOnly = !allowDividing,
+                                unitDivisions = if (allowDividing) divisions!! else 1
+                            ))
+                            editingUnit = false
+                        }
+                    }, Modifier.fillMaxWidth()) { Text("Guardar") }
+                    if (!food.unitName.isNullOrBlank()) TextButton(onClick = {
+                        onSaveFood(food.copy(unitName = null, unitPlural = null, unitAmount = null, wholeUnitsOnly = false, unitDivisions = 1))
+                        unitDraft = null
+                        editingUnit = false
+                    }, Modifier.fillMaxWidth()) { Text("Quitar unidad", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { editingUnit = false }, Modifier.fillMaxWidth()) { Text("Cancelar") }
+                } else if (food.unitName.isNullOrBlank() || food.unitAmount == null) {
                     Text("Sin unidad configurada", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     TextButton(onClick = { editingUnit = true }) {
                         Icon(Icons.Default.Add, contentDescription = null)
@@ -6182,7 +6332,7 @@ private fun FoodDetailScreen(
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Alimentos similares", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("Alimentos similares", style = MaterialTheme.typography.titleLarge)
                 HorizontalDivider()
                 Text(
                     "Puedes sustituirlo por estos alimentos sin alterar demasiado el reparto nutricional.",
@@ -6204,21 +6354,54 @@ private fun FoodDetailScreen(
 }
 
 @Composable
-private fun FoodUnitDialog(
-    food: Food,
-    onSave: (Food) -> Unit,
+private fun UnitDefinitionField(
+    selected: FoodUnitDefinition?,
+    options: List<FoodUnitDefinition>,
+    onSelect: (FoodUnitDefinition) -> Unit,
+    onCreateNew: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded, { expanded = it }) {
+        OutlinedTextField(
+            value = selected?.label.orEmpty(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Unidad") },
+            placeholder = { Text("Elige una unidad") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded, { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = { onSelect(option); expanded = false }
+                )
+            }
+            if (options.isNotEmpty()) HorizontalDivider()
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text("Crear una unidad nueva") },
+                onClick = { expanded = false; onCreateNew() }
+            )
+        }
+    }
+}
+
+@Composable
+private fun NewFoodUnitDialog(
+    foodName: String,
+    onCreate: (FoodUnitDefinition) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var unitName by rememberSaveable(food.id) { mutableStateOf(food.unitName.orEmpty()) }
-    var unitPlural by rememberSaveable(food.id) { mutableStateOf(food.unitPlural.orEmpty()) }
-    var unitAmount by rememberSaveable(food.id) { mutableStateOf(food.unitAmount?.let(::formatDecimal).orEmpty()) }
-    var allowDividing by rememberSaveable(food.id) { mutableStateOf(!food.wholeUnitsOnly) }
-    var divisions by rememberSaveable(food.id) { mutableStateOf(food.unitDivisions.takeIf { it > 1 }?.toString() ?: "2") }
-    var gender by rememberSaveable(food.id) { mutableStateOf(food.unitGender) }
+    var unitName by rememberSaveable { mutableStateOf("") }
+    var unitPlural by rememberSaveable { mutableStateOf("") }
+    var unitAmount by rememberSaveable { mutableStateOf("") }
+    var gender by rememberSaveable { mutableStateOf("MASCULINE") }
     var error by remember { mutableStateOf<String?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Unidades de ${food.name}", style = MaterialTheme.typography.headlineSmall)
+                Text("Nueva unidad para $foodName", style = MaterialTheme.typography.headlineSmall)
                 OutlinedTextField(
                     value = unitName,
                     onValueChange = { unitName = it.take(40) },
@@ -6228,42 +6411,19 @@ private fun FoodUnitDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(unitPlural, { unitPlural = it.take(40) }, Modifier.fillMaxWidth(), label = { Text("Plural") }, placeholder = { Text("vasitos, huevos, latas…") }, singleLine = true)
-                NumericField("Gramos o ml por unidad", unitAmount, { unitAmount = it }, Modifier.fillMaxWidth())
                 SelectorField("Género gramatical", if (gender == "FEMININE") "Femenino" else "Masculino", listOf("MASCULINE", "FEMININE"), { if (it == "FEMININE") "Femenino" else "Masculino" }, { gender = it }, null)
-                Row(
-                    Modifier.fillMaxWidth().clickable { allowDividing = !allowDividing },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(checked = allowDividing, onCheckedChange = { allowDividing = it })
-                    Text("Permitir dividirlo")
-                }
-                if (allowDividing) NumericField("¿En cuántas partes?", divisions, { divisions = it }, Modifier.fillMaxWidth())
+                NumericField("Gramos o ml por unidad", unitAmount, { unitAmount = it }, Modifier.fillMaxWidth())
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Button(onClick = {
-                val amount = unitAmount.takeIf { it.isNotBlank() }?.let(::parseDecimal)
-                val parsedDivisions = divisions.toIntOrNull()
+                val amount = parseDecimal(unitAmount)
                 error = when {
-                    unitName.isBlank() != unitAmount.isBlank() -> "Indica el nombre y la equivalencia."
-                    unitName.isNotBlank() && unitPlural.isBlank() -> "Indica también el plural."
-                    amount != null && amount !in 0.1..5000.0 -> "La equivalencia debe estar entre 0,1 y 5.000."
-                    allowDividing && unitName.isBlank() -> "Configura una unidad antes de permitir dividirla."
-                    allowDividing && (parsedDivisions == null || parsedDivisions !in 2..100) -> "Indica entre 2 y 100 partes."
+                    unitName.isBlank() -> "Indica el singular."
+                    unitPlural.isBlank() -> "Indica también el plural."
+                    amount == null || amount !in 0.1..5000.0 -> "La equivalencia debe estar entre 0,1 y 5.000."
                     else -> null
                 }
-                if (error == null) onSave(food.copy(
-                    unitName = unitName.trim().ifBlank { null },
-                    unitPlural = unitPlural.trim().ifBlank { null },
-                    unitGender = gender,
-                    unitAmount = amount,
-                    wholeUnitsOnly = !allowDividing && unitName.isNotBlank(),
-                    unitDivisions = if (allowDividing) parsedDivisions!! else 1
-                ))
-            }, Modifier.fillMaxWidth()) { Text("Guardar") }
-                if (!food.unitName.isNullOrBlank()) {
-                    TextButton(onClick = { onSave(food.copy(unitName = null, unitPlural = null, unitAmount = null, wholeUnitsOnly = false, unitDivisions = 1)) }, Modifier.fillMaxWidth()) {
-                        Text("Quitar unidad", color = MaterialTheme.colorScheme.error)
-                    }
-                }
+                if (error == null && amount != null) onCreate(FoodUnitDefinition(unitName.trim(), unitPlural.trim(), gender, amount))
+            }, Modifier.fillMaxWidth()) { Text("Crear unidad") }
                 TextButton(onClick = onDismiss, Modifier.fillMaxWidth()) { Text("Cancelar") }
                 Spacer(Modifier.height(16.dp))
             }
