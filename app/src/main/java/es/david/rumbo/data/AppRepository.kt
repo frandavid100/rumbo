@@ -525,7 +525,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 16)
+        put("schemaVersion", 17)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -597,8 +597,11 @@ class AppRepository(context: Context) {
                 putNullable("retailer", food.retailer)
                 putNullable("source", food.source)
                 putNullable("unitName", food.unitName)
+                putNullable("unitPlural", food.unitPlural)
+                put("unitGender", food.unitGender)
                 putNullable("unitAmount", food.unitAmount)
                 put("wholeUnitsOnly", food.wholeUnitsOnly)
+                put("unitDivisions", food.unitDivisions)
             })
         }
     }
@@ -824,8 +827,11 @@ class AppRepository(context: Context) {
                     retailer = item.optionalString("retailer"),
                     source = item.optionalString("source"),
                     unitName = item.optionalString("unitName"),
+                    unitPlural = item.optionalString("unitPlural"),
+                    unitGender = item.optString("unitGender", "MASCULINE"),
                     unitAmount = item.optionalDouble("unitAmount"),
-                    wholeUnitsOnly = item.optBoolean("wholeUnitsOnly", false)
+                    wholeUnitsOnly = item.optBoolean("wholeUnitsOnly", false),
+                    unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100)
                 )
             )
         }

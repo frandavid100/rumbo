@@ -69,6 +69,9 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -77,6 +80,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
@@ -469,11 +473,6 @@ fun RumboApp(repository: AppRepository) {
                             }
                         }
                     }
-                    if (profileReady && screen == Screen.HOME) {
-                        IconButton(onClick = { screenName = Screen.FOODS.name }) {
-                            Icon(Icons.Default.Search, contentDescription = "Buscar alimentos y platos")
-                        }
-                    }
                 }
             )
         },
@@ -516,6 +515,16 @@ fun RumboApp(repository: AppRepository) {
                         screenName = Screen.EDIT_PLANNED_MEAL.name
                     },
                     onOpenFoods = { screenName = Screen.FOODS.name },
+                    onOpenFood = {
+                        selectedFoodId = it
+                        foodReturnScreenName = Screen.HOME.name
+                        screenName = Screen.FOOD_DETAIL.name
+                    },
+                    onOpenDish = {
+                        selectedDishId = it
+                        dishReturnScreenName = Screen.HOME.name
+                        screenName = Screen.DISH_DETAIL.name
+                    },
                     onAddMissingMeal = { type, day ->
                         plannerWeekName = PlanWeek.CURRENT.name
                         screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
@@ -584,6 +593,16 @@ fun RumboApp(repository: AppRepository) {
                         plannerWeekName = week.name
                         selectedPlannedMealId = mealId
                         screenName = Screen.EDIT_PLANNED_MEAL.name
+                    },
+                    onOpenFood = {
+                        selectedFoodId = it
+                        foodReturnScreenName = Screen.PLANNER.name
+                        screenName = Screen.FOOD_DETAIL.name
+                    },
+                    onOpenDish = {
+                        selectedDishId = it
+                        dishReturnScreenName = Screen.PLANNER.name
+                        screenName = Screen.DISH_DETAIL.name
                     },
                     onAddMissing = { type, day, week ->
                         plannerWeekName = week.name
@@ -816,6 +835,11 @@ fun RumboApp(repository: AppRepository) {
                             plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                             dishes = data.dishes,
                             onOpenFood = { selectedFoodId = it },
+                            onOpenDish = {
+                                selectedDishId = it
+                                dishReturnScreenName = Screen.FOOD_DETAIL.name
+                                screenName = Screen.DISH_DETAIL.name
+                            },
                             onOpenMeal = {
                                 selectedPlannedMealId = it
                                 screenName = Screen.EDIT_PLANNED_MEAL.name
@@ -847,15 +871,11 @@ fun RumboApp(repository: AppRepository) {
                                 draftMealDayName = null
                                 screenName = Screen.ADD_PLANNED_MEAL.name
                             },
-                            planningRule = data.activeProfileData?.planningRules?.firstOrNull {
+                            planningRules = data.activeProfileData?.planningRules?.filter {
                                 it.itemKind == PlannedItemKind.FOOD && it.itemId == food.id
-                            },
+                            }.orEmpty(),
                             onSavePlanningRule = { data = repository.savePlanningRule(it) },
-                            onDeletePlanningRule = {
-                                data.activeProfileData?.planningRules?.firstOrNull {
-                                    it.itemKind == PlannedItemKind.FOOD && it.itemId == food.id
-                                }?.let { data = repository.deletePlanningRule(it.ruleId) }
-                            },
+                            onDeletePlanningRule = { data = repository.deletePlanningRule(it) },
                             onSaveFood = { data = repository.saveFood(it) },
                             onEdit = { screenName = Screen.EDIT_FOOD.name },
                             onDelete = {
@@ -1007,7 +1027,11 @@ private fun HomeScreen(
     onExplainBody: () -> Unit,
     onOpenPlanner: () -> Unit,
     onOpenMeal: (Long) -> Unit,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
     onOpenFoods: () -> Unit,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
     onAddMissingMeal: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
 ) {
@@ -1027,6 +1051,15 @@ private fun HomeScreen(
         contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item {
+            HomeCatalogSearch(
+                foods = data.foods,
+                dishes = data.dishes,
+                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                onOpenFood = onOpenFood,
+                onOpenDish = onOpenDish
+            )
+        }
         if (assessment != null && recommendedGoal != null) {
             item {
                 BodyGoalNutritionCard(
@@ -1061,6 +1094,8 @@ private fun HomeScreen(
                 recommendation = recommendation,
                 onOpenPlanner = onOpenPlanner,
                 onOpenMeal = onOpenMeal,
+                onOpenFood = onOpenFood,
+                onOpenDish = onOpenDish,
                 onAddMissing = onAddMissingMeal,
                 onApplyAdjustedMeals = onApplyAdjustedMeals
             )
@@ -1460,6 +1495,7 @@ private fun TodayPlanSection(
                     it.dishes.mapNotNull { planned ->
                         dishesById[planned.dishId]?.let { dish ->
                             MenuItemLine(
+                                dish.id, true,
                                 dish.name,
                                 it.resolvedGrams(planned, today),
                                 dish.dominantCategory(foodsById)
@@ -1468,6 +1504,7 @@ private fun TodayPlanSection(
                     } + it.items.mapNotNull { planned ->
                         foodsById[planned.foodId]?.let { food ->
                             MenuItemLine(
+                                food.id, false,
                                 food.name,
                                 it.resolvedGrams(planned, today),
                                 food.category
@@ -1493,7 +1530,9 @@ private fun TodayPlanSection(
                     if (entries.isNotEmpty()) {
                         entries.forEach { entry ->
                             Row(
-                                Modifier.fillMaxWidth(),
+                                Modifier.fillMaxWidth().clickable {
+                                    if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
+                                },
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -1541,6 +1580,8 @@ private fun TodayPlanSection(
 }
 
 private data class MenuItemLine(
+    val id: Long,
+    val isDish: Boolean,
     val name: String,
     val grams: Double,
     val category: FoodCategory
@@ -1585,7 +1626,7 @@ private fun NutritionAmountMetric(
         Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(4.dp))
         Text(
-            "${actual.roundToInt()}/${target.roundToInt()}",
+            "${if (target > 0.0) (actual / target * 100.0).roundToInt() else 0} %",
             color = color,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
@@ -1720,8 +1761,16 @@ private fun foodAmountLabel(food: Food, grams: Double): String {
         return "${formatDecimal(grams)} g"
     }
     val units = grams / unitAmount
-    val natural = if (food.wholeUnitsOnly) units.roundToInt().toString() else formatDecimal(units)
-    return "$natural $unitName · ${formatDecimal(grams)} g"
+    val plural = food.unitPlural?.takeIf { it.isNotBlank() } ?: "${unitName}s"
+    val halves = (units * 2).roundToInt()
+    val natural = when {
+        abs(units - 0.5) < 0.01 -> if (food.unitGender == "FEMININE") "media $unitName" else "medio $unitName"
+        abs(units - 1.0) < 0.01 -> "1 $unitName"
+        halves > 2 && halves % 2 == 1 -> "${halves / 2} $unitName y ${if (food.unitGender == "FEMININE") "media" else "medio"}"
+        abs(units - units.roundToInt()) < 0.01 -> "${units.roundToInt()} $plural"
+        else -> "${formatDecimal(units)} $plural"
+    }
+    return "$natural · ${formatDecimal(grams)} g"
 }
 
 @Composable
@@ -2668,173 +2717,46 @@ private fun PlanningRuleCards(
     itemKind: PlannedItemKind,
     itemId: Long,
     defaultGrams: Double,
-    rule: PlanningRule?,
+    rules: List<PlanningRule>,
     onSave: (PlanningRule) -> Unit,
-    onDelete: () -> Unit
+    onDelete: (Long) -> Unit
 ) {
-    var editingUnifiedRule by remember(itemKind, itemId, rule?.ruleId) { mutableStateOf(false) }
-    if (editingUnifiedRule) {
+    var editingRule by remember(itemKind, itemId) { mutableStateOf<PlanningRule?>(null) }
+    var addingRule by remember(itemKind, itemId) { mutableStateOf(false) }
+    val shownRule = editingRule
+    if (shownRule != null || addingRule) {
         PlanningRuleDialog(
             name = "Regla de planificación",
-            initial = rule ?: PlanningRule(
+            initial = shownRule ?: PlanningRule(
                 itemKind, itemId, MealType.entries.toSet(),
                 frequency = PlanningFrequency.NORMAL,
                 preferredGrams = defaultGrams,
                 ruleId = System.currentTimeMillis()
             ),
-            onSave = { onSave(it); editingUnifiedRule = false },
-            onDelete = rule?.let { { onDelete(); editingUnifiedRule = false } },
-            onDismiss = { editingUnifiedRule = false }
+            onSave = { onSave(it); editingRule = null; addingRule = false },
+            onDelete = shownRule?.let { rule -> { onDelete(rule.ruleId); editingRule = null } },
+            onDismiss = { editingRule = null; addingRule = false }
         )
     }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Planificación", style = MaterialTheme.typography.titleLarge)
             HorizontalDivider()
-            if (rule == null) {
+            if (rules.isEmpty()) {
                 Text("Sin reglas. Rumbo no utilizará este alimento automáticamente.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                Text("${rule.frequency.label} · ${rule.allowedMealTypes.joinToString { it.label }}")
-                Text(
-                    if (rule.allowedDays.size == WeekDay.entries.size) "Cualquier día"
-                    else rule.allowedDays.joinToString { it.label },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                rules.forEachIndexed { index, rule ->
+                    Column(Modifier.fillMaxWidth().clickable { editingRule = rule }.padding(vertical = 8.dp)) {
+                        Text("${rule.frequency.label} · ${rule.allowedMealTypes.joinToString { it.label }}")
+                        Text(if (rule.allowedDays.size == WeekDay.entries.size) "Cualquier día" else rule.allowedDays.joinToString { it.label }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (index < rules.lastIndex) HorizontalDivider()
+                }
             }
-            TextButton(onClick = { editingUnifiedRule = true }) {
+            TextButton(onClick = { addingRule = true }) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text(if (rule == null) "Añadir regla" else "Editar regla")
-            }
-        }
-    }
-    return
-    var editingFixedType by remember(itemKind, itemId) { mutableStateOf<MealType?>(null) }
-    val base = rule ?: PlanningRule(
-        itemKind = itemKind,
-        itemId = itemId,
-        allowedMealTypes = emptySet(),
-        fixedSlots = emptySet(),
-        frequency = PlanningFrequency.NEVER,
-        preferredGrams = defaultGrams
-    )
-
-    fun persist(updated: PlanningRule) {
-        if (updated.frequency == PlanningFrequency.NEVER && updated.fixedSlots.isEmpty()) {
-            onDelete()
-        } else {
-            onSave(updated)
-        }
-    }
-
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Añadirlo al menú", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            HorizontalDivider()
-            Text(
-                "Rumbo lo tendrá en cuenta al generar nuevas semanas.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            SelectorField(
-                label = "Frecuencia",
-                selectedLabel = if (rule == null || base.frequency == PlanningFrequency.NEVER) {
-                    "No añadir aleatoriamente"
-                } else base.frequency.label,
-                options = PlanningFrequency.entries,
-                optionLabel = {
-                    if (it == PlanningFrequency.NEVER) "No añadir aleatoriamente" else it.label
-                },
-                onSelect = { selected ->
-                    val allowed = if (
-                        selected != PlanningFrequency.NEVER && base.allowedMealTypes.isEmpty()
-                    ) MealType.entries.toSet() else base.allowedMealTypes
-                    persist(base.copy(frequency = selected, allowedMealTypes = allowed))
-                },
-                onClear = null
-            )
-            if (base.frequency != PlanningFrequency.NEVER) {
-                Text("Puede aparecer en", fontWeight = FontWeight.SemiBold)
-                MealType.entries.chunked(3).forEach { types ->
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        types.forEach { type ->
-                            FilterChip(
-                                selected = type in base.allowedMealTypes,
-                                onClick = {
-                                    val updated = if (type in base.allowedMealTypes) {
-                                        base.allowedMealTypes - type
-                                    } else base.allowedMealTypes + type
-                                    if (updated.isNotEmpty()) {
-                                        persist(base.copy(allowedMealTypes = updated))
-                                    }
-                                },
-                                label = { Text(type.label) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Comidas fijas", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            HorizontalDivider()
-            Text(
-                "Añade todas las combinaciones de comida y día en las que debe aparecer siempre.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            val configuredTypes = MealType.entries.filter { type ->
-                base.fixedSlots.any { it.mealType == type }
-            }
-            if (configuredTypes.isNotEmpty()) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    configuredTypes.forEach { type ->
-                        FilterChip(
-                            selected = editingFixedType == type,
-                            onClick = { editingFixedType = type },
-                            label = { Text(type.label) }
-                        )
-                    }
-                }
-            }
-            SelectorField(
-                label = "Añadir o editar",
-                selectedLabel = editingFixedType?.label ?: "Elegir comida",
-                options = MealType.entries,
-                optionLabel = { it.label },
-                onSelect = { editingFixedType = it },
-                onClear = null
-            )
-            editingFixedType?.let { type ->
-                FixedDayRow(
-                    label = "Días fijos en ${type.label.lowercase()}",
-                    type = type,
-                    selected = base.fixedSlots,
-                    onChange = { updatedSlots ->
-                        persist(base.copy(fixedSlots = updatedSlots))
-                    }
-                )
-                Text(
-                    "Rumbo decidirá la cantidad según tus necesidades nutricionales.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (configuredTypes.isEmpty() && editingFixedType == null) {
-                Text(
-                    "Todavía no hay ninguna comida fija.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text("Añadir regla")
             }
         }
     }
@@ -3194,61 +3116,35 @@ private fun PlanningRuleDialog(
         })
     }
     var error by remember { mutableStateOf<String?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-        text = {
-            LazyColumn(
-                Modifier.fillMaxWidth().heightIn(max = 540.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    Text("Frecuencia", fontWeight = FontWeight.SemiBold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(PlanningFrequency.ALWAYS, PlanningFrequency.NORMAL, PlanningFrequency.OCCASIONAL).forEach { option ->
-                            FilterChip(selected = frequency == option, onClick = { frequency = option }, label = { Text(option.label) })
-                        }
-                    }
-                }
-                item {
-                    Text("Puede aparecer en", fontWeight = FontWeight.SemiBold)
-                    MealType.entries.chunked(3).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            row.forEach { type ->
-                                FilterChip(
-                                    selected = type in meals,
-                                    onClick = { meals = if (type in meals) meals - type else meals + type },
-                                    label = { Text(type.label) }
-                                )
-                            }
-                        }
-                    }
-                }
-                item {
-                    Text("Días", fontWeight = FontWeight.SemiBold)
-                    FilterChip(
-                        selected = days.size == WeekDay.entries.size,
-                        onClick = { days = WeekDay.entries.toSet() },
-                        label = { Text("Cualquier día") }
-                    )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        WeekDay.entries.forEach { day ->
-                            FilterChip(
-                                selected = day in days,
-                                onClick = { days = if (day in days) days - day else days + day },
-                                label = { Text(day.shortLabel) }
-                            )
-                        }
-                    }
-                }
-                error?.let { message ->
-                    item { Text(message, color = MaterialTheme.colorScheme.error) }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(name, style = MaterialTheme.typography.headlineSmall)
+            SelectorField(
+                label = "Frecuencia",
+                selectedLabel = frequency.label,
+                options = listOf(PlanningFrequency.ALWAYS, PlanningFrequency.NORMAL, PlanningFrequency.OCCASIONAL),
+                optionLabel = { it.label }, onSelect = { frequency = it }, onClear = null
+            )
+            MultiSelectField(
+                label = "Comidas",
+                options = MealType.entries,
+                selected = meals,
+                optionLabel = { it.label },
+                onSelectedChange = { meals = it }
+            )
+            MultiSelectField(
+                label = "Días",
+                options = WeekDay.entries,
+                selected = days,
+                optionLabel = { it.label },
+                allLabel = "Cualquier día",
+                onSelectedChange = { days = it }
+            )
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Button(onClick = {
                 val draft = initial.copy(
                     allowedMealTypes = meals,
                     allowedDays = days,
@@ -3260,19 +3156,49 @@ private fun PlanningRuleDialog(
                 )
                 if (draft.isValid()) onSave(draft)
                 else error = "Selecciona al menos una comida y un día."
-            }) { Text("Guardar") }
-        },
-        dismissButton = {
-            Row {
-                onDelete?.let {
-                    TextButton(onClick = it) {
-                        Text("Quitar", color = MaterialTheme.colorScheme.error)
-                    }
+            }, Modifier.fillMaxWidth()) { Text("Guardar") }
+            onDelete?.let { delete ->
+                TextButton(onClick = delete, Modifier.fillMaxWidth()) {
+                    Text("Eliminar regla", color = MaterialTheme.colorScheme.error)
                 }
-                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+            TextButton(onClick = onDismiss, Modifier.fillMaxWidth()) { Text("Cancelar") }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun <T> MultiSelectField(
+    label: String,
+    options: List<T>,
+    selected: Set<T>,
+    optionLabel: (T) -> String,
+    allLabel: String? = null,
+    onSelectedChange: (Set<T>) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = if (selected.size == options.size && allLabel != null) allLabel else selected.joinToString { optionLabel(it) },
+            onValueChange = {}, readOnly = true, label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(option in selected, null)
+                            Text(optionLabel(option))
+                        }
+                    },
+                    onClick = { onSelectedChange(if (option in selected) selected - option else selected + option) }
+                )
             }
         }
-    )
+    }
 }
 
 @Composable
@@ -3314,6 +3240,8 @@ private fun WeeklyPlannerScreen(
     onWeekChange: (PlanWeek) -> Unit,
     onApplyGeneratedMenu: (es.david.rumbo.logic.GeneratedWeeklyMenu, PlanWeek) -> Unit,
     onOpenMeal: (Long, PlanWeek) -> Unit,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
     onAddMissing: (MealType, WeekDay, PlanWeek) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>, PlanWeek) -> Unit
 ) {
@@ -3455,6 +3383,8 @@ private fun WeeklyPlannerScreen(
                 dishesById = dishesById,
                 assessment = assessments[day],
                 onOpenMeal = { onOpenMeal(it, selectedWeek) },
+                onOpenFood = onOpenFood,
+                onOpenDish = onOpenDish,
                 onAddMissing = { type, day -> onAddMissing(type, day, selectedWeek) }
             )
         }
@@ -3552,6 +3482,8 @@ private fun WeeklyDayCard(
     dishesById: Map<Long, Dish>,
     assessment: PlanNutritionAssessment?,
     onOpenMeal: (Long) -> Unit,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
     onAddMissing: (MealType, WeekDay) -> Unit
 ) {
     val dayMeals = meals.filter { day in it.days }.associateBy { it.type }
@@ -3564,6 +3496,7 @@ private fun WeeklyDayCard(
                     it.dishes.mapNotNull { planned ->
                         dishesById[planned.dishId]?.let { dish ->
                             MenuItemLine(
+                                dish.id, true,
                                 dish.name,
                                 it.resolvedGrams(planned, day),
                                 dish.dominantCategory(foodsById)
@@ -3572,6 +3505,7 @@ private fun WeeklyDayCard(
                     } + it.items.mapNotNull { planned ->
                         foodsById[planned.foodId]?.let { food ->
                             MenuItemLine(
+                                food.id, false,
                                 food.name,
                                 it.resolvedGrams(planned, day),
                                 food.category
@@ -3594,7 +3528,9 @@ private fun WeeklyDayCard(
                     if (entries.isNotEmpty()) {
                         entries.forEach { entry ->
                             Row(
-                                Modifier.fillMaxWidth(),
+                                Modifier.fillMaxWidth().clickable {
+                                    if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
+                                },
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -4781,6 +4717,77 @@ private data class CatalogEntry(
 )
 
 @Composable
+private fun HomeCatalogSearch(
+    foods: List<Food>, dishes: List<Dish>, repertoireFoodIds: Set<Long>,
+    onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
+    var scanMessage by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val normalized = normalizeSearch(query)
+    val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val entries = remember(foods, dishes, normalized, filter, repertoireFoodIds) {
+        buildList {
+            if (filter != CatalogFilter.DISHES) foods.forEach { food ->
+                val text = normalizeSearch(listOfNotNull(food.name, food.brand, food.barcode).joinToString(" "))
+                if (normalized.isBlank() && food.id in repertoireFoodIds || normalized.isNotBlank() && text.contains(normalized))
+                    add(CatalogEntry(food.id, food.name, false))
+            }
+            if (filter != CatalogFilter.FOODS) dishes.forEach { dish ->
+                val favorite = dish.ingredients.any { it.foodId in repertoireFoodIds }
+                if (normalized.isBlank() && favorite || normalized.isNotBlank() && normalizeSearch(dish.name).contains(normalized))
+                    add(CatalogEntry(dish.id, dish.name, true))
+            }
+        }.sortedBy { it.name.lowercase() }
+    }
+    BackHandler(enabled = expanded) { expanded = false }
+    SearchBar(
+        inputField = {
+            SearchBarDefaults.InputField(
+                query = query,
+                onQueryChange = { query = it },
+                onSearch = {},
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+                placeholder = { Text("Buscar alimentos y platos") },
+                leadingIcon = {
+                    if (expanded) IconButton(onClick = { expanded = false }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
+                    } else Icon(Icons.Default.Search, null)
+                },
+                trailingIcon = {
+                    IconButton(onClick = {
+                        GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
+                            val value = barcode.rawValue.orEmpty()
+                            foods.firstOrNull { it.barcode == value }?.let { onOpenFood(it.id) } ?: run {
+                                query = value
+                                scanMessage = "No encuentro este producto en tus supermercados."
+                            }
+                        }
+                    }) { Icon(Icons.Default.QrCodeScanner, "Escanear código de barras") }
+                }
+            )
+        }, expanded = expanded, onExpandedChange = { expanded = it }, modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            CatalogFilterChips(filter) { filter = it }
+            if (query.isBlank()) Text(
+                "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
+                Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            scanMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            CatalogEntries(
+                entries, foods, foodsById, dishes, repertoireFoodIds,
+                if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
+                normalized, onOpenFood, onOpenDish, {}, {}, Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
 private fun FoodDishCatalogScreen(
     foods: List<Food>,
     dishes: List<Dish>,
@@ -5910,12 +5917,13 @@ private fun FoodDetailScreen(
     plannedMeals: List<PlannedMeal>,
     dishes: List<Dish>,
     onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
     onOpenMeal: (Long) -> Unit,
     onAddToMeal: (Long) -> Unit,
     onAddNewMeal: () -> Unit,
-    planningRule: PlanningRule?,
+    planningRules: List<PlanningRule>,
     onSavePlanningRule: (PlanningRule) -> Unit,
-    onDeletePlanningRule: () -> Unit,
+    onDeletePlanningRule: (Long) -> Unit,
     onSaveFood: (Food) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -6063,7 +6071,8 @@ private fun FoodDetailScreen(
                 } else {
                     Text("1 ${food.unitName} = ${formatDecimal(food.unitAmount)} g o ml")
                     Text(
-                        if (food.wholeUnitsOnly) "Solo unidades completas" else "Se pueden utilizar fracciones",
+                        if (food.wholeUnitsOnly) "Solo unidades completas"
+                        else "Puede dividirse en ${food.unitDivisions} partes",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     TextButton(onClick = { editingUnit = true }) { Text("Editar") }
@@ -6076,48 +6085,25 @@ private fun FoodDetailScreen(
             itemKind = PlannedItemKind.FOOD,
             itemId = food.id,
             defaultGrams = 100.0,
-            rule = planningRule,
+            rules = planningRules,
             onSave = onSavePlanningRule,
             onDelete = onDeletePlanningRule
         )
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("En el menú de esta semana", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("Presente en estos platos", style = MaterialTheme.typography.titleLarge)
                 HorizontalDivider()
-                if (menuUsages.isEmpty()) {
-                    Text("Este alimento no está incluido en el menú de esta semana.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val containingDishes = dishes.filter { dish -> dish.ingredients.any { it.foodId == food.id } }
+                if (containingDishes.isEmpty()) {
+                    Text("No forma parte de ningún plato.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    menuUsages.forEachIndexed { index, (_, label, amount) ->
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(label, modifier = Modifier.weight(1f), maxLines = 2)
-                            Text(amount)
+                    containingDishes.forEachIndexed { index, dish ->
+                        Row(Modifier.fillMaxWidth().clickable { onOpenDish(dish.id) }.padding(vertical = 10.dp)) {
+                            Text(dish.name, Modifier.weight(1f))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, "Abrir plato")
                         }
-                        if (index < menuUsages.lastIndex) HorizontalDivider()
-                    }
-                }
-            }
-        }
-
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("En el menú de la semana que viene", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                HorizontalDivider()
-                if (nextMenuUsages.isEmpty()) {
-                    Text("Este alimento no está incluido en el menú de la semana que viene.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    nextMenuUsages.forEachIndexed { index, (_, label, amount) ->
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(label, modifier = Modifier.weight(1f), maxLines = 2)
-                            Text(amount)
-                        }
-                        if (index < nextMenuUsages.lastIndex) HorizontalDivider()
+                        if (index < containingDishes.lastIndex) HorizontalDivider()
                     }
                 }
             }
@@ -6153,56 +6139,60 @@ private fun FoodUnitDialog(
     onDismiss: () -> Unit
 ) {
     var unitName by rememberSaveable(food.id) { mutableStateOf(food.unitName.orEmpty()) }
+    var unitPlural by rememberSaveable(food.id) { mutableStateOf(food.unitPlural.orEmpty()) }
     var unitAmount by rememberSaveable(food.id) { mutableStateOf(food.unitAmount?.let(::formatDecimal).orEmpty()) }
     var wholeOnly by rememberSaveable(food.id) { mutableStateOf(food.wholeUnitsOnly) }
+    var divisions by rememberSaveable(food.id) { mutableStateOf(food.unitDivisions.toString()) }
+    var gender by rememberSaveable(food.id) { mutableStateOf(food.unitGender) }
     var error by remember { mutableStateOf<String?>(null) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Unidades de ${food.name}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Unidades de ${food.name}", style = MaterialTheme.typography.headlineSmall)
                 OutlinedTextField(
                     value = unitName,
                     onValueChange = { unitName = it.take(40) },
-                    label = { Text("Nombre de la unidad") },
+                    label = { Text("Singular") },
                     placeholder = { Text("vasito, huevo, lata…") },
                     singleLine = true
                 )
+                OutlinedTextField(unitPlural, { unitPlural = it.take(40) }, Modifier.fillMaxWidth(), label = { Text("Plural") }, placeholder = { Text("vasitos, huevos, latas…") }, singleLine = true)
                 NumericField("Gramos o ml por unidad", unitAmount, { unitAmount = it }, Modifier.fillMaxWidth())
+                SelectorField("Género gramatical", if (gender == "FEMININE") "Femenino" else "Masculino", listOf("MASCULINE", "FEMININE"), { if (it == "FEMININE") "Femenino" else "Masculino" }, { gender = it }, null)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = wholeOnly, onCheckedChange = { wholeOnly = it })
                     Text("Usar solo unidades completas")
                 }
+                if (!wholeOnly) NumericField("Partes en que puede dividirse", divisions, { divisions = it }, Modifier.fillMaxWidth())
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
+                Button(onClick = {
                 val amount = unitAmount.takeIf { it.isNotBlank() }?.let(::parseDecimal)
+                val parsedDivisions = divisions.toIntOrNull()
                 error = when {
-                    unitName.isBlank() != unitAmount.isBlank() -> "Indica tanto el nombre como la equivalencia."
+                    unitName.isBlank() != unitAmount.isBlank() -> "Indica el nombre y la equivalencia."
+                    unitName.isNotBlank() && unitPlural.isBlank() -> "Indica también el plural."
                     amount != null && amount !in 0.1..5000.0 -> "La equivalencia debe estar entre 0,1 y 5.000."
                     wholeOnly && unitName.isBlank() -> "Configura una unidad antes de exigir unidades completas."
+                    !wholeOnly && (parsedDivisions == null || parsedDivisions !in 2..100) -> "Indica entre 2 y 100 partes."
                     else -> null
                 }
                 if (error == null) onSave(food.copy(
                     unitName = unitName.trim().ifBlank { null },
+                    unitPlural = unitPlural.trim().ifBlank { null },
+                    unitGender = gender,
                     unitAmount = amount,
-                    wholeUnitsOnly = wholeOnly && unitName.isNotBlank()
+                    wholeUnitsOnly = wholeOnly && unitName.isNotBlank(),
+                    unitDivisions = if (wholeOnly) 1 else parsedDivisions!!
                 ))
-            }) { Text("Guardar") }
-        },
-        dismissButton = {
-            Row {
+            }, Modifier.fillMaxWidth()) { Text("Guardar") }
                 if (!food.unitName.isNullOrBlank()) {
-                    TextButton(onClick = { onSave(food.copy(unitName = null, unitAmount = null, wholeUnitsOnly = false)) }) {
+                    TextButton(onClick = { onSave(food.copy(unitName = null, unitPlural = null, unitAmount = null, wholeUnitsOnly = false, unitDivisions = 1)) }, Modifier.fillMaxWidth()) {
                         Text("Quitar unidad", color = MaterialTheme.colorScheme.error)
                     }
                 }
-                TextButton(onClick = onDismiss) { Text("Cancelar") }
+                TextButton(onClick = onDismiss, Modifier.fillMaxWidth()) { Text("Cancelar") }
+                Spacer(Modifier.height(16.dp))
             }
-        }
-    )
+    }
 }
 
 private fun linkLabel(link: String): String = runCatching {
