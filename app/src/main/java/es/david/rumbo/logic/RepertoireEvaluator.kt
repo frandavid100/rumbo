@@ -40,6 +40,7 @@ data class RepertoireAssessment(
     val acceptableSolutions: Int,
     val limitingFactors: List<String>,
     val suggestions: List<FoodCategory>,
+    val reactivationFoodIds: List<Long>,
     val metrics: RepertoireMetrics
 )
 
@@ -82,9 +83,14 @@ object RepertoireEvaluator {
                 foodsById[it.itemId]?.hasComparableNutrition() == true
         }
         val activeFoods = activeRules.mapNotNull { foodsById[it.itemId] }.distinctBy { it.id }
+        val inactiveFoods = rules.filter {
+            it.itemKind == PlannedItemKind.FOOD && it.frequency == PlanningFrequency.NEVER
+        }.mapNotNull { foodsById[it.itemId] }.distinctBy { it.id }
         val coverage = MealType.entries.filter { (mealShares[it] ?: defaultShares.getValue(it)) > 0.0 }
             .map { type ->
-                MealCoverage(type, activeRules.count { type in it.allowedMealTypes })
+                MealCoverage(type, activeRules.count { rule ->
+                    type in rule.allowedMealTypes || rule.fixedSlots.any { it.mealType == type }
+                })
             }
         val vegetableGroups = activeFoods.filter { it.category == FoodCategory.VEGETABLE }
             .map(::conceptKey).distinct().size
@@ -100,7 +106,7 @@ object RepertoireEvaluator {
             }
             return emptyAssessment(
                 recommendation, coverage, fruitGroups, vegetableGroups, activeFoods,
-                factors, thresholds
+                factors, thresholds, inactiveFoods
             )
         }
 
@@ -116,7 +122,8 @@ object RepertoireEvaluator {
         if (attempts.isEmpty()) {
             return emptyAssessment(
                 recommendation, coverage, fruitGroups, vegetableGroups, activeFoods,
-                listOf("Las reglas obligatorias no permiten construir todas las comidas."), thresholds
+                listOf("Las reglas obligatorias no permiten construir todas las comidas."),
+                thresholds, inactiveFoods
             )
         }
 
@@ -152,6 +159,7 @@ object RepertoireEvaluator {
         val profiles = activeFoods.map(::nutritionProfile).distinct().size
         val factors = limitingFactors(nutrition, coverage, fruitGroups, vegetableGroups, thresholds)
         val suggestions = suggestionsFor(nutrition, fruitGroups, vegetableGroups)
+        val reactivations = matchingInactiveFoods(inactiveFoods, suggestions)
         val status = when {
             best.worstPenalty > thresholds.acceptableWorstPenalty -> RepertoireStatus.INSUFFICIENT
             distinctAcceptable.size >= thresholds.robustSolutionCount && limitedMeals == 0 &&
@@ -161,7 +169,7 @@ object RepertoireEvaluator {
         }
         return RepertoireAssessment(
             status, nutrition, coverage, fruitGroups, vegetableGroups,
-            distinctAcceptable.size, factors, suggestions,
+            distinctAcceptable.size, factors, suggestions, reactivations,
             RepertoireMetrics(
                 best.worstPenalty, best.totalPenalty, activeFoods.size, profiles,
                 limitedMeals, ranked.size
@@ -193,7 +201,8 @@ object RepertoireEvaluator {
         vegetables: Int,
         foods: List<Food>,
         factors: List<String>,
-        thresholds: RepertoireThresholds
+        thresholds: RepertoireThresholds,
+        inactiveFoods: List<Food>
     ): RepertoireAssessment {
         val target = MealPlanEvaluator.dailyTarget(recommendation)
         val nutrition = mapOf(
@@ -202,9 +211,10 @@ object RepertoireEvaluator {
             NutrientKind.CARBOHYDRATES to NutrientCapacity(target.carbohydrateGrams, 0.0, -target.carbohydrateGrams, TargetFit.OUTSIDE),
             NutrientKind.FAT to NutrientCapacity(target.fatGrams, 0.0, -target.fatGrams, TargetFit.OUTSIDE)
         )
+        val suggestions = suggestionsFor(nutrition, fruit, vegetables)
         return RepertoireAssessment(
             RepertoireStatus.INSUFFICIENT, nutrition, coverage, fruit, vegetables, 0,
-            factors, suggestionsFor(nutrition, fruit, vegetables),
+            factors, suggestions, matchingInactiveFoods(inactiveFoods, suggestions),
             RepertoireMetrics(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, foods.size,
                 foods.map(::nutritionProfile).distinct().size,
                 coverage.count { it.alternatives <= thresholds.limitedMealAlternatives }, 0)
@@ -241,6 +251,10 @@ object RepertoireEvaluator {
         if (fruit == 0) add(FoodCategory.FRUIT)
         if (vegetables == 0) add(FoodCategory.VEGETABLE)
     }.toList()
+
+    private fun matchingInactiveFoods(
+        inactiveFoods: List<Food>, suggestions: List<FoodCategory>
+    ): List<Long> = inactiveFoods.filter { it.category in suggestions }.map { it.id }
 
     private fun NutrientKind.label() = when (this) {
         NutrientKind.CALORIES -> "calorías"
