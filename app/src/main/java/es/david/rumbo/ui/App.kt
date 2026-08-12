@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -341,7 +340,6 @@ fun RumboApp(repository: AppRepository) {
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.shadow(2.dp),
                 navigationIcon = {
                     if (profileReady && screen == Screen.HOME && data.profile != null) {
                         ProfileSwitcher(
@@ -743,6 +741,7 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.FOODS -> FoodDishCatalogScreen(
                     foods = data.foods,
                     dishes = data.dishes,
+                    planningRules = data.activeProfileData?.planningRules.orEmpty(),
                     onOpenFood = {
                         selectedFoodId = it
                         foodReturnScreenName = null
@@ -4524,6 +4523,7 @@ private fun MealItemPickerDialog(
 }
 
 private enum class CatalogFilter { ALL, FOODS, DISHES }
+private enum class CatalogMode { SEARCH, REPERTOIRE }
 
 private data class CatalogEntry(
     val id: Long,
@@ -4535,6 +4535,7 @@ private data class CatalogEntry(
 private fun FoodDishCatalogScreen(
     foods: List<Food>,
     dishes: List<Dish>,
+    planningRules: List<PlanningRule>,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onAddFood: () -> Unit,
@@ -4543,17 +4544,21 @@ private fun FoodDishCatalogScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var normalizedQuery by remember { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
+    var mode by rememberSaveable { mutableStateOf(CatalogMode.SEARCH) }
     var addMenuExpanded by remember { mutableStateOf(false) }
     var scanMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val repertoireFoodIds = remember(planningRules) {
+        planningRules.filter { it.itemKind == PlannedItemKind.FOOD }.mapTo(mutableSetOf()) { it.itemId }
+    }
 
     LaunchedEffect(query) {
         if (query.isNotBlank()) delay(200)
         normalizedQuery = normalizeSearch(query)
     }
 
-    val entries = remember(foods, dishes, normalizedQuery, filter) {
+    val entries = remember(foods, dishes, normalizedQuery, filter, mode, repertoireFoodIds) {
         buildList {
             if (filter != CatalogFilter.DISHES) {
                 foods.forEach { food ->
@@ -4563,7 +4568,10 @@ private fun FoodDishCatalogScreen(
                             food.subcategory, food.retailer, food.barcode
                         ).joinToString(" ")
                     )
-                    if (normalizedQuery.isNotBlank() && searchable.contains(normalizedQuery)) {
+                    val belongs = food.id in repertoireFoodIds
+                    if ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
+                            mode == CatalogMode.REPERTOIRE && belongs) &&
+                        (normalizedQuery.isBlank() || searchable.contains(normalizedQuery))) {
                         add(CatalogEntry(food.id, food.name, false))
                     }
                 }
@@ -4574,7 +4582,10 @@ private fun FoodDishCatalogScreen(
                     val searchable = normalizeSearch(
                         (listOf(dish.name) + ingredientNames).joinToString(" ")
                     )
-                    if (normalizedQuery.isNotBlank() && searchable.contains(normalizedQuery)) {
+                    val belongs = dish.ingredients.any { it.foodId in repertoireFoodIds }
+                    if ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
+                            mode == CatalogMode.REPERTOIRE && belongs) &&
+                        (normalizedQuery.isBlank() || searchable.contains(normalizedQuery))) {
                         add(CatalogEntry(dish.id, dish.name, true))
                     }
                 }
@@ -4591,6 +4602,19 @@ private fun FoodDishCatalogScreen(
         contentPadding = PaddingValues(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 32.dp)
     ) {
         item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = mode == CatalogMode.SEARCH,
+                    onClick = { mode = CatalogMode.SEARCH },
+                    label = { Text("Buscar") }
+                )
+                FilterChip(
+                    selected = mode == CatalogMode.REPERTOIRE,
+                    onClick = { mode = CatalogMode.REPERTOIRE },
+                    label = { Text("Mi repertorio") }
+                )
+            }
+            Spacer(Modifier.height(8.dp))
             SearchBar(
                 inputField = {
                     SearchBarDefaults.InputField(
@@ -4712,7 +4736,7 @@ private fun FoodDishCatalogScreen(
             if (entry != entries.lastOrNull()) HorizontalDivider()
         }
 
-        if (normalizedQuery.isBlank()) {
+        if (mode == CatalogMode.SEARCH && normalizedQuery.isBlank()) {
             item {
                 Text(
                     "Escribe el nombre de un alimento o plato, o escanea su código de barras.",
@@ -4723,7 +4747,9 @@ private fun FoodDishCatalogScreen(
         } else if (entries.isEmpty()) {
             item {
                 Text(
-                    if (foods.isEmpty() && dishes.isEmpty()) {
+                    if (mode == CatalogMode.REPERTOIRE && repertoireFoodIds.isEmpty()) {
+                        "Tu repertorio todavía está vacío. Configura alimentos desde la generación automática."
+                    } else if (foods.isEmpty() && dishes.isEmpty()) {
                         "Todavía no hay alimentos ni platos."
                     } else {
                         "No hay resultados con estos criterios."
