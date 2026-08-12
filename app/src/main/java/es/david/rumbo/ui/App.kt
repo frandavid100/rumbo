@@ -9,6 +9,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +32,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -105,6 +104,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -120,6 +120,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -133,6 +134,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -292,6 +298,7 @@ fun RumboApp(repository: AppRepository) {
     var adjustmentRange by remember { mutableStateOf(loadAdjustmentRange(context)) }
     var detailMenuExpanded by remember { mutableStateOf(false) }
     var pendingTopDelete by remember { mutableStateOf<Screen?>(null) }
+    var addingMeasurement by rememberSaveable { mutableStateOf(false) }
     val screenStateHolder = rememberSaveableStateHolder()
     val navigateBack = {
         screenName = when {
@@ -524,7 +531,7 @@ fun RumboApp(repository: AppRepository) {
                     onManageProfiles = { screenName = Screen.PROFILE.name },
                     onOpenSettings = { screenName = Screen.SETTINGS.name },
                     onGoalChange = { data = repository.setWeeklyRate(it) },
-                    onAddMeasurement = { screenName = Screen.ADD.name },
+                    onAddMeasurement = { addingMeasurement = true },
                     onExplainBody = { screenName = Screen.BODY_EXPLANATION.name },
                     onOpenPlanner = {
                         plannerWeekName = PlanWeek.CURRENT.name
@@ -985,6 +992,17 @@ fun RumboApp(repository: AppRepository) {
             }
         }
     }
+
+    if (addingMeasurement) {
+        AddMeasurementScreen(
+            data = data,
+            onDismiss = { addingMeasurement = false },
+            onSave = {
+                data = repository.addMeasurement(it)
+                addingMeasurement = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -999,17 +1017,7 @@ private fun ProfileSwitcher(
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
-            Box(
-                Modifier.size(avatarSize.dp).background(profileColor(activeProfile?.id), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    activeProfile?.name?.trim()?.firstOrNull()?.uppercase() ?: "?",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            ProfileAvatar(activeProfile, avatarSize.dp)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             profiles.forEach { profile ->
@@ -1043,6 +1051,36 @@ private fun ProfileSwitcher(
                 }
             )
         }
+    }
+}
+
+@Composable
+private fun ProfileAvatar(profile: UserProfile?, size: androidx.compose.ui.unit.Dp) {
+    val context = LocalContext.current
+    val bitmap by produceState<android.graphics.Bitmap?>(null, profile?.photoUri) {
+        value = profile?.photoUri?.let { uri ->
+            runCatching {
+                context.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use(android.graphics.BitmapFactory::decodeStream)
+            }.getOrNull()
+        }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = profile?.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(CircleShape)
+        )
+    } else Box(
+        Modifier.size(size).background(profileColor(profile?.id), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            profile?.name?.trim()?.firstOrNull()?.uppercase() ?: "?",
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -1088,17 +1126,14 @@ private fun HomeScreen(
     var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var searchMessage by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
-    val searchBarVisible by remember {
-        derivedStateOf { !listState.canScrollBackward || !listState.lastScrolledForward }
-    }
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            AnimatedVisibility(
-                visible = searchBarVisible,
-                enter = slideInVertically { -it } + fadeIn(),
-                exit = slideOutVertically { -it } + fadeOut()
-            ) {
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                TopAppBar(
+                    title = {
                 HomeCatalogSearch(
                 foods = data.foods,
                 dishes = data.dishes,
@@ -1123,12 +1158,16 @@ private fun HomeScreen(
                         avatarSize = 40
                     )
                 },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.fillMaxWidth()
+                )
+                    },
+                    scrollBehavior = scrollBehavior
                 )
             }
+        ) { innerPadding ->
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -1181,7 +1220,6 @@ private fun HomeScreen(
                     onOpenFoods = onOpenFoods
                 )
             }
-        }
         }
         if (searchExpanded) {
             HomeCatalogSearch(
@@ -2644,10 +2682,6 @@ private fun AddMeasurementScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(if (isEditing) "Editar medición" else "Nueva medición", style = MaterialTheme.typography.headlineSmall)
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Medición", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                HorizontalDivider()
                 OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.CalendarMonth, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -2657,20 +2691,7 @@ private fun AddMeasurementScreen(
                     NumericField("Peso (kg)", weight, { weight = it }, Modifier.weight(1f))
                     NumericField("Cintura (cm)", waist, { waist = it }, Modifier.weight(1f))
                 }
-                Text(
-                    if (isEditing) "Deja vacío un dato si esta entrada no lo modificó."
-                    else "Puedes registrar solo uno. El otro conservará su último valor conocido.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 WaistMeasurementHelp()
-            }
-        }
-
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Contexto", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                HorizontalDivider()
                 SelectorField(
                     label = "Actividad habitual",
                     selectedLabel = activity?.label ?: "Mantener la anterior · ${inherited.activity.label}",
@@ -2687,11 +2708,6 @@ private fun AddMeasurementScreen(
                     onSelect = { compliance = it },
                     onClear = { compliance = null }
                 )
-                Text(
-                    "Indica, desde la medición anterior, si comiste aproximadamente lo previsto o una cantidad distinta.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 if (isEditing) {
                     SelectorField(
                         label = "Cambio de objetivo",
@@ -2702,8 +2718,6 @@ private fun AddMeasurementScreen(
                         onClear = { goal = null }
                     )
                 }
-            }
-        }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         Button(
             onClick = {
@@ -4830,6 +4844,13 @@ private fun HomeCatalogSearch(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val closeSearch = {
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+        onExpandedChange(false)
+    }
     val normalized = normalizeSearch(query)
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val entries = remember(foods, dishes, normalized, filter, repertoireFoodIds) {
@@ -4846,7 +4867,7 @@ private fun HomeCatalogSearch(
             }
         }.sortedBy { it.name.lowercase() }
     }
-    BackHandler(enabled = expanded) { onExpandedChange(false) }
+    BackHandler(enabled = expanded) { closeSearch() }
     val scan = {
         GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
             val value = barcode.rawValue.orEmpty()
@@ -4866,11 +4887,18 @@ private fun HomeCatalogSearch(
             onExpandedChange = onExpandedChange,
             placeholder = { Text("Buscar alimentos y platos") },
             leadingIcon = {
-                if (expanded) IconButton(onClick = { onExpandedChange(false) }) {
+                if (expanded) IconButton(onClick = closeSearch) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
                 } else Icon(Icons.Default.Search, null)
             },
-            trailingIcon = trailingContent
+            trailingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = scan) {
+                        Icon(Icons.Default.QrCodeScanner, "Escanear código de barras")
+                    }
+                    trailingContent()
+                }
+            }
         )
     }
     if (!expanded) SearchBar(
@@ -4890,12 +4918,8 @@ private fun HomeCatalogSearch(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             ) {}
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            CatalogFilterChips(filter, onFilterChange)
-            TextButton(onClick = scan) {
-                Icon(Icons.Default.QrCodeScanner, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("Escanear código de barras")
-            }
+            Spacer(Modifier.height(8.dp))
+            CatalogFilterMenu(filter, onFilterChange)
             if (query.isBlank()) Text(
                 "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
                 Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -5113,6 +5137,38 @@ private fun CatalogFilterChips(
         }
     }
     Spacer(Modifier.height(8.dp))
+}
+
+@Composable
+private fun CatalogFilterMenu(
+    filter: CatalogFilter,
+    onFilterChange: (CatalogFilter) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        CatalogFilter.ALL to "Todos",
+        CatalogFilter.FOODS to "Alimentos",
+        CatalogFilter.DISHES to "Platos"
+    )
+    Box {
+        FilterChip(
+            selected = true,
+            onClick = { expanded = true },
+            label = { Text(options.first { it.first == filter }.second) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { (option, label) ->
+                DropdownMenuItem(
+                    leadingIcon = {
+                        if (filter == option) Icon(Icons.Default.Check, contentDescription = null)
+                    },
+                    text = { Text(label) },
+                    onClick = { onFilterChange(option); expanded = false }
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -6808,6 +6864,7 @@ private fun ProfileScreen(
         mutableStateOf(editedProfile?.birthYear?.toString() ?: "")
     }
     var sex by remember(editedProfile?.id, creating) { mutableStateOf(editedProfile?.sex ?: Sex.MALE) }
+    var photoUri by rememberSaveable(editedProfile?.id, creating) { mutableStateOf(editedProfile?.photoUri) }
     var initialWeight by rememberSaveable(editedProfile?.id, creating) { mutableStateOf("") }
     var initialWaist by rememberSaveable(editedProfile?.id, creating) { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
@@ -6820,6 +6877,16 @@ private fun ProfileScreen(
         )
     }
     val needsBaseline = creating || requiresBaseline
+    val context = LocalContext.current
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        photoUri = uri.toString()
+    }
 
     pendingDelete?.let { selected ->
         AlertDialog(
@@ -6888,6 +6955,16 @@ private fun ProfileScreen(
                     fontWeight = FontWeight.SemiBold
                 )
                 HorizontalDivider()
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ProfileAvatar(
+                        UserProfile(1, name.ifBlank { "Perfil" }, 170.0, 1990, sex, photoUri),
+                        64.dp
+                    )
+                    Column {
+                        TextButton(onClick = { photoPicker.launch(arrayOf("image/*")) }) { Text("Elegir foto") }
+                        if (photoUri != null) TextButton(onClick = { photoUri = null }) { Text("Quitar foto") }
+                    }
+                }
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.take(30) },
@@ -6997,7 +7074,8 @@ private fun ProfileScreen(
                     name = name.trim(),
                     heightCm = parseDecimal(height) ?: 0.0,
                     birthYear = birthYear.toIntOrNull() ?: 0,
-                    sex = sex
+                    sex = sex,
+                    photoUri = photoUri
                 )
                 val parsedWeight = parseDecimal(initialWeight)
                 val parsedWaist = parseDecimal(initialWaist)
