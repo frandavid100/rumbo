@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Grain
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
@@ -56,6 +57,7 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card as MaterialCard
@@ -91,6 +93,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
@@ -130,6 +133,9 @@ import es.david.rumbo.logic.NutrientKind
 import es.david.rumbo.logic.NutritionTolerancePolicy
 import es.david.rumbo.logic.PlanNutritionAssessment
 import es.david.rumbo.logic.QuantityOptimizationResult
+import es.david.rumbo.logic.RepertoireAssessment
+import es.david.rumbo.logic.RepertoireEvaluator
+import es.david.rumbo.logic.RepertoireStatus
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import es.david.rumbo.logic.RecommendationEngine
 import es.david.rumbo.logic.TargetFit
@@ -167,6 +173,8 @@ import es.david.rumbo.model.sanitizedDayAmounts
 import es.david.rumbo.model.totalWeightGrams
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -594,6 +602,8 @@ fun RumboApp(repository: AppRepository) {
                     rules = data.activeProfileData?.planningRules.orEmpty(),
                     foods = data.foods,
                     dishes = data.dishes,
+                    recommendation = currentRecommendation,
+                    mealShares = mealShares,
                     onSaveRule = { data = repository.savePlanningRule(it) },
                     onDeleteRule = { kind, id -> data = repository.deletePlanningRule(kind, id) }
                 )
@@ -2778,6 +2788,8 @@ private fun AutomaticPlanningScreen(
     rules: List<PlanningRule>,
     foods: List<Food>,
     dishes: List<Dish>,
+    recommendation: es.david.rumbo.model.Recommendation?,
+    mealShares: Map<MealType, Double>,
     onSaveRule: (PlanningRule) -> Unit,
     onDeleteRule: (PlannedItemKind, Long) -> Unit
 ) {
@@ -2786,6 +2798,22 @@ private fun AutomaticPlanningScreen(
     val candidates = remember(foods) {
         foods.filter { it.hasComparableNutrition() }.map { food ->
             PlanningCandidate(PlannedItemKind.FOOD, food.id, food.name, 100.0)
+        }
+    }
+    val assessment by produceState<RepertoireAssessment?>(
+        initialValue = null,
+        rules, foods, dishes, recommendation, mealShares
+    ) {
+        value = recommendation?.let { target ->
+            withContext(Dispatchers.Default) {
+                RepertoireEvaluator.evaluate(
+                    rules = rules,
+                    foodsById = foods.associateBy { it.id },
+                    dishesById = dishes.associateBy { it.id },
+                    recommendation = target,
+                    mealShares = mealShares
+                )
+            }
         }
     }
     var query by rememberSaveable { mutableStateOf("") }
@@ -2822,13 +2850,22 @@ private fun AutomaticPlanningScreen(
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     HomeCardHeader("Tu repertorio", showArrow = false)
                     Text(
-                        "Elige qué sueles comer y establece cuándo puede usarlo Rumbo. La generación se limita a comidas y cenas.",
+                        "Elige qué sueles comer y establece cuándo puede usarlo Rumbo.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (foodRules.isEmpty()) {
+                    if (recommendation == null) {
                         Text(
-                            "Añade suficientes alternativas para cubrir tanto comidas como cenas.",
-                            fontWeight = FontWeight.SemiBold
+                            "Añade una medición para que Rumbo pueda valorar este repertorio según tus necesidades.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else if (assessment == null) {
+                        Text("Analizando el repertorio…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        RepertoireAssessmentSummary(
+                            assessment = assessment!!,
+                            foodsById = foodsById,
+                            rules = foodRules,
+                            onEditRule = { editing = it }
                         )
                     }
                 }
@@ -2921,6 +2958,58 @@ private fun AutomaticPlanningScreen(
                 Icon(Icons.Default.Add, contentDescription = "Añadir")
             }
         }
+    }
+}
+
+@Composable
+private fun RepertoireAssessmentSummary(
+    assessment: RepertoireAssessment,
+    foodsById: Map<Long, Food>,
+    rules: List<PlanningRule>,
+    onEditRule: (PlanningRule) -> Unit
+) {
+    val (title, icon, color) = when (assessment.status) {
+        RepertoireStatus.ROBUST -> Triple("Repertorio robusto", Icons.Default.Check, MaterialTheme.colorScheme.primary)
+        RepertoireStatus.SUFFICIENT -> Triple("Repertorio suficiente", Icons.Default.Check, MaterialTheme.colorScheme.primary)
+        RepertoireStatus.LIMITED -> Triple("Repertorio limitado", Icons.Default.Info, MaterialTheme.colorScheme.tertiary)
+        RepertoireStatus.INSUFFICIENT -> Triple("Repertorio insuficiente", Icons.Default.Warning, MaterialTheme.colorScheme.error)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(icon, contentDescription = null, tint = color)
+        Text(title, style = MaterialTheme.typography.titleMedium, color = color)
+    }
+    Text(
+        when (assessment.status) {
+            RepertoireStatus.ROBUST -> "Rumbo dispone de varias combinaciones bien ajustadas y margen para variar."
+            RepertoireStatus.SUFFICIENT -> "Rumbo puede construir menús bien ajustados con las opciones actuales."
+            RepertoireStatus.LIMITED -> "Rumbo puede generar menús, pero dependerá de pocas combinaciones o comidas con escasas alternativas."
+            RepertoireStatus.INSUFFICIENT -> "Con la programación actual Rumbo no puede construir un menú razonablemente ajustado."
+        },
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    assessment.limitingFactors.take(4).forEach { factor ->
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+            Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(18.dp), tint = color)
+            Text(factor, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+    val inactiveRules = assessment.reactivationFoodIds.mapNotNull { id ->
+        rules.firstOrNull { it.itemId == id }?.let { it to foodsById[id] }
+    }
+    if (inactiveRules.isNotEmpty()) {
+        Text("Puedes reactivar", style = MaterialTheme.typography.labelLarge)
+        inactiveRules.take(4).forEach { (rule, food) ->
+            TextButton(onClick = { onEditRule(rule) }, contentPadding = PaddingValues(0.dp)) {
+                Text(food?.name ?: "Alimento inactivo")
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Revisar")
+            }
+        }
+    } else if (assessment.suggestions.isNotEmpty()) {
+        Text(
+            "Sería útil añadir: ${assessment.suggestions.joinToString { it.label.lowercase() }}.",
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
