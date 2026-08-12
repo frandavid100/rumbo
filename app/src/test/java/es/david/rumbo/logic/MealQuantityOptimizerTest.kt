@@ -75,4 +75,32 @@ class MealQuantityOptimizerTest {
         )
         assertTrue(result.changes.none { it.label == peach.name })
     }
+
+    @Test
+    fun optimizerUsesWholePracticalUnitsForAdjustableFood() {
+        val yogurt = Food(
+            4, "Yogur", FoodCategory.PROTEIN, 80.0, 3.0, 8.0, 5.0, 0.0,
+            unitName = "vasito", unitAmount = 120.0, wholeUnitsOnly = true
+        )
+        val allFoods = (foods.values + yogurt).associateBy { it.id }
+        val meals = MealType.entries.mapIndexed { index, type ->
+            PlannedMeal(
+                id = 100L + index,
+                type = type,
+                days = setOf(WeekDay.MONDAY),
+                items = if (type == MealType.BREAKFAST) listOf(
+                    PlannedFood(yogurt.id, 120.0, true, 60.0, 360.0)
+                ) else listOf(PlannedFood(base.id, 100.0))
+            )
+        }
+
+        val result = MealQuantityOptimizer.optimize(
+            meals, allFoods, emptyMap(), recommendation, setOf(WeekDay.MONDAY)
+        )
+        val breakfast = result.meals.first { it.type == MealType.BREAKFAST }
+        val yogurtAmount = breakfast.resolvedGrams(breakfast.items.single(), WeekDay.MONDAY)
+
+        assertEquals(0.0, yogurtAmount % 120.0, 0.001)
+        assertTrue(yogurtAmount in setOf(120.0, 240.0, 360.0))
+    }
 }
