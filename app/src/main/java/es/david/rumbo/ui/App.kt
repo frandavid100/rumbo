@@ -1412,8 +1412,7 @@ private fun TodayPlanSection(
                             MenuItemLine(
                                 dish.name,
                                 it.resolvedGrams(planned, today),
-                                dish.dominantCategory(foodsById),
-                                locked = !planned.adjustable
+                                dish.dominantCategory(foodsById)
                             )
                         }
                     } + it.items.mapNotNull { planned ->
@@ -1421,8 +1420,7 @@ private fun TodayPlanSection(
                             MenuItemLine(
                                 food.name,
                                 it.resolvedGrams(planned, today),
-                                food.category,
-                                locked = !planned.adjustable
+                                food.category
                             )
                         }
                     }
@@ -1451,14 +1449,6 @@ private fun TodayPlanSection(
                             ) {
                                 SmallFoodCategoryBadge(entry.category)
                                 Text(entry.name, modifier = Modifier.weight(1f))
-                                if (entry.locked) {
-                                    Icon(
-                                        Icons.Default.Lock,
-                                        contentDescription = "Cantidad fijada por ti",
-                                        modifier = Modifier.size(17.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
                                 Text(
                                     "${formatDecimal(entry.grams)} g",
                                     fontWeight = FontWeight.SemiBold,
@@ -1503,8 +1493,7 @@ private fun TodayPlanSection(
 private data class MenuItemLine(
     val name: String,
     val grams: Double,
-    val category: FoodCategory,
-    val locked: Boolean
+    val category: FoodCategory
 )
 
 @Composable
@@ -2630,13 +2619,6 @@ private fun PlanningRuleCards(
     onDelete: () -> Unit
 ) {
     var editingFixedType by remember(itemKind, itemId) { mutableStateOf<MealType?>(null) }
-    var fixedAmount by remember(itemKind, itemId, editingFixedType, rule?.fixedGrams) {
-        mutableStateOf(
-            editingFixedType?.let { type ->
-                rule?.fixedGrams?.get(type)?.let(::formatDecimal)
-            }.orEmpty()
-        )
-    }
     val base = rule ?: PlanningRule(
         itemKind = itemKind,
         itemId = itemId,
@@ -2747,47 +2729,14 @@ private fun PlanningRuleCards(
                     type = type,
                     selected = base.fixedSlots,
                     onChange = { updatedSlots ->
-                        val hasType = updatedSlots.any { it.mealType == type }
-                        persist(
-                            base.copy(
-                                fixedSlots = updatedSlots,
-                                fixedGrams = if (hasType) base.fixedGrams
-                                else base.fixedGrams - type
-                            )
-                        )
+                        persist(base.copy(fixedSlots = updatedSlots))
                     }
                 )
-                OutlinedTextField(
-                    value = fixedAmount,
-                    onValueChange = { fixedAmount = it.take(8) },
-                    label = { Text("Cantidad fija (opcional)") },
-                    placeholder = { Text("Cualquier cantidad") },
-                    suffix = { Text("g", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
                 Text(
-                    "Si lo dejas vacío, Rumbo ajustará la cantidad a las necesidades de esa comida.",
+                    "Rumbo decidirá la cantidad según tus necesidades nutricionales.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                OutlinedButton(
-                    onClick = {
-                        val grams = parseDecimal(fixedAmount)
-                        val amounts = if (fixedAmount.isBlank()) {
-                            base.fixedGrams - type
-                        } else {
-                            base.fixedGrams + (type to checkNotNull(grams))
-                        }
-                        persist(base.copy(fixedGrams = amounts))
-                    },
-                    enabled = fixedAmount.isBlank() ||
-                        (parseDecimal(fixedAmount)?.let { it in 0.1..5000.0 } == true),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (fixedAmount.isBlank()) "Permitir cualquier cantidad" else "Guardar cantidad")
-                }
             }
             if (configuredTypes.isEmpty() && editingFixedType == null) {
                 Text(
@@ -3371,8 +3320,7 @@ private fun WeeklyDayCard(
                             MenuItemLine(
                                 dish.name,
                                 it.resolvedGrams(planned, day),
-                                dish.dominantCategory(foodsById),
-                                locked = !planned.adjustable
+                                dish.dominantCategory(foodsById)
                             )
                         }
                     } + it.items.mapNotNull { planned ->
@@ -3380,8 +3328,7 @@ private fun WeeklyDayCard(
                             MenuItemLine(
                                 food.name,
                                 it.resolvedGrams(planned, day),
-                                food.category,
-                                locked = !planned.adjustable
+                                food.category
                             )
                         }
                     }
@@ -3407,14 +3354,6 @@ private fun WeeklyDayCard(
                             ) {
                                 SmallFoodCategoryBadge(entry.category)
                                 Text(entry.name, modifier = Modifier.weight(1f))
-                                if (entry.locked) {
-                                    Icon(
-                                        Icons.Default.Lock,
-                                        contentDescription = "Cantidad fijada por ti",
-                                        modifier = Modifier.size(17.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
                                 Text(
                                     "${formatDecimal(entry.grams)} g",
                                     fontWeight = FontWeight.SemiBold,
@@ -4148,14 +4087,6 @@ private fun PlannedMealEditorScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
-                            if (!draft.adjustable) {
-                                Icon(
-                                    Icons.Default.Lock,
-                                    contentDescription = "Cantidad fija",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
                             Text(
                                 dish.name,
                                 modifier = Modifier.weight(1f),
@@ -4229,14 +4160,6 @@ private fun PlannedMealEditorScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             SmallFoodCategoryBadge(food.category)
-                            if (!draft.adjustable) {
-                                Icon(
-                                    Icons.Default.Lock,
-                                    contentDescription = "Cantidad fija",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
                             Text(
                                 food.name,
                                 modifier = Modifier.weight(1f),
@@ -4962,12 +4885,6 @@ private fun DishDetailScreen(
                     ) {
                         if (food != null) SmallFoodCategoryBadge(food.category) else Spacer(Modifier.size(24.dp))
                         Text(food?.name ?: "Alimento eliminado", modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Icon(
-                            Icons.Default.Lock,
-                            contentDescription = "Proporción bloqueada",
-                            modifier = Modifier.size(17.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                         Text("${formatDecimal(ingredient.grams)} g")
                     }
                     if (index < dish.ingredients.lastIndex) HorizontalDivider()
@@ -5154,12 +5071,6 @@ private fun DishEditorScreen(
                     Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                     if (proportionsLocked) {
                         Text("${amount} g", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Icon(
-                            Icons.Default.Lock,
-                            contentDescription = "Proporción bloqueada",
-                            modifier = Modifier.size(17.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     } else {
                         NumericField(
                             "Gramos",
@@ -6049,7 +5960,7 @@ private fun SettingsScreen(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    "Indica qué porcentaje del total diario corresponde a cada comida. La suma debe ser 100 %.",
+                    "Indica qué porcentaje del total diario corresponde a cada comida. Usa 0 % para saltarte el almuerzo o la merienda. La suma debe ser 100 %.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -6324,7 +6235,7 @@ private fun ProfileScreen(
                     )
                     HorizontalDivider()
                     Text(
-                        "Indica qué porcentaje de las calorías diarias quieres reservar para cada comida.",
+                        "Indica qué porcentaje de las calorías diarias quieres reservar para cada comida. Puedes poner 0 % en almuerzo o merienda si no los haces.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     MealType.entries.forEach { type ->
