@@ -192,7 +192,7 @@ private fun Card(
     modifier: Modifier = Modifier,
     shape: Shape = CardDefaults.shape,
     colors: CardColors = CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     ),
     elevation: CardElevation = CardDefaults.cardElevation(),
     border: BorderStroke? = null,
@@ -1044,12 +1044,32 @@ private fun HomeScreen(
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
         .filter { it.planWeek == PlanWeek.CURRENT }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, top = 92.dp, end = 16.dp, bottom = 96.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+        item {
+            HomeCatalogSearch(
+                foods = data.foods,
+                dishes = data.dishes,
+                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                filter = searchFilter,
+                onFilterChange = { searchFilter = it },
+                scanMessage = searchMessage,
+                onScanMessageChange = { searchMessage = it },
+                expanded = false,
+                onExpandedChange = { if (it) searchExpanded = true },
+                onOpenFood = onOpenFood,
+                onOpenDish = onOpenDish
+            )
+        }
         if (assessment != null && recommendedGoal != null) {
             item {
                 BodyGoalNutritionCard(
@@ -1100,15 +1120,23 @@ private fun HomeScreen(
                 )
             }
         }
-        HomeCatalogSearch(
-            foods = data.foods,
-            dishes = data.dishes,
-            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-            expanded = searchExpanded,
-            onExpandedChange = { searchExpanded = it },
-            onOpenFood = onOpenFood,
-            onOpenDish = onOpenDish
-        )
+        if (searchExpanded) {
+            HomeCatalogSearch(
+                foods = data.foods,
+                dishes = data.dishes,
+                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                filter = searchFilter,
+                onFilterChange = { searchFilter = it },
+                scanMessage = searchMessage,
+                onScanMessageChange = { searchMessage = it },
+                expanded = true,
+                onExpandedChange = { searchExpanded = it },
+                onOpenFood = onOpenFood,
+                onOpenDish = onOpenDish
+            )
+        }
     }
 }
 
@@ -4721,12 +4749,12 @@ private data class CatalogEntry(
 @Composable
 private fun HomeCatalogSearch(
     foods: List<Food>, dishes: List<Dish>, repertoireFoodIds: Set<Long>,
+    query: String, onQueryChange: (String) -> Unit,
+    filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
+    scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     expanded: Boolean, onExpandedChange: (Boolean) -> Unit,
     onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
-    var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
-    var scanMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val normalized = normalizeSearch(query)
     val foodsById = remember(foods) { foods.associateBy { it.id } }
@@ -4749,7 +4777,7 @@ private fun HomeCatalogSearch(
         inputField = {
             SearchBarDefaults.InputField(
                 query = query,
-                onQueryChange = { query = it },
+                onQueryChange = onQueryChange,
                 onSearch = {},
                 expanded = expanded,
                 onExpandedChange = onExpandedChange,
@@ -4764,8 +4792,8 @@ private fun HomeCatalogSearch(
                         GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
                             val value = barcode.rawValue.orEmpty()
                             foods.firstOrNull { it.barcode == value }?.let { onOpenFood(it.id) } ?: run {
-                                query = value
-                                scanMessage = "No encuentro este producto en tus supermercados."
+                                onQueryChange(value)
+                                onScanMessageChange("No encuentro este producto en tus supermercados.")
                             }
                         }
                     }) { Icon(Icons.Default.QrCodeScanner, "Escanear código de barras") }
@@ -4774,10 +4802,10 @@ private fun HomeCatalogSearch(
         },
         expanded = expanded,
         onExpandedChange = onExpandedChange,
-        modifier = if (expanded) Modifier.fillMaxSize() else Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+        modifier = if (expanded) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
     ) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            CatalogFilterChips(filter) { filter = it }
+            CatalogFilterChips(filter, onFilterChange)
             if (query.isBlank()) Text(
                 "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
                 Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant
