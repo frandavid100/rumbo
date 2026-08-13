@@ -60,6 +60,7 @@ import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
@@ -636,6 +637,9 @@ fun RumboApp(repository: AppRepository) {
                         selectedFoodId = it
                         foodReturnScreenName = Screen.HOME.name
                         screenName = Screen.FOOD_DETAIL.name
+                    },
+                    onDismissFoodSuggestion = {
+                        data = repository.dismissFoodSuggestion(it)
                     },
                     onOpenDish = {
                         selectedDishId = it
@@ -1231,6 +1235,7 @@ private fun HomeScreen(
     onRegenerateWeek: () -> String?,
     onOpenMeal: (Long) -> Unit,
     onOpenFood: (Long) -> Unit,
+    onDismissFoodSuggestion: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onOpenFoods: () -> Unit,
     onAddMissingMeal: (MealType, WeekDay) -> Unit,
@@ -1261,7 +1266,8 @@ private fun HomeScreen(
             planningRules = data.activeProfileData?.planningRules.orEmpty(),
             plannedMeals = meals,
             dishesById = dishesById,
-            recommendation = recommendation
+            recommendation = recommendation,
+            excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty()
         )
     }
     val searchTextState = rememberTextFieldState()
@@ -1354,6 +1360,15 @@ private fun HomeScreen(
                 )
             }
         }
+        if (foodSuggestions.isNotEmpty()) {
+            item {
+                FoodSuggestionsCard(
+                    suggestions = foodSuggestions,
+                    onOpenFood = onOpenFood,
+                    onDismiss = onDismissFoodSuggestion
+                )
+            }
+        }
         item {
             WeeklyHomeMenuSection(
                 meals = meals,
@@ -1370,14 +1385,6 @@ private fun HomeScreen(
                 onApplyAdjustedMeals = onApplyAdjustedMeals
             )
         }
-        if (foodSuggestions.isNotEmpty()) {
-            item {
-                FoodSuggestionsCard(
-                    suggestions = foodSuggestions,
-                    onOpenFood = onOpenFood
-                )
-            }
-        }
         }
     }
 }
@@ -1385,7 +1392,8 @@ private fun HomeScreen(
 @Composable
 private fun FoodSuggestionsCard(
     suggestions: List<FoodSuggestion>,
-    onOpenFood: (Long) -> Unit
+    onOpenFood: (Long) -> Unit,
+    onDismiss: (Long) -> Unit
 ) {
     Column(
         Modifier.fillMaxWidth(),
@@ -1426,12 +1434,13 @@ private fun FoodSuggestionsCard(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Ver alimento",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        IconButton(onClick = { onDismiss(suggestion.food.id) }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "No me interesa",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     if (index < suggestions.lastIndex) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
