@@ -37,7 +37,8 @@ data class UserProfile(
     val name: String,
     val heightCm: Double,
     val birthYear: Int,
-    val sex: Sex
+    val sex: Sex,
+    val photoUri: String? = null
 ) {
     fun isValid(currentYear: Int = LocalDate.now().year): Boolean =
         id > 0 && name.trim().isNotEmpty() && name.length <= 30 &&
@@ -200,11 +201,23 @@ data class DishIngredient(
 data class Dish(
     val id: Long,
     val name: String,
-    val ingredients: List<DishIngredient>
+    val ingredients: List<DishIngredient>,
+    val unitName: String? = null,
+    val unitPlural: String? = null,
+    val unitGender: String = "MASCULINE",
+    val unitAmount: Double? = null,
+    val wholeUnitsOnly: Boolean = false,
+    val unitDivisions: Int = 1,
+    val allowedMealTypes: Set<MealType> = MealType.entries.toSet(),
+    val allowedDays: Set<WeekDay> = WeekDay.entries.toSet()
 ) {
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 80 &&
         ingredients.isNotEmpty() && ingredients.all { it.isValid() } &&
-        ingredients.map { it.foodId }.distinct().size == ingredients.size
+        ingredients.map { it.foodId }.distinct().size == ingredients.size &&
+        (unitName == null || unitName.length <= 40) &&
+        (unitPlural == null || unitPlural.length <= 40) &&
+        unitGender in setOf("MASCULINE", "FEMININE") && unitDivisions in 1..100 &&
+        (unitAmount == null || unitAmount in 0.1..5000.0)
 }
 
 data class PlannedDish(
@@ -388,8 +401,11 @@ data class Food(
     val retailer: String? = null,
     val source: String? = null,
     val unitName: String? = null,
+    val unitPlural: String? = null,
+    val unitGender: String = "MASCULINE",
     val unitAmount: Double? = null,
-    val wholeUnitsOnly: Boolean = false
+    val wholeUnitsOnly: Boolean = false,
+    val unitDivisions: Int = 1
 ) {
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 160 &&
         validCalories(calories) && validNutrient(fatGrams) &&
@@ -399,8 +415,10 @@ data class Food(
         (barcode == null || barcode.length in 8..14) && brand.validText(100) && family.validText(180) &&
         subcategory.validText(140) && legalName.validText(600) &&
         ingredients.validText(5000) && retailer.validText(100) && source.validText(100) &&
-        unitName.validText(40) && (unitAmount == null || unitAmount in 0.1..5000.0) &&
-        (!wholeUnitsOnly || unitName?.isNotBlank() == true && unitAmount != null) &&
+        unitName.validText(40) && unitPlural.validText(40) &&
+        unitGender in setOf("MASCULINE", "FEMININE") && unitDivisions in 1..100 &&
+        (unitAmount == null || unitAmount in 0.1..5000.0) &&
+        (!wholeUnitsOnly || unitName?.isNotBlank() == true) &&
         links.size <= 10 &&
         links.distinct().size == links.size && links.all {
             it.length <= 500 && (it.startsWith("https://") || it.startsWith("http://"))
@@ -452,7 +470,7 @@ data class AppData(
         get() = activeProfileData?.measurements.orEmpty()
 
     val isActiveProfileReady: Boolean
-        get() = profile != null && measurements.any { it.weightKg != null || it.waistCm != null }
+        get() = profile != null
 }
 
 data class EffectiveValues(

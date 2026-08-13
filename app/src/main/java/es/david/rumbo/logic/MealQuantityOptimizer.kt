@@ -173,7 +173,13 @@ object MealQuantityOptimizer {
                             food.carbohydrateGrams!! / 100.0,
                             food.fatGrams!! / 100.0
                         ),
-                        step = food.unitAmount.takeIf { food.wholeUnitsOnly }
+                        step = food.unitAmount?.let { amount ->
+                            when {
+                                food.wholeUnitsOnly -> amount
+                                food.unitDivisions > 1 -> amount / food.unitDivisions
+                                else -> null
+                            }
+                        }
                     )
                 )
             }
@@ -185,7 +191,13 @@ object MealQuantityOptimizer {
                         meal.id, meal.type, item.dishId, true, dish.name,
                         item.minimumGrams, item.maximumGrams, meal.resolvedGrams(item, day),
                         perGram.toVector(),
-                        step = dish.wholeUnitStep(foodsById)
+                        step = dish.unitAmount?.let { amount ->
+                            when {
+                                dish.wholeUnitsOnly -> amount
+                                dish.unitDivisions > 1 -> amount / dish.unitDivisions
+                                else -> null
+                            }
+                        } ?: dish.wholeUnitStep(foodsById)
                     )
                 )
             }
