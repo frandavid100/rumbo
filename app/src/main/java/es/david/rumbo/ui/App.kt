@@ -27,6 +27,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -1231,6 +1234,7 @@ private fun HomeScreen(
     var searchMessage by remember { mutableStateOf<String?>(null) }
     val searchBarState = rememberSearchBarState()
     val searchListState = rememberLazyListState()
+    var suppressRestoredSearchKeyboard by rememberSaveable { mutableStateOf(false) }
     val searchScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
     val searchScope = rememberCoroutineScope()
     val closeSearch = {
@@ -1257,10 +1261,18 @@ private fun HomeScreen(
                 onScanMessageChange = { searchMessage = it },
                 state = searchBarState,
                 listState = searchListState,
+                suppressRestoredKeyboard = suppressRestoredSearchKeyboard,
+                onRestoredKeyboardSuppressed = { suppressRestoredSearchKeyboard = false },
                 scrollBehavior = searchScrollBehavior,
                 onCloseSearch = closeSearch,
-                onOpenFood = onOpenFood,
-                onOpenDish = onOpenDish,
+                onOpenFood = {
+                    suppressRestoredSearchKeyboard = true
+                    onOpenFood(it)
+                },
+                onOpenDish = {
+                    suppressRestoredSearchKeyboard = true
+                    onOpenDish(it)
+                },
                 trailingContent = {
                     ProfileSwitcher(
                         profiles = data.profiles.map { it.profile },
@@ -2591,7 +2603,6 @@ private fun HomeShoppingEntry(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
-        FoodCategoryBadge(food.category)
         Column(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -5546,6 +5557,8 @@ private fun HomeCatalogSearch(
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     state: SearchBarState,
     listState: LazyListState,
+    suppressRestoredKeyboard: Boolean,
+    onRestoredKeyboardSuppressed: () -> Unit,
     scrollBehavior: SearchBarScrollBehavior,
     onCloseSearch: () -> Unit,
     onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit,
@@ -5599,6 +5612,15 @@ private fun HomeCatalogSearch(
     val close = {
         leaveForDetail()
         onCloseSearch()
+    }
+
+    LaunchedEffect(suppressRestoredKeyboard, state.targetValue) {
+        if (suppressRestoredKeyboard && state.targetValue == SearchBarValue.Expanded) {
+            delay(150)
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            onRestoredKeyboardSuppressed()
+        }
     }
 
     LaunchedEffect(state.targetValue) {
@@ -5675,7 +5697,12 @@ private fun HomeCatalogSearch(
         },
         colors = searchBarColors,
         tonalElevation = 0.dp,
-        shadowElevation = 0.dp
+        shadowElevation = 0.dp,
+        windowInsets = {
+            WindowInsets.safeDrawing.only(
+                WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+            )
+        }
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
