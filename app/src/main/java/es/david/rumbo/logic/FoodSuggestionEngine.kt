@@ -15,6 +15,8 @@ data class FoodSuggestion(val food: Food, val reason: String, val score: Double)
 
 /** Ranks foods outside the repertoire using only data already stored by Rumbo. */
 object FoodSuggestionEngine {
+    private const val MINIMUM_ACTIVE_REPERTOIRE_SIZE = 15
+
     fun suggest(
         foods: List<Food>,
         repertoireFoodIds: Set<Long>,
@@ -35,6 +37,7 @@ object FoodSuggestionEngine {
             .toSet()
             .ifEmpty { repertoireFoodIds }
         val activeFoods = activeFoodIds.mapNotNull(foodsById::get)
+        val repertoireNeedsExpansion = activeFoods.size < MINIMUM_ACTIVE_REPERTOIRE_SIZE
         val activeRetailers = activeFoods.mapNotNull { it.retailer.normalized() }.toSet()
         val categoryCounts = activeFoods.groupingBy { it.category }.eachCount()
         val totals = weeklyTotals(
@@ -62,7 +65,7 @@ object FoodSuggestionEngine {
                         if (candidate.unitAmount != null && candidate.unitName != null) 0.05 else 0.0
                 )
             }
-            .filter { it.score >= 0.18 }
+            .filter { repertoireNeedsExpansion || it.score >= 0.18 }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
             .distinctBy { equivalenceKey(it.food) }
             .take(limit)
