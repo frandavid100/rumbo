@@ -181,6 +181,8 @@ import es.david.rumbo.logic.RepertoireEvaluator
 import es.david.rumbo.logic.RepertoireStatus
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import es.david.rumbo.logic.RecommendationEngine
+import es.david.rumbo.logic.RecipeRecommendation
+import es.david.rumbo.logic.RecipeRecommendationEngine
 import es.david.rumbo.logic.TargetFit
 import es.david.rumbo.logic.WeeklyMenuGenerator
 import es.david.rumbo.logic.PlanningConflictException
@@ -908,6 +910,14 @@ fun RumboApp(repository: AppRepository) {
                         draftDishFoodId = null
                         dishReturnScreenName = null
                         screenName = Screen.ADD_DISH.name
+                    },
+                    onAcceptRecipe = { recommendation ->
+                        val nextId = (data.dishes.maxOfOrNull { it.id } ?: 0L) + 1L
+                        val dish = recommendation.toDish(nextId)
+                        data = repository.saveDish(dish)
+                        selectedDishId = dish.id
+                        dishReturnScreenName = null
+                        screenName = Screen.DISH_DETAIL.name
                     }
                 )
                 screen == Screen.ADD_FOOD -> FoodEditorScreen(
@@ -5598,7 +5608,8 @@ private fun FoodDishCatalogScreen(
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onAddFood: () -> Unit,
-    onAddDish: () -> Unit
+    onAddDish: () -> Unit,
+    onAcceptRecipe: (RecipeRecommendation) -> Unit
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var normalizedQuery by remember { mutableStateOf("") }
@@ -5608,6 +5619,13 @@ private fun FoodDishCatalogScreen(
     var scanMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val recipeRecommendations = remember(foods, dishes, repertoireFoodIds) {
+        RecipeRecommendationEngine.recommend(
+            foods = foods,
+            repertoireFoodIds = repertoireFoodIds,
+            existingDishes = dishes
+        )
+    }
 
     LaunchedEffect(query) {
         if (query.isNotBlank()) delay(200)
@@ -5759,7 +5777,15 @@ private fun FoodDishCatalogScreen(
                     onOpenDish = onOpenDish,
                     onAddFood = onAddFood,
                     onAddDish = onAddDish,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    header = if (filter != CatalogFilter.FOODS && recipeRecommendations.isNotEmpty()) {
+                        {
+                            RecipeRecommendationSection(
+                                recommendations = recipeRecommendations,
+                                onAccept = onAcceptRecipe
+                            )
+                        }
+                    } else null
                 )
             } else {
                 Text(
@@ -5769,6 +5795,55 @@ private fun FoodDishCatalogScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun RecipeRecommendationSection(
+    recommendations: List<RecipeRecommendation>,
+    onAccept: (RecipeRecommendation) -> Unit
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            "Recetas recomendadas",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "Puedes prepararlas únicamente con alimentos de tu repertorio.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        recommendations.forEach { recommendation ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(recommendation.recipe.name, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            recommendation.recipe.ingredients.joinToString(" · ") { ingredient ->
+                                recommendation.foodsByIngredient[ingredient.key]?.name.orEmpty()
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    TextButton(onClick = { onAccept(recommendation) }) {
+                        Text("Añadir")
+                    }
+                }
+            }
+        }
+        HorizontalDivider()
+        Spacer(Modifier.height(4.dp))
+        Text("Mi repertorio", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
     }
 }
 
