@@ -63,3 +63,5 @@ jobs:
           name: rumbo-0.45.0-signed-temporary
           path: build/signed/Rumbo-0.45.0.apk
           if-no-files-found: error
+
+# diagnóstico temporal
