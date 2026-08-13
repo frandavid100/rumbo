@@ -1267,7 +1267,8 @@ private fun HomeScreen(
             plannedMeals = meals,
             dishesById = dishesById,
             recommendation = recommendation,
-            excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty()
+            excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
+            limit = 100
         )
     }
     val searchTextState = rememberTextFieldState()
@@ -1295,6 +1296,7 @@ private fun HomeScreen(
                 foods = data.foods,
                 dishes = data.dishes,
                 repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                foodSuggestions = foodSuggestions,
                 textFieldState = searchTextState,
                 filter = searchFilter,
                 onFilterChange = { searchFilter = it },
@@ -1363,7 +1365,7 @@ private fun HomeScreen(
         if (foodSuggestions.isNotEmpty()) {
             item {
                 FoodSuggestionsCard(
-                    suggestions = foodSuggestions,
+                    suggestions = foodSuggestions.take(3),
                     onOpenFood = onOpenFood,
                     onDismiss = onDismissFoodSuggestion
                 )
@@ -5704,6 +5706,7 @@ private data class CatalogEntry(
 @Composable
 private fun HomeCatalogSearch(
     foods: List<Food>, dishes: List<Dish>, repertoireFoodIds: Set<Long>,
+    foodSuggestions: List<FoodSuggestion>,
     textFieldState: TextFieldState,
     filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
@@ -5740,21 +5743,48 @@ private fun HomeCatalogSearch(
         scrolledSearchBarContainerColor = searchContainerColor
     )
     val foodsById = remember(foods) { foods.associateBy { it.id } }
-    val entries = remember(foods, dishes, normalized, filter, repertoireFoodIds) {
+    val suggestionsByFoodId = remember(foodSuggestions) {
+        foodSuggestions.associateBy { it.food.id }
+    }
+    val topSuggestionIds = remember(foodSuggestions) {
+        foodSuggestions.take(3).mapTo(mutableSetOf()) { it.food.id }
+    }
+    val entries = remember(
+        foods, dishes, normalized, filter, repertoireFoodIds, suggestionsByFoodId,
+        topSuggestionIds
+    ) {
         buildList {
             if (filter != CatalogFilter.DISHES) foods.forEach { food ->
-                val searchText = normalizeSearch(listOfNotNull(food.name, food.brand, food.barcode).joinToString(" "))
-                if (normalized.isBlank() && food.id in repertoireFoodIds || normalized.isNotBlank() && searchText.contains(normalized)) {
+                val searchText = normalizeSearch(
+                    listOfNotNull(food.name, food.brand, food.barcode).joinToString(" ")
+                )
+                val suggested = food.id in topSuggestionIds
+                if (normalized.isBlank() && (suggested || food.id in repertoireFoodIds) ||
+                    normalized.isNotBlank() && searchText.contains(normalized)
+                ) {
                     add(CatalogEntry(food.id, food.name, false))
                 }
             }
             if (filter != CatalogFilter.FOODS) dishes.forEach { dish ->
                 val favorite = dish.ingredients.any { it.foodId in repertoireFoodIds }
-                if (normalized.isBlank() && favorite || normalized.isNotBlank() && normalizeSearch(dish.name).contains(normalized)) {
+                if (normalized.isBlank() && favorite ||
+                    normalized.isNotBlank() && normalizeSearch(dish.name).contains(normalized)
+                ) {
                     add(CatalogEntry(dish.id, dish.name, true))
                 }
             }
-        }.sortedBy { it.name.lowercase() }
+        }.sortedWith(
+            compareBy<CatalogEntry> {
+                if (it.isDish) Int.MAX_VALUE
+                else foodSuggestions.indexOfFirst { suggestion -> suggestion.food.id == it.id }
+                    .takeIf { index -> index >= 0 } ?: Int.MAX_VALUE
+            }.thenBy { !normalizeSearch(it.name).startsWith(normalized) }
+                .thenByDescending {
+                    if (it.isDish) Double.NEGATIVE_INFINITY
+                    else suggestionsByFoodId[it.id]?.score ?: Double.NEGATIVE_INFINITY
+                }
+                .thenBy { it.name.lowercase() }
+        )
     }
 
     val leaveForDetail = {
@@ -5869,6 +5899,7 @@ private fun HomeCatalogSearch(
                 foodsById = foodsById,
                 dishes = dishes,
                 repertoireFoodIds = repertoireFoodIds,
+                foodSuggestions = suggestionsByFoodId,
                 mode = if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
                 normalizedQuery = normalized,
                 onOpenFood = { id -> leaveForDetail(); onOpenFood(id) },
@@ -6142,6 +6173,7 @@ private fun CatalogEntries(
     foodsById: Map<Long, Food>,
     dishes: List<Dish>,
     repertoireFoodIds: Set<Long>,
+    foodSuggestions: Map<Long, FoodSuggestion> = emptyMap(),
     mode: CatalogMode,
     normalizedQuery: String,
     onOpenFood: (Long) -> Unit,
@@ -6191,7 +6223,8 @@ private fun CatalogEntries(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            if (entry.isDish) "Plato" else category.label,
+                            if (entry.isDish) "Plato"
+                            else foodSuggestions[entry.id]?.reason ?: category.label,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1
