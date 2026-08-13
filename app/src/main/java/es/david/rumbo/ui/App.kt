@@ -41,6 +41,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -1679,54 +1681,97 @@ private fun WeeklyHomeMenuSection(
         }
     }
 
+    fun toggleSection(key: String) {
+        expandedSection = if (expandedSection == key) "" else key
+    }
+
     @Composable
-    fun SummaryCard() {
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    fun SectionHeader(
+        title: String,
+        subtitle: String?,
+        expanded: Boolean,
+        onClick: () -> Unit
+    ) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    Modifier.fillMaxWidth().clickable { expandedSection = "" },
-                    verticalAlignment = Alignment.CenterVertically
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                subtitle?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Icon(
+                if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = if (expanded) "Contraer" else "Expandir"
+            )
+        }
+    }
+
+    @Composable
+    fun SummarySection(expanded: Boolean) {
+        Column(Modifier.fillMaxWidth()) {
+            SectionHeader(
+                title = "Valoración nutricional",
+                subtitle = if (expanded) null else "Calorías y macronutrientes de toda la semana",
+                expanded = expanded,
+                onClick = { toggleSection(summaryKey) }
+            )
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Valoración nutricional", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Contraer")
-                }
-                weeklyAssessment?.let { TodayNutritionSummary(it) }
-                Text(
-                    weeklyAssessmentText(weeklyAssessment),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                OutlinedButton(onClick = { rebuildSheet = true }, Modifier.fillMaxWidth()) {
-                    Text("Rehacer menú semanal")
-                }
-                FilledTonalButton(onClick = onOpenNextWeek, Modifier.fillMaxWidth()) {
-                    Text("Ver la semana que viene")
+                    weeklyAssessment?.let { TodayNutritionSummary(it) }
+                    Text(
+                        weeklyAssessmentText(weeklyAssessment),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    OutlinedButton(onClick = { rebuildSheet = true }, Modifier.fillMaxWidth()) {
+                        Text("Rehacer menú semanal")
+                    }
+                    FilledTonalButton(onClick = onOpenNextWeek, Modifier.fillMaxWidth()) {
+                        Text("Ver la semana que viene")
+                    }
                 }
             }
         }
     }
 
     @Composable
-    fun DayCard(day: WeekDay) {
+    fun DaySection(day: WeekDay, expanded: Boolean) {
         val dayMeals = meals.filter { day in it.days }.associateBy { it.type }
         val assessment = recommendation?.let {
             MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, it)
         }
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
-            Column(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().clickable { expandedSection = "" }.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(day.label, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Contraer")
-                }
+        val count = dayMeals.values.count { it.items.isNotEmpty() || it.dishes.isNotEmpty() }
+        val subtitle = buildString {
+            append("$count comidas")
+            assessment?.actual?.calories?.let { append(" · ${formatDecimal(it)} kcal") }
+        }
+
+        Column(Modifier.fillMaxWidth()) {
+            SectionHeader(
+                title = day.label,
+                subtitle = if (expanded) null else subtitle,
+                expanded = expanded,
+                onClick = { toggleSection(day.name) }
+            )
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+            ) {
                 Column(
                     Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -1739,11 +1784,18 @@ private fun WeeklyHomeMenuSection(
                         val meal = dayMeals[type] ?: return@forEachIndexed
                         val entries = meal.dishes.mapNotNull { planned ->
                             dishesById[planned.dishId]?.let { dish ->
-                                MenuItemLine(dish.id, true, dish.name, meal.resolvedGrams(planned, day), dish.dominantCategory(foodsById))
+                                MenuItemLine(
+                                    dish.id, true, dish.name,
+                                    meal.resolvedGrams(planned, day),
+                                    dish.dominantCategory(foodsById)
+                                )
                             }
                         } + meal.items.mapNotNull { planned ->
                             foodsById[planned.foodId]?.let { food ->
-                                MenuItemLine(food.id, false, food.name, meal.resolvedGrams(planned, day), food.category)
+                                MenuItemLine(
+                                    food.id, false, food.name,
+                                    meal.resolvedGrams(planned, day), food.category
+                                )
                             }
                         }
                         Column(
@@ -1760,12 +1812,19 @@ private fun WeeklyHomeMenuSection(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     SmallFoodCategoryBadge(entry.category)
-                                    Text(entry.name, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Text(
+                                        entry.name,
+                                        Modifier.weight(1f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                     Text("${formatDecimal(entry.grams)} g", fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
-                        if (index < MealType.entries.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        if (index < MealType.entries.lastIndex) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
                     }
                 }
             }
@@ -1774,69 +1833,14 @@ private fun WeeklyHomeMenuSection(
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Tu menú de esta semana", style = MaterialTheme.typography.titleLarge)
-
-        if (expandedSection == summaryKey) SummaryCard()
-
-        val collapsedKeys = buildList {
-            if (expandedSection != summaryKey) add(summaryKey)
-            WeekDay.entries.filter { it.name != expandedSection }.forEach { add(it.name) }
-        }
-        if (collapsedKeys.isNotEmpty()) {
-            Card(
-                Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-            ) {
-                Column(Modifier.fillMaxWidth()) {
-                    collapsedKeys.forEachIndexed { index, key ->
-                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        if (key == summaryKey) {
-                            Row(
-                                Modifier.fillMaxWidth().clickable { expandedSection = summaryKey }.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("Valoración nutricional", style = MaterialTheme.typography.titleMedium)
-                                    Text(
-                                        "Calorías y macronutrientes de toda la semana",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Expandir")
-                            }
-                        } else {
-                            val day = WeekDay.valueOf(key)
-                            val dayMeals = meals.filter { day in it.days }.associateBy { it.type }
-                            val assessment = recommendation?.let {
-                                MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, it)
-                            }
-                            Row(
-                                Modifier.fillMaxWidth().clickable { expandedSection = day.name }.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(day.label, style = MaterialTheme.typography.titleMedium)
-                                    val count = dayMeals.values.count { it.items.isNotEmpty() || it.dishes.isNotEmpty() }
-                                    val calories = assessment?.actual?.calories
-                                    Text(
-                                        buildString {
-                                            append("$count comidas")
-                                            if (calories != null) append(" · ${formatDecimal(calories)} kcal")
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Expandir")
-                            }
-                        }
-                    }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth()) {
+                SummarySection(expandedSection == summaryKey)
+                WeekDay.entries.forEach { day ->
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    DaySection(day, expandedSection == day.name)
                 }
             }
-        }
-
-        if (expandedSection != summaryKey && expandedSection.isNotBlank()) {
-            runCatching { WeekDay.valueOf(expandedSection) }.getOrNull()?.let { DayCard(it) }
         }
     }
 }
@@ -5021,7 +5025,7 @@ private fun HomeCatalogSearch(
     val appBarColors = SearchBarDefaults.appBarWithSearchColors(
         searchBarColors = SearchBarDefaults.containedColors(state = state),
         appBarContainerColor = MaterialTheme.colorScheme.surface,
-        scrolledAppBarContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        scrolledAppBarContainerColor = MaterialTheme.colorScheme.surface,
         scrolledSearchBarContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     )
     val foodsById = remember(foods) { foods.associateBy { it.id } }
@@ -5109,7 +5113,8 @@ private fun HomeCatalogSearch(
         colors = appBarColors,
         actions = { trailingContent() },
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        tonalElevation = 0.dp
     )
 
     ExpandedFullScreenSearchBar(
