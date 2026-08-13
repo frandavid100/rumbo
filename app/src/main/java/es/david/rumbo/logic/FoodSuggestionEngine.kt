@@ -45,7 +45,7 @@ object FoodSuggestionEngine {
         return foods.asSequence()
             .filter {
                 it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
-                    it.hasComparableNutrition()
+                    it.hasComparableNutrition() && it.isRecommendableCandidate()
             }
             .filter { activeRetailers.isEmpty() || it.retailer.normalized() in activeRetailers }
             .map { candidate ->
@@ -150,6 +150,24 @@ object FoodSuggestionEngine {
                 food.family.orEmpty().lowercase() + "."
         }
         return "Puede darte más variedad."
+    }
+
+    /**
+     * Prevents a carbohydrate deficit from promoting energy-dense processed foods.
+     * Fruit is allowed more naturally occurring sugar, but still has to be low in fat.
+     */
+    private fun Food.isRecommendableCandidate(): Boolean {
+        val carbohydrate = carbohydrateGrams ?: 0.0
+        val proteinEnergy = (proteinGrams ?: 0.0) * 4.0
+        val fat = fatGrams ?: 0.0
+        val carbohydrateDominant = carbohydrate * 4.0 >= max(proteinEnergy, fat * 9.0)
+        if (!carbohydrateDominant) return true
+
+        val sugarLimit = if (category == FoodCategory.FRUIT) 20.0 else 15.0
+        return fat <= 8.0 &&
+            (saturatedFatGrams ?: 0.0) <= 3.0 &&
+            (sugarGrams ?: 0.0) <= sugarLimit &&
+            (saltGrams ?: 0.0) <= 1.5
     }
 
     private fun equivalenceKey(food: Food): String = listOf(
