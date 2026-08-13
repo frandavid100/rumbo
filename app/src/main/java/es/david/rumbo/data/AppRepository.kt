@@ -60,6 +60,7 @@ class AppRepository(context: Context) {
             plannedMeals = existing?.plannedMeals.orEmpty(),
             planningRules = existing?.planningRules.orEmpty(),
             repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
+            dismissedSuggestionFoodIds = existing?.dismissedSuggestionFoodIds.orEmpty(),
             menuHistory = existing?.menuHistory.orEmpty()
         )
         val profiles = if (existing == null) {
@@ -84,6 +85,7 @@ class AppRepository(context: Context) {
             plannedMeals = existing?.plannedMeals.orEmpty(),
             planningRules = existing?.planningRules.orEmpty(),
             repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
+            dismissedSuggestionFoodIds = existing?.dismissedSuggestionFoodIds.orEmpty(),
             menuHistory = existing?.menuHistory.orEmpty()
         )
         val profiles = if (existing == null) {
@@ -311,6 +313,16 @@ class AppRepository(context: Context) {
         return updateActive(current, active.copy(repertoireFoodIds = active.repertoireFoodIds + foodId))
     }
 
+    fun dismissFoodSuggestion(foodId: Long): AppData {
+        val current = load()
+        require(current.foods.any { it.id == foodId }) { "El alimento ya no existe" }
+        val active = current.activeProfileData ?: return current
+        return updateActive(
+            current,
+            active.copy(dismissedSuggestionFoodIds = active.dismissedSuggestionFoodIds + foodId)
+        )
+    }
+
     fun removeFromRepertoire(foodId: Long): AppData {
         val current = load()
         val active = current.activeProfileData ?: return current
@@ -437,6 +449,8 @@ class AppRepository(context: Context) {
                     }
                 },
                 repertoireFoodIds = profileData.repertoireFoodIds.filterTo(mutableSetOf()) { it in foodIds },
+                dismissedSuggestionFoodIds = profileData.dismissedSuggestionFoodIds
+                    .filterTo(mutableSetOf()) { it in foodIds },
                 menuHistory = profileData.menuHistory.filter { entry ->
                     when (entry.itemKind) {
                         PlannedItemKind.FOOD -> entry.itemId in foodIds
@@ -536,6 +550,9 @@ class AppRepository(context: Context) {
                     put("planningRules", encodePlanningRules(profileData.planningRules))
                     put("repertoireFoodIds", JSONArray().apply {
                         profileData.repertoireFoodIds.forEach(::put)
+                    })
+                    put("dismissedSuggestionFoodIds", JSONArray().apply {
+                        profileData.dismissedSuggestionFoodIds.forEach(::put)
                     })
                     put("menuHistory", encodeMenuHistory(profileData.menuHistory))
                 })
@@ -753,6 +770,10 @@ class AppRepository(context: Context) {
                                 ?: decodePlanningRules(item.optJSONArray("planningRules") ?: JSONArray())
                                     .filter { it.itemKind == PlannedItemKind.FOOD }
                                     .mapTo(mutableSetOf()) { it.itemId },
+                            dismissedSuggestionFoodIds = item
+                                .optJSONArray("dismissedSuggestionFoodIds")
+                                ?.let(::decodeIds)
+                                .orEmpty(),
                             menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray())
                         )
                     )
