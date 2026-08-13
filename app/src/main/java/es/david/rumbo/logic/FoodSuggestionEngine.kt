@@ -81,14 +81,16 @@ object FoodSuggestionEngine {
         food: Food, recommendation: Recommendation?, deficits: Deficits
     ): Double {
         val efficiency = MacroEfficiency.from(food)
+        val proteinQuality = if (food.isCleanProteinSource()) 1.0 else 0.0
         if (recommendation == null) return efficiency.fiber * 0.12
         val servingFactor = (food.unitAmount ?: 100.0).coerceIn(30.0, 250.0) / 100.0
         fun contribution(value: Double?, target: Int): Double =
             ((value ?: 0.0) * servingFactor / target.coerceAtLeast(1))
                 .coerceIn(0.0, 0.35) / 0.35
         return deficits.calories * contribution(food.calories, recommendation.calories) * 0.03 +
-            deficits.protein * (contribution(food.proteinGrams, recommendation.proteinGrams) * 0.30 +
-                efficiency.protein * 0.40) +
+            deficits.protein * proteinQuality *
+                (contribution(food.proteinGrams, recommendation.proteinGrams) * 0.30 +
+                    efficiency.protein * 0.40) +
             deficits.carbohydrate * (contribution(food.carbohydrateGrams, recommendation.carbohydrateGrams) * 0.08 +
                 efficiency.carbohydrate * 0.16) +
             deficits.fat * (contribution(food.fatGrams, recommendation.fatGrams) * 0.08 +
@@ -116,8 +118,11 @@ object FoodSuggestionEngine {
     ): String {
         val efficiency = MacroEfficiency.from(food)
         val efficientSources = listOf(
-            Triple(deficits.protein * efficiency.protein, efficiency.protein,
-                "Aporta proteína con pocas calorías."),
+            Triple(
+                if (food.isCleanProteinSource()) deficits.protein * efficiency.protein else 0.0,
+                if (food.isCleanProteinSource()) efficiency.protein else 0.0,
+                "Aporta proteína con pocas calorías."
+            ),
             Triple(deficits.carbohydrate * efficiency.carbohydrate, efficiency.carbohydrate,
                 "Aporta hidratos con poca grasa."),
             Triple(deficits.fat * efficiency.fat, efficiency.fat,
@@ -132,7 +137,11 @@ object FoodSuggestionEngine {
             ?.let { return it.third }
 
         val nutrientReasons = listOf(
-            Triple(deficits.protein, food.proteinGrams ?: 0.0, "Porque falta proteína en tu menú."),
+            Triple(
+                deficits.protein,
+                if (food.isCleanProteinSource()) food.proteinGrams ?: 0.0 else 0.0,
+                "Porque falta proteína en tu menú."
+            ),
             Triple(deficits.fiber, food.fiberGrams ?: 0.0, "Porque falta fibra en tu menú."),
             Triple(deficits.carbohydrate, food.carbohydrateGrams ?: 0.0, "Porque faltan hidratos en tu menú."),
             Triple(deficits.fat, food.fatGrams ?: 0.0, "Porque faltan grasas en tu menú.")
@@ -168,6 +177,8 @@ object FoodSuggestionEngine {
      * Fruit is allowed more naturally occurring sugar, but still has to be low in fat.
      */
     private fun Food.isRecommendableCandidate(): Boolean {
+        if ((saturatedFatGrams ?: 0.0) > 8.0 || (saltGrams ?: 0.0) > 3.0) return false
+
         val carbohydrate = carbohydrateGrams ?: 0.0
         val proteinEnergy = (proteinGrams ?: 0.0) * 4.0
         val fat = fatGrams ?: 0.0
@@ -182,6 +193,15 @@ object FoodSuggestionEngine {
             (saturatedFatGrams ?: 0.0) <= 3.0 &&
             (sugarGrams ?: 0.0) <= sugarLimit &&
             (saltGrams ?: 0.0) <= 1.5
+    }
+
+    private fun Food.isCleanProteinSource(): Boolean {
+        val protein = proteinGrams ?: 0.0
+        val calories = calories ?: return false
+        if (protein < 5.0 || calories <= 0.0) return false
+        return protein * 100.0 / calories >= 8.0 &&
+            (saturatedFatGrams ?: 0.0) <= 5.0 &&
+            (saltGrams ?: 0.0) <= 2.0
     }
 
     private fun equivalenceKey(food: Food): String {
