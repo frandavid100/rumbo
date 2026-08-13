@@ -429,8 +429,16 @@ fun RumboApp(repository: AppRepository) {
         )
     }
 
+    val plannerTopAppBarState = rememberTopAppBarState()
+    val plannerScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(plannerTopAppBarState)
+
     Scaffold(
-        contentWindowInsets = if (screen in setOf(Screen.HOME, Screen.SHOPPING_LIST)) {
+        modifier = if (screen == Screen.PLANNER) {
+            Modifier.nestedScroll(plannerScrollBehavior.nestedScrollConnection)
+        } else {
+            Modifier
+        },
+        contentWindowInsets = if (screen in setOf(Screen.HOME, Screen.SHOPPING_LIST, Screen.PLANNER)) {
             WindowInsets(0, 0, 0, 0)
         } else {
             ScaffoldDefaults.contentWindowInsets
@@ -534,7 +542,8 @@ fun RumboApp(repository: AppRepository) {
                             }
                         }
                     }
-                }
+                },
+                scrollBehavior = if (screen == Screen.PLANNER) plannerScrollBehavior else null
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -691,11 +700,7 @@ fun RumboApp(repository: AppRepository) {
                         foodsById = data.foods.associateBy { it.id },
                         dishesById = data.dishes.associateBy { it.id },
                         recommendation = currentRecommendation,
-                        sectionTitle = if (selectedWeek == PlanWeek.NEXT) {
-                            "Tu menú de la semana que viene"
-                        } else {
-                            "Tu menú de esta semana"
-                        },
+                        sectionTitle = "",
                         onOpenShoppingList = {
                             shoppingCurrentOnly = false
                             shoppingWeekName = selectedWeek.name
@@ -2562,7 +2567,7 @@ private fun HomeShoppingSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            neededEntries.forEach { (food, grams) ->
+            neededEntries.forEachIndexed { index, (food, grams) ->
                 HomeShoppingEntry(
                     food = food,
                     grams = grams,
@@ -2571,6 +2576,9 @@ private fun HomeShoppingSection(
                         if (isChecked) saveAvailableFoods(availableFoodIds + food.id)
                     }
                 )
+                if (index < neededEntries.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
             }
         }
         if (purchasedEntries.isNotEmpty()) {
@@ -2579,7 +2587,7 @@ private fun HomeShoppingSection(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(top = 4.dp)
             )
-            purchasedEntries.forEach { (food, grams) ->
+            purchasedEntries.forEachIndexed { index, (food, grams) ->
                 HomeShoppingEntry(
                     food = food,
                     grams = grams,
@@ -2588,6 +2596,9 @@ private fun HomeShoppingSection(
                         if (!isChecked) saveAvailableFoods(availableFoodIds - food.id)
                     }
                 )
+                if (index < purchasedEntries.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
             }
         }
     }
@@ -5648,7 +5659,9 @@ private fun HomeCatalogSearch(
 
     LaunchedEffect(suppressRestoredKeyboard, state.targetValue) {
         if (suppressRestoredKeyboard && state.targetValue == SearchBarValue.Expanded) {
-            delay(150)
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            delay(500)
             focusManager.clearFocus(force = true)
             keyboard?.hide()
             onRestoredKeyboardSuppressed()
@@ -5686,6 +5699,7 @@ private fun HomeCatalogSearch(
         SearchBarDefaults.InputField(
             textFieldState = textFieldState,
             searchBarState = state,
+            enabled = !suppressRestoredKeyboard,
             colors = appBarColors.searchBarColors.inputFieldColors,
             onSearch = {},
             modifier = Modifier.fillMaxWidth(),
