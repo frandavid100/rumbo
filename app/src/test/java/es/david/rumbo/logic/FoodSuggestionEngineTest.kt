@@ -42,6 +42,22 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun efficientProteinSourceBeatsFattyAlternative() {
+        val foods = listOf(
+            food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
+            food(2, "Pechuga", FoodCategory.PROTEIN, "Mercadona", 110.0, 24.0, 0.0, 1.0),
+            food(3, "Embutido", FoodCategory.PROTEIN, "Mercadona",
+                400.0, 24.0, 1.0, 32.0, saturated = 12.0)
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods, setOf(1), listOf(rule(1)), emptyList(), emptyMap(),
+            Recommendation(2000, 140, 220, 65, "")
+        )
+        assertEquals(2L, result.first().food.id)
+        assertTrue(result.first().reason.contains("Mucha proteína"))
+    }
+
+    @Test
     fun dismissedFoodIsNotSuggestedAgain() {
         val foods = listOf(
             food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
@@ -67,8 +83,11 @@ class FoodSuggestionEngineTest {
     private fun food(
         id: Long, name: String, category: FoodCategory, retailer: String,
         calories: Double, protein: Double, carbohydrate: Double, fat: Double,
-        fiber: Double = 0.0
+        fiber: Double = 0.0,
+        saturated: Double? = null
     ) = Food(
-        id, name, category, calories, fat, carbohydrate, protein, fiber, retailer = retailer
+        id, name, category, calories, fat, carbohydrate, protein, fiber,
+        retailer = retailer,
+        saturatedFatGrams = saturated
     )
 }
