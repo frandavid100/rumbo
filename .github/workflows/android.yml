@@ -20,6 +20,7 @@ jobs:
           distribution: temurin
           java-version: 17
       - name: Aplicar corrección oficial de búsqueda
+        if: github.event_name == 'push' && hashFiles('tools/patch_search_material3.py') != ''
         run: |
           python3 tools/patch_search_material3.py
           git config user.name "github-actions[bot]"
