@@ -2,13 +2,13 @@ name: Android
 
 on:
   push:
-    branches: [main, feature/0.12.0-dishes]
+    branches: [main, feature/0.12.0-dishes, fix/ui-review-0.45.0]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -19,6 +19,16 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Aplicar corrección estable de búsqueda
+        if: github.event_name == 'push' && hashFiles('tools/patch_search_stable.py') != ''
+        run: |
+          python3 tools/patch_search_stable.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/es/david/rumbo/ui/App.kt app/build.gradle
+          git add -u tools/patch_search_stable.py
+          git commit -m "Corregir búsqueda y desplazamiento con Material 3 estable"
+          git push origin HEAD:fix/ui-review-0.45.0
       - name: Restaurar catálogo nutricional de Mercadona
         run: |
           mkdir -p app/src/main/assets
