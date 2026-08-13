@@ -41,6 +41,24 @@ class FoodSuggestionEngineTest {
         assertTrue(result.first().reason.contains("proteína"))
     }
 
+    @Test
+    fun dismissedFoodIsNotSuggestedAgain() {
+        val foods = listOf(
+            food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
+            food(2, "Pechuga", FoodCategory.PROTEIN, "Mercadona", 110.0, 24.0, 0.0, 1.0)
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = foods,
+            repertoireFoodIds = setOf(1),
+            planningRules = listOf(rule(1)),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(2000, 140, 220, 65, ""),
+            excludedFoodIds = setOf(2)
+        )
+        assertTrue(result.isEmpty())
+    }
+
     private fun rule(id: Long) = PlanningRule(
         PlannedItemKind.FOOD, id, MealType.entries.toSet(),
         frequency = PlanningFrequency.NORMAL, preferredGrams = 100.0
