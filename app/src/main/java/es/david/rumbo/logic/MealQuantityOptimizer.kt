@@ -191,7 +191,13 @@ object MealQuantityOptimizer {
                         meal.id, meal.type, item.dishId, true, dish.name,
                         item.minimumGrams, item.maximumGrams, meal.resolvedGrams(item, day),
                         perGram.toVector(),
-                        step = dish.wholeUnitStep(foodsById)
+                        step = dish.unitAmount?.let { amount ->
+                            when {
+                                dish.wholeUnitsOnly -> amount
+                                dish.unitDivisions > 1 -> amount / dish.unitDivisions
+                                else -> null
+                            }
+                        } ?: dish.wholeUnitStep(foodsById)
                     )
                 )
             }
