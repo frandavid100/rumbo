@@ -6,7 +6,6 @@
         <item name="android:statusBarColor">#F7FAF7</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:windowNavigationBarContrastEnforced">false</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
 </resources>
