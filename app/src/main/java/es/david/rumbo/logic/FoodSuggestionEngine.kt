@@ -44,6 +44,20 @@ object FoodSuggestionEngine {
             plannedMeals.filter { it.planWeek == PlanWeek.CURRENT }, foodsById, dishesById
         )
         val deficits = Deficits.from(recommendation, totals)
+        val menuNeedsCorrection = recommendation?.let {
+            listOf(
+                NutrientKind.CALORIES to (totals.calories to it.calories * 7.0),
+                NutrientKind.PROTEIN to (totals.protein to it.proteinGrams * 7.0),
+                NutrientKind.CARBOHYDRATES to
+                    (totals.carbohydrate to it.carbohydrateGrams * 7.0),
+                NutrientKind.FAT to (totals.fat to it.fatGrams * 7.0)
+            ).any { (kind, values) ->
+                values.first < values.second &&
+                    NutritionTolerancePolicy.evaluate(
+                        kind, values.first, values.second
+                    ).fit != TargetFit.ON_TARGET
+            }
+        } == true
 
         return foods.asSequence()
             .filter {
@@ -70,7 +84,10 @@ object FoodSuggestionEngine {
                         if (candidate.unitAmount != null && candidate.unitName != null) 0.05 else 0.0
                 )
             }
-            .filter { repertoireNeedsExpansion || it.score >= 0.18 }
+            .filter {
+                repertoireNeedsExpansion ||
+                    menuNeedsCorrection && it.food.addresses(deficits)
+            }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
             .distinctBy { equivalenceKey(it.food) }
             .take(limit)
@@ -97,6 +114,16 @@ object FoodSuggestionEngine {
                 efficiency.fat * 0.16) +
             deficits.fiber * (((food.fiberGrams ?: 0.0) * servingFactor / 25.0)
                 .coerceIn(0.0, 0.35) / 0.35 * 0.12 + efficiency.fiber * 0.22)
+    }
+
+    private fun Food.addresses(deficits: Deficits): Boolean {
+        val efficiency = MacroEfficiency.from(this)
+        return deficits.protein > 0.0 &&
+            isCleanProteinSource() && (proteinGrams ?: 0.0) >= 3.0 ||
+            deficits.carbohydrate > 0.0 &&
+                (carbohydrateGrams ?: 0.0) >= 5.0 && efficiency.carbohydrate >= 0.25 ||
+            deficits.fat > 0.0 &&
+                (fatGrams ?: 0.0) >= 3.0 && efficiency.fat >= 0.25
     }
 
     private fun affinity(candidate: Food, activeFoods: List<Food>): Double {
