@@ -3,10 +3,13 @@ package es.david.rumbo.logic
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.PlannedFood
 import es.david.rumbo.model.PlannedItemKind
+import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
+import es.david.rumbo.model.WeekDay
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -173,6 +176,43 @@ class FoodSuggestionEngineTest {
         assertTrue(result.none { it.food.id == 1L })
         assertEquals(2L, result.first().food.id)
         assertTrue(result.first().reason.contains("proteína"))
+    }
+
+    @Test
+    fun carbohydrateSuggestionContinuesAtEightyFourPercentWithLargeRepertoire() {
+        val menuBase = food(
+            1, "Base del menú", FoodCategory.CARBOHYDRATE, "Mercadona",
+            400.0, 22.0, 100.0, 7.0, subcategory = "Base"
+        )
+        val repertoire = listOf(menuBase) + (2L..15L).map { id ->
+            food(
+                id, "Alimento $id", FoodCategory.PROTEIN, "Mercadona",
+                120.0, 20.0, 2.0, 2.0, subcategory = "Grupo $id"
+            )
+        }
+        val candidate = food(
+            100, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona",
+            360.0, 7.0, 79.0, 1.0, subcategory = "Arroz"
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = repertoire + candidate,
+            repertoireFoodIds = repertoire.mapTo(mutableSetOf()) { it.id },
+            planningRules = repertoire.map { rule(it.id) },
+            plannedMeals = listOf(
+                PlannedMeal(
+                    id = 1,
+                    type = MealType.LUNCH,
+                    days = WeekDay.entries.toSet(),
+                    items = listOf(PlannedFood(menuBase.id, 168.0))
+                )
+            ),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 200, 52, "")
+        )
+        assertTrue(result.any { it.food.id == candidate.id })
+        assertTrue(
+            result.first { it.food.id == candidate.id }.reason.contains("hidratos")
+        )
     }
 
     @Test
