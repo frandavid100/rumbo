@@ -13,6 +13,25 @@ import org.junit.Test
 
 class FoodSuggestionEngineTest {
     @Test
+    fun emptyRepertoireStillGetsColdStartSuggestions() {
+        val foods = listOf(
+            food(1, "Pechuga", FoodCategory.PROTEIN, "Mercadona", 110.0, 24.0, 0.0, 1.0),
+            food(2, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
+            food(3, "Nueces", FoodCategory.FAT, "Mercadona", 650.0, 15.0, 12.0, 60.0)
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = foods,
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 152, 200, 52, "")
+        )
+        assertTrue(result.isNotEmpty())
+        assertTrue(result.size <= 3)
+    }
+
+    @Test
     fun excludesRepertoireAndOtherRetailers() {
         val foods = listOf(
             food(1, "Arroz habitual", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
