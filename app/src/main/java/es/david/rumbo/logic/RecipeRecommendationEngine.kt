@@ -41,17 +41,17 @@ data class RecipeRecommendation(
  * when a positive term appears in its commercial/legal classification and no preparation term
  * makes it a materially different food.
  */
+private val commonPreparedTerms = listOf(
+        "nugget", "croqueta", "empanad", "rebozad", "rellen", "pizza", "hamburgues",
+        "salchicha", "salsa", "caldo", "sopa", "crema", "paté", "pate", "snack",
+        "sabor ", "aroma", "plato preparad", "listo para", "precocinad"
+    )
+
 object GenericIngredientClassifier {
     private data class Rule(
         val key: String,
         val requiredAny: List<String>,
         val forbidden: List<String> = commonPreparedTerms
-    )
-
-    private val commonPreparedTerms = listOf(
-        "nugget", "croqueta", "empanad", "rebozad", "rellen", "pizza", "hamburgues",
-        "salchicha", "salsa", "caldo", "sopa", "crema", "paté", "pate", "snack",
-        "sabor ", "aroma", "plato preparad", "listo para", "precocinad"
     )
 
     private val rules = listOf(
