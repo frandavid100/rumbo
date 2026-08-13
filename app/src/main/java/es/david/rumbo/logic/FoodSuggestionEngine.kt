@@ -44,20 +44,25 @@ object FoodSuggestionEngine {
             plannedMeals.filter { it.planWeek == PlanWeek.CURRENT }, foodsById, dishesById
         )
         val deficits = Deficits.from(recommendation, totals)
-        val menuNeedsCorrection = recommendation?.let {
+        val underTargetKinds = recommendation?.let {
             listOf(
                 NutrientKind.CALORIES to (totals.calories to it.calories * 7.0),
                 NutrientKind.PROTEIN to (totals.protein to it.proteinGrams * 7.0),
                 NutrientKind.CARBOHYDRATES to
                     (totals.carbohydrate to it.carbohydrateGrams * 7.0),
                 NutrientKind.FAT to (totals.fat to it.fatGrams * 7.0)
-            ).any { (kind, values) ->
+            ).filterTo(mutableSetOf()) { (kind, values) ->
                 values.first < values.second &&
                     NutritionTolerancePolicy.evaluate(
                         kind, values.first, values.second
                     ).fit != TargetFit.ON_TARGET
-            }
-        } == true
+            }.mapTo(mutableSetOf()) { it.first }
+        }.orEmpty()
+        val macroCorrectionNeeded = underTargetKinds.any {
+            it == NutrientKind.PROTEIN ||
+                it == NutrientKind.CARBOHYDRATES ||
+                it == NutrientKind.FAT
+        }
 
         return foods.asSequence()
             .filter {
@@ -76,17 +81,20 @@ object FoodSuggestionEngine {
                 FoodSuggestion(
                     food = candidate,
                     reason = reason(
-                        candidate, activeFoods, categoryCounts, deficits, repertoireNeedsExpansion
+                        candidate, activeFoods, categoryCounts, deficits,
+                        repertoireNeedsExpansion, macroCorrectionNeeded
                     ),
-                    score = nutritionalUtility(candidate, recommendation, deficits) +
+                    score = nutritionalUtility(
+                        candidate, recommendation, deficits, macroCorrectionNeeded
+                    ) +
                         categoryNovelty +
                         if (repertoireNeedsExpansion) 0.0 else affinity(candidate, activeFoods) +
                         if (candidate.unitAmount != null && candidate.unitName != null) 0.05 else 0.0
                 )
             }
             .filter {
-                repertoireNeedsExpansion ||
-                    menuNeedsCorrection && it.food.addresses(deficits)
+                if (macroCorrectionNeeded) it.food.addresses(deficits)
+                else repertoireNeedsExpansion
             }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
             .distinctBy { equivalenceKey(it.food) }
@@ -95,7 +103,10 @@ object FoodSuggestionEngine {
     }
 
     private fun nutritionalUtility(
-        food: Food, recommendation: Recommendation?, deficits: Deficits
+        food: Food,
+        recommendation: Recommendation?,
+        deficits: Deficits,
+        prioritizeMacros: Boolean
     ): Double {
         val efficiency = MacroEfficiency.from(food)
         val proteinQuality = if (food.isCleanProteinSource()) 1.0 else 0.0
@@ -112,8 +123,9 @@ object FoodSuggestionEngine {
                 efficiency.carbohydrate * 0.16) +
             deficits.fat * (contribution(food.fatGrams, recommendation.fatGrams) * 0.08 +
                 efficiency.fat * 0.16) +
-            deficits.fiber * (((food.fiberGrams ?: 0.0) * servingFactor / 25.0)
-                .coerceIn(0.0, 0.35) / 0.35 * 0.12 + efficiency.fiber * 0.22)
+            if (prioritizeMacros) 0.0 else
+                deficits.fiber * (((food.fiberGrams ?: 0.0) * servingFactor / 25.0)
+                    .coerceIn(0.0, 0.35) / 0.35 * 0.12 + efficiency.fiber * 0.22)
     }
 
     private fun Food.addresses(deficits: Deficits): Boolean {
@@ -141,7 +153,8 @@ object FoodSuggestionEngine {
         activeFoods: List<Food>,
         categoryCounts: Map<FoodCategory, Int>,
         deficits: Deficits,
-        repertoireNeedsExpansion: Boolean
+        repertoireNeedsExpansion: Boolean,
+        prioritizeMacros: Boolean
     ): String {
         val efficiency = MacroEfficiency.from(food)
         val efficientSources = listOf(
@@ -155,8 +168,11 @@ object FoodSuggestionEngine {
             Triple(deficits.fat * efficiency.fat, efficiency.fat,
                 if (food.saturatedFatGrams != null) "Aporta grasa con poca grasa saturada."
                 else "Aporta grasa con pocos hidratos."),
-            Triple(deficits.fiber * efficiency.fiber, efficiency.fiber,
-                "Aporta fibra con pocas calorías.")
+            Triple(
+                if (prioritizeMacros) 0.0 else deficits.fiber * efficiency.fiber,
+                if (prioritizeMacros) 0.0 else efficiency.fiber,
+                "Aporta fibra con pocas calorías."
+            )
         )
         efficientSources.filter { it.second >= 0.65 }
             .maxByOrNull { it.first }
@@ -169,7 +185,11 @@ object FoodSuggestionEngine {
                 if (food.isCleanProteinSource()) food.proteinGrams ?: 0.0 else 0.0,
                 "Porque falta proteína en tu menú."
             ),
-            Triple(deficits.fiber, food.fiberGrams ?: 0.0, "Porque falta fibra en tu menú."),
+            Triple(
+                if (prioritizeMacros) 0.0 else deficits.fiber,
+                if (prioritizeMacros) 0.0 else food.fiberGrams ?: 0.0,
+                "Porque falta fibra en tu menú."
+            ),
             Triple(deficits.carbohydrate, food.carbohydrateGrams ?: 0.0, "Porque faltan hidratos en tu menú."),
             Triple(deficits.fat, food.fatGrams ?: 0.0, "Porque faltan grasas en tu menú.")
         )
