@@ -39,7 +39,9 @@ class AppDataTest {
     }
 
     @Test
-    fun profileIsReadyWithEitherBodyMeasurementAndAutomaticGoal() {
+    fun profileIsReadyBeforeItsFirstBodyMeasurement() {
+        assertFalse(AppData().isActiveProfileReady)
+
         val empty = AppData(
             profiles = listOf(ProfileData(david)),
             activeProfileId = david.id
@@ -61,7 +63,7 @@ class AppDataTest {
             )
         )
 
-        assertFalse(empty.isActiveProfileReady)
+        assertTrue(empty.isActiveProfileReady)
         assertTrue(weightOnly.isActiveProfileReady)
         assertTrue(waistOnly.isActiveProfileReady)
     }
