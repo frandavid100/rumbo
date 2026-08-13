@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
@@ -98,6 +99,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
@@ -106,6 +108,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -404,6 +407,8 @@ fun RumboApp(repository: AppRepository) {
     }
 
     Scaffold(
+        contentWindowInsets = if (screen == Screen.HOME) WindowInsets(0, 0, 0, 0)
+            else ScaffoldDefaults.contentWindowInsets,
         topBar = {
             if (screen != Screen.HOME && screen !in setOf(Screen.ADD, Screen.EDIT_MEASUREMENT)) TopAppBar(
                 navigationIcon = {
@@ -800,6 +805,7 @@ fun RumboApp(repository: AppRepository) {
                             onDeletePlanningRule = {
                                 data = repository.deletePlanningRule(PlannedItemKind.DISH, dish.id)
                             },
+                            onSaveDish = { data = repository.saveDish(it) },
                             onEdit = { screenName = Screen.EDIT_DISH.name },
                             onDelete = {
                                 data = repository.deleteDish(dish.id)
@@ -1056,14 +1062,12 @@ private fun ProfileSwitcher(
 @Composable
 private fun ProfileAvatar(profile: UserProfile?, size: androidx.compose.ui.unit.Dp) {
     val context = LocalContext.current
-    val bitmap by produceState<android.graphics.Bitmap?>(null, profile?.photoUri) {
-        value = profile?.photoUri?.let { uri ->
-            runCatching {
-                context.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use {
-                    android.graphics.BitmapFactory.decodeStream(it)
-                }
-            }.getOrNull()
-        }
+    val bitmap = remember(profile?.photoUri) {
+        profile?.photoUri?.let { uri -> runCatching {
+            context.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use {
+                android.graphics.BitmapFactory.decodeStream(it)
+            }
+        }.getOrNull() }
     }
     if (bitmap != null) {
         Image(
@@ -1153,40 +1157,54 @@ private fun HomeScreen(
         return
     }
 
-    Box(Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().statusBarsPadding(),
-                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-        item {
-            HomeCatalogSearch(
-                foods = data.foods,
-                dishes = data.dishes,
-                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                filter = searchFilter,
-                onFilterChange = { searchFilter = it },
-                scanMessage = searchMessage,
-                onScanMessageChange = { searchMessage = it },
-                expanded = false,
-                onExpandedChange = { if (it) searchExpanded = true },
-                onOpenFood = onOpenFood,
-                onOpenDish = onOpenDish,
-                trailingContent = {
-                    ProfileSwitcher(
-                        profiles = data.profiles.map { it.profile },
-                        activeProfile = data.profile,
-                        onSelect = onSwitchProfile,
-                        onManage = onManageProfiles,
-                        onSettings = onOpenSettings,
-                        avatarSize = 36
+    val topBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(topBarState)
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            TopAppBar(
+                title = {
+                    HomeCatalogSearch(
+                        foods = data.foods,
+                        dishes = data.dishes,
+                        repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        filter = searchFilter,
+                        onFilterChange = { searchFilter = it },
+                        scanMessage = searchMessage,
+                        onScanMessageChange = { searchMessage = it },
+                        expanded = false,
+                        onExpandedChange = { if (it) searchExpanded = true },
+                        onOpenFood = onOpenFood,
+                        onOpenDish = onOpenDish,
+                        trailingContent = {
+                            ProfileSwitcher(
+                                profiles = data.profiles.map { it.profile },
+                                activeProfile = data.profile,
+                                onSelect = onSwitchProfile,
+                                onManage = onManageProfiles,
+                                onSettings = onOpenSettings,
+                                avatarSize = 36
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
+    ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
         if (assessment != null && recommendedGoal != null) {
             item {
                 BodyGoalNutritionCard(
@@ -1250,7 +1268,7 @@ private fun MissingMeasurementCard(
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                if (missingWeight) "Añade tu peso" else "Añade tu cintura",
+                "Añade una medición",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -1258,7 +1276,7 @@ private fun MissingMeasurementCard(
             Text(
                 when {
                     missingWeight && missingWaist ->
-                        "Añade una primera medición para que Rumbo pueda valorar tu situación."
+                        "Añade tu peso o tu cintura para que Rumbo pueda empezar a funcionar. Lo ideal es introducir ambos datos, porque así la valoración es más fiable."
                     missingWeight ->
                         "La cintura ya permite orientar el objetivo, pero con el peso también podremos calcular el IMC y las calorías que necesitas."
                     else ->
@@ -1266,8 +1284,9 @@ private fun MissingMeasurementCard(
                 },
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            WaistMeasurementHelp()
             OutlinedButton(onClick = onAddMeasurement, modifier = Modifier.fillMaxWidth()) {
-                Text(if (missingWeight) "Añadir peso" else "Añadir cintura")
+                Text("Añadir medición")
             }
         }
     }
@@ -5328,10 +5347,32 @@ private fun DishDetailScreen(
     planningRule: PlanningRule?,
     onSavePlanningRule: (PlanningRule) -> Unit,
     onDeletePlanningRule: () -> Unit,
+    onSaveDish: (Dish) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    var creatingUnit by remember { mutableStateOf(false) }
+    var unitDraft by remember(dish.id, dish.unitName) {
+        mutableStateOf(dish.unitName?.let { FoodUnitDefinition(it, dish.unitPlural ?: it, dish.unitGender) })
+    }
+    var selectedUnitAmount by remember(dish.id, dish.unitAmount) {
+        mutableStateOf(dish.unitAmount?.let(::formatDecimal).orEmpty())
+    }
+    var allowDividing by remember(dish.id, dish.wholeUnitsOnly) {
+        mutableStateOf(!dish.unitName.isNullOrBlank() && !dish.wholeUnitsOnly)
+    }
+    var unitDivisions by remember(dish.id, dish.unitDivisions) {
+        mutableStateOf(dish.unitDivisions.takeIf { it > 1 }?.toString() ?: "2")
+    }
+    var unitError by remember { mutableStateOf<String?>(null) }
+    val availableUnits = remember(foods) {
+        foods.mapNotNull { candidate ->
+            val singular = candidate.unitName ?: return@mapNotNull null
+            FoodUnitDefinition(singular, candidate.unitPlural ?: singular, candidate.unitGender)
+        }.plus(defaultUnitDefinitions).distinctBy { listOf(it.singular, it.plural, it.gender) }
+            .sortedBy { it.singular.lowercase() }
+    }
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val totals = dish.nutrition(foodsById)
     val totalWeight = dish.totalWeightGrams()
@@ -5377,6 +5418,22 @@ private fun DishDetailScreen(
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") }
             }
+        )
+    }
+    if (creatingUnit) {
+        NewFoodUnitDialog(
+            foodName = dish.name,
+            onCreate = { definition ->
+                unitDraft = definition
+                creatingUnit = false
+                onSaveDish(dish.copy(
+                    unitName = definition.singular, unitPlural = definition.plural,
+                    unitGender = definition.gender, unitAmount = parseDecimal(selectedUnitAmount),
+                    wholeUnitsOnly = !allowDividing,
+                    unitDivisions = if (allowDividing) unitDivisions.toIntOrNull()?.coerceIn(2, 100) ?: 2 else 1
+                ))
+            },
+            onDismiss = { creatingUnit = false }
         )
     }
 
@@ -5425,6 +5482,68 @@ private fun DishDetailScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Unidades", style = MaterialTheme.typography.titleLarge)
+                HorizontalDivider()
+                UnitDefinitionField(
+                    selected = unitDraft,
+                    options = availableUnits,
+                    onSelect = { definition ->
+                        unitDraft = definition
+                        unitError = null
+                        onSaveDish(dish.copy(
+                            unitName = definition.singular, unitPlural = definition.plural,
+                            unitGender = definition.gender, unitAmount = parseDecimal(selectedUnitAmount),
+                            wholeUnitsOnly = !allowDividing,
+                            unitDivisions = if (allowDividing) unitDivisions.toIntOrNull()?.coerceIn(2, 100) ?: 2 else 1
+                        ))
+                    },
+                    onCreateNew = { creatingUnit = true }
+                )
+                unitDraft?.let { definition ->
+                    NumericField("Gramos o ml por unidad", selectedUnitAmount, { value ->
+                        selectedUnitAmount = value
+                        val amount = parseDecimal(value)
+                        unitError = if (value.isNotBlank() && (amount == null || amount !in 0.1..5000.0))
+                            "Indica entre 0,1 y 5.000 g o ml." else null
+                        if (amount != null && amount in 0.1..5000.0) onSaveDish(dish.copy(
+                            unitName = definition.singular, unitPlural = definition.plural,
+                            unitGender = definition.gender, unitAmount = amount,
+                            wholeUnitsOnly = !allowDividing,
+                            unitDivisions = if (allowDividing) unitDivisions.toIntOrNull()?.coerceIn(2, 100) ?: 2 else 1
+                        ))
+                    }, Modifier.fillMaxWidth())
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            allowDividing = !allowDividing
+                            onSaveDish(dish.copy(
+                                unitName = definition.singular, unitPlural = definition.plural,
+                                unitGender = definition.gender, unitAmount = parseDecimal(selectedUnitAmount),
+                                wholeUnitsOnly = !allowDividing,
+                                unitDivisions = if (allowDividing) unitDivisions.toIntOrNull()?.coerceIn(2, 100) ?: 2 else 1
+                            ))
+                        },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(allowDividing, null)
+                        Text("Permitir dividirlo")
+                    }
+                    if (allowDividing) NumericField("¿En cuántas partes?", unitDivisions, { value ->
+                        unitDivisions = value
+                        val divisions = value.toIntOrNull()
+                        unitError = if (divisions == null || divisions !in 2..100) "Indica entre 2 y 100 partes." else null
+                        if (divisions != null && divisions in 2..100) onSaveDish(dish.copy(
+                            unitName = definition.singular, unitPlural = definition.plural,
+                            unitGender = definition.gender, unitAmount = parseDecimal(selectedUnitAmount),
+                            wholeUnitsOnly = false, unitDivisions = divisions
+                        ))
+                    }, Modifier.fillMaxWidth())
+                    unitError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
             }
         }
 
@@ -5678,7 +5797,10 @@ private fun DishEditorScreen(
                     else -> null
                 }
                 if (error == null) {
-                    onSave(Dish(initial?.id ?: System.currentTimeMillis(), name.trim(), ingredients))
+                    onSave(
+                        initial?.copy(name = name.trim(), ingredients = ingredients)
+                            ?: Dish(System.currentTimeMillis(), name.trim(), ingredients)
+                    )
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -6876,7 +6998,8 @@ private fun ProfileScreen(
         mutableStateOf(MealType.entries.associateWith { type ->
             when {
                 (mealShares[type] ?: 0.0) <= 0.0 -> "NONE"
-                (mealShares[type] ?: 0.0) >= 0.25 -> "LARGE"
+                (mealShares[type] ?: 0.0) >= 0.28 -> "LARGE"
+                (mealShares[type] ?: 0.0) >= 0.15 -> "NORMAL"
                 else -> "SMALL"
             }
         })
@@ -7014,9 +7137,9 @@ private fun ProfileScreen(
                     MealType.entries.forEach { type ->
                         SelectorField(
                             label = type.label,
-                            selectedLabel = when (mealSizes[type]) { "LARGE" -> "Grande"; "NONE" -> "No la hago"; else -> "Pequeña" },
-                            options = listOf("LARGE", "SMALL", "NONE"),
-                            optionLabel = { when (it) { "LARGE" -> "Grande"; "NONE" -> "No la hago"; else -> "Pequeña" } },
+                            selectedLabel = when (mealSizes[type]) { "LARGE" -> "Grande"; "NORMAL" -> "Normal"; "NONE" -> "No la hago"; else -> "Pequeña" },
+                            options = listOf("NONE", "SMALL", "NORMAL", "LARGE"),
+                            optionLabel = { when (it) { "LARGE" -> "Grande"; "NORMAL" -> "Normal"; "NONE" -> "No la hago"; else -> "Pequeña" } },
                             onSelect = { mealSizes = mealSizes + (type to it) },
                             onClear = null
                         )
@@ -7036,7 +7159,7 @@ private fun ProfileScreen(
                     sex = sex,
                     photoUri = photoUri
                 )
-                val weights = MealType.entries.associateWith { type -> when (mealSizes[type]) { "LARGE" -> 2.0; "NONE" -> 0.0; else -> 1.0 } }
+                val weights = MealType.entries.associateWith { type -> when (mealSizes[type]) { "LARGE" -> 3.0; "NORMAL" -> 2.0; "NONE" -> 0.0; else -> 1.0 } }
                 val weightTotal = weights.values.sum()
                 val parsedShares = weights.mapValues { if (weightTotal > 0.0) it.value / weightTotal else 0.0 }
                 error = when {
