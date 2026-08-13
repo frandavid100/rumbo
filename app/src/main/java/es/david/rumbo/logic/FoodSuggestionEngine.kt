@@ -54,14 +54,19 @@ object FoodSuggestionEngine {
             .map { candidate ->
                 val categoryNovelty = when {
                     candidate.category == FoodCategory.OTHER -> 0.0
+                    repertoireNeedsExpansion ->
+                        0.60 / (1 + (categoryCounts[candidate.category] ?: 0))
                     categoryCounts[candidate.category] == null -> 0.20
                     else -> 0.05 / max(1, categoryCounts.getValue(candidate.category))
                 }
                 FoodSuggestion(
                     food = candidate,
-                    reason = reason(candidate, activeFoods, categoryCounts, deficits),
+                    reason = reason(
+                        candidate, activeFoods, categoryCounts, deficits, repertoireNeedsExpansion
+                    ),
                     score = nutritionalUtility(candidate, recommendation, deficits) +
-                        categoryNovelty + affinity(candidate, activeFoods) +
+                        categoryNovelty +
+                        if (repertoireNeedsExpansion) 0.0 else affinity(candidate, activeFoods) +
                         if (candidate.unitAmount != null && candidate.unitName != null) 0.05 else 0.0
                 )
             }
@@ -106,7 +111,8 @@ object FoodSuggestionEngine {
         food: Food,
         activeFoods: List<Food>,
         categoryCounts: Map<FoodCategory, Int>,
-        deficits: Deficits
+        deficits: Deficits,
+        repertoireNeedsExpansion: Boolean
     ): String {
         val efficiency = MacroEfficiency.from(food)
         val efficientSources = listOf(
@@ -138,6 +144,8 @@ object FoodSuggestionEngine {
         if (food.category != FoodCategory.OTHER && categoryCounts[food.category] == null) {
             return "Aporta más variedad con " + food.category.label.lowercase() + "."
         }
+        if (repertoireNeedsExpansion) return "Puede darte más variedad."
+
         val sharedSubcategory = food.subcategory.normalized()?.let { subcategory ->
             activeFoods.any { it.subcategory.normalized() == subcategory }
         } == true
@@ -176,14 +184,17 @@ object FoodSuggestionEngine {
             (saltGrams ?: 0.0) <= 1.5
     }
 
-    private fun equivalenceKey(food: Food): String = listOf(
-        food.retailer.normalized().orEmpty(),
-        food.subcategory.normalized() ?: food.family.normalized().orEmpty(),
-        food.category.name,
-        food.name.lowercase()
+    private fun equivalenceKey(food: Food): String {
+        val group = food.subcategory.normalized() ?: food.family.normalized()
+        val fallbackName = food.name.lowercase()
             .replace(Regex("\\b\\d+(?:[.,]\\d+)?\\s*(?:g|kg|ml|l)\\b"), "")
             .replace(Regex("\\s+"), " ").trim()
-    ).joinToString("|")
+        return listOf(
+            food.retailer.normalized().orEmpty(),
+            food.category.name,
+            group ?: fallbackName
+        ).joinToString("|")
+    }
 
     private fun weeklyTotals(
         meals: List<PlannedMeal>, foodsById: Map<Long, Food>, dishesById: Map<Long, Dish>
