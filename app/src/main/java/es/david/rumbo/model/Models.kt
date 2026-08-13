@@ -451,7 +451,8 @@ data class ProfileData(
     val planningRules: List<PlanningRule> = emptyList(),
     val repertoireFoodIds: Set<Long> = planningRules
         .filter { it.itemKind == PlannedItemKind.FOOD }.mapTo(mutableSetOf()) { it.itemId },
-    val menuHistory: List<MenuHistoryEntry> = emptyList()
+    val menuHistory: List<MenuHistoryEntry> = emptyList(),
+    val dismissedSuggestionFoodIds: Set<Long> = emptySet()
 )
 
 data class AppData(
