@@ -2515,42 +2515,73 @@ private fun HomeShoppingSection(
     val neededEntries = entries.filterNot { (food, _) -> food.id in availableFoodIds }
     val notNeededEntries = entries.filter { (food, _) -> food.id in availableFoodIds }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Hace falta comprar", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-        if (neededEntries.isEmpty()) {
-            Text(
-                if (entries.isEmpty()) "El plan todavía no contiene alimentos." else "No falta ningún alimento.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            neededEntries.forEach { (food, grams) ->
-                HomeShoppingEntry(
-                    food = food,
-                    grams = grams,
-                    checked = false,
-                    onCheckedChange = { available ->
-                        if (available) saveAvailableFoods(availableFoodIds + food.id)
+    @Composable
+    fun ShoppingGroup(
+        title: String,
+        groupEntries: List<Pair<Food, Double>>,
+        checked: Boolean,
+        emptyText: String
+    ) {
+        Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            Card(Modifier.fillMaxWidth()) {
+                if (groupEntries.isEmpty()) {
+                    Text(
+                        emptyText,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Column(Modifier.fillMaxWidth()) {
+                        groupEntries.forEachIndexed { index, (food, grams) ->
+                            HomeShoppingEntry(
+                                food = food,
+                                grams = grams,
+                                checked = checked,
+                                onCheckedChange = { isChecked ->
+                                    if (isChecked) {
+                                        saveAvailableFoods(availableFoodIds + food.id)
+                                    } else {
+                                        saveAvailableFoods(availableFoodIds - food.id)
+                                    }
+                                }
+                            )
+                            if (index < groupEntries.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 56.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                )
+                            }
+                        }
                     }
-                )
+                }
             }
         }
+    }
 
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
-        Text("No hace falta comprar", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-        if (notNeededEntries.isEmpty()) {
-            Text("Todavía no has marcado ningún alimento.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            notNeededEntries.forEach { (food, grams) ->
-                HomeShoppingEntry(
-                    food = food,
-                    grams = grams,
-                    checked = true,
-                    onCheckedChange = { available ->
-                        if (!available) saveAvailableFoods(availableFoodIds - food.id)
-                    }
-                )
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        ShoppingGroup(
+            title = "Hace falta comprar",
+            groupEntries = neededEntries,
+            checked = false,
+            emptyText = if (entries.isEmpty()) {
+                "El plan todavía no contiene alimentos."
+            } else {
+                "No falta ningún alimento."
             }
-        }
+        )
+        ShoppingGroup(
+            title = "Comprado",
+            groupEntries = notNeededEntries,
+            checked = true,
+            emptyText = "Todavía no has marcado ningún alimento."
+        )
     }
 }
 
@@ -2562,17 +2593,35 @@ private fun HomeShoppingEntry(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier.size(32.dp)
+            onCheckedChange = onCheckedChange
         )
-        Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Text(foodAmountLabel(food, grams), fontWeight = FontWeight.SemiBold)
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                food.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                foodAmountLabel(food, grams),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
     }
 }
 
