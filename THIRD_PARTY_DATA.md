@@ -26,3 +26,19 @@ El catálogo se puede regenerar ejecutando:
 ```bash
 python3 tools/import_aesan.py
 ```
+
+
+## Combinaciones de recetas (Open Recipes)
+
+El catálogo inicial de recomendaciones se ha normalizado a partir de Open Recipes,
+una base de descubrimiento de recetas publicada por Fictive Kin LLC bajo licencia
+Creative Commons Attribution 3.0 Unported:
+
+https://openrecip.es/
+https://creativecommons.org/licenses/by/3.0/
+
+Rumbo no redistribuye fotografías ni instrucciones de preparación. Conserva
+únicamente combinaciones ordinarias de ingredientes, convertidas a identificadores
+genéricos y cantidades métricas. Posteriormente vincula esos identificadores, de
+forma local y conservadora, con productos comerciales presentes en el repertorio
+del usuario.
