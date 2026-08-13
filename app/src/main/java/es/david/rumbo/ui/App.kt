@@ -1404,9 +1404,10 @@ private fun BodyGoalNutritionCard(
                 }
         }
     }
+    Text("Situación y objetivo", style = MaterialTheme.typography.titleLarge)
+    Spacer(Modifier.height(12.dp))
     Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            HomeCardHeader("Situación y objetivo")
             CombinedBodyScale(assessment)
             Text(
                 weeklyGoalSummary(
@@ -1429,7 +1430,7 @@ private fun BodyGoalNutritionCard(
                 ) {
                     NutritionGoalMetric(
                         "Calorías", "${recommendation.calories} kcal",
-                        Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurface
+                        Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     NutritionGoalMetric(
                         "Proteína", "${recommendation.proteinGrams} g",
@@ -1837,11 +1838,28 @@ private fun WeeklyHomeMenuSection(
             Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Card(Modifier.fillMaxWidth()) {
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(
+                    topStart = 12.dp,
+                    topEnd = 12.dp,
+                    bottomStart = 4.dp,
+                    bottomEnd = 4.dp
+                )
+            ) {
                 SummarySection(expandedSection == summaryKey)
             }
-            WeekDay.entries.forEach { day ->
-                Card(Modifier.fillMaxWidth()) {
+            WeekDay.entries.forEachIndexed { index, day ->
+                val isLast = index == WeekDay.entries.lastIndex
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(
+                        topStart = 4.dp,
+                        topEnd = 4.dp,
+                        bottomStart = if (isLast) 12.dp else 4.dp,
+                        bottomEnd = if (isLast) 12.dp else 4.dp
+                    )
+                ) {
                     DaySection(day, expandedSection == day.name)
                 }
             }
@@ -1862,7 +1880,7 @@ private fun TodayNutritionSummary(assessment: PlanNutritionAssessment) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         NutritionAmountMetric(
             "Calorías", assessment.actual.calories, assessment.target.calories,
-            Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
+            Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
         NutritionAmountMetric(
             "Proteína", assessment.actual.proteinGrams, assessment.target.proteinGrams,
@@ -3698,7 +3716,7 @@ private fun WeeklyNutritionSummary(assessments: List<PlanNutritionAssessment>) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         NutritionAmountMetric(
             "Calorías", actualCalories, targetCalories,
-            Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
+            Icons.Default.LocalFireDepartment, MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f)
         )
         NutritionAmountMetric(
             "Proteína", actualProtein, targetProtein,
@@ -6463,7 +6481,7 @@ private fun FoodPrimaryNutritionStrip(food: Food) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         NutrientIconValue(
             Icons.Default.LocalFireDepartment, "Calorías", food.calories, "kcal",
-            MaterialTheme.colorScheme.onSurface, Modifier.weight(1.25f)
+            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1.25f)
         )
         NutrientIconValue(
             Icons.Default.FitnessCenter, "Proteínas", food.proteinGrams, "g",
