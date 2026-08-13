@@ -1760,11 +1760,20 @@ private fun WeeklyHomeMenuSection(
         }
     }
 
+    fun compactNutritionNumber(value: Double): String =
+        if (abs(value) < 10.0) formatOneDecimal(value) else value.roundToInt().toString()
+
     fun nutrientAmount(valuePer100: Double?, grams: Double): String =
-        valuePer100?.let { formatDecimal(it * grams / 100.0) } ?: "—"
+        valuePer100?.let { compactNutritionNumber(it * grams / 100.0) } ?: "—"
 
     @Composable
-    fun CompactNutritionGrid(food: Food, grams: Double, modifier: Modifier = Modifier) {
+    fun CompactNutritionGridValues(
+        calories: Double?,
+        protein: Double?,
+        carbohydrates: Double?,
+        fat: Double?,
+        modifier: Modifier = Modifier
+    ) {
         val color = MaterialTheme.colorScheme.onSurfaceVariant
 
         @Composable
@@ -1774,9 +1783,9 @@ private fun WeeklyHomeMenuSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start
             ) {
-                Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(16.dp))
+                Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(3.dp))
-                Text(value, style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1)
+                Text(value, style = MaterialTheme.typography.bodySmall, color = color, maxLines = 1)
             }
         }
 
@@ -1787,24 +1796,26 @@ private fun WeeklyHomeMenuSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.End
             ) {
-                Text(value, style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1)
+                Text(value, style = MaterialTheme.typography.bodySmall, color = color, maxLines = 1)
                 Spacer(Modifier.width(3.dp))
-                Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(16.dp))
+                Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(17.dp))
             }
         }
 
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        fun display(value: Double?): String = value?.let(::compactNutritionNumber) ?: "—"
+
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(Modifier.fillMaxWidth()) {
                 LeftMetric(
                     Icons.Default.LocalFireDepartment,
                     "Calorías",
-                    nutrientAmount(food.calories, grams),
+                    display(calories),
                     Modifier.weight(1f)
                 )
                 RightMetric(
                     foodCategoryIcon(FoodCategory.PROTEIN),
                     "Proteínas",
-                    nutrientAmount(food.proteinGrams, grams),
+                    display(protein),
                     Modifier.weight(1f)
                 )
             }
@@ -1812,13 +1823,13 @@ private fun WeeklyHomeMenuSection(
                 LeftMetric(
                     foodCategoryIcon(FoodCategory.CARBOHYDRATE),
                     "Carbohidratos",
-                    nutrientAmount(food.carbohydrateGrams, grams),
+                    display(carbohydrates),
                     Modifier.weight(1f)
                 )
                 RightMetric(
                     foodCategoryIcon(FoodCategory.FAT),
                     "Grasas",
-                    nutrientAmount(food.fatGrams, grams),
+                    display(fat),
                     Modifier.weight(1f)
                 )
             }
@@ -1826,63 +1837,117 @@ private fun WeeklyHomeMenuSection(
     }
 
     @Composable
+    fun CompactNutritionGrid(food: Food, grams: Double, modifier: Modifier = Modifier) {
+        val factor = grams / 100.0
+        CompactNutritionGridValues(
+            calories = food.calories?.times(factor),
+            protein = food.proteinGrams?.times(factor),
+            carbohydrates = food.carbohydrateGrams?.times(factor),
+            fat = food.fatGrams?.times(factor),
+            modifier = modifier
+        )
+    }
+
+    @Composable
     fun FoodNutritionLine(food: Food, grams: Double) {
         Row(
-            Modifier.fillMaxWidth().clickable { onOpenFood(food.id) }.padding(vertical = 4.dp),
+            Modifier.fillMaxWidth().clickable { onOpenFood(food.id) }.padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     food.name,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     foodAmountLabel(food, grams),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
             }
-            CompactNutritionGrid(food, grams, Modifier.width(156.dp))
+            CompactNutritionGrid(food, grams, Modifier.width(132.dp))
         }
+    }
+
+    fun dishAmountLabelForHome(dish: Dish, grams: Double): String {
+        val unitAmount = dish.unitAmount?.takeIf { it > 0.0 }
+        val singular = dish.unitName?.trim()?.takeIf { it.isNotEmpty() }
+        if (unitAmount != null && singular != null) {
+            val count = grams / unitAmount
+            val countLabel = if (abs(count - count.roundToInt()) < 0.01) {
+                count.roundToInt().toString()
+            } else compactNutritionNumber(count)
+            val name = if (abs(count - 1.0) < 0.01) singular
+            else dish.unitPlural?.trim()?.takeIf { it.isNotEmpty() } ?: singular
+            return "$countLabel $name · ${formatDecimal(grams)} g"
+        }
+        return "${formatDecimal(grams)} g"
+    }
+
+    fun foodCategoryPriority(category: FoodCategory?): Int = when (category) {
+        FoodCategory.PROTEIN -> 0
+        FoodCategory.CARBOHYDRATE -> 1
+        FoodCategory.FAT -> 2
+        FoodCategory.VEGETABLE -> 3
+        FoodCategory.FRUIT -> 4
+        FoodCategory.OTHER, null -> 5
     }
 
     @Composable
     fun DishNutritionCard(dish: Dish, grams: Double) {
         val totalWeight = dish.totalWeightGrams().takeIf { it > 0.0 } ?: 1.0
-        Card(
-            Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-        ) {
-            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(
-                    Modifier.fillMaxWidth().clickable { onOpenDish(dish.id) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+        val totals = dish.nutritionForGrams(foodsById, grams)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                Modifier.fillMaxWidth().clickable { onOpenDish(dish.id) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         dish.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.width(8.dp))
                     Text(
-                        "${formatDecimal(grams)} g",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        dishAmountLabelForHome(dish, grams),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
                     )
                 }
-                dish.ingredients.forEach ingredientLoop@ { ingredient ->
-                    val food = foodsById[ingredient.foodId] ?: return@ingredientLoop
-                    val ingredientGrams = ingredient.grams * grams / totalWeight
-                    FoodNutritionLine(food, ingredientGrams)
+                CompactNutritionGridValues(
+                    calories = totals.calories,
+                    protein = totals.proteinGrams,
+                    carbohydrates = totals.carbohydrateGrams,
+                    fat = totals.fatGrams,
+                    modifier = Modifier.width(132.dp)
+                )
+            }
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    dish.ingredients
+                        .sortedWith(
+                            compareBy<DishIngredient> { foodCategoryPriority(foodsById[it.foodId]?.category) }
+                                .thenBy { foodsById[it.foodId]?.name.orEmpty().lowercase() }
+                        )
+                        .forEach ingredientLoop@ { ingredient ->
+                            val food = foodsById[ingredient.foodId] ?: return@ingredientLoop
+                            val ingredientGrams = ingredient.grams * grams / totalWeight
+                            FoodNutritionLine(food, ingredientGrams)
+                        }
                 }
             }
         }
@@ -1916,25 +1981,88 @@ private fun WeeklyHomeMenuSection(
             Metric(
                 Icons.Default.LocalFireDepartment,
                 "Calorías",
-                actual?.calories?.let { "${formatDecimal(it)} kcal" } ?: "—",
+                actual?.calories?.let { "${compactNutritionNumber(it)} kcal" } ?: "—",
                 Modifier.weight(1.2f)
             )
             Metric(
                 foodCategoryIcon(FoodCategory.PROTEIN),
                 "Proteínas",
-                actual?.proteinGrams?.let { "${formatDecimal(it)} g" } ?: "—",
+                actual?.proteinGrams?.let { "${compactNutritionNumber(it)} g" } ?: "—",
                 Modifier.weight(1f)
             )
             Metric(
                 foodCategoryIcon(FoodCategory.CARBOHYDRATE),
                 "Carbohidratos",
-                actual?.carbohydrateGrams?.let { "${formatDecimal(it)} g" } ?: "—",
+                actual?.carbohydrateGrams?.let { "${compactNutritionNumber(it)} g" } ?: "—",
                 Modifier.weight(1f)
             )
             Metric(
                 foodCategoryIcon(FoodCategory.FAT),
                 "Grasas",
-                actual?.fatGrams?.let { "${formatDecimal(it)} g" } ?: "—",
+                actual?.fatGrams?.let { "${compactNutritionNumber(it)} g" } ?: "—",
+                Modifier.weight(1f)
+            )
+        }
+    }
+
+    @Composable
+    fun WeeklyPercentSummary(assessment: PlanNutritionAssessment) {
+        val color = MaterialTheme.colorScheme.onSurfaceVariant
+        fun percentage(actual: Double, target: Double): String =
+            if (target <= 0.0) "—" else "${(actual / target * 100.0).roundToInt()} %"
+
+        @Composable
+        fun Metric(
+            icon: ImageVector,
+            label: String,
+            value: String,
+            arrangement: Arrangement.Horizontal,
+            modifier: Modifier
+        ) {
+            Row(
+                modifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = arrangement
+            ) {
+                Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = color,
+                    maxLines = 1
+                )
+            }
+        }
+
+        Row(Modifier.fillMaxWidth()) {
+            Metric(
+                Icons.Default.LocalFireDepartment,
+                "Calorías",
+                percentage(assessment.actual.calories, assessment.target.calories),
+                Arrangement.Start,
+                Modifier.weight(1f)
+            )
+            Metric(
+                foodCategoryIcon(FoodCategory.PROTEIN),
+                "Proteínas",
+                percentage(assessment.actual.proteinGrams, assessment.target.proteinGrams),
+                Arrangement.Center,
+                Modifier.weight(1f)
+            )
+            Metric(
+                foodCategoryIcon(FoodCategory.CARBOHYDRATE),
+                "Carbohidratos",
+                percentage(assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams),
+                Arrangement.Center,
+                Modifier.weight(1f)
+            )
+            Metric(
+                foodCategoryIcon(FoodCategory.FAT),
+                "Grasas",
+                percentage(assessment.actual.fatGrams, assessment.target.fatGrams),
+                Arrangement.End,
                 Modifier.weight(1f)
             )
         }
@@ -1951,7 +2079,7 @@ private fun WeeklyHomeMenuSection(
             )
             weeklyAssessment?.let {
                 Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) {
-                    TodayNutritionSummary(it)
+                    WeeklyPercentSummary(it)
                 }
             }
             AnimatedVisibility(
@@ -2025,14 +2153,19 @@ private fun WeeklyHomeMenuSection(
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.clickable { onOpenMeal(meal.id) }
                             )
-                            meal.items.forEach foodLoop@ { planned ->
-                                val food = foodsById[planned.foodId] ?: return@foodLoop
-                                FoodNutritionLine(food, meal.resolvedGrams(planned, day))
-                            }
                             meal.dishes.forEach dishLoop@ { planned ->
                                 val dish = dishesById[planned.dishId] ?: return@dishLoop
                                 DishNutritionCard(dish, meal.resolvedGrams(planned, day))
                             }
+                            meal.items
+                                .sortedWith(
+                                    compareBy<PlannedFood> { foodCategoryPriority(foodsById[it.foodId]?.category) }
+                                        .thenBy { foodsById[it.foodId]?.name.orEmpty().lowercase() }
+                                )
+                                .forEach foodLoop@ { planned ->
+                                    val food = foodsById[planned.foodId] ?: return@foodLoop
+                                    FoodNutritionLine(food, meal.resolvedGrams(planned, day))
+                                }
                         }
                         if (index < visibleTypes.lastIndex) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
