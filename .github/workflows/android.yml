@@ -2,13 +2,13 @@ name: Android
 
 on:
   push:
-    branches: [main, feature/0.12.0-dishes, fix/ui-review-0.45.0]
+    branches: [main, feature/0.12.0-dishes]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -19,16 +19,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Aplicar rediseño semanal y restricciones de platos
-        if: github.event_name == 'push' && hashFiles('tools/patch_weekly_home_and_dish_rules.py') != ''
-        run: |
-          python3 tools/patch_weekly_home_and_dish_rules.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/es/david/rumbo/ui/App.kt app/src/main/java/es/david/rumbo/model/Models.kt app/src/main/java/es/david/rumbo/data/AppRepository.kt app/src/main/java/es/david/rumbo/logic/WeeklyMenuGenerator.kt
-          git add -u tools/patch_weekly_home_and_dish_rules.py
-          git commit -m "Rediseñar Inicio semanal y restringir platos por momento"
-          git push origin HEAD:fix/ui-review-0.45.0
       - name: Restaurar catálogo nutricional de Mercadona
         run: |
           mkdir -p app/src/main/assets
