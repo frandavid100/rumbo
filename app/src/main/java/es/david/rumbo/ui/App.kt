@@ -1411,12 +1411,6 @@ private fun FoodSuggestionsCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(
-                            imageVector = foodCategoryIcon(suggestion.food.category),
-                            contentDescription = null,
-                            tint = foodCategoryColor(suggestion.food.category),
-                            modifier = Modifier.size(24.dp)
-                        )
                         Column(
                             Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -1425,13 +1419,15 @@ private fun FoodSuggestionsCard(
                                 suggestion.food.name,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold,
-                                maxLines = 2,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 suggestion.reason,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         IconButton(onClick = { onDismiss(suggestion.food.id) }) {
