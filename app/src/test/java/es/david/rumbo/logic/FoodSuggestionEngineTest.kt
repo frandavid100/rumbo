@@ -54,7 +54,7 @@ class FoodSuggestionEngineTest {
             Recommendation(2000, 140, 220, 65, "")
         )
         assertEquals(2L, result.first().food.id)
-        assertTrue(result.first().reason.contains("Mucha proteína"))
+        assertEquals("Aporta proteína con pocas calorías.", result.first().reason)
     }
 
     @Test
