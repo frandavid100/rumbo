@@ -2,23 +2,33 @@ name: Android
 
 on:
   push:
-    branches: [main, feature/0.12.0-dishes]
+    branches: [main, feature/0.12.0-dishes, fix/ui-review-0.45.0]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
+      - name: Aplicar nueva API de búsqueda y lista de compra
+        if: github.event_name == 'push' && hashFiles('tools/patch_search_api37_shopping.py') != ''
+        run: |
+          python3 tools/patch_search_api37_shopping.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/es/david/rumbo/ui/App.kt app/build.gradle build.gradle gradle/wrapper/gradle-wrapper.properties gradle.properties
+          git add -u tools/patch_search_api37_shopping.py
+          git commit -m "Usar nueva API de búsqueda y mover lista de compra"
+          git push origin HEAD:fix/ui-review-0.45.0
       - name: Restaurar catálogo nutricional de Mercadona
         run: |
           mkdir -p app/src/main/assets
