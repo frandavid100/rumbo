@@ -146,6 +146,21 @@ object MealPlanEvaluator {
         return assess(actual, dailyTarget(recommendation)).copy(missingMealTypes = missing)
     }
 
+    fun assessWeek(
+        meals: List<PlannedMeal>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation
+    ): PlanNutritionAssessment {
+        val actual = WeekDay.entries.fold(NutritionTotals()) { total, day ->
+            val dayMeals = meals.filter { day in it.days }
+            total + dayMeals.fold(NutritionTotals()) { dayTotal, meal ->
+                dayTotal + meal.nutrition(foodsById, dishesById, day)
+            }
+        }
+        return assess(actual, dailyTarget(recommendation).scaled(WeekDay.entries.size.toDouble()))
+    }
+
     fun weeklyFoodAmounts(
         meals: List<PlannedMeal>,
         dishesById: Map<Long, Dish>

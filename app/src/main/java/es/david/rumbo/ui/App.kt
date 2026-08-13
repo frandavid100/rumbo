@@ -25,9 +25,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -1200,7 +1198,6 @@ private fun HomeScreen(
         Unit
     }
 
-    Box(Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(searchScrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -1280,12 +1277,6 @@ private fun HomeScreen(
             )
         }
         }
-    }
-    Box(
-        Modifier.fillMaxWidth()
-            .windowInsetsTopHeight(WindowInsets.statusBars)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-    )
     }
 }
 
@@ -1627,10 +1618,14 @@ private fun WeeklyHomeMenuSection(
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
 ) {
     val today = WeekDay.entries[LocalDate.now().dayOfWeek.value - 1]
-    var expandedDay by rememberSaveable { mutableStateOf(today.name) }
+    val summaryKey = "WEEKLY_SUMMARY"
+    var expandedSection by rememberSaveable { mutableStateOf(today.name) }
     var rebuildSheet by remember { mutableStateOf(false) }
     var optimizationPreview by remember { mutableStateOf<QuantityOptimizationResult?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    val weeklyAssessment = recommendation?.let {
+        MealPlanEvaluator.assessWeek(meals, foodsById, dishesById, it)
+    }
 
     optimizationPreview?.let { result ->
         QuantityOptimizationPreviewDialog(
@@ -1657,10 +1652,7 @@ private fun WeeklyHomeMenuSection(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text("Rehacer menú semanal", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    "Elige cuánto quieres cambiar.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("Elige cuánto quieres cambiar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FilledTonalButton(
                     onClick = {
                         rebuildSheet = false
@@ -1687,93 +1679,164 @@ private fun WeeklyHomeMenuSection(
         }
     }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Tu semana", style = MaterialTheme.typography.headlineSmall)
-        WeekDay.entries.forEach { day ->
-            val dayMeals = meals.filter { day in it.days }.associateBy { it.type }
-            val isExpanded = expandedDay == day.name
-            val assessment = recommendation?.let {
-                MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, it)
+    @Composable
+    fun SummaryCard() {
+        Card(
+            Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { expandedSection = "" },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Valoración nutricional", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Contraer")
+                }
+                weeklyAssessment?.let { TodayNutritionSummary(it) }
+                Text(
+                    weeklyAssessmentText(weeklyAssessment),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                OutlinedButton(onClick = { rebuildSheet = true }, Modifier.fillMaxWidth()) {
+                    Text("Rehacer menú semanal")
+                }
+                FilledTonalButton(onClick = onOpenNextWeek, Modifier.fillMaxWidth()) {
+                    Text("Ver la semana que viene")
+                }
             }
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.fillMaxWidth().clickable {
-                            expandedDay = if (isExpanded) "" else day.name
-                        }.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(day.label, style = MaterialTheme.typography.titleLarge)
-                            if (!isExpanded) {
-                                val count = dayMeals.values.count { it.items.isNotEmpty() || it.dishes.isNotEmpty() }
-                                val calories = assessment?.actual?.calories
-                                Text(
-                                    buildString {
-                                        append("$count comidas")
-                                        if (calories != null) append(" · ${formatDecimal(calories)} kcal")
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+        }
+    }
+
+    @Composable
+    fun DayCard(day: WeekDay) {
+        val dayMeals = meals.filter { day in it.days }.associateBy { it.type }
+        val assessment = recommendation?.let {
+            MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, it)
+        }
+        Card(
+            Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { expandedSection = "" }.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(day.label, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Contraer")
+                }
+                Column(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    assessment?.let { TodayNutritionSummary(it) }
+                    if (dayMeals.isEmpty()) {
+                        Text("No hay comidas planificadas.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    MealType.entries.forEachIndexed { index, type ->
+                        val meal = dayMeals[type] ?: return@forEachIndexed
+                        val entries = meal.dishes.mapNotNull { planned ->
+                            dishesById[planned.dishId]?.let { dish ->
+                                MenuItemLine(dish.id, true, dish.name, meal.resolvedGrams(planned, day), dish.dominantCategory(foodsById))
+                            }
+                        } + meal.items.mapNotNull { planned ->
+                            foodsById[planned.foodId]?.let { food ->
+                                MenuItemLine(food.id, false, food.name, meal.resolvedGrams(planned, day), food.category)
                             }
                         }
-                        Icon(
-                            if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isExpanded) "Contraer" else "Expandir"
-                        )
-                    }
-                    AnimatedVisibility(visible = isExpanded) {
                         Column(
-                            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            Modifier.fillMaxWidth().clickable { onOpenMeal(meal.id) }.padding(vertical = 2.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            assessment?.let { TodayNutritionSummary(it) }
-                            if (dayMeals.isEmpty()) {
-                                Text("No hay comidas planificadas.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            MealType.entries.forEachIndexed { index, type ->
-                                val meal = dayMeals[type] ?: return@forEachIndexed
-                                val entries = meal.dishes.mapNotNull { planned ->
-                                    dishesById[planned.dishId]?.let { dish ->
-                                        MenuItemLine(dish.id, true, dish.name, meal.resolvedGrams(planned, day), dish.dominantCategory(foodsById))
-                                    }
-                                } + meal.items.mapNotNull { planned ->
-                                    foodsById[planned.foodId]?.let { food ->
-                                        MenuItemLine(food.id, false, food.name, meal.resolvedGrams(planned, day), food.category)
-                                    }
-                                }
-                                Column(
-                                    Modifier.fillMaxWidth().clickable { onOpenMeal(meal.id) }.padding(vertical = 2.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                            Text(type.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            entries.forEach { entry ->
+                                Row(
+                                    Modifier.fillMaxWidth().clickable {
+                                        if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
+                                    },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(type.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                    entries.forEach { entry ->
-                                        Row(
-                                            Modifier.fillMaxWidth().clickable {
-                                                if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
-                                            },
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            SmallFoodCategoryBadge(entry.category)
-                                            Text(entry.name, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                            Text("${formatDecimal(entry.grams)} g", fontWeight = FontWeight.SemiBold)
-                                        }
-                                    }
+                                    SmallFoodCategoryBadge(entry.category)
+                                    Text(entry.name, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Text("${formatDecimal(entry.grams)} g", fontWeight = FontWeight.SemiBold)
                                 }
-                                if (index < MealType.entries.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            }
+                        }
+                        if (index < MealType.entries.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
+        }
+    }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Tu menú de esta semana", style = MaterialTheme.typography.titleLarge)
+
+        if (expandedSection == summaryKey) SummaryCard()
+
+        val collapsedKeys = buildList {
+            if (expandedSection != summaryKey) add(summaryKey)
+            WeekDay.entries.filter { it.name != expandedSection }.forEach { add(it.name) }
+        }
+        if (collapsedKeys.isNotEmpty()) {
+            Card(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(Modifier.fillMaxWidth()) {
+                    collapsedKeys.forEachIndexed { index, key ->
+                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        if (key == summaryKey) {
+                            Row(
+                                Modifier.fillMaxWidth().clickable { expandedSection = summaryKey }.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("Valoración nutricional", style = MaterialTheme.typography.titleMedium)
+                                    Text(
+                                        "Calorías y macronutrientes de toda la semana",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Expandir")
+                            }
+                        } else {
+                            val day = WeekDay.valueOf(key)
+                            val dayMeals = meals.filter { day in it.days }.associateBy { it.type }
+                            val assessment = recommendation?.let {
+                                MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, it)
+                            }
+                            Row(
+                                Modifier.fillMaxWidth().clickable { expandedSection = day.name }.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(day.label, style = MaterialTheme.typography.titleMedium)
+                                    val count = dayMeals.values.count { it.items.isNotEmpty() || it.dishes.isNotEmpty() }
+                                    val calories = assessment?.actual?.calories
+                                    Text(
+                                        buildString {
+                                            append("$count comidas")
+                                            if (calories != null) append(" · ${formatDecimal(calories)} kcal")
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Expandir")
                             }
                         }
                     }
                 }
             }
         }
-        OutlinedButton(onClick = { rebuildSheet = true }, Modifier.fillMaxWidth()) {
-            Text("Rehacer menú semanal")
-        }
-        FilledTonalButton(onClick = onOpenNextWeek, Modifier.fillMaxWidth()) {
-            Text("Ver la semana que viene")
+
+        if (expandedSection != summaryKey && expandedSection.isNotBlank()) {
+            runCatching { WeekDay.valueOf(expandedSection) }.getOrNull()?.let { DayCard(it) }
         }
     }
 }
@@ -1847,6 +1910,21 @@ private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
     return buildList {
         if (below.isNotEmpty()) add("Por debajo del objetivo: ${below.joinToString()}.")
         if (above.isNotEmpty()) add("Por encima del objetivo: ${above.joinToString()}.")
+    }.joinToString(" ")
+}
+
+
+private fun weeklyAssessmentText(assessment: PlanNutritionAssessment?): String {
+    if (assessment == null) return "Añade una medición para poder valorar este menú."
+    if (!assessment.actual.isComplete) return "Faltan datos nutricionales para valorar el menú completo."
+    val names = listOf("calorías", "proteína", "hidratos", "grasa")
+    val outside = assessment.evaluations.withIndex().filter { it.value.fit == TargetFit.OUTSIDE }
+    val below = outside.filter { it.value.difference < 0.0 }.map { names[it.index] }
+    val above = outside.filter { it.value.difference > 0.0 }.map { names[it.index] }
+    if (below.isEmpty() && above.isEmpty()) return "El menú semanal está bien ajustado a tus objetivos."
+    return buildList {
+        if (below.isNotEmpty()) add("Por debajo del objetivo semanal: ${below.joinToString()}.")
+        if (above.isNotEmpty()) add("Por encima del objetivo semanal: ${above.joinToString()}.")
     }.joinToString(" ")
 }
 
@@ -4940,6 +5018,12 @@ private fun HomeCatalogSearch(
     val scope = rememberCoroutineScope()
     val query = textFieldState.text.toString()
     val normalized = normalizeSearch(query)
+    val appBarColors = SearchBarDefaults.appBarWithSearchColors(
+        searchBarColors = SearchBarDefaults.containedColors(state = state),
+        appBarContainerColor = MaterialTheme.colorScheme.surface,
+        scrolledAppBarContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        scrolledSearchBarContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    )
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val entries = remember(foods, dishes, normalized, filter, repertoireFoodIds) {
         buildList {
@@ -4995,6 +5079,7 @@ private fun HomeCatalogSearch(
         SearchBarDefaults.InputField(
             textFieldState = textFieldState,
             searchBarState = state,
+            colors = appBarColors.searchBarColors.inputFieldColors,
             onSearch = {},
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Buscar alimentos y platos") },
@@ -5021,8 +5106,10 @@ private fun HomeCatalogSearch(
         state = state,
         inputField = inputField,
         scrollBehavior = scrollBehavior,
+        colors = appBarColors,
         actions = { trailingContent() },
-        modifier = Modifier.padding(horizontal = 16.dp)
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp)
     )
 
     ExpandedFullScreenSearchBar(
@@ -5804,17 +5891,22 @@ private fun MultiSelectDishField(
     onSelectionChange: (Set<String>) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box(Modifier.fillMaxWidth()) {
-        OutlinedButton(onClick = { expanded = true }, Modifier.fillMaxWidth()) {
-            Text(
-                if (selectedLabels.size == options.size) "$label: todos" else if (selectedLabels.isEmpty()) "$label: ninguno" else "$label: ${selectedLabels.joinToString()}",
-                Modifier.weight(1f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+    val displayValue = when {
+        selectedLabels.size == options.size -> "Todos"
+        selectedLabels.isEmpty() -> "Ninguno"
+        else -> selectedLabels.joinToString()
+    }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = displayValue,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            maxLines = 2
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (key, optionLabel) ->
                 DropdownMenuItem(
                     leadingIcon = { Checkbox(checked = key in selectedKeys, onCheckedChange = null) },
