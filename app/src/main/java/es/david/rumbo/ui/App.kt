@@ -452,7 +452,11 @@ fun RumboApp(repository: AppRepository) {
                         Screen.BODY_EXPLANATION, Screen.RECOMMENDATION_EXPLANATION ->
                             Text("Situación y objetivo", fontWeight = FontWeight.SemiBold)
                         Screen.PLANNER ->
-                            Text("Menú semanal", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (plannerWeekName == PlanWeek.NEXT.name) "Menú de la semana que viene"
+                                else "Menú de esta semana",
+                                fontWeight = FontWeight.SemiBold
+                            )
                         Screen.AUTO_PLANNING ->
                             Text("Generación automática", fontWeight = FontWeight.SemiBold)
                         Screen.FOODS ->
@@ -663,47 +667,68 @@ fun RumboApp(repository: AppRepository) {
                         )
                     }
                 }
-                screen == Screen.PLANNER -> WeeklyPlannerScreen(
-                    meals = data.activeProfileData?.plannedMeals.orEmpty(),
-                    planningRules = data.activeProfileData?.planningRules.orEmpty(),
-                    menuHistory = data.activeProfileData?.menuHistory.orEmpty(),
-                    foods = data.foods,
-                    dishes = data.dishes,
-                    recommendation = currentRecommendation,
-                    mealShares = mealShares,
-                    initialWeek = PlanWeek.valueOf(plannerWeekName),
-                    onWeekChange = { plannerWeekName = it.name },
-                    onApplyGeneratedMenu = { result, week ->
-                        data = repository.applyGeneratedMenu(result, week)
-                    },
-                    onOpenMeal = { mealId, week ->
-                        plannerWeekName = week.name
-                        selectedPlannedMealId = mealId
-                        screenName = Screen.EDIT_PLANNED_MEAL.name
-                    },
-                    onOpenFood = {
-                        selectedFoodId = it
-                        foodReturnScreenName = Screen.PLANNER.name
-                        screenName = Screen.FOOD_DETAIL.name
-                    },
-                    onOpenDish = {
-                        selectedDishId = it
-                        dishReturnScreenName = Screen.PLANNER.name
-                        screenName = Screen.DISH_DETAIL.name
-                    },
-                    onAddMissing = { type, day, week ->
-                        plannerWeekName = week.name
-                        screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
-                        draftMealTypeName = type.name
-                        draftMealDayName = day.name
-                        draftFoodId = null
-                        draftDishId = null
-                        screenName = Screen.ADD_PLANNED_MEAL.name
-                    },
-                    onApplyAdjustedMeals = { meals, week ->
-                        data = repository.savePlannedMeals(meals, week)
-                    }
-                )
+                screen == Screen.PLANNER -> {
+                    val selectedWeek = PlanWeek.valueOf(plannerWeekName)
+                    WeeklyMenuReplicaScreen(
+                        meals = data.activeProfileData?.plannedMeals.orEmpty()
+                            .filter { it.planWeek == selectedWeek },
+                        foodsById = data.foods.associateBy { it.id },
+                        dishesById = data.dishes.associateBy { it.id },
+                        recommendation = currentRecommendation,
+                        sectionTitle = if (selectedWeek == PlanWeek.NEXT) {
+                            "Tu menú de la semana que viene"
+                        } else {
+                            "Tu menú de esta semana"
+                        },
+                        onOpenShoppingList = {
+                            shoppingCurrentOnly = false
+                            shoppingWeekName = selectedWeek.name
+                            screenName = Screen.SHOPPING_LIST.name
+                        },
+                        onRegenerateWeek = {
+                            if (currentRecommendation == null) {
+                                "Necesitas una recomendación nutricional antes de generar el menú."
+                            } else {
+                                runCatching {
+                                    WeeklyMenuGenerator.generate(
+                                        currentMeals = data.activeProfileData?.plannedMeals.orEmpty()
+                                            .filter { it.planWeek == selectedWeek },
+                                        rules = data.activeProfileData?.planningRules.orEmpty(),
+                                        history = data.activeProfileData?.menuHistory.orEmpty(),
+                                        foodsById = data.foods.associateBy { it.id },
+                                        dishesById = data.dishes.associateBy { it.id },
+                                        recommendation = currentRecommendation,
+                                        mealShares = mealShares
+                                    )
+                                }.fold(
+                                    onSuccess = { result ->
+                                        data = repository.applyGeneratedMenu(result, selectedWeek)
+                                        null
+                                    },
+                                    onFailure = { it.message ?: "No se pudo generar una semana válida." }
+                                )
+                            }
+                        },
+                        onOpenMeal = { mealId ->
+                            plannerWeekName = selectedWeek.name
+                            selectedPlannedMealId = mealId
+                            screenName = Screen.EDIT_PLANNED_MEAL.name
+                        },
+                        onOpenFood = {
+                            selectedFoodId = it
+                            foodReturnScreenName = Screen.PLANNER.name
+                            screenName = Screen.FOOD_DETAIL.name
+                        },
+                        onOpenDish = {
+                            selectedDishId = it
+                            dishReturnScreenName = Screen.PLANNER.name
+                            screenName = Screen.DISH_DETAIL.name
+                        },
+                        onApplyAdjustedMeals = { adjustedMeals ->
+                            data = repository.savePlannedMeals(adjustedMeals, selectedWeek)
+                        }
+                    )
+                }
                 screen == Screen.AUTO_PLANNING -> AutomaticPlanningScreen(
                     rules = data.activeProfileData?.planningRules.orEmpty(),
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
@@ -1282,6 +1307,7 @@ private fun HomeScreen(
                 foodsById = foodsById,
                 dishesById = dishesById,
                 recommendation = recommendation,
+                sectionTitle = "Tu menú de esta semana",
                 onOpenNextWeek = onOpenNextWeek,
                 onOpenCurrentShoppingList = onOpenCurrentShoppingList,
                 onRegenerateWeek = onRegenerateWeek,
@@ -1672,7 +1698,8 @@ private fun WeeklyHomeMenuSection(
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
-    onOpenNextWeek: () -> Unit,
+    sectionTitle: String,
+    onOpenNextWeek: (() -> Unit)?,
     onOpenCurrentShoppingList: () -> Unit,
     onRegenerateWeek: () -> String?,
     onOpenMeal: (Long) -> Unit,
@@ -2233,7 +2260,7 @@ private fun WeeklyHomeMenuSection(
     }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Tu menú de esta semana", style = MaterialTheme.typography.titleLarge)
+        Text(sectionTitle, style = MaterialTheme.typography.titleLarge)
         Column(
             Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -2264,11 +2291,50 @@ private fun WeeklyHomeMenuSection(
                 }
             }
         }
-        FilledTonalButton(
-            onClick = onOpenNextWeek,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Ver menú de la semana que viene")
+        onOpenNextWeek?.let { openNextWeek ->
+            FilledTonalButton(
+                onClick = openNextWeek,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Ver menú de la semana que viene")
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeeklyMenuReplicaScreen(
+    meals: List<PlannedMeal>,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    recommendation: es.david.rumbo.model.Recommendation?,
+    sectionTitle: String,
+    onOpenShoppingList: () -> Unit,
+    onRegenerateWeek: () -> String?,
+    onOpenMeal: (Long) -> Unit,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
+    onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
+) {
+    LazyColumn(
+        contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            WeeklyHomeMenuSection(
+                meals = meals,
+                foodsById = foodsById,
+                dishesById = dishesById,
+                recommendation = recommendation,
+                sectionTitle = sectionTitle,
+                onOpenNextWeek = null,
+                onOpenCurrentShoppingList = onOpenShoppingList,
+                onRegenerateWeek = onRegenerateWeek,
+                onOpenMeal = onOpenMeal,
+                onOpenFood = onOpenFood,
+                onOpenDish = onOpenDish,
+                onApplyAdjustedMeals = onApplyAdjustedMeals
+            )
         }
     }
 }
