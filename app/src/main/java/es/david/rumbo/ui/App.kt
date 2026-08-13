@@ -6195,6 +6195,26 @@ private fun CatalogEntries(
     ) {
         if (header != null) item { header() }
         items(entries, key = { "${if (it.isDish) "dish" else "food"}_${it.id}" }) { entry ->
+            if (compactPresentation && normalizedQuery.isBlank()) {
+                val entryIndex = entries.indexOf(entry)
+                val previous = entries.getOrNull(entryIndex - 1)
+                val isRecommended = !entry.isDish && entry.id in foodSuggestions
+                val previousWasRecommended = previous != null && !previous.isDish &&
+                    previous.id in foodSuggestions
+                val sectionTitle = when {
+                    isRecommended && !previousWasRecommended -> "Recomendados"
+                    !isRecommended && (previous == null || previousWasRecommended) -> "Tu repertorio"
+                    else -> null
+                }
+                sectionTitle?.let {
+                    Text(
+                        it,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 6.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
             if (compactPresentation) {
                 val food = if (entry.isDish) null else foodsById[entry.id]
                 val dish = if (entry.isDish) dishes.firstOrNull { it.id == entry.id } else null
