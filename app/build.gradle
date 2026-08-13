@@ -4,7 +4,7 @@ apply plugin: "org.jetbrains.kotlin.plugin.compose"
 
 android {
     namespace = "es.david.rumbo"
-    compileSdk = 36
+    compileSdk = 37
 
     sourceSets {
         main.assets.exclude "aesan_foods.jsonl.gz", "aesan_foods.jsonl"
@@ -54,7 +54,7 @@ dependencies {
     androidTestImplementation composeBom
 
     implementation "androidx.activity:activity-compose:1.12.2"
-    implementation "androidx.compose.material3:material3"
+    implementation "androidx.compose.material3:material3:1.5.0-alpha25"
     implementation "androidx.compose.material:material-icons-extended"
     implementation "androidx.compose.ui:ui-tooling-preview"
     implementation "com.google.android.gms:play-services-code-scanner:16.1.0"
