@@ -201,11 +201,20 @@ data class DishIngredient(
 data class Dish(
     val id: Long,
     val name: String,
-    val ingredients: List<DishIngredient>
+    val ingredients: List<DishIngredient>,
+    val unitName: String? = null,
+    val unitPlural: String? = null,
+    val unitGender: String = "MASCULINE",
+    val unitAmount: Double? = null,
+    val wholeUnitsOnly: Boolean = false,
+    val unitDivisions: Int = 1
 ) {
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 80 &&
         ingredients.isNotEmpty() && ingredients.all { it.isValid() } &&
-        ingredients.map { it.foodId }.distinct().size == ingredients.size
+        ingredients.map { it.foodId }.distinct().size == ingredients.size &&
+        unitName.validText(40) && unitPlural.validText(40) &&
+        unitGender in setOf("MASCULINE", "FEMININE") && unitDivisions in 1..100 &&
+        (unitAmount == null || unitAmount in 0.1..5000.0)
 }
 
 data class PlannedDish(
@@ -406,7 +415,7 @@ data class Food(
         unitName.validText(40) && unitPlural.validText(40) &&
         unitGender in setOf("MASCULINE", "FEMININE") && unitDivisions in 1..100 &&
         (unitAmount == null || unitAmount in 0.1..5000.0) &&
-        (!wholeUnitsOnly || unitName?.isNotBlank() == true && unitAmount != null) &&
+        (!wholeUnitsOnly || unitName?.isNotBlank() == true) &&
         links.size <= 10 &&
         links.distinct().size == links.size && links.all {
             it.length <= 500 && (it.startsWith("https://") || it.startsWith("http://"))
