@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -1229,6 +1230,7 @@ private fun HomeScreen(
     var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var searchMessage by remember { mutableStateOf<String?>(null) }
     val searchBarState = rememberSearchBarState()
+    val searchListState = rememberLazyListState()
     val searchScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
     val searchScope = rememberCoroutineScope()
     val closeSearch = {
@@ -1254,6 +1256,7 @@ private fun HomeScreen(
                 scanMessage = searchMessage,
                 onScanMessageChange = { searchMessage = it },
                 state = searchBarState,
+                listState = searchListState,
                 scrollBehavior = searchScrollBehavior,
                 onCloseSearch = closeSearch,
                 onOpenFood = onOpenFood,
@@ -1711,8 +1714,13 @@ private fun WeeklyHomeMenuSection(
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
 ) {
     val today = WeekDay.entries[LocalDate.now().dayOfWeek.value - 1]
+    val visibleDays = if (onOpenNextWeek != null) {
+        WeekDay.entries.dropWhile { it != today }
+    } else {
+        WeekDay.entries
+    }
     val summaryKey = "WEEKLY_SUMMARY"
-    var expandedSection by rememberSaveable { mutableStateOf(today.name) }
+    var expandedSection by rememberSaveable(today.name) { mutableStateOf(today.name) }
     var rebuildSheet by remember { mutableStateOf(false) }
     var optimizationPreview by remember { mutableStateOf<QuantityOptimizationResult?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -2279,8 +2287,8 @@ private fun WeeklyHomeMenuSection(
             ) {
                 SummarySection(expandedSection == summaryKey)
             }
-            WeekDay.entries.forEachIndexed { index, day ->
-                val isLast = index == WeekDay.entries.lastIndex
+            visibleDays.forEachIndexed { index, day ->
+                val isLast = index == visibleDays.lastIndex
                 Card(
                     Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(
@@ -5537,6 +5545,7 @@ private fun HomeCatalogSearch(
     filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     state: SearchBarState,
+    listState: LazyListState,
     scrollBehavior: SearchBarScrollBehavior,
     onCloseSearch: () -> Unit,
     onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit,
@@ -5685,6 +5694,7 @@ private fun HomeCatalogSearch(
                 onAddFood = {},
                 onAddDish = {},
                 compactPresentation = true,
+                listState = listState,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 header = {
                     Column(Modifier.fillMaxWidth()) {
@@ -5958,10 +5968,16 @@ private fun CatalogEntries(
     onAddDish: () -> Unit,
     modifier: Modifier = Modifier,
     header: (@Composable () -> Unit)? = null,
-    compactPresentation: Boolean = false
+    compactPresentation: Boolean = false,
+    listState: LazyListState? = null
 ) {
     var addMenuExpanded by remember { mutableStateOf(false) }
-    LazyColumn(modifier = modifier, contentPadding = PaddingValues(bottom = 32.dp)) {
+    val resolvedListState = listState ?: rememberLazyListState()
+    LazyColumn(
+        modifier = modifier,
+        state = resolvedListState,
+        contentPadding = PaddingValues(bottom = 32.dp)
+    ) {
         if (header != null) item { header() }
         items(entries, key = { "${if (it.isDish) "dish" else "food"}_${it.id}" }) { entry ->
             if (compactPresentation) {
