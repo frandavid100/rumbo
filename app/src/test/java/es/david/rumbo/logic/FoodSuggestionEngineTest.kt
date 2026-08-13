@@ -151,6 +151,31 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun saltyFattyPorkSnackIsNotRecommendedForProtein() {
+        val foods = listOf(
+            food(
+                1, "Morro de cerdo", FoodCategory.FAT, "Mercadona",
+                580.0, 60.3, 0.5, 37.2, saturated = 12.3, salt = 4.0
+            ),
+            food(
+                2, "Pechuga de pollo", FoodCategory.PROTEIN, "Mercadona",
+                110.0, 24.0, 0.0, 1.0, saturated = 0.3, salt = 0.2
+            )
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = foods,
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, "")
+        )
+        assertTrue(result.none { it.food.id == 1L })
+        assertEquals(2L, result.first().food.id)
+        assertTrue(result.first().reason.contains("proteína"))
+    }
+
+    @Test
     fun dismissedFoodIsNotSuggestedAgain() {
         val foods = listOf(
             food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
@@ -178,11 +203,13 @@ class FoodSuggestionEngineTest {
         calories: Double, protein: Double, carbohydrate: Double, fat: Double,
         fiber: Double = 0.0,
         saturated: Double? = null,
-        subcategory: String? = null
+        subcategory: String? = null,
+        salt: Double? = null
     ) = Food(
         id, name, category, calories, fat, carbohydrate, protein, fiber,
         retailer = retailer,
         saturatedFatGrams = saturated,
-        subcategory = subcategory
+        subcategory = subcategory,
+        saltGrams = salt
     )
 }
