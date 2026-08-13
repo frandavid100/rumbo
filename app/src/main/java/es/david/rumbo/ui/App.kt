@@ -1785,7 +1785,7 @@ private fun WeeklyHomeMenuSection(
             ) {
                 Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(3.dp))
-                Text(value, style = MaterialTheme.typography.bodySmall, color = color, maxLines = 1)
+                Text(value, style = MaterialTheme.typography.bodyMedium, color = color, maxLines = 1)
             }
         }
 
@@ -1796,7 +1796,7 @@ private fun WeeklyHomeMenuSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.End
             ) {
-                Text(value, style = MaterialTheme.typography.bodySmall, color = color, maxLines = 1)
+                Text(value, style = MaterialTheme.typography.bodyMedium, color = color, maxLines = 1)
                 Spacer(Modifier.width(3.dp))
                 Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(17.dp))
             }
@@ -1805,32 +1805,32 @@ private fun WeeklyHomeMenuSection(
         fun display(value: Double?): String = value?.let(::compactNutritionNumber) ?: "—"
 
         Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Row(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 LeftMetric(
                     Icons.Default.LocalFireDepartment,
                     "Calorías",
                     display(calories),
-                    Modifier.weight(1f)
+                    Modifier
                 )
                 RightMetric(
                     foodCategoryIcon(FoodCategory.PROTEIN),
                     "Proteínas",
                     display(protein),
-                    Modifier.weight(1f)
+                    Modifier
                 )
             }
-            Row(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 LeftMetric(
                     foodCategoryIcon(FoodCategory.CARBOHYDRATE),
                     "Carbohidratos",
                     display(carbohydrates),
-                    Modifier.weight(1f)
+                    Modifier
                 )
                 RightMetric(
                     foodCategoryIcon(FoodCategory.FAT),
                     "Grasas",
                     display(fat),
-                    Modifier.weight(1f)
+                    Modifier
                 )
             }
         }
@@ -1858,7 +1858,8 @@ private fun WeeklyHomeMenuSection(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     food.name,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1869,7 +1870,7 @@ private fun WeeklyHomeMenuSection(
                     maxLines = 1
                 )
             }
-            CompactNutritionGrid(food, grams, Modifier.width(132.dp))
+            CompactNutritionGrid(food, grams, Modifier.width(112.dp))
         }
     }
 
@@ -1910,7 +1911,8 @@ private fun WeeklyHomeMenuSection(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         dish.name,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1926,29 +1928,26 @@ private fun WeeklyHomeMenuSection(
                     protein = totals.proteinGrams,
                     carbohydrates = totals.carbohydrateGrams,
                     fat = totals.fatGrams,
-                    modifier = Modifier.width(132.dp)
+                    modifier = Modifier.width(112.dp)
                 )
             }
-            Card(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(12.dp))
+                    .padding(vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    dish.ingredients
-                        .sortedWith(
-                            compareBy<DishIngredient> { foodCategoryPriority(foodsById[it.foodId]?.category) }
-                                .thenBy { foodsById[it.foodId]?.name.orEmpty().lowercase() }
-                        )
-                        .forEach ingredientLoop@ { ingredient ->
-                            val food = foodsById[ingredient.foodId] ?: return@ingredientLoop
-                            val ingredientGrams = ingredient.grams * grams / totalWeight
-                            FoodNutritionLine(food, ingredientGrams)
-                        }
-                }
+                dish.ingredients
+                    .sortedWith(
+                        compareBy<DishIngredient> { foodCategoryPriority(foodsById[it.foodId]?.category) }
+                            .thenBy { foodsById[it.foodId]?.name.orEmpty().lowercase() }
+                    )
+                    .forEach ingredientLoop@ { ingredient ->
+                        val food = foodsById[ingredient.foodId] ?: return@ingredientLoop
+                        val ingredientGrams = ingredient.grams * grams / totalWeight
+                        FoodNutritionLine(food, ingredientGrams)
+                    }
             }
         }
     }
@@ -1963,7 +1962,7 @@ private fun WeeklyHomeMenuSection(
             Row(
                 modifier,
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Start
             ) {
                 Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
