@@ -1405,53 +1405,67 @@ private fun FoodSuggestionsCard(
         Text("Alimentos que podrían interesarte", style = MaterialTheme.typography.titleLarge)
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                suggestions.forEachIndexed { index, suggestion ->
-                    AnimatedContent(
-                        targetState = suggestion,
-                        transitionSpec = {
-                            (fadeIn() + expandVertically()) togetherWith
-                                (fadeOut() + shrinkVertically())
-                        },
-                        label = "Sustitución de recomendación"
-                    ) { animatedSuggestion ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenFood(animatedSuggestion.food.id) }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Column(
-                                Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    animatedSuggestion.food.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    animatedSuggestion.reason,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                repeat(3) { index ->
+                    val suggestion = suggestions.getOrNull(index)
+                    var displayedSuggestion by remember(index) {
+                        mutableStateOf(suggestion)
+                    }
+                    if (suggestion != null) displayedSuggestion = suggestion
+                    AnimatedVisibility(
+                        visible = suggestion != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        displayedSuggestion?.let { currentSuggestion ->
+                            AnimatedContent(
+                                targetState = currentSuggestion,
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                label = "Texto de recomendación"
+                            ) { animatedSuggestion ->
+                                Row(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onOpenFood(animatedSuggestion.food.id) }
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Column(
+                                        Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(
+                                            animatedSuggestion.food.name,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            animatedSuggestion.reason,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { onDismiss(animatedSuggestion.food.id) }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "No me interesa",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                             }
-                            IconButton(onClick = { onDismiss(animatedSuggestion.food.id) }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "No me interesa",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            if (index < suggestions.lastIndex) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant
                                 )
                             }
                         }
-                    }
-                    if (index < suggestions.lastIndex) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
             }
