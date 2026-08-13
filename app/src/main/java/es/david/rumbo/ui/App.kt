@@ -1253,8 +1253,8 @@ private fun HomeScreen(
                 state = searchBarState,
                 scrollBehavior = searchScrollBehavior,
                 onCloseSearch = closeSearch,
-                onOpenFood = { id -> closeSearch(); onOpenFood(id) },
-                onOpenDish = { id -> closeSearch(); onOpenDish(id) },
+                onOpenFood = onOpenFood,
+                onOpenDish = onOpenDish,
                 trailingContent = {
                     ProfileSwitcher(
                         profiles = data.profiles.map { it.profile },
@@ -5568,16 +5568,22 @@ private fun HomeCatalogSearch(
     val scope = rememberCoroutineScope()
     val query = textFieldState.text.toString()
     val normalized = normalizeSearch(query)
+    val searchContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val searchInputColors = SearchBarDefaults.inputFieldColors(
+        focusedContainerColor = searchContainerColor,
+        unfocusedContainerColor = searchContainerColor,
+        disabledContainerColor = searchContainerColor
+    )
+    val searchBarColors = SearchBarDefaults.colors(
+        containerColor = searchContainerColor,
+        dividerColor = Color.Transparent,
+        inputFieldColors = searchInputColors
+    )
     val appBarColors = SearchBarDefaults.appBarWithSearchColors(
-        searchBarColors = SearchBarDefaults.containedColors(state = state),
+        searchBarColors = searchBarColors,
         appBarContainerColor = MaterialTheme.colorScheme.surface,
         scrolledAppBarContainerColor = MaterialTheme.colorScheme.surface,
-        scrolledSearchBarContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-    )
-    val expandedSearchColors = SearchBarDefaults.colors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        dividerColor = Color.Transparent,
-        inputFieldColors = appBarColors.searchBarColors.inputFieldColors
+        scrolledSearchBarContainerColor = searchContainerColor
     )
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val entries = remember(foods, dishes, normalized, filter, repertoireFoodIds) {
@@ -5597,9 +5603,12 @@ private fun HomeCatalogSearch(
         }.sortedBy { it.name.lowercase() }
     }
 
-    val close = {
+    val leaveForDetail = {
         focusManager.clearFocus(force = true)
         keyboard?.hide()
+    }
+    val close = {
+        leaveForDetail()
         onCloseSearch()
     }
 
@@ -5619,7 +5628,7 @@ private fun HomeCatalogSearch(
         GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
             val value = barcode.rawValue.orEmpty()
             foods.firstOrNull { it.barcode == value }?.let { food ->
-                close()
+                leaveForDetail()
                 onOpenFood(food.id)
             } ?: run {
                 textFieldState.setTextAndPlaceCursorAtEnd(value)
@@ -5675,7 +5684,7 @@ private fun HomeCatalogSearch(
                 inputField()
             }
         },
-        colors = expandedSearchColors,
+        colors = searchBarColors,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
@@ -5691,8 +5700,8 @@ private fun HomeCatalogSearch(
                 repertoireFoodIds = repertoireFoodIds,
                 mode = if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
                 normalizedQuery = normalized,
-                onOpenFood = { id -> close(); onOpenFood(id) },
-                onOpenDish = { id -> close(); onOpenDish(id) },
+                onOpenFood = { id -> leaveForDetail(); onOpenFood(id) },
+                onOpenDish = { id -> leaveForDetail(); onOpenDish(id) },
                 onAddFood = {},
                 onAddDish = {},
                 compactPresentation = true,
@@ -5980,6 +5989,15 @@ private fun CatalogEntries(
                 val dish = if (entry.isDish) dishes.firstOrNull { it.id == entry.id } else null
                 if (food == null && dish == null) return@items
                 val category = food?.category ?: dish!!.dominantCategory(foodsById)
+                val nutrition = food?.let {
+                    NutritionTotals(
+                        calories = it.calories ?: 0.0,
+                        proteinGrams = it.proteinGrams ?: 0.0,
+                        carbohydrateGrams = it.carbohydrateGrams ?: 0.0,
+                        fatGrams = it.fatGrams ?: 0.0,
+                        fiberGrams = it.fiberGrams
+                    )
+                } ?: dish!!.nutrition(foodsById)
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -5988,7 +6006,7 @@ private fun CatalogEntries(
                         }
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FoodCategoryBadge(category)
                     Column(
@@ -6009,6 +6027,13 @@ private fun CatalogEntries(
                             maxLines = 1
                         )
                     }
+                    SearchNutritionGrid(
+                        calories = nutrition.calories,
+                        protein = nutrition.proteinGrams,
+                        carbohydrates = nutrition.carbohydrateGrams,
+                        fat = nutrition.fatGrams,
+                        modifier = Modifier.width(98.dp)
+                    )
                 }
             } else if (entry.isDish) {
                 val dish = dishes.firstOrNull { it.id == entry.id } ?: return@items
@@ -6958,6 +6983,70 @@ private fun FoodFilterDialog(
             }
         }
     )
+}
+
+@Composable
+private fun SearchNutritionGrid(
+    calories: Double?,
+    protein: Double?,
+    carbohydrates: Double?,
+    fat: Double?,
+    modifier: Modifier = Modifier
+) {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    fun display(value: Double?): String = value?.let {
+        if (abs(it) < 10.0) formatOneDecimal(it) else it.roundToInt().toString()
+    } ?: "—"
+
+    @Composable
+    fun Metric(
+        icon: ImageVector,
+        label: String,
+        value: String,
+        alignEnd: Boolean,
+        modifier: Modifier
+    ) {
+        Row(
+            modifier,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start
+        ) {
+            if (alignEnd) {
+                Text(value, style = MaterialTheme.typography.bodyLarge, color = color, maxLines = 1)
+                Spacer(Modifier.width(2.dp))
+                Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(17.dp))
+            } else {
+                Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(2.dp))
+                Text(value, style = MaterialTheme.typography.bodyLarge, color = color, maxLines = 1)
+            }
+        }
+    }
+
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Metric(
+                Icons.Default.LocalFireDepartment, "Calorías", display(calories), false,
+                Modifier.width(46.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Metric(
+                foodCategoryIcon(FoodCategory.PROTEIN), "Proteínas", display(protein), true,
+                Modifier.width(46.dp)
+            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Metric(
+                foodCategoryIcon(FoodCategory.CARBOHYDRATE), "Carbohidratos",
+                display(carbohydrates), false, Modifier.width(46.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Metric(
+                foodCategoryIcon(FoodCategory.FAT), "Grasas", display(fat), true,
+                Modifier.width(46.dp)
+            )
+        }
+    }
 }
 
 @Composable
