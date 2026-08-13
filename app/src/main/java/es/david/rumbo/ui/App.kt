@@ -426,8 +426,11 @@ fun RumboApp(repository: AppRepository) {
     }
 
     Scaffold(
-        contentWindowInsets = if (screen == Screen.HOME) WindowInsets(0, 0, 0, 0)
-            else ScaffoldDefaults.contentWindowInsets,
+        contentWindowInsets = if (screen in setOf(Screen.HOME, Screen.SHOPPING_LIST)) {
+            WindowInsets(0, 0, 0, 0)
+        } else {
+            ScaffoldDefaults.contentWindowInsets
+        },
         topBar = {
             if (screen != Screen.HOME && screen !in setOf(Screen.ADD, Screen.EDIT_MEASUREMENT, Screen.SHOPPING_LIST)) TopAppBar(
                 navigationIcon = {
@@ -563,7 +566,7 @@ fun RumboApp(repository: AppRepository) {
                         screenName = Screen.SHOPPING_LIST.name
                     },
                     onOpenCurrentShoppingList = {
-                        shoppingCurrentOnly = true
+                        shoppingCurrentOnly = false
                         shoppingWeekName = PlanWeek.CURRENT.name
                         screenName = Screen.SHOPPING_LIST.name
                     },
@@ -1050,7 +1053,7 @@ fun RumboApp(repository: AppRepository) {
                     data = data,
                     week = PlanWeek.valueOf(shoppingWeekName),
                     onWeekChange = { shoppingWeekName = it.name },
-                    showWeekSelector = !shoppingCurrentOnly,
+                    showWeekSelector = true,
                     onBack = { shoppingCurrentOnly = false; screenName = Screen.HOME.name }
                 )
                 screen == Screen.SETTINGS -> SettingsScreen(
@@ -2437,8 +2440,12 @@ private fun ShoppingListScreen(
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty().filter { it.planWeek == week }
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(topAppBarState)
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text("Lista de la compra") },
@@ -2446,12 +2453,13 @@ private fun ShoppingListScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding()),
             contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -2513,75 +2521,46 @@ private fun HomeShoppingSection(
             .apply()
     }
     val neededEntries = entries.filterNot { (food, _) -> food.id in availableFoodIds }
-    val notNeededEntries = entries.filter { (food, _) -> food.id in availableFoodIds }
-
-    @Composable
-    fun ShoppingGroup(
-        title: String,
-        groupEntries: List<Pair<Food, Double>>,
-        checked: Boolean,
-        emptyText: String
-    ) {
-        Column(
-            Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            Card(Modifier.fillMaxWidth()) {
-                if (groupEntries.isEmpty()) {
-                    Text(
-                        emptyText,
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Column(Modifier.fillMaxWidth()) {
-                        groupEntries.forEachIndexed { index, (food, grams) ->
-                            HomeShoppingEntry(
-                                food = food,
-                                grams = grams,
-                                checked = checked,
-                                onCheckedChange = { isChecked ->
-                                    if (isChecked) {
-                                        saveAvailableFoods(availableFoodIds + food.id)
-                                    } else {
-                                        saveAvailableFoods(availableFoodIds - food.id)
-                                    }
-                                }
-                            )
-                            if (index < groupEntries.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 56.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    val purchasedEntries = entries.filter { (food, _) -> food.id in availableFoodIds }
 
     Column(
         Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        ShoppingGroup(
-            title = "Hace falta comprar",
-            groupEntries = neededEntries,
-            checked = false,
-            emptyText = if (entries.isEmpty()) {
-                "El plan todavía no contiene alimentos."
-            } else {
-                "No falta ningún alimento."
+        if (neededEntries.isEmpty() && entries.isEmpty()) {
+            Text(
+                "El plan todavía no contiene alimentos.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            neededEntries.forEach { (food, grams) ->
+                HomeShoppingEntry(
+                    food = food,
+                    grams = grams,
+                    checked = false,
+                    onCheckedChange = { isChecked ->
+                        if (isChecked) saveAvailableFoods(availableFoodIds + food.id)
+                    }
+                )
             }
-        )
-        ShoppingGroup(
-            title = "Comprado",
-            groupEntries = notNeededEntries,
-            checked = true,
-            emptyText = "Todavía no has marcado ningún alimento."
-        )
+        }
+        if (purchasedEntries.isNotEmpty()) {
+            Text(
+                "Ya comprado",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            purchasedEntries.forEach { (food, grams) ->
+                HomeShoppingEntry(
+                    food = food,
+                    grams = grams,
+                    checked = true,
+                    onCheckedChange = { isChecked ->
+                        if (!isChecked) saveAvailableFoods(availableFoodIds - food.id)
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -2596,7 +2575,7 @@ private fun HomeShoppingEntry(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -2604,6 +2583,7 @@ private fun HomeShoppingEntry(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
+        FoodCategoryBadge(food.category)
         Column(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
