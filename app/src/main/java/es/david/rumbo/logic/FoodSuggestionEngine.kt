@@ -108,14 +108,14 @@ object FoodSuggestionEngine {
         val efficiency = MacroEfficiency.from(food)
         val efficientSources = listOf(
             Triple(deficits.protein * efficiency.protein, efficiency.protein,
-                "Mucha proteína para las calorías que aporta."),
+                "Aporta proteína con pocas calorías."),
             Triple(deficits.carbohydrate * efficiency.carbohydrate, efficiency.carbohydrate,
-                "Aporta hidratos con muy poca grasa."),
+                "Aporta hidratos con poca grasa."),
             Triple(deficits.fat * efficiency.fat, efficiency.fat,
                 if (food.saturatedFatGrams != null) "Aporta grasa con poca grasa saturada."
-                else "Aporta grasa sin apenas hidratos."),
+                else "Aporta grasa con pocos hidratos."),
             Triple(deficits.fiber * efficiency.fiber, efficiency.fiber,
-                "Mucha fibra para las calorías que aporta.")
+                "Aporta fibra con pocas calorías.")
         )
         efficientSources.filter { it.second >= 0.65 }
             .maxByOrNull { it.first }
@@ -123,10 +123,10 @@ object FoodSuggestionEngine {
             ?.let { return it.third }
 
         val nutrientReasons = listOf(
-            Triple(deficits.protein, food.proteinGrams ?: 0.0, "Ayuda a cubrir la proteína del menú."),
-            Triple(deficits.fiber, food.fiberGrams ?: 0.0, "Ayuda a aumentar la fibra del menú."),
-            Triple(deficits.carbohydrate, food.carbohydrateGrams ?: 0.0, "Ayuda a completar los hidratos del menú."),
-            Triple(deficits.fat, food.fatGrams ?: 0.0, "Ayuda a completar las grasas del menú.")
+            Triple(deficits.protein, food.proteinGrams ?: 0.0, "Porque falta proteína en tu menú."),
+            Triple(deficits.fiber, food.fiberGrams ?: 0.0, "Porque falta fibra en tu menú."),
+            Triple(deficits.carbohydrate, food.carbohydrateGrams ?: 0.0, "Porque faltan hidratos en tu menú."),
+            Triple(deficits.fat, food.fatGrams ?: 0.0, "Porque faltan grasas en tu menú.")
         )
         nutrientReasons.filter { it.second >= 3.0 }
             .maxByOrNull { it.first * it.second }
@@ -139,17 +139,17 @@ object FoodSuggestionEngine {
             activeFoods.any { it.subcategory.normalized() == subcategory }
         } == true
         if (sharedSubcategory) {
-            return "Ya utilizas otros productos de la subcategoría " +
+            return "Ya comes otros productos de " +
                 food.subcategory.orEmpty().lowercase() + "."
         }
         val sharedFamily = food.family.normalized()?.let { family ->
             activeFoods.any { it.family.normalized() == family }
         } == true
         if (sharedFamily) {
-            return "Ya utilizas otros productos de la familia " +
+            return "Ya comes otros productos de " +
                 food.family.orEmpty().lowercase() + "."
         }
-        return "Puede aportar más variedad a tu repertorio habitual."
+        return "Puede darte más variedad."
     }
 
     private fun equivalenceKey(food: Food): String = listOf(
