@@ -175,6 +175,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.david.rumbo.data.AppRepository
 import es.david.rumbo.logic.FoodSimilarityEngine
+import es.david.rumbo.logic.FoodSuggestion
+import es.david.rumbo.logic.FoodSuggestionEngine
 import es.david.rumbo.logic.MealPlanEvaluator
 import es.david.rumbo.logic.MealQuantityOptimizer
 import es.david.rumbo.logic.NutrientKind
@@ -1245,6 +1247,23 @@ private fun HomeScreen(
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
         .filter { it.planWeek == PlanWeek.CURRENT }
+    val foodSuggestions = remember(
+        data.foods,
+        data.activeProfileData?.repertoireFoodIds,
+        data.activeProfileData?.planningRules,
+        meals,
+        data.dishes,
+        recommendation
+    ) {
+        FoodSuggestionEngine.suggest(
+            foods = data.foods,
+            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+            planningRules = data.activeProfileData?.planningRules.orEmpty(),
+            plannedMeals = meals,
+            dishesById = dishesById,
+            recommendation = recommendation
+        )
+    }
     val searchTextState = rememberTextFieldState()
     var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var searchMessage by remember { mutableStateOf<String?>(null) }
@@ -1351,6 +1370,74 @@ private fun HomeScreen(
                 onApplyAdjustedMeals = onApplyAdjustedMeals
             )
         }
+        if (foodSuggestions.isNotEmpty()) {
+            item {
+                FoodSuggestionsCard(
+                    suggestions = foodSuggestions,
+                    onOpenFood = onOpenFood
+                )
+            }
+        }
+        }
+    }
+}
+
+@Composable
+private fun FoodSuggestionsCard(
+    suggestions: List<FoodSuggestion>,
+    onOpenFood: (Long) -> Unit
+) {
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Alimentos que podrían interesarte", style = MaterialTheme.typography.titleLarge)
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                suggestions.forEachIndexed { index, suggestion ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenFood(suggestion.food.id) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = foodCategoryIcon(suggestion.food.category),
+                            contentDescription = null,
+                            tint = foodCategoryColor(suggestion.food.category),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Column(
+                            Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                suggestion.food.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                suggestion.reason,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Ver alimento",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    if (index < suggestions.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
         }
     }
 }
