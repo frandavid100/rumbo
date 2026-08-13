@@ -292,6 +292,7 @@ fun RumboApp(repository: AppRepository) {
     var draftMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
     var plannerWeekName by rememberSaveable { mutableStateOf(PlanWeek.CURRENT.name) }
     var shoppingWeekName by rememberSaveable { mutableStateOf(PlanWeek.CURRENT.name) }
+    var shoppingCurrentOnly by rememberSaveable { mutableStateOf(false) }
     var draftMealDayName by rememberSaveable { mutableStateOf<String?>(null) }
     var draftFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftDishId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -552,7 +553,16 @@ fun RumboApp(repository: AppRepository) {
                         screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
                     },
                     onManageProfiles = { screenName = Screen.PROFILE.name },
-                    onOpenShoppingList = { shoppingWeekName = PlanWeek.CURRENT.name; screenName = Screen.SHOPPING_LIST.name },
+                    onOpenShoppingList = {
+                        shoppingCurrentOnly = false
+                        shoppingWeekName = PlanWeek.CURRENT.name
+                        screenName = Screen.SHOPPING_LIST.name
+                    },
+                    onOpenCurrentShoppingList = {
+                        shoppingCurrentOnly = true
+                        shoppingWeekName = PlanWeek.CURRENT.name
+                        screenName = Screen.SHOPPING_LIST.name
+                    },
                     onOpenSettings = { screenName = Screen.SETTINGS.name },
                     onGoalChange = { data = repository.setWeeklyRate(it) },
                     onAddMeasurement = { addingMeasurement = true },
@@ -1015,7 +1025,8 @@ fun RumboApp(repository: AppRepository) {
                     data = data,
                     week = PlanWeek.valueOf(shoppingWeekName),
                     onWeekChange = { shoppingWeekName = it.name },
-                    onBack = { screenName = Screen.HOME.name }
+                    showWeekSelector = !shoppingCurrentOnly,
+                    onBack = { shoppingCurrentOnly = false; screenName = Screen.HOME.name }
                 )
                 screen == Screen.SETTINGS -> SettingsScreen(
                     mealShares = mealShares,
@@ -1161,6 +1172,7 @@ private fun HomeScreen(
     onSwitchProfile: (Long) -> Unit,
     onManageProfiles: () -> Unit,
     onOpenShoppingList: () -> Unit,
+    onOpenCurrentShoppingList: () -> Unit,
     onOpenSettings: () -> Unit,
     onGoalChange: (Double?) -> Unit,
     onAddMeasurement: () -> Unit,
@@ -1271,6 +1283,7 @@ private fun HomeScreen(
                 dishesById = dishesById,
                 recommendation = recommendation,
                 onOpenNextWeek = onOpenNextWeek,
+                onOpenCurrentShoppingList = onOpenCurrentShoppingList,
                 onRegenerateWeek = onRegenerateWeek,
                 onOpenMeal = onOpenMeal,
                 onOpenFood = onOpenFood,
@@ -1660,6 +1673,7 @@ private fun WeeklyHomeMenuSection(
     dishesById: Map<Long, Dish>,
     recommendation: es.david.rumbo.model.Recommendation?,
     onOpenNextWeek: () -> Unit,
+    onOpenCurrentShoppingList: () -> Unit,
     onRegenerateWeek: () -> String?,
     onOpenMeal: (Long) -> Unit,
     onOpenFood: (Long) -> Unit,
@@ -2104,9 +2118,9 @@ private fun WeeklyHomeMenuSection(
                             modifier = Modifier.weight(1f)
                         ) { Text("Rehacer menú") }
                         FilledTonalButton(
-                            onClick = onOpenNextWeek,
+                            onClick = onOpenCurrentShoppingList,
                             modifier = Modifier.weight(1f)
-                        ) { Text("Semana que viene") }
+                        ) { Text("Lista de la compra") }
                     }
                 }
             }
@@ -2139,6 +2153,7 @@ private fun WeeklyHomeMenuSection(
                     Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     if (dayMeals.isEmpty()) {
                         Text("No hay comidas planificadas.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -2206,6 +2221,12 @@ private fun WeeklyHomeMenuSection(
                     DaySection(day, expandedSection == day.name)
                 }
             }
+        }
+        FilledTonalButton(
+            onClick = onOpenNextWeek,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Ver menú de la semana que viene")
         }
     }
 }
@@ -2302,6 +2323,7 @@ private fun ShoppingListScreen(
     data: AppData,
     week: PlanWeek,
     onWeekChange: (PlanWeek) -> Unit,
+    showWeekSelector: Boolean = true,
     onBack: () -> Unit
 ) {
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
@@ -2325,14 +2347,16 @@ private fun ShoppingListScreen(
             contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    listOf(PlanWeek.CURRENT to "Esta semana", PlanWeek.NEXT to "La que viene").forEachIndexed { index, (value, label) ->
-                        SegmentedButton(
-                            selected = week == value,
-                            onClick = { onWeekChange(value) },
-                            shape = SegmentedButtonDefaults.itemShape(index, 2)
-                        ) { Text(label) }
+            if (showWeekSelector) {
+                item {
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        listOf(PlanWeek.CURRENT to "Esta semana", PlanWeek.NEXT to "La que viene").forEachIndexed { index, (value, label) ->
+                            SegmentedButton(
+                                selected = week == value,
+                                onClick = { onWeekChange(value) },
+                                shape = SegmentedButtonDefaults.itemShape(index, 2)
+                            ) { Text(label) }
+                        }
                     }
                 }
             }
