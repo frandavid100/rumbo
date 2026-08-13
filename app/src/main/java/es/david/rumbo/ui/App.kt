@@ -1443,7 +1443,7 @@ private fun BodyGoalNutritionCard(
                 }
         }
     }
-    Text("Situación y objetivo", style = MaterialTheme.typography.titleLarge)
+    Text("Tu objetivo", style = MaterialTheme.typography.titleLarge)
     Spacer(Modifier.height(12.dp))
     Card(Modifier.fillMaxWidth().clickable(onClick = onExplain)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2166,7 +2166,7 @@ private fun WeeklyHomeMenuSection(
                             onClick = { rebuildSheet = true },
                             modifier = Modifier.weight(1f)
                         ) { Text("Rehacer menú") }
-                        FilledTonalButton(
+                        OutlinedButton(
                             onClick = onOpenCurrentShoppingList,
                             modifier = Modifier.weight(1f)
                         ) { Text("Lista de la compra") }
@@ -2296,7 +2296,7 @@ private fun WeeklyHomeMenuSection(
                 onClick = openNextWeek,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Ver menú de la semana que viene")
+                Text("Ver el menú de la semana que viene")
             }
         }
     }
