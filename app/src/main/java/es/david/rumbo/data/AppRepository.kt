@@ -525,7 +525,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 18)
+        put("schemaVersion", 19)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -709,6 +709,12 @@ class AppRepository(context: Context) {
             put(JSONObject().apply {
                 put("id", dish.id)
                 put("name", dish.name)
+                putNullable("unitName", dish.unitName)
+                putNullable("unitPlural", dish.unitPlural)
+                put("unitGender", dish.unitGender)
+                putNullable("unitAmount", dish.unitAmount)
+                put("wholeUnitsOnly", dish.wholeUnitsOnly)
+                put("unitDivisions", dish.unitDivisions)
                 put("ingredients", JSONArray().apply {
                     dish.ingredients.forEach { ingredient ->
                         put(JSONObject().apply {
@@ -1004,6 +1010,12 @@ class AppRepository(context: Context) {
                 Dish(
                     id = item.getLong("id"),
                     name = item.getString("name"),
+                    unitName = item.optionalString("unitName"),
+                    unitPlural = item.optionalString("unitPlural"),
+                    unitGender = item.optString("unitGender", "MASCULINE"),
+                    unitAmount = item.optionalDouble("unitAmount"),
+                    wholeUnitsOnly = item.optBoolean("wholeUnitsOnly", false),
+                    unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100),
                     ingredients = buildList {
                         for (ingredientIndex in 0 until ingredientsJson.length()) {
                             val ingredient = ingredientsJson.getJSONObject(ingredientIndex)
