@@ -212,7 +212,8 @@ data class Dish(
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 80 &&
         ingredients.isNotEmpty() && ingredients.all { it.isValid() } &&
         ingredients.map { it.foodId }.distinct().size == ingredients.size &&
-        unitName.validText(40) && unitPlural.validText(40) &&
+        (unitName == null || unitName.length <= 40) &&
+        (unitPlural == null || unitPlural.length <= 40) &&
         unitGender in setOf("MASCULINE", "FEMININE") && unitDivisions in 1..100 &&
         (unitAmount == null || unitAmount in 0.1..5000.0)
 }
