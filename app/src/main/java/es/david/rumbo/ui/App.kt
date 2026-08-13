@@ -1833,11 +1833,15 @@ private fun WeeklyHomeMenuSection(
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Tu menú de esta semana", style = MaterialTheme.typography.titleLarge)
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Card(Modifier.fillMaxWidth()) {
                 SummarySection(expandedSection == summaryKey)
-                WeekDay.entries.forEach { day ->
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+            WeekDay.entries.forEach { day ->
+                Card(Modifier.fillMaxWidth()) {
                     DaySection(day, expandedSection == day.name)
                 }
             }
