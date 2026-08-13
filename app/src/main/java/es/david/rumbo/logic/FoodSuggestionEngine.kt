@@ -22,6 +22,7 @@ object FoodSuggestionEngine {
         plannedMeals: List<PlannedMeal>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation?,
+        excludedFoodIds: Set<Long> = emptySet(),
         limit: Int = 3
     ): List<FoodSuggestion> {
         if (limit <= 0 || repertoireFoodIds.isEmpty()) return emptyList()
@@ -42,7 +43,10 @@ object FoodSuggestionEngine {
         val deficits = Deficits.from(recommendation, totals)
 
         return foods.asSequence()
-            .filter { it.id !in repertoireFoodIds && it.hasComparableNutrition() }
+            .filter {
+                it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
+                    it.hasComparableNutrition()
+            }
             .filter { activeRetailers.isEmpty() || it.retailer.normalized() in activeRetailers }
             .map { candidate ->
                 val categoryNovelty = when {
@@ -52,7 +56,7 @@ object FoodSuggestionEngine {
                 }
                 FoodSuggestion(
                     food = candidate,
-                    reason = reason(candidate, categoryCounts, deficits),
+                    reason = reason(candidate, activeFoods, categoryCounts, deficits),
                     score = nutritionalUtility(candidate, recommendation, deficits) +
                         categoryNovelty + affinity(candidate, activeFoods) +
                         if (candidate.unitAmount != null && candidate.unitName != null) 0.05 else 0.0
@@ -91,7 +95,10 @@ object FoodSuggestionEngine {
     }
 
     private fun reason(
-        food: Food, categoryCounts: Map<FoodCategory, Int>, deficits: Deficits
+        food: Food,
+        activeFoods: List<Food>,
+        categoryCounts: Map<FoodCategory, Int>,
+        deficits: Deficits
     ): String {
         val nutrientReasons = listOf(
             Triple(deficits.protein, food.proteinGrams ?: 0.0, "Puede ayudarte a cubrir la proteína del menú."),
@@ -106,7 +113,21 @@ object FoodSuggestionEngine {
         if (food.category != FoodCategory.OTHER && categoryCounts[food.category] == null) {
             return "Aporta más variedad con " + food.category.label.lowercase() + "."
         }
-        return "Se parece a alimentos que ya forman parte de tu repertorio."
+        val sharedSubcategory = food.subcategory.normalized()?.let { subcategory ->
+            activeFoods.any { it.subcategory.normalized() == subcategory }
+        } == true
+        if (sharedSubcategory) {
+            return "Ya utilizas otros productos de la subcategoría " +
+                food.subcategory.orEmpty().lowercase() + "."
+        }
+        val sharedFamily = food.family.normalized()?.let { family ->
+            activeFoods.any { it.family.normalized() == family }
+        } == true
+        if (sharedFamily) {
+            return "Ya utilizas otros productos de la familia " +
+                food.family.orEmpty().lowercase() + "."
+        }
+        return "Puede aportar más variedad a tu repertorio habitual."
     }
 
     private fun equivalenceKey(food: Food): String = listOf(
