@@ -2,6 +2,7 @@ from pathlib import Path
 
 app_path = Path("app/src/main/java/es/david/rumbo/ui/App.kt")
 build_path = Path("app/build.gradle")
+workflow_path = Path(".github/workflows/android.yml")
 text = app_path.read_text()
 
 import_anchor = "import androidx.compose.material3.AlertDialog\n"
@@ -140,6 +141,7 @@ private fun HomeCatalogSearch(
         GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
             val value = barcode.rawValue.orEmpty()
             foods.firstOrNull { it.barcode == value }?.let { food ->
+                closeSearch()
                 onOpenFood(food.id)
             } ?: run {
                 onQueryChange(value)
@@ -181,6 +183,7 @@ private fun HomeCatalogSearch(
             onExpandedChange = { shouldExpand ->
                 if (shouldExpand) onOpenSearch() else closeSearch()
             },
+            modifier = with(scrollBehavior) { Modifier.searchBarScrollBehavior() },
             placeholder = { Text("Buscar alimentos y platos") },
             leadingIcon = {
                 IconButton(onClick = closeSearch) {
@@ -204,13 +207,7 @@ private fun HomeCatalogSearch(
 
     ExpandedFullScreenSearchBar(
         state = state,
-        inputField = {
-            Box(
-                with(scrollBehavior) { Modifier.searchBarScrollBehavior() }
-            ) {
-                expandedInput()
-            }
-        }
+        inputField = expandedInput
     ) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(8.dp))
@@ -231,8 +228,8 @@ private fun HomeCatalogSearch(
                 repertoireFoodIds = repertoireFoodIds,
                 mode = if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
                 normalizedQuery = normalized,
-                onOpenFood = onOpenFood,
-                onOpenDish = onOpenDish,
+                onOpenFood = { id -> closeSearch(); onOpenFood(id) },
+                onOpenDish = { id -> closeSearch(); onOpenDish(id) },
                 onAddFood = {},
                 onAddDish = {},
                 modifier = Modifier.weight(1f).nestedScroll(scrollBehavior.nestedScrollConnection)
@@ -244,7 +241,6 @@ private fun HomeCatalogSearch(
 }
 '''
 text = text[:search_start] + search_replacement + text[search_end:]
-
 app_path.write_text(text)
 
 build = build_path.read_text()
@@ -255,4 +251,62 @@ if old_dep not in build and new_dep not in build:
 build = build.replace(old_dep, new_dep, 1)
 build_path.write_text(build)
 
+workflow_path.write_text('''name: Android
+
+on:
+  push:
+    branches: [main, feature/0.12.0-dishes]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Restaurar catálogo nutricional de Mercadona
+        run: |
+          mkdir -p app/src/main/assets
+          base64 --decode tools/aesan_foods.dat.b64 > app/src/main/assets/aesan_foods.dat
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Probar y compilar
+        run: ./gradlew test assembleRelease
+      - name: Preparar herramientas de firma
+        run: |
+          BUILD_TOOLS="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          mkdir -p build/signing-tools/lib build/signing-tools/lib64
+          cp "$BUILD_TOOLS/apksigner" "$BUILD_TOOLS/zipalign" build/signing-tools/
+          cp "$BUILD_TOOLS/lib/apksigner.jar" build/signing-tools/lib/
+          cp "$BUILD_TOOLS/lib64/libc++.so" build/signing-tools/lib64/
+      - name: Firmar APK con una clave temporal
+        run: |
+          mkdir -p build/signed
+          PASS="$(openssl rand -base64 36 | tr -d '\\n')"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/rumbo-release.jks" -storepass "$PASS" -keypass "$PASS" -alias rumbo -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Rumbo, OU=Rumbo, O=Rumbo, L=Unknown, ST=Unknown, C=ES"
+          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-0.45.0-aligned.apk"
+          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$PASS" --key-pass "pass:$PASS" --out build/signed/Rumbo-0.45.0.apk "$RUNNER_TEMP/Rumbo-0.45.0-aligned.apk"
+          build/signing-tools/apksigner verify --verbose --print-certs build/signed/Rumbo-0.45.0.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rumbo-release-unsigned
+          path: |
+            app/build/outputs/apk/release/app-release-unsigned.apk
+            build/signing-tools
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rumbo-0.45.0-signed-temporary
+          path: build/signed/Rumbo-0.45.0.apk
+          if-no-files-found: error
+''')
+
+Path(__file__).unlink()
 print("Corrección Material 3 aplicada")
