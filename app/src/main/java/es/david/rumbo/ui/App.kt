@@ -69,12 +69,6 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AppBarWithSearch
-import androidx.compose.material3.ExpandedFullScreenSearchBar
-import androidx.compose.material3.SearchBarScrollBehavior
-import androidx.compose.material3.SearchBarState
-import androidx.compose.material3.SearchBarValue
-import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card as MaterialCard
 import androidx.compose.material3.CardColors
@@ -1132,48 +1126,63 @@ private fun HomeScreen(
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
         .filter { it.planWeek == PlanWeek.CURRENT }
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var searchMessage by remember { mutableStateOf<String?>(null) }
-    val searchBarState = rememberSearchBarState()
-    val searchScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
-    val searchScope = rememberCoroutineScope()
-    val openSearch = {
-        searchScrollBehavior.scrollOffset = 0f
-        searchScrollBehavior.contentOffset = 0f
-        searchScope.launch { searchBarState.animateToExpanded() }
-        Unit
-    }
     val closeSearch = {
         searchQuery = ""
         searchMessage = null
-        searchScrollBehavior.scrollOffset = 0f
-        searchScrollBehavior.contentOffset = 0f
-        searchScope.launch { searchBarState.animateToCollapsed() }
-        Unit
+        searchExpanded = false
     }
 
+    if (searchExpanded) {
+        HomeCatalogSearch(
+            foods = data.foods,
+            dishes = data.dishes,
+            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            filter = searchFilter,
+            onFilterChange = { searchFilter = it },
+            scanMessage = searchMessage,
+            onScanMessageChange = { searchMessage = it },
+            expanded = true,
+            onExpandedChange = { if (!it) closeSearch() },
+            onOpenFood = { id -> closeSearch(); onOpenFood(id) },
+            onOpenDish = { id -> closeSearch(); onOpenDish(id) }
+        )
+        return
+    }
+
+    val homeTopBarState = rememberTopAppBarState()
+    val homeScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(homeTopBarState)
     Scaffold(
-        modifier = Modifier.fillMaxSize().nestedScroll(searchScrollBehavior.nestedScrollConnection),
+        modifier = Modifier.fillMaxSize().nestedScroll(homeScrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            HomeCatalogSearch(
-                foods = data.foods,
-                dishes = data.dishes,
-                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                filter = searchFilter,
-                onFilterChange = { searchFilter = it },
-                scanMessage = searchMessage,
-                onScanMessageChange = { searchMessage = it },
-                state = searchBarState,
-                scrollBehavior = searchScrollBehavior,
-                onOpenSearch = openSearch,
-                onCloseSearch = closeSearch,
-                onOpenFood = onOpenFood,
-                onOpenDish = onOpenDish,
-                trailingContent = {
+            TopAppBar(
+                title = {
+                    HomeCatalogSearch(
+                        foods = data.foods,
+                        dishes = data.dishes,
+                        repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                        query = "",
+                        onQueryChange = {
+                            searchQuery = it
+                            searchExpanded = true
+                        },
+                        filter = searchFilter,
+                        onFilterChange = { searchFilter = it },
+                        scanMessage = searchMessage,
+                        onScanMessageChange = { searchMessage = it },
+                        expanded = false,
+                        onExpandedChange = { if (it) searchExpanded = true },
+                        onOpenFood = onOpenFood,
+                        onOpenDish = onOpenDish
+                    )
+                },
+                actions = {
                     ProfileSwitcher(
                         profiles = data.profiles.map { it.profile },
                         activeProfile = data.profile,
@@ -1182,7 +1191,12 @@ private fun HomeScreen(
                         onSettings = onOpenSettings,
                         avatarSize = 36
                     )
-                }
+                },
+                scrollBehavior = homeScrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { innerPadding ->
@@ -4833,17 +4847,12 @@ private fun HomeCatalogSearch(
     query: String, onQueryChange: (String) -> Unit,
     filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
-    state: SearchBarState,
-    scrollBehavior: SearchBarScrollBehavior,
-    onOpenSearch: () -> Unit,
-    onCloseSearch: () -> Unit,
-    onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit,
-    trailingContent: @Composable () -> Unit
+    expanded: Boolean, onExpandedChange: (Boolean) -> Unit,
+    onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val expanded = state.targetValue == SearchBarValue.Expanded
     val normalized = normalizeSearch(query)
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val entries = remember(foods, dishes, normalized, filter, repertoireFoodIds) {
@@ -4866,18 +4875,9 @@ private fun HomeCatalogSearch(
     val closeSearch = {
         focusManager.clearFocus(force = true)
         keyboard?.hide()
-        onCloseSearch()
-    }
-
-    LaunchedEffect(state.targetValue) {
-        if (state.targetValue == SearchBarValue.Collapsed) {
-            focusManager.clearFocus(force = true)
-            keyboard?.hide()
-            onQueryChange("")
-            onScanMessageChange(null)
-            scrollBehavior.scrollOffset = 0f
-            scrollBehavior.contentOffset = 0f
-        }
+        onQueryChange("")
+        onScanMessageChange(null)
+        onExpandedChange(false)
     }
 
     val scan = {
@@ -4885,53 +4885,32 @@ private fun HomeCatalogSearch(
         GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
             val value = barcode.rawValue.orEmpty()
             foods.firstOrNull { it.barcode == value }?.let { food ->
-                closeSearch()
+                if (expanded) closeSearch()
                 onOpenFood(food.id)
             } ?: run {
                 onQueryChange(value)
                 onScanMessageChange("No encuentro este producto en tus supermercados.")
-                onOpenSearch()
+                onExpandedChange(true)
             }
         }
         Unit
     }
 
-    val collapsedInput: @Composable () -> Unit = {
-        SearchBarDefaults.InputField(
-            query = "",
-            onQueryChange = { value ->
-                onQueryChange(value)
-                onOpenSearch()
-            },
-            onSearch = {},
-            expanded = expanded,
-            onExpandedChange = { shouldExpand ->
-                if (shouldExpand) onOpenSearch() else closeSearch()
-            },
-            placeholder = { Text("Buscar alimentos y platos") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            trailingIcon = {
-                IconButton(onClick = scan) {
-                    Icon(Icons.Default.QrCodeScanner, "Escanear código de barras")
-                }
-            }
-        )
-    }
-
-    val expandedInput: @Composable () -> Unit = {
+    val input: @Composable () -> Unit = {
         SearchBarDefaults.InputField(
             query = query,
             onQueryChange = onQueryChange,
             onSearch = {},
             expanded = expanded,
-            onExpandedChange = { shouldExpand ->
-                if (shouldExpand) onOpenSearch() else closeSearch()
-            },
-            modifier = with(scrollBehavior) { Modifier.searchBarScrollBehavior() },
+            onExpandedChange = onExpandedChange,
             placeholder = { Text("Buscar alimentos y platos") },
             leadingIcon = {
-                IconButton(onClick = closeSearch) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
+                if (expanded) {
+                    IconButton(onClick = closeSearch) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
+                    }
+                } else {
+                    Icon(Icons.Default.Search, contentDescription = null)
                 }
             },
             trailingIcon = {
@@ -4942,18 +4921,41 @@ private fun HomeCatalogSearch(
         )
     }
 
-    AppBarWithSearch(
-        state = state,
-        inputField = collapsedInput,
-        scrollBehavior = scrollBehavior,
-        actions = { trailingContent() }
-    )
+    if (!expanded) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) { input() }
+        return
+    }
 
-    ExpandedFullScreenSearchBar(
-        state = state,
-        inputField = expandedInput
-    ) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+    BackHandler { closeSearch() }
+    val searchTopBarState = rememberTopAppBarState()
+    val searchScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(searchTopBarState)
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(searchScrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ) { input() }
+                },
+                scrollBehavior = searchScrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)
+        ) {
             Spacer(Modifier.height(8.dp))
             CatalogFilterMenu(filter, onFilterChange)
             if (query.isBlank()) {
@@ -4976,12 +4978,10 @@ private fun HomeCatalogSearch(
                 onOpenDish = { id -> closeSearch(); onOpenDish(id) },
                 onAddFood = {},
                 onAddDish = {},
-                modifier = Modifier.weight(1f).nestedScroll(scrollBehavior.nestedScrollConnection)
+                modifier = Modifier.weight(1f)
             )
         }
     }
-
-    BackHandler(enabled = expanded) { closeSearch() }
 }
 
 @Composable
