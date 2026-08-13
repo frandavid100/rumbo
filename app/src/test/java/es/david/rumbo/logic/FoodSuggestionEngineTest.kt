@@ -77,6 +77,25 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun carbohydrateDeficitRejectsFattyProcessedCandidates() {
+        val foods = listOf(
+            food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
+            food(2, "Patatas fritas", FoodCategory.CARBOHYDRATE, "Mercadona", 540.0, 6.0, 55.0, 34.0),
+            food(3, "Galletas", FoodCategory.CARBOHYDRATE, "Mercadona", 470.0, 7.0, 70.0, 19.0),
+            food(4, "Pasta con queso", FoodCategory.CARBOHYDRATE, "Mercadona", 390.0, 14.0, 64.0, 9.1)
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = foods,
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 152, 200, 52, "")
+        )
+        assertEquals(listOf(1L), result.map { it.food.id })
+    }
+
+    @Test
     fun dismissedFoodIsNotSuggestedAgain() {
         val foods = listOf(
             food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
