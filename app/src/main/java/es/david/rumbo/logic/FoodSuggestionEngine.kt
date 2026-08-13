@@ -160,6 +160,9 @@ object FoodSuggestionEngine {
         val carbohydrate = carbohydrateGrams ?: 0.0
         val proteinEnergy = (proteinGrams ?: 0.0) * 4.0
         val fat = fatGrams ?: 0.0
+        val concentratedCarbohydrateAndFat = carbohydrate >= 20.0 && fat > 8.0
+        if (concentratedCarbohydrateAndFat) return false
+
         val carbohydrateDominant = carbohydrate * 4.0 >= max(proteinEnergy, fat * 9.0)
         if (!carbohydrateDominant) return true
 
