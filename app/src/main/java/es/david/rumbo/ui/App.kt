@@ -1255,6 +1255,7 @@ private fun HomeScreen(
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
+        data.activeProfileData?.dismissedSuggestionFoodIds,
         data.activeProfileData?.planningRules,
         meals,
         data.dishes,
