@@ -119,6 +119,38 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun undersizedRepertoireDiversifiesSuggestionsAcrossFoodGroups() {
+        val existingNut = food(
+            1, "Almendra", FoodCategory.FAT, "Mercadona",
+            600.0, 20.0, 10.0, 52.0, subcategory = "Frutos secos"
+        )
+        val foods = listOf(
+            existingNut,
+            food(2, "Nuez", FoodCategory.FAT, "Mercadona", 650.0, 15.0, 7.0, 65.0,
+                subcategory = "Frutos secos"),
+            food(3, "Avellana", FoodCategory.FAT, "Mercadona", 630.0, 15.0, 8.0, 61.0,
+                subcategory = "Frutos secos"),
+            food(4, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0,
+                subcategory = "Arroz"),
+            food(5, "Pechuga", FoodCategory.PROTEIN, "Mercadona", 110.0, 24.0, 0.0, 1.0,
+                subcategory = "Aves"),
+            food(6, "Calabacín", FoodCategory.VEGETABLE, "Mercadona", 20.0, 1.2, 3.1, 0.3,
+                subcategory = "Hortalizas")
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = foods,
+            repertoireFoodIds = setOf(1),
+            planningRules = listOf(rule(1)),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = null
+        )
+        assertEquals(3, result.size)
+        assertEquals(3, result.map { it.food.subcategory }.distinct().size)
+        assertTrue(result.none { it.reason.startsWith("Ya comes otros productos") })
+    }
+
+    @Test
     fun dismissedFoodIsNotSuggestedAgain() {
         val foods = listOf(
             food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
@@ -145,10 +177,12 @@ class FoodSuggestionEngineTest {
         id: Long, name: String, category: FoodCategory, retailer: String,
         calories: Double, protein: Double, carbohydrate: Double, fat: Double,
         fiber: Double = 0.0,
-        saturated: Double? = null
+        saturated: Double? = null,
+        subcategory: String? = null
     ) = Food(
         id, name, category, calories, fat, carbohydrate, protein, fiber,
         retailer = retailer,
-        saturatedFatGrams = saturated
+        saturatedFatGrams = saturated,
+        subcategory = subcategory
     )
 }
