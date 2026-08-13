@@ -22,6 +22,7 @@ jobs:
       - name: Aplicar corrección localizada de Inicio
         if: github.event_name == 'push' && hashFiles('tools/patch_home_nutrition_detail_v2.py') != ''
         run: |
+          git fetch --depth=100 origin fix/ui-review-0.45.0
           git show de985ddec8001c972c3c96929da1ba0ff2c539e2:app/src/main/java/es/david/rumbo/ui/App.kt > app/src/main/java/es/david/rumbo/ui/App.kt
           python3 tools/patch_home_nutrition_detail_v2.py
           git config user.name "github-actions[bot]"
