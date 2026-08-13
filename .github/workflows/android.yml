@@ -2,13 +2,13 @@ name: Android
 
 on:
   push:
-    branches: [main, feature/0.12.0-dishes, fix/ui-review-0.45.0]
+    branches: [main, feature/0.12.0-dishes]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -19,16 +19,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Aplicar acciones finales del menú semanal
-        if: github.event_name == 'push' && hashFiles('tools/patch_home_week_actions.py') != ''
-        run: |
-          python3 tools/patch_home_week_actions.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/es/david/rumbo/ui/App.kt
-          git rm tools/patch_home_week_actions.py
-          git commit -m "Ajustar acciones y separación del menú semanal"
-          git push origin HEAD:fix/ui-review-0.45.0
       - name: Restaurar catálogo nutricional de Mercadona
         run: |
           mkdir -p app/src/main/assets
