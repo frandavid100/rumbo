@@ -69,10 +69,15 @@ object WeeklyMenuGenerator {
             val ingredientRules = foodRules.filter { rule ->
                 dish.ingredients.any { it.foodId == rule.itemId } && rule.allowedMealTypes.isNotEmpty()
             }
-            if (ingredientRules.isEmpty()) null else PlanningRule(
+            val allowedMealTypes = ingredientRules.flatMapTo(mutableSetOf()) { it.allowedMealTypes }
+                .intersect(dish.allowedMealTypes)
+            val allowedDays = ingredientRules.flatMapTo(mutableSetOf()) { it.allowedDays }
+                .intersect(dish.allowedDays)
+            if (ingredientRules.isEmpty() || allowedMealTypes.isEmpty() || allowedDays.isEmpty()) null else PlanningRule(
                 itemKind = PlannedItemKind.DISH,
                 itemId = dish.id,
-                allowedMealTypes = ingredientRules.flatMapTo(mutableSetOf()) { it.allowedMealTypes },
+                allowedMealTypes = allowedMealTypes,
+                allowedDays = allowedDays,
                 frequency = PlanningFrequency.NORMAL,
                 preferredGrams = dish.totalWeightGrams().coerceAtLeast(1.0)
             )
@@ -277,9 +282,11 @@ object WeeklyMenuGenerator {
             val remaining = required.distinctBy { it.itemId }.toMutableList()
             val selected = mutableListOf<PlanningRule>()
             while (true) {
-                val best = dishes.map { dish ->
+                val best = dishes.filter { dish ->
+                    slot.mealType in dish.allowedMealTypes && slot.day in dish.allowedDays
+                }.map { dish ->
                     dish to remaining.count { rule ->
-                        slot.mealType in rule.allowedMealTypes &&
+                        slot.mealType in rule.allowedMealTypes && slot.day in rule.allowedDays &&
                             dish.ingredients.any { it.foodId == rule.itemId }
                     }
                 }.maxByOrNull { it.second }?.takeIf { it.second >= 2 } ?: break

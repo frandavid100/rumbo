@@ -207,7 +207,9 @@ data class Dish(
     val unitGender: String = "MASCULINE",
     val unitAmount: Double? = null,
     val wholeUnitsOnly: Boolean = false,
-    val unitDivisions: Int = 1
+    val unitDivisions: Int = 1,
+    val allowedMealTypes: Set<MealType> = MealType.entries.toSet(),
+    val allowedDays: Set<WeekDay> = WeekDay.entries.toSet()
 ) {
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 80 &&
         ingredients.isNotEmpty() && ingredients.all { it.isValid() } &&
