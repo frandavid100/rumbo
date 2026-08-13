@@ -69,6 +69,12 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AppBarWithSearch
+import androidx.compose.material3.ExpandedFullScreenSearchBar
+import androidx.compose.material3.SearchBarScrollBehavior
+import androidx.compose.material3.SearchBarState
+import androidx.compose.material3.SearchBarValue
+import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card as MaterialCard
 import androidx.compose.material3.CardColors
@@ -1126,77 +1132,57 @@ private fun HomeScreen(
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
         .filter { it.planWeek == PlanWeek.CURRENT }
-    var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
     var searchMessage by remember { mutableStateOf<String?>(null) }
-
-    if (searchExpanded) {
-        HomeCatalogSearch(
-            foods = data.foods,
-            dishes = data.dishes,
-            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-            query = searchQuery,
-            onQueryChange = { searchQuery = it },
-            filter = searchFilter,
-            onFilterChange = { searchFilter = it },
-            scanMessage = searchMessage,
-            onScanMessageChange = { searchMessage = it },
-            expanded = true,
-            onExpandedChange = { searchExpanded = it },
-            onOpenFood = onOpenFood,
-            onOpenDish = onOpenDish,
-            trailingContent = {
-                ProfileSwitcher(
-                    profiles = data.profiles.map { it.profile }, activeProfile = data.profile,
-                    onSelect = onSwitchProfile, onManage = onManageProfiles,
-                    onSettings = onOpenSettings, avatarSize = 36
-                )
-            }
-        )
-        return
+    val searchBarState = rememberSearchBarState()
+    val searchScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
+    val searchScope = rememberCoroutineScope()
+    val openSearch = {
+        searchScrollBehavior.scrollOffset = 0f
+        searchScrollBehavior.contentOffset = 0f
+        searchScope.launch { searchBarState.animateToExpanded() }
+        Unit
+    }
+    val closeSearch = {
+        searchQuery = ""
+        searchMessage = null
+        searchScrollBehavior.scrollOffset = 0f
+        searchScrollBehavior.contentOffset = 0f
+        searchScope.launch { searchBarState.animateToCollapsed() }
+        Unit
     }
 
-    val topBarState = rememberTopAppBarState()
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(topBarState)
     Scaffold(
-        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier.fillMaxSize().nestedScroll(searchScrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = {
-                    HomeCatalogSearch(
-                        foods = data.foods,
-                        dishes = data.dishes,
-                        repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it },
-                        filter = searchFilter,
-                        onFilterChange = { searchFilter = it },
-                        scanMessage = searchMessage,
-                        onScanMessageChange = { searchMessage = it },
-                        expanded = false,
-                        onExpandedChange = { if (it) searchExpanded = true },
-                        onOpenFood = onOpenFood,
-                        onOpenDish = onOpenDish,
-                        trailingContent = {
-                            ProfileSwitcher(
-                                profiles = data.profiles.map { it.profile },
-                                activeProfile = data.profile,
-                                onSelect = onSwitchProfile,
-                                onManage = onManageProfiles,
-                                onSettings = onOpenSettings,
-                                avatarSize = 36
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
+            HomeCatalogSearch(
+                foods = data.foods,
+                dishes = data.dishes,
+                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                filter = searchFilter,
+                onFilterChange = { searchFilter = it },
+                scanMessage = searchMessage,
+                onScanMessageChange = { searchMessage = it },
+                state = searchBarState,
+                scrollBehavior = searchScrollBehavior,
+                onOpenSearch = openSearch,
+                onCloseSearch = closeSearch,
+                onOpenFood = onOpenFood,
+                onOpenDish = onOpenDish,
+                trailingContent = {
+                    ProfileSwitcher(
+                        profiles = data.profiles.map { it.profile },
+                        activeProfile = data.profile,
+                        onSelect = onSwitchProfile,
+                        onManage = onManageProfiles,
+                        onSettings = onOpenSettings,
+                        avatarSize = 36
                     )
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         }
     ) { innerPadding ->
@@ -4847,97 +4833,155 @@ private fun HomeCatalogSearch(
     query: String, onQueryChange: (String) -> Unit,
     filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
-    expanded: Boolean, onExpandedChange: (Boolean) -> Unit,
+    state: SearchBarState,
+    scrollBehavior: SearchBarScrollBehavior,
+    onOpenSearch: () -> Unit,
+    onCloseSearch: () -> Unit,
     onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit,
-    trailingContent: @Composable () -> Unit,
-    modifier: Modifier = Modifier
+    trailingContent: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val closeSearch = {
-        focusManager.clearFocus(force = true)
-        keyboard?.hide()
-        onExpandedChange(false)
-    }
+    val expanded = state.targetValue == SearchBarValue.Expanded
     val normalized = normalizeSearch(query)
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val entries = remember(foods, dishes, normalized, filter, repertoireFoodIds) {
         buildList {
             if (filter != CatalogFilter.DISHES) foods.forEach { food ->
-                val text = normalizeSearch(listOfNotNull(food.name, food.brand, food.barcode).joinToString(" "))
-                if (normalized.isBlank() && food.id in repertoireFoodIds || normalized.isNotBlank() && text.contains(normalized))
+                val searchText = normalizeSearch(listOfNotNull(food.name, food.brand, food.barcode).joinToString(" "))
+                if (normalized.isBlank() && food.id in repertoireFoodIds || normalized.isNotBlank() && searchText.contains(normalized)) {
                     add(CatalogEntry(food.id, food.name, false))
+                }
             }
             if (filter != CatalogFilter.FOODS) dishes.forEach { dish ->
                 val favorite = dish.ingredients.any { it.foodId in repertoireFoodIds }
-                if (normalized.isBlank() && favorite || normalized.isNotBlank() && normalizeSearch(dish.name).contains(normalized))
+                if (normalized.isBlank() && favorite || normalized.isNotBlank() && normalizeSearch(dish.name).contains(normalized)) {
                     add(CatalogEntry(dish.id, dish.name, true))
+                }
             }
         }.sortedBy { it.name.lowercase() }
     }
-    BackHandler(enabled = expanded) { closeSearch() }
+
+    val closeSearch = {
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+        onCloseSearch()
+    }
+
+    LaunchedEffect(state.targetValue) {
+        if (state.targetValue == SearchBarValue.Collapsed) {
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            onQueryChange("")
+            onScanMessageChange(null)
+            scrollBehavior.scrollOffset = 0f
+            scrollBehavior.contentOffset = 0f
+        }
+    }
+
     val scan = {
+        onScanMessageChange(null)
         GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
             val value = barcode.rawValue.orEmpty()
-            foods.firstOrNull { it.barcode == value }?.let { onOpenFood(it.id) } ?: run {
+            foods.firstOrNull { it.barcode == value }?.let { food ->
+                closeSearch()
+                onOpenFood(food.id)
+            } ?: run {
                 onQueryChange(value)
                 onScanMessageChange("No encuentro este producto en tus supermercados.")
+                onOpenSearch()
             }
         }
         Unit
     }
-    val input: @Composable () -> Unit = {
+
+    val collapsedInput: @Composable () -> Unit = {
+        SearchBarDefaults.InputField(
+            query = "",
+            onQueryChange = { value ->
+                onQueryChange(value)
+                onOpenSearch()
+            },
+            onSearch = {},
+            expanded = expanded,
+            onExpandedChange = { shouldExpand ->
+                if (shouldExpand) onOpenSearch() else closeSearch()
+            },
+            placeholder = { Text("Buscar alimentos y platos") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                IconButton(onClick = scan) {
+                    Icon(Icons.Default.QrCodeScanner, "Escanear código de barras")
+                }
+            }
+        )
+    }
+
+    val expandedInput: @Composable () -> Unit = {
         SearchBarDefaults.InputField(
             query = query,
             onQueryChange = onQueryChange,
             onSearch = {},
             expanded = expanded,
-            onExpandedChange = onExpandedChange,
+            onExpandedChange = { shouldExpand ->
+                if (shouldExpand) onOpenSearch() else closeSearch()
+            },
+            modifier = with(scrollBehavior) { Modifier.searchBarScrollBehavior() },
             placeholder = { Text("Buscar alimentos y platos") },
             leadingIcon = {
-                if (expanded) IconButton(onClick = closeSearch) {
+                IconButton(onClick = closeSearch) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
-                } else Icon(Icons.Default.Search, null)
+                }
             },
             trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = scan) {
-                        Icon(Icons.Default.QrCodeScanner, "Escanear código de barras")
-                    }
-                    trailingContent()
+                IconButton(onClick = scan) {
+                    Icon(Icons.Default.QrCodeScanner, "Escanear código de barras")
                 }
             }
         )
     }
-    if (!expanded) Surface(
-        modifier = modifier.fillMaxWidth().height(56.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) { input() }
-    else Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().padding(top = 8.dp)) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh
-            ) { input() }
-            Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+
+    AppBarWithSearch(
+        state = state,
+        inputField = collapsedInput,
+        scrollBehavior = scrollBehavior,
+        actions = { trailingContent() }
+    )
+
+    ExpandedFullScreenSearchBar(
+        state = state,
+        inputField = expandedInput
+    ) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(8.dp))
             CatalogFilterMenu(filter, onFilterChange)
-            if (query.isBlank()) Text(
-                "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
-                Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (query.isBlank()) {
+                Text(
+                    "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
+                    Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             scanMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             CatalogEntries(
-                entries, foods, foodsById, dishes, repertoireFoodIds,
-                if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
-                normalized, onOpenFood, onOpenDish, {}, {}, Modifier.weight(1f)
+                entries = entries,
+                foods = foods,
+                foodsById = foodsById,
+                dishes = dishes,
+                repertoireFoodIds = repertoireFoodIds,
+                mode = if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
+                normalizedQuery = normalized,
+                onOpenFood = { id -> closeSearch(); onOpenFood(id) },
+                onOpenDish = { id -> closeSearch(); onOpenDish(id) },
+                onAddFood = {},
+                onAddDish = {},
+                modifier = Modifier.weight(1f).nestedScroll(scrollBehavior.nestedScrollConnection)
             )
-            }
         }
     }
+
+    BackHandler(enabled = expanded) { closeSearch() }
 }
 
 @Composable
