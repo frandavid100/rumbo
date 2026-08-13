@@ -25,7 +25,7 @@ object FoodSuggestionEngine {
         excludedFoodIds: Set<Long> = emptySet(),
         limit: Int = 3
     ): List<FoodSuggestion> {
-        if (limit <= 0 || repertoireFoodIds.isEmpty()) return emptyList()
+        if (limit <= 0) return emptyList()
 
         val foodsById = foods.associateBy { it.id }
         val activeFoodIds = planningRules.asSequence()
