@@ -51,8 +51,8 @@ object FoodSuggestionEngine {
             .map { candidate ->
                 val categoryNovelty = when {
                     candidate.category == FoodCategory.OTHER -> 0.0
-                    categoryCounts[candidate.category] == null -> 0.35
-                    else -> 0.10 / max(1, categoryCounts.getValue(candidate.category))
+                    categoryCounts[candidate.category] == null -> 0.20
+                    else -> 0.05 / max(1, categoryCounts.getValue(candidate.category))
                 }
                 FoodSuggestion(
                     food = candidate,
@@ -72,16 +72,21 @@ object FoodSuggestionEngine {
     private fun nutritionalUtility(
         food: Food, recommendation: Recommendation?, deficits: Deficits
     ): Double {
-        if (recommendation == null) return if ((food.fiberGrams ?: 0.0) >= 3.0) 0.08 else 0.0
+        val efficiency = MacroEfficiency.from(food)
+        if (recommendation == null) return efficiency.fiber * 0.12
         val servingFactor = (food.unitAmount ?: 100.0).coerceIn(30.0, 250.0) / 100.0
         fun contribution(value: Double?, target: Int): Double =
-            ((value ?: 0.0) * servingFactor / target.coerceAtLeast(1)).coerceIn(0.0, 0.35) / 0.35
-        return deficits.calories * contribution(food.calories, recommendation.calories) * 0.05 +
-            deficits.protein * contribution(food.proteinGrams, recommendation.proteinGrams) * 0.55 +
-            deficits.carbohydrate * contribution(food.carbohydrateGrams, recommendation.carbohydrateGrams) * 0.10 +
-            deficits.fat * contribution(food.fatGrams, recommendation.fatGrams) * 0.10 +
+            ((value ?: 0.0) * servingFactor / target.coerceAtLeast(1))
+                .coerceIn(0.0, 0.35) / 0.35
+        return deficits.calories * contribution(food.calories, recommendation.calories) * 0.03 +
+            deficits.protein * (contribution(food.proteinGrams, recommendation.proteinGrams) * 0.30 +
+                efficiency.protein * 0.40) +
+            deficits.carbohydrate * (contribution(food.carbohydrateGrams, recommendation.carbohydrateGrams) * 0.08 +
+                efficiency.carbohydrate * 0.16) +
+            deficits.fat * (contribution(food.fatGrams, recommendation.fatGrams) * 0.08 +
+                efficiency.fat * 0.16) +
             deficits.fiber * (((food.fiberGrams ?: 0.0) * servingFactor / 25.0)
-                .coerceIn(0.0, 0.35) / 0.35) * 0.20
+                .coerceIn(0.0, 0.35) / 0.35 * 0.12 + efficiency.fiber * 0.22)
     }
 
     private fun affinity(candidate: Food, activeFoods: List<Food>): Double {
@@ -91,7 +96,7 @@ object FoodSuggestionEngine {
         val sameFamily = candidate.family.normalized()?.let { value ->
             activeFoods.any { it.family.normalized() == value }
         } == true
-        return when { sameSubcategory -> 0.20; sameFamily -> 0.10; else -> 0.0 }
+        return when { sameSubcategory -> 0.05; sameFamily -> 0.02; else -> 0.0 }
     }
 
     private fun reason(
@@ -100,11 +105,28 @@ object FoodSuggestionEngine {
         categoryCounts: Map<FoodCategory, Int>,
         deficits: Deficits
     ): String {
+        val efficiency = MacroEfficiency.from(food)
+        val efficientSources = listOf(
+            Triple(deficits.protein * efficiency.protein, efficiency.protein,
+                "Mucha proteína para las calorías que aporta."),
+            Triple(deficits.carbohydrate * efficiency.carbohydrate, efficiency.carbohydrate,
+                "Aporta hidratos con muy poca grasa."),
+            Triple(deficits.fat * efficiency.fat, efficiency.fat,
+                if (food.saturatedFatGrams != null) "Aporta grasa con poca grasa saturada."
+                else "Aporta grasa sin apenas hidratos."),
+            Triple(deficits.fiber * efficiency.fiber, efficiency.fiber,
+                "Mucha fibra para las calorías que aporta.")
+        )
+        efficientSources.filter { it.second >= 0.65 }
+            .maxByOrNull { it.first }
+            ?.takeIf { it.first >= 0.10 }
+            ?.let { return it.third }
+
         val nutrientReasons = listOf(
-            Triple(deficits.protein, food.proteinGrams ?: 0.0, "Puede ayudarte a cubrir la proteína del menú."),
-            Triple(deficits.fiber, food.fiberGrams ?: 0.0, "Puede ayudarte a aumentar la fibra del menú."),
-            Triple(deficits.carbohydrate, food.carbohydrateGrams ?: 0.0, "Puede ayudarte a completar los hidratos del menú."),
-            Triple(deficits.fat, food.fatGrams ?: 0.0, "Puede ayudarte a completar las grasas del menú.")
+            Triple(deficits.protein, food.proteinGrams ?: 0.0, "Ayuda a cubrir la proteína del menú."),
+            Triple(deficits.fiber, food.fiberGrams ?: 0.0, "Ayuda a aumentar la fibra del menú."),
+            Triple(deficits.carbohydrate, food.carbohydrateGrams ?: 0.0, "Ayuda a completar los hidratos del menú."),
+            Triple(deficits.fat, food.fatGrams ?: 0.0, "Ayuda a completar las grasas del menú.")
         )
         nutrientReasons.filter { it.second >= 3.0 }
             .maxByOrNull { it.first * it.second }
@@ -161,6 +183,46 @@ object FoodSuggestionEngine {
             }
         }
         return result
+    }
+
+    private data class MacroEfficiency(
+        val protein: Double,
+        val carbohydrate: Double,
+        val fat: Double,
+        val fiber: Double
+    ) {
+        companion object {
+            fun from(food: Food): MacroEfficiency {
+                val calories = (food.calories ?: 0.0).coerceAtLeast(1.0)
+                val protein = food.proteinGrams ?: 0.0
+                val carbohydrate = food.carbohydrateGrams ?: 0.0
+                val fat = food.fatGrams ?: 0.0
+                val saturated = food.saturatedFatGrams
+                val proteinPer100Calories = protein * 100.0 / calories
+                val carbohydrateEnergyShare = (carbohydrate * 4.0 / calories).coerceIn(0.0, 1.0)
+                val fatEnergyShare = (fat * 9.0 / calories).coerceIn(0.0, 1.0)
+                val unsaturatedFactor = if (saturated == null || fat <= 0.0) 0.75 else
+                    1.0 - (saturated / fat).coerceIn(0.0, 1.0) * 0.75
+                val fiberPer100Calories = (food.fiberGrams ?: 0.0) * 100.0 / calories
+                return MacroEfficiency(
+                    protein = (proteinPer100Calories / 15.0).coerceIn(0.0, 1.0) *
+                        secondaryNutrientPenalty(food),
+                    carbohydrate = carbohydrateEnergyShare * (1.0 - fatEnergyShare),
+                    fat = fatEnergyShare * (1.0 - carbohydrateEnergyShare) * unsaturatedFactor,
+                    fiber = (fiberPer100Calories / 4.0).coerceIn(0.0, 1.0)
+                )
+            }
+
+            private fun secondaryNutrientPenalty(food: Food): Double {
+                val saturatedPenalty = food.saturatedFatGrams?.let {
+                    1.0 - (it / 10.0).coerceIn(0.0, 0.5)
+                } ?: 0.90
+                val saltPenalty = food.saltGrams?.let {
+                    1.0 - (it / 5.0).coerceIn(0.0, 0.4)
+                } ?: 0.95
+                return saturatedPenalty * saltPenalty
+            }
+        }
     }
 
     private data class Deficits(
