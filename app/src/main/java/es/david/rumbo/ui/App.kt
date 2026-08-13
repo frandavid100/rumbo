@@ -5778,7 +5778,7 @@ private fun FoodDishCatalogScreen(
                     onAddFood = onAddFood,
                     onAddDish = onAddDish,
                     modifier = Modifier.weight(1f),
-                    header = if (filter != CatalogFilter.FOODS && recipeRecommendations.isNotEmpty()) {
+                    header = if (filter != CatalogFilter.FOODS) {
                         {
                             RecipeRecommendationSection(
                                 recommendations = recipeRecommendations,
@@ -5817,6 +5817,16 @@ private fun RecipeRecommendationSection(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (recommendations.isEmpty()) {
+            Card(Modifier.fillMaxWidth()) {
+                Text(
+                    "Todavía no puedes preparar ninguna receta recomendada. Añade más alimentos al repertorio para que aparezcan aquí.",
+                    modifier = Modifier.padding(14.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         recommendations.forEach { recommendation ->
             Card(Modifier.fillMaxWidth()) {
                 Row(
