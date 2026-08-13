@@ -179,6 +179,33 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun coldStartPrioritizesMacrosBeforeFiber() {
+        val foods = listOf(
+            food(1, "Soja", FoodCategory.PROTEIN, "Mercadona", 330.0, 45.0, 20.0, 5.0,
+                fiber = 18.0, subcategory = "Soja"),
+            food(2, "Tosta", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 10.0, 70.0, 3.0,
+                fiber = 12.0, subcategory = "Pan"),
+            food(3, "Cacahuete", FoodCategory.FAT, "Mercadona", 620.0, 26.0, 8.0, 50.0,
+                fiber = 10.0, subcategory = "Frutos secos")
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = foods,
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, "")
+        )
+        assertEquals(3, result.size)
+        assertTrue(result.none { it.reason.contains("fibra") })
+        assertTrue(result.all {
+            it.reason.contains("proteína") ||
+                it.reason.contains("hidratos") ||
+                it.reason.contains("grasa")
+        })
+    }
+
+    @Test
     fun carbohydrateSuggestionContinuesAtEightyFourPercentWithLargeRepertoire() {
         val menuBase = food(
             1, "Base del menú", FoodCategory.CARBOHYDRATE, "Mercadona",
