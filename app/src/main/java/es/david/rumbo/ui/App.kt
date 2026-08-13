@@ -5574,6 +5574,11 @@ private fun HomeCatalogSearch(
         scrolledAppBarContainerColor = MaterialTheme.colorScheme.surface,
         scrolledSearchBarContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     )
+    val expandedSearchColors = SearchBarDefaults.colors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        dividerColor = Color.Transparent,
+        inputFieldColors = appBarColors.searchBarColors.inputFieldColors
+    )
     val foodsById = remember(foods) { foods.associateBy { it.id } }
     val entries = remember(foods, dishes, normalized, filter, repertoireFoodIds) {
         buildList {
@@ -5669,36 +5674,45 @@ private fun HomeCatalogSearch(
             Box(Modifier.fillMaxWidth()) {
                 inputField()
             }
-        }
+        },
+        colors = expandedSearchColors,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
     ) {
-        CatalogEntries(
-            entries = entries,
-            foods = foods,
-            foodsById = foodsById,
-            dishes = dishes,
-            repertoireFoodIds = repertoireFoodIds,
-            mode = if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
-            normalizedQuery = normalized,
-            onOpenFood = { id -> close(); onOpenFood(id) },
-            onOpenDish = { id -> close(); onOpenDish(id) },
-            onAddFood = {},
-            onAddDish = {},
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            header = {
-                Column(Modifier.fillMaxWidth()) {
-                    Spacer(Modifier.height(8.dp))
-                    CatalogFilterMenu(filter, onFilterChange)
-                    if (query.isBlank()) {
-                        Text(
-                            "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
-                            Modifier.padding(vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            CatalogEntries(
+                entries = entries,
+                foods = foods,
+                foodsById = foodsById,
+                dishes = dishes,
+                repertoireFoodIds = repertoireFoodIds,
+                mode = if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
+                normalizedQuery = normalized,
+                onOpenFood = { id -> close(); onOpenFood(id) },
+                onOpenDish = { id -> close(); onOpenDish(id) },
+                onAddFood = {},
+                onAddDish = {},
+                compactPresentation = true,
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                header = {
+                    Column(Modifier.fillMaxWidth()) {
+                        Spacer(Modifier.height(8.dp))
+                        CatalogFilterMenu(filter, onFilterChange)
+                        if (query.isBlank()) {
+                            Text(
+                                "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
+                                Modifier.padding(vertical = 12.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        scanMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
-                    scanMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
-            }
-        )
+            )
+        }
     }
 
     BackHandler(enabled = state.targetValue == SearchBarValue.Expanded) { close() }
@@ -5954,13 +5968,49 @@ private fun CatalogEntries(
     onAddFood: () -> Unit,
     onAddDish: () -> Unit,
     modifier: Modifier = Modifier,
-    header: (@Composable () -> Unit)? = null
+    header: (@Composable () -> Unit)? = null,
+    compactPresentation: Boolean = false
 ) {
     var addMenuExpanded by remember { mutableStateOf(false) }
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(bottom = 32.dp)) {
         if (header != null) item { header() }
         items(entries, key = { "${if (it.isDish) "dish" else "food"}_${it.id}" }) { entry ->
-            if (entry.isDish) {
+            if (compactPresentation) {
+                val food = if (entry.isDish) null else foodsById[entry.id]
+                val dish = if (entry.isDish) dishes.firstOrNull { it.id == entry.id } else null
+                if (food == null && dish == null) return@items
+                val category = food?.category ?: dish!!.dominantCategory(foodsById)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
+                        }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FoodCategoryBadge(category)
+                    Column(
+                        Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            entry.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            if (entry.isDish) "Plato" else category.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                }
+            } else if (entry.isDish) {
                 val dish = dishes.firstOrNull { it.id == entry.id } ?: return@items
                 val totals = dish.nutrition(foodsById)
                 Row(
