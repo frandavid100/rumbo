@@ -5989,15 +5989,7 @@ private fun CatalogEntries(
                 val dish = if (entry.isDish) dishes.firstOrNull { it.id == entry.id } else null
                 if (food == null && dish == null) return@items
                 val category = food?.category ?: dish!!.dominantCategory(foodsById)
-                val nutrition = food?.let {
-                    NutritionTotals(
-                        calories = it.calories ?: 0.0,
-                        proteinGrams = it.proteinGrams ?: 0.0,
-                        carbohydrateGrams = it.carbohydrateGrams ?: 0.0,
-                        fatGrams = it.fatGrams ?: 0.0,
-                        fiberGrams = it.fiberGrams
-                    )
-                } ?: dish!!.nutrition(foodsById)
+                val dishNutrition = dish?.nutrition(foodsById)
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -6028,10 +6020,10 @@ private fun CatalogEntries(
                         )
                     }
                     SearchNutritionGrid(
-                        calories = nutrition.calories,
-                        protein = nutrition.proteinGrams,
-                        carbohydrates = nutrition.carbohydrateGrams,
-                        fat = nutrition.fatGrams,
+                        calories = food?.calories ?: dishNutrition?.calories,
+                        protein = food?.proteinGrams ?: dishNutrition?.proteinGrams,
+                        carbohydrates = food?.carbohydrateGrams ?: dishNutrition?.carbohydrateGrams,
+                        fat = food?.fatGrams ?: dishNutrition?.fatGrams,
                         modifier = Modifier.width(98.dp)
                     )
                 }
