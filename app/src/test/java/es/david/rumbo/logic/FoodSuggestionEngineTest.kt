@@ -96,6 +96,29 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun smallRepertoireKeepsReceivingSuggestionsWithoutAStrongMenuDeficit() {
+        val repertoire = (1L..14L).map { id ->
+            food(
+                id, "Alimento $id", FoodCategory.PROTEIN, "Mercadona",
+                120.0, 20.0, 2.0, 2.0
+            )
+        }
+        val candidate = food(
+            100, "Alternativa", FoodCategory.PROTEIN, "Mercadona",
+            150.0, 12.0, 8.0, 6.0
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = repertoire + candidate,
+            repertoireFoodIds = repertoire.mapTo(mutableSetOf()) { it.id },
+            planningRules = repertoire.map { rule(it.id) },
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = null
+        )
+        assertEquals(listOf(100L), result.map { it.food.id })
+    }
+
+    @Test
     fun dismissedFoodIsNotSuggestedAgain() {
         val foods = listOf(
             food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
