@@ -19,15 +19,16 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Aplicar presentación nutricional de Inicio
-        if: github.event_name == 'push' && hashFiles('tools/patch_home_nutrition_detail.py') != ''
+      - name: Aplicar corrección localizada de Inicio
+        if: github.event_name == 'push' && hashFiles('tools/patch_home_nutrition_detail_v2.py') != ''
         run: |
-          python3 tools/patch_home_nutrition_detail.py
+          git show de985ddec8001c972c3c96929da1ba0ff2c539e2:app/src/main/java/es/david/rumbo/ui/App.kt > app/src/main/java/es/david/rumbo/ui/App.kt
+          python3 tools/patch_home_nutrition_detail_v2.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/java/es/david/rumbo/ui/App.kt
-          git add -u tools/patch_home_nutrition_detail.py
-          git commit -m "Completar información nutricional de Inicio"
+          git add -u tools/patch_home_nutrition_detail_v2.py
+          git commit -m "Completar información nutricional de Inicio sin alterar otras pantallas"
           git push origin HEAD:fix/ui-review-0.45.0
       - name: Restaurar catálogo nutricional de Mercadona
         run: |
