@@ -3600,7 +3600,7 @@ private fun PlanningRuleCards(
     }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Planificación", style = MaterialTheme.typography.titleLarge)
+            Text("Cuándo quieres comerlo", style = MaterialTheme.typography.titleLarge)
             HorizontalDivider()
             if (rules.isEmpty()) {
                 Text("Sin reglas. Rumbo no utilizará este alimento automáticamente.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -7416,8 +7416,10 @@ private fun FoodDetailScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FoodCategoryBadge(food.category)
                     Column(Modifier.weight(1f)) {
@@ -7478,11 +7480,12 @@ private fun FoodDetailScreen(
                         if (index < food.links.lastIndex) HorizontalDivider()
                     }
                 }
-            }
         }
 
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Unidad habitual", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                     TextButton(onClick = { editingUnit = !editingUnit }) {
@@ -7567,7 +7570,6 @@ private fun FoodDetailScreen(
                         unitError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     }
                 }
-            }
         }
 
 
@@ -7583,7 +7585,7 @@ private fun FoodDetailScreen(
         if (containingDishes.isNotEmpty()) {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Presente en estos platos", style = MaterialTheme.typography.titleLarge)
+                    Text("En qué platos puedes comerlo", style = MaterialTheme.typography.titleLarge)
                     HorizontalDivider()
                     containingDishes.forEachIndexed { index, dish ->
                         Row(Modifier.fillMaxWidth().clickable { onOpenDish(dish.id) }.padding(vertical = 10.dp)) {
@@ -7596,8 +7598,10 @@ private fun FoodDetailScreen(
             }
         }
 
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
                 Text("Alimentos similares", style = MaterialTheme.typography.titleLarge)
                 HorizontalDivider()
                 Text(
@@ -7613,7 +7617,6 @@ private fun FoodDetailScreen(
                         if (index < similarFoods.lastIndex) HorizontalDivider()
                     }
                 }
-            }
         }
 
     }
