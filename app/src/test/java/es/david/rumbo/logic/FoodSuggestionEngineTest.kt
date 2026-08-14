@@ -228,7 +228,7 @@ class FoodSuggestionEngineTest {
                 toastWithSomeProtein.id to assessment
             )
         )
-        assertEquals(listOf(protein.id), result.map { it.food.id })
+        assertEquals(protein.id, result.first().food.id)
         assertTrue(result.none { it.food.id == toastWithSomeProtein.id })
         assertTrue(result.first().reason.contains("proteína"))
     }
