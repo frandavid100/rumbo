@@ -167,13 +167,28 @@ object WeeklyMenuGenerator {
             }
         }).takeLast(HISTORY_GENERATIONS * entriesPerGeneration)
 
+        val generatedMeals = checkNotNull(bestMeals)
+        val incumbentIsComplete = currentMeals.isNotEmpty() && WeekDay.entries.all { day ->
+            val assessment = MealPlanEvaluator.assessDay(
+                day, currentMeals, foodsById, dishesById, recommendation
+            )
+            assessment.missingMealTypes.isEmpty() && assessment.actual.isComplete
+        }
+        val retainIncumbent = incumbentIsComplete &&
+            nutritionalQuality(currentMeals, foodsById, dishesById, recommendation) <=
+            nutritionalQuality(generatedMeals, foodsById, dishesById, recommendation)
+        val selectedMeals = if (retainIncumbent) currentMeals else generatedMeals
         return GeneratedWeeklyMenu(
-            meals = checkNotNull(bestMeals),
-            history = newHistory,
-            generation = generation,
+            meals = selectedMeals,
+            history = if (retainIncumbent) history else newHistory,
+            generation = if (retainIncumbent) {
+                (history.maxOfOrNull { it.generation } ?: generation)
+            } else {
+                generation
+            },
             diagnostics = WeekDay.entries.map { day ->
                 deviation(day, MealPlanEvaluator.assessDay(
-                    day, checkNotNull(bestMeals), foodsById, dishesById, recommendation
+                    day, selectedMeals, foodsById, dishesById, recommendation
                 ))
             }
         )
@@ -437,6 +452,24 @@ object WeeklyMenuGenerator {
             if (draw <= 0.0) return rule
         }
         return weighted.last().first
+    }
+
+    private fun nutritionalQuality(
+        meals: List<PlannedMeal>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation
+    ): Double {
+        val deviations = WeekDay.entries.map { day ->
+            deviation(
+                day,
+                MealPlanEvaluator.assessDay(
+                    day, meals, foodsById, dishesById, recommendation
+                )
+            )
+        }
+        return deviations.maxOf { it.worst } * 1_000_000.0 +
+            deviations.sumOf { it.weightedTotal } * 10_000.0
     }
 
     private fun score(
