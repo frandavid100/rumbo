@@ -1315,6 +1315,11 @@ private fun HomeScreen(
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
         .filter { it.planWeek == PlanWeek.CURRENT }
+    val currentMenuAcceptable = remember(meals, foodsById, dishesById, recommendation) {
+        recommendation?.let {
+            isAcceptableWeeklyMenu(meals, foodsById, dishesById, it)
+        } == true
+    }
     val repertoireAssessment by produceState<RepertoireAssessment?>(
         initialValue = null,
         data.activeProfileData?.planningRules,
@@ -1335,8 +1340,49 @@ private fun HomeScreen(
             }
         }
     }
-    val menuReady = repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
+    val menuReady = currentMenuAcceptable ||
+        repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
         repertoireAssessment?.status == RepertoireStatus.ROBUST
+    val candidateAssessments by produceState<Map<Long, RepertoireAssessment>?>(
+        initialValue = null,
+        menuReady,
+        repertoireAssessment,
+        data.foods,
+        data.activeProfileData?.repertoireFoodIds,
+        data.activeProfileData?.dismissedSuggestionFoodIds,
+        data.activeProfileData?.planningRules,
+        recommendation,
+        mealShares
+    ) {
+        val baseline = repertoireAssessment
+        val target = recommendation
+        value = if (menuReady || baseline == null || target == null) {
+            emptyMap()
+        } else {
+            withContext(Dispatchers.Default) {
+                val candidates = FoodSuggestionEngine.suggest(
+                    foods = data.foods,
+                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                    planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                    plannedMeals = emptyList(),
+                    dishesById = dishesById,
+                    recommendation = target,
+                    excludedFoodIds = data.activeProfileData
+                        ?.dismissedSuggestionFoodIds.orEmpty(),
+                    repertoireAssessment = baseline,
+                    limit = 3
+                ).map { it.food }
+                RepertoireEvaluator.evaluateCandidates(
+                    rules = data.activeProfileData?.planningRules.orEmpty(),
+                    candidates = candidates,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = target,
+                    mealShares = mealShares
+                )
+            }
+        }
+    }
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
@@ -1344,7 +1390,9 @@ private fun HomeScreen(
         data.activeProfileData?.planningRules,
         data.dishes,
         recommendation,
-        repertoireAssessment
+        repertoireAssessment,
+        candidateAssessments,
+        menuReady
     ) {
         FoodSuggestionEngine.suggest(
             foods = data.foods,
@@ -1355,7 +1403,7 @@ private fun HomeScreen(
             recommendation = recommendation,
             excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
             repertoireAssessment = repertoireAssessment,
-            candidateAssessments = null,
+            candidateAssessments = candidateAssessments,
             limit = 100
         )
     }
@@ -1461,12 +1509,12 @@ private fun HomeScreen(
                 )
             }
         }
-        if (foodSuggestions.isNotEmpty() || recommendation != null && !menuReady) {
+        if (!menuReady && (foodSuggestions.isNotEmpty() || recommendation != null)) {
             item {
                 FoodSuggestionsCard(
                     suggestions = foodSuggestions.take(3),
                     showMenuReadiness = recommendation != null && !menuReady,
-                    assessment = repertoireAssessment,
+                    assessment = if (candidateAssessments == null) null else repertoireAssessment,
                     rules = data.activeProfileData?.planningRules.orEmpty(),
                     foodsById = foodsById,
                     onOpenFood = openFood,
@@ -2832,6 +2880,33 @@ private fun naturalListText(values: List<String>): String = when (values.size) {
     1 -> values.first()
     2 -> values.joinToString(" y ")
     else -> values.dropLast(1).joinToString(", ") + " y " + values.last()
+}
+
+private fun isAcceptableWeeklyMenu(
+    meals: List<PlannedMeal>,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    recommendation: Recommendation
+): Boolean {
+    if (meals.isEmpty()) return false
+    val assessments = WeekDay.entries.map { day ->
+        MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, recommendation)
+    }
+    if (assessments.any { it.missingMealTypes.isNotEmpty() || !it.actual.isComplete }) {
+        return false
+    }
+    fun averageRatio(actual: (PlanNutritionAssessment) -> Double, target: Double): Double =
+        assessments.map(actual).average() / target.coerceAtLeast(1.0)
+    val calories = averageRatio({ it.actual.calories }, recommendation.calories.toDouble())
+    val protein = averageRatio({ it.actual.proteinGrams }, recommendation.proteinGrams.toDouble())
+    val carbohydrates = averageRatio(
+        { it.actual.carbohydrateGrams }, recommendation.carbohydrateGrams.toDouble()
+    )
+    val fat = averageRatio({ it.actual.fatGrams }, recommendation.fatGrams.toDouble())
+    return calories in 0.90..1.10 &&
+        protein in 0.90..1.15 &&
+        carbohydrates in 0.85..1.15 &&
+        fat in 0.85..1.15
 }
 
 private fun weeklyAssessmentText(assessment: PlanNutritionAssessment?): String {
