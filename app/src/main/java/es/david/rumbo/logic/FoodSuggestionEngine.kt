@@ -14,6 +14,8 @@ import kotlin.math.max
 
 data class FoodSuggestion(val food: Food, val reason: String, val score: Double)
 
+enum class EfficientNutrient { PROTEIN, CARBOHYDRATES, FAT, FIBER }
+
 /** Ranks foods outside the repertoire using only data already stored by Rumbo. */
 object FoodSuggestionEngine {
     private const val MINIMUM_ACTIVE_REPERTOIRE_SIZE = 15
@@ -95,7 +97,8 @@ object FoodSuggestionEngine {
         val ranked = foods.asSequence()
             .filter {
                 it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
-                    it.hasComparableNutrition() && it.isRecommendableCandidate()
+                    it.hasComparableNutrition() && it.isRecommendableCandidate() &&
+                    efficientNutrients(it).isNotEmpty()
             }
             .filter { activeRetailers.isEmpty() || it.retailer.normalized() in activeRetailers }
             .map { candidate ->
@@ -135,10 +138,12 @@ object FoodSuggestionEngine {
                 )
             }
             .filter {
-                val nutritionallyRelevant =
-                    macroCorrectionNeeded && it.food.addresses(deficits) ||
-                        coverageCorrectionNeeded ||
-                        repertoireNeedsExpansion
+                val nutritionallyRelevant = if (macroCorrectionNeeded) {
+                    it.food.addresses(deficits)
+                } else {
+                    coverageCorrectionNeeded || repertoireNeedsExpansion ||
+                        efficientNutrients(it.food).isNotEmpty()
+                }
                 val producesMeasuredImprovement = if (hasMeasuredImprover) {
                     val baseline = repertoireAssessment
                     baseline != null && candidateAssessments?.get(it.food.id)?.let { candidate ->
@@ -189,41 +194,19 @@ object FoodSuggestionEngine {
     ): List<FoodSuggestion> {
         val selected = mutableListOf<FoodSuggestion>()
         val usedReasons = mutableSetOf<String>()
-        val usedCategories = mutableSetOf<FoodCategory>()
         ranked.forEach { suggestion ->
-            if (selected.size >= limit) return@forEach
-            if (suggestion.reason !in usedReasons &&
-                suggestion.food.category !in usedCategories
-            ) {
+            if (selected.size < limit && suggestion.reason !in usedReasons) {
                 selected += suggestion
                 usedReasons += suggestion.reason
-                usedCategories += suggestion.food.category
             }
         }
         ranked.forEach { suggestion ->
-            if (selected.size >= limit) return@forEach
-            if (selected.none { it.food.id == suggestion.food.id } &&
-                suggestion.food.category !in usedCategories
-            ) {
-                selected += suggestion.copy(reason = varietyReason(suggestion.food))
-                usedCategories += suggestion.food.category
-            }
-        }
-        ranked.forEach { suggestion ->
-            if (selected.size >= limit) return@forEach
-            if (selected.none { it.food.id == suggestion.food.id }) {
-                selected += suggestion.copy(reason = varietyReason(suggestion.food))
+            if (selected.size < limit && selected.none { it.food.id == suggestion.food.id }) {
+                selected += suggestion
             }
         }
         return selected
     }
-
-    private fun varietyReason(food: Food): String =
-        if (food.category != FoodCategory.OTHER) {
-            "Aporta más variedad con " + food.category.label.lowercase() + "."
-        } else {
-            "Puede darte más variedad."
-        }
 
     private fun nutritionalUtility(
         food: Food,
@@ -282,6 +265,23 @@ object FoodSuggestionEngine {
         return when { sameSubcategory -> 0.05; sameFamily -> 0.02; else -> 0.0 }
     }
 
+    fun efficientNutrients(food: Food): Set<EfficientNutrient> {
+        if (!food.hasComparableNutrition() || !food.isRecommendableCandidate()) return emptySet()
+        val efficiency = MacroEfficiency.from(food)
+        return buildSet {
+            if (food.isCleanProteinSource() &&
+                food.isEfficientSourceOf(NutrientKind.PROTEIN)
+            ) add(EfficientNutrient.PROTEIN)
+            if (food.isEfficientSourceOf(NutrientKind.CARBOHYDRATES)) {
+                add(EfficientNutrient.CARBOHYDRATES)
+            }
+            if (food.isEfficientSourceOf(NutrientKind.FAT)) add(EfficientNutrient.FAT)
+            if ((food.fiberGrams ?: 0.0) >= 2.0 &&
+                efficiency.fiber >= MINIMUM_MACRO_EFFICIENCY
+            ) add(EfficientNutrient.FIBER)
+        }
+    }
+
     private fun reason(
         food: Food,
         activeFoods: List<Food>,
@@ -291,69 +291,40 @@ object FoodSuggestionEngine {
         prioritizeMacros: Boolean
     ): String {
         val efficiency = MacroEfficiency.from(food)
-        val efficientSources = listOf(
-            Triple(
-                if (food.isCleanProteinSource()) deficits.protein * efficiency.protein else 0.0,
-                if (food.isCleanProteinSource()) efficiency.protein else 0.0,
-                "Aporta proteína con pocas calorías."
-            ),
-            Triple(deficits.carbohydrate * efficiency.carbohydrate, efficiency.carbohydrate,
-                "Aporta hidratos con poca grasa."),
-            Triple(deficits.fat * efficiency.fat, efficiency.fat,
-                if (food.saturatedFatGrams != null) "Aporta grasa con poca grasa saturada."
-                else "Aporta grasa con pocos hidratos."),
-            Triple(
-                if (prioritizeMacros) 0.0 else deficits.fiber * efficiency.fiber,
-                if (prioritizeMacros) 0.0 else efficiency.fiber,
-                "Aporta fibra con pocas calorías."
-            )
-        )
-        efficientSources.filter { it.second >= MINIMUM_MACRO_EFFICIENCY }
-            .maxByOrNull { it.first }
-            ?.takeIf { it.first >= 0.10 }
-            ?.let { return it.third }
-
-        val nutrientReasons = listOf(
-            Triple(
-                deficits.protein,
-                food.isEfficientSourceOf(NutrientKind.PROTEIN),
-                "Porque falta proteína en tu repertorio."
-            ),
-            Triple(
-                deficits.carbohydrate,
-                food.isEfficientSourceOf(NutrientKind.CARBOHYDRATES),
-                "Porque faltan hidratos en tu repertorio."
-            ),
-            Triple(
-                deficits.fat,
-                food.isEfficientSourceOf(NutrientKind.FAT),
-                "Porque faltan grasas en tu repertorio."
-            )
-        )
-        nutrientReasons.filter { it.second }
-            .maxByOrNull { it.first }
-            ?.takeIf { it.first >= 0.12 }
-            ?.let { return it.third }
-        if (food.category != FoodCategory.OTHER && categoryCounts[food.category] == null) {
-            return "Aporta más variedad con " + food.category.label.lowercase() + "."
+        val available = efficientNutrients(food)
+        val weighted = buildList {
+            if (EfficientNutrient.PROTEIN in available) {
+                add(EfficientNutrient.PROTEIN to deficits.protein * efficiency.protein)
+            }
+            if (EfficientNutrient.CARBOHYDRATES in available) {
+                add(EfficientNutrient.CARBOHYDRATES to
+                    deficits.carbohydrate * efficiency.carbohydrate)
+            }
+            if (EfficientNutrient.FAT in available) {
+                add(EfficientNutrient.FAT to deficits.fat * efficiency.fat)
+            }
+            if (!prioritizeMacros && EfficientNutrient.FIBER in available) {
+                add(EfficientNutrient.FIBER to deficits.fiber * efficiency.fiber)
+            }
         }
-        if (repertoireNeedsExpansion) return "Puede darte más variedad."
-
-        val sharedSubcategory = food.subcategory.normalized()?.let { subcategory ->
-            activeFoods.any { it.subcategory.normalized() == subcategory }
-        } == true
-        if (sharedSubcategory) {
-            return "Ya comes otros productos de " +
-                food.subcategory.orEmpty().lowercase() + "."
+        val selected = weighted.maxByOrNull { it.second }
+            ?.takeIf { it.second > 0.0 }
+            ?.first
+            ?: available.maxByOrNull {
+                when (it) {
+                    EfficientNutrient.PROTEIN -> efficiency.protein
+                    EfficientNutrient.CARBOHYDRATES -> efficiency.carbohydrate
+                    EfficientNutrient.FAT -> efficiency.fat
+                    EfficientNutrient.FIBER -> if (prioritizeMacros) -1.0 else efficiency.fiber
+                }
+            }
+            ?: error("Solo se solicita un motivo para candidatos eficientes")
+        return when (selected) {
+            EfficientNutrient.PROTEIN -> "Es una fuente eficiente de proteína."
+            EfficientNutrient.CARBOHYDRATES -> "Es una fuente eficiente de hidratos."
+            EfficientNutrient.FAT -> "Es una fuente eficiente de grasas."
+            EfficientNutrient.FIBER -> "Es una fuente eficiente de fibra."
         }
-        val sharedFamily = food.family.normalized()?.let { family ->
-            activeFoods.any { it.family.normalized() == family }
-        } == true
-        if (sharedFamily) {
-            return "Ya comes otros productos de " +
-                food.family.orEmpty().lowercase() + "."
-        }
-        return "Puede darte más variedad."
     }
 
     /**
