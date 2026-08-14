@@ -213,6 +213,7 @@ import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.PlanningSlot
+import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.RecommendedGoal
 import es.david.rumbo.model.Sex
 import es.david.rumbo.model.UserProfile
