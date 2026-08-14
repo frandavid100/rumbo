@@ -177,6 +177,32 @@ object RepertoireEvaluator {
         )
     }
 
+    fun evaluateCandidates(
+        rules: List<PlanningRule>,
+        candidates: List<Food>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double> = defaultShares,
+        thresholds: RepertoireThresholds = RepertoireThresholds()
+    ): Map<Long, RepertoireAssessment> = candidates.associate { candidate ->
+        val hypotheticalRule = PlanningRule(
+            itemKind = PlannedItemKind.FOOD,
+            itemId = candidate.id,
+            allowedMealTypes = MealType.entries.toSet(),
+            frequency = PlanningFrequency.NORMAL,
+            preferredGrams = (candidate.unitAmount ?: 100.0).coerceIn(30.0, 250.0)
+        )
+        candidate.id to evaluate(
+            rules = rules + hypotheticalRule,
+            foodsById = foodsById,
+            dishesById = dishesById,
+            recommendation = recommendation,
+            mealShares = mealShares,
+            thresholds = thresholds
+        )
+    }
+
     private data class Candidate(
         val assessments: List<PlanNutritionAssessment>,
         val worstPenalty: Double,
