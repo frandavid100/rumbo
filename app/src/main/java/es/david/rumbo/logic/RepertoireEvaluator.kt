@@ -60,7 +60,7 @@ data class RepertoireMetrics(
  * nutrition solver from developing beside the real one.
  */
 object RepertoireEvaluator {
-    private val seeds = listOf(11L, 97L, 313L, 997L)
+    private val seeds = listOf(11L)
     private val defaultShares = mapOf(
         MealType.BREAKFAST to .20,
         MealType.MORNING_SNACK to .10,
