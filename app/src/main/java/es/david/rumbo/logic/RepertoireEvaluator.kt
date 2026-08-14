@@ -144,27 +144,28 @@ object RepertoireEvaluator {
         val best = ranked.first()
         val acceptable = ranked.filter { it.worstPenalty <= thresholds.acceptableWorstPenalty }
         val distinctAcceptable = acceptable.distinctBy { it.fingerprint }
-        val average = averageNutrition(best.assessments)
-        val target = MealPlanEvaluator.dailyTarget(recommendation)
-        val nutrition = listOf(
-            NutrientKind.CALORIES to (average.calories to target.calories),
-            NutrientKind.PROTEIN to (average.proteinGrams to target.proteinGrams),
-            NutrientKind.CARBOHYDRATES to (average.carbohydrateGrams to target.carbohydrateGrams),
-            NutrientKind.FAT to (average.fatGrams to target.fatGrams)
-        ).associate { (kind, values) ->
-            val evaluation = NutritionTolerancePolicy.evaluate(kind, values.first, values.second)
-            kind to NutrientCapacity(values.second, values.first, evaluation.difference, evaluation.fit)
-        }
+        // Menu generation is heuristic: failure to find a good week is not proof
+        // that the repertoire lacks a nutrient. Capacity is therefore evaluated
+        // deterministically from the amounts and slots the rules actually permit.
+        val nutrition = capacityNutrition(
+            activeRules, foodsById, recommendation, mealShares
+        )
         val limitedMeals = coverage.count { it.alternatives <= thresholds.limitedMealAlternatives }
         val profiles = activeFoods.map(::nutritionProfile).distinct().size
         val factors = limitingFactors(nutrition, coverage, fruitGroups, vegetableGroups, thresholds)
         val suggestions = suggestionsFor(nutrition, fruitGroups, vegetableGroups)
         val reactivations = matchingInactiveFoods(inactiveFoods, suggestions)
+        val capacityPenalty = nutrition.maxOf { (kind, capacity) ->
+            NutritionTolerancePolicy.evaluate(
+                kind, capacity.bestAchievable, capacity.target
+            ).penalty
+        }
         val status = when {
-            best.worstPenalty > thresholds.acceptableWorstPenalty -> RepertoireStatus.INSUFFICIENT
+            capacityPenalty > thresholds.acceptableWorstPenalty ->
+                RepertoireStatus.INSUFFICIENT
             distinctAcceptable.size >= thresholds.robustSolutionCount && limitedMeals == 0 &&
                 profiles >= thresholds.robustSolutionCount -> RepertoireStatus.ROBUST
-            best.worstPenalty <= thresholds.goodWorstPenalty && limitedMeals == 0 -> RepertoireStatus.SUFFICIENT
+            limitedMeals == 0 -> RepertoireStatus.SUFFICIENT
             else -> RepertoireStatus.LIMITED
         }
         return RepertoireAssessment(
@@ -219,6 +220,69 @@ object RepertoireEvaluator {
             fiberGrams = values.map { it.actual.fiberGrams }.average(),
             isComplete = values.all { it.actual.isComplete }
         )
+
+    /**
+     * Computes whether every nutrient target lies inside the daily interval that
+     * the configured rules permit. Optional foods have a zero lower bound;
+     * «Siempre» and fixed slots contribute their real compulsory minimum.
+     *
+     * This is intentionally independent from the stochastic menu generator:
+     * not finding a combination is a generator limitation, not evidence that
+     * another food is required.
+     */
+    private fun capacityNutrition(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double>
+    ): Map<NutrientKind, NutrientCapacity> {
+        val targets = mapOf(
+            NutrientKind.CALORIES to recommendation.calories.toDouble(),
+            NutrientKind.PROTEIN to recommendation.proteinGrams.toDouble(),
+            NutrientKind.CARBOHYDRATES to recommendation.carbohydrateGrams.toDouble(),
+            NutrientKind.FAT to recommendation.fatGrams.toDouble()
+        )
+        fun Food.value(kind: NutrientKind): Double = when (kind) {
+            NutrientKind.CALORIES -> calories ?: 0.0
+            NutrientKind.PROTEIN -> proteinGrams ?: 0.0
+            NutrientKind.CARBOHYDRATES -> carbohydrateGrams ?: 0.0
+            NutrientKind.FAT -> fatGrams ?: 0.0
+        }
+        fun usable(rule: PlanningRule, day: WeekDay): Boolean =
+            day in rule.allowedDays && rule.allowedMealTypes.any {
+                (mealShares[it] ?: defaultShares.getValue(it)) > 0.0
+            }
+
+        return targets.mapValues { (kind, target) ->
+            val dailyBest = WeekDay.entries.map { day ->
+                var minimum = 0.0
+                var maximum = 0.0
+                rules.filter { usable(it, day) }.forEach { rule ->
+                    val food = foodsById[rule.itemId] ?: return@forEach
+                    val perGram = food.value(kind) / 100.0
+                    val requiredCount = rule.requiredSlots().count { slot ->
+                        slot.day == day &&
+                            (mealShares[slot.mealType]
+                                ?: defaultShares.getValue(slot.mealType)) > 0.0
+                    }
+                    if (requiredCount > 0) {
+                        minimum += perGram * rule.preferredGrams *
+                            rule.minimumFactor * requiredCount
+                        maximum += perGram * rule.preferredGrams *
+                            rule.maximumFactor * requiredCount
+                    } else {
+                        maximum += perGram * rule.preferredGrams * rule.maximumFactor
+                    }
+                }
+                target.coerceIn(minimum, maximum)
+            }
+            val worst = dailyBest.maxByOrNull { achieved ->
+                NutritionTolerancePolicy.evaluate(kind, achieved, target).penalty
+            } ?: 0.0
+            val evaluation = NutritionTolerancePolicy.evaluate(kind, worst, target)
+            NutrientCapacity(target, worst, evaluation.difference, evaluation.fit)
+        }
+    }
 
     private fun emptyAssessment(
         recommendation: Recommendation,
