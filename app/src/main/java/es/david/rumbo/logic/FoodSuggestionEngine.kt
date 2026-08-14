@@ -16,6 +16,7 @@ data class FoodSuggestion(val food: Food, val reason: String, val score: Double)
 /** Ranks foods outside the repertoire using only data already stored by Rumbo. */
 object FoodSuggestionEngine {
     private const val MINIMUM_ACTIVE_REPERTOIRE_SIZE = 15
+    private const val MINIMUM_MACRO_EFFICIENCY = 0.65
 
     fun suggest(
         foods: List<Food>,
@@ -176,14 +177,25 @@ object FoodSuggestionEngine {
                     .coerceIn(0.0, 0.35) / 0.35 * 0.12 + efficiency.fiber * 0.22)
     }
 
-    private fun Food.addresses(deficits: Deficits): Boolean {
+    private fun Food.addresses(deficits: Deficits): Boolean =
+        deficits.protein > 0.0 && isEfficientSourceOf(NutrientKind.PROTEIN) ||
+            deficits.carbohydrate > 0.0 && isEfficientSourceOf(NutrientKind.CARBOHYDRATES) ||
+            deficits.fat > 0.0 && isEfficientSourceOf(NutrientKind.FAT)
+
+    private fun Food.isEfficientSourceOf(kind: NutrientKind): Boolean {
         val efficiency = MacroEfficiency.from(this)
-        return deficits.protein > 0.0 &&
-            isCleanProteinSource() && (proteinGrams ?: 0.0) >= 3.0 ||
-            deficits.carbohydrate > 0.0 &&
-                (carbohydrateGrams ?: 0.0) >= 5.0 && efficiency.carbohydrate >= 0.25 ||
-            deficits.fat > 0.0 &&
-                (fatGrams ?: 0.0) >= 3.0 && efficiency.fat >= 0.25
+        return when (kind) {
+            NutrientKind.PROTEIN ->
+                isCleanProteinSource() && (proteinGrams ?: 0.0) >= 3.0 &&
+                    efficiency.protein >= MINIMUM_MACRO_EFFICIENCY
+            NutrientKind.CARBOHYDRATES ->
+                (carbohydrateGrams ?: 0.0) >= 5.0 &&
+                    efficiency.carbohydrate >= MINIMUM_MACRO_EFFICIENCY
+            NutrientKind.FAT ->
+                (fatGrams ?: 0.0) >= 3.0 &&
+                    efficiency.fat >= MINIMUM_MACRO_EFFICIENCY
+            NutrientKind.CALORIES -> false
+        }
     }
 
     private fun affinity(candidate: Food, activeFoods: List<Food>): Double {
@@ -230,19 +242,22 @@ object FoodSuggestionEngine {
         val nutrientReasons = listOf(
             Triple(
                 deficits.protein,
-                if (food.isCleanProteinSource()) food.proteinGrams ?: 0.0 else 0.0,
-                "Porque falta proteína en tu menú."
+                food.isEfficientSourceOf(NutrientKind.PROTEIN),
+                "Porque falta proteína en tu repertorio."
             ),
             Triple(
-                if (prioritizeMacros) 0.0 else deficits.fiber,
-                if (prioritizeMacros) 0.0 else food.fiberGrams ?: 0.0,
-                "Porque falta fibra en tu menú."
+                deficits.carbohydrate,
+                food.isEfficientSourceOf(NutrientKind.CARBOHYDRATES),
+                "Porque faltan hidratos en tu repertorio."
             ),
-            Triple(deficits.carbohydrate, food.carbohydrateGrams ?: 0.0, "Porque faltan hidratos en tu menú."),
-            Triple(deficits.fat, food.fatGrams ?: 0.0, "Porque faltan grasas en tu menú.")
+            Triple(
+                deficits.fat,
+                food.isEfficientSourceOf(NutrientKind.FAT),
+                "Porque faltan grasas en tu repertorio."
+            )
         )
-        nutrientReasons.filter { it.second >= 3.0 }
-            .maxByOrNull { it.first * it.second }
+        nutrientReasons.filter { it.second }
+            .maxByOrNull { it.first }
             ?.takeIf { it.first >= 0.12 }
             ?.let { return it.third }
         if (food.category != FoodCategory.OTHER && categoryCounts[food.category] == null) {
