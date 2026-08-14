@@ -1337,45 +1337,6 @@ private fun HomeScreen(
     }
     val menuReady = repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
         repertoireAssessment?.status == RepertoireStatus.ROBUST
-    val candidateAssessments by produceState<Map<Long, RepertoireAssessment>?>(
-        initialValue = null,
-        repertoireAssessment,
-        data.foods,
-        data.activeProfileData?.repertoireFoodIds,
-        data.activeProfileData?.dismissedSuggestionFoodIds,
-        data.activeProfileData?.planningRules,
-        recommendation,
-        mealShares
-    ) {
-        val baseline = repertoireAssessment
-        val target = recommendation
-        value = if (baseline == null || target == null) {
-            emptyMap()
-        } else {
-            withContext(Dispatchers.Default) {
-                val shortlist = FoodSuggestionEngine.suggest(
-                    foods = data.foods,
-                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                    planningRules = data.activeProfileData?.planningRules.orEmpty(),
-                    plannedMeals = emptyList(),
-                    dishesById = dishesById,
-                    recommendation = target,
-                    excludedFoodIds = data.activeProfileData
-                        ?.dismissedSuggestionFoodIds.orEmpty(),
-                    repertoireAssessment = baseline,
-                    limit = 12
-                ).map { it.food }
-                RepertoireEvaluator.evaluateCandidates(
-                    rules = data.activeProfileData?.planningRules.orEmpty(),
-                    candidates = shortlist,
-                    foodsById = foodsById,
-                    dishesById = dishesById,
-                    recommendation = target,
-                    mealShares = mealShares
-                )
-            }
-        }
-    }
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
@@ -1383,8 +1344,7 @@ private fun HomeScreen(
         data.activeProfileData?.planningRules,
         data.dishes,
         recommendation,
-        repertoireAssessment,
-        candidateAssessments
+        repertoireAssessment
     ) {
         FoodSuggestionEngine.suggest(
             foods = data.foods,
@@ -1395,7 +1355,7 @@ private fun HomeScreen(
             recommendation = recommendation,
             excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
             repertoireAssessment = repertoireAssessment,
-            candidateAssessments = candidateAssessments,
+            candidateAssessments = null,
             limit = 100
         )
     }
@@ -1501,10 +1461,14 @@ private fun HomeScreen(
                 )
             }
         }
-        if (foodSuggestions.isNotEmpty()) {
+        if (foodSuggestions.isNotEmpty() || recommendation != null && !menuReady) {
             item {
                 FoodSuggestionsCard(
                     suggestions = foodSuggestions.take(3),
+                    showMenuReadiness = recommendation != null && !menuReady,
+                    assessment = repertoireAssessment,
+                    rules = data.activeProfileData?.planningRules.orEmpty(),
+                    foodsById = foodsById,
                     onOpenFood = openFood,
                     onDismiss = onDismissFoodSuggestion
                 )
@@ -1528,65 +1492,9 @@ private fun HomeScreen(
                         onOpenDish = onOpenDish,
                         onApplyAdjustedMeals = onApplyAdjustedMeals
                     )
-                } else {
-                    MenuReadinessSection(
-                        assessment = repertoireAssessment,
-                        rules = data.activeProfileData?.planningRules.orEmpty(),
-                        foodsById = foodsById
-                    )
                 }
             }
         }
-        }
-    }
-}
-
-@Composable
-private fun MenuReadinessSection(
-    assessment: RepertoireAssessment?,
-    rules: List<PlanningRule>,
-    foodsById: Map<Long, Food>
-) {
-    Column(
-        Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text("Tu menú de esta semana", style = MaterialTheme.typography.titleLarge)
-        Card(Modifier.fillMaxWidth()) {
-            Column(
-                Modifier.fillMaxWidth().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    "Rumbo todavía no puede crear un menú adecuado",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Text(
-                    "Necesitas más alimentos. Puedes elegir alguno de los recomendados " +
-                        "o utilizar la búsqueda para añadir el que quieras.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                if (assessment == null) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text(
-                        "Comprobando qué necesita tu repertorio…",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    repertoireActionMessages(assessment, rules, foodsById).forEach { message ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Text("•", style = MaterialTheme.typography.bodyMedium)
-                            Text(message, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -1594,6 +1502,10 @@ private fun MenuReadinessSection(
 @Composable
 private fun FoodSuggestionsCard(
     suggestions: List<FoodSuggestion>,
+    showMenuReadiness: Boolean,
+    assessment: RepertoireAssessment?,
+    rules: List<PlanningRule>,
+    foodsById: Map<Long, Food>,
     onOpenFood: (Long) -> Unit,
     onDismiss: (Long) -> Unit
 ) {
@@ -1665,6 +1577,36 @@ private fun FoodSuggestionsCard(
                                     }
                                 }
                             }
+                            }
+                        }
+                    }
+                }
+                if (showMenuReadiness) {
+                    if (suggestions.isNotEmpty()) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                    Column(
+                        Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "Para que podamos crearte un menú adecuado, añade alimentos " +
+                                "recomendados o usa la búsqueda para elegir los que tú quieras.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        if (assessment == null) {
+                            Text(
+                                "Analizando tus alimentos…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                        } else {
+                            val message = repertoireActionMessages(
+                                assessment, rules, foodsById
+                            ).joinToString(" ")
+                            if (message.isNotBlank()) {
+                                Text(message, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
@@ -2823,11 +2765,7 @@ private fun repertoireActionMessages(
     }
     val messages = mutableListOf<String>()
 
-    deficits.sortedBy { (kind, _, _) ->
-        assessment.nutrition[kind]?.let {
-            it.deviation / it.target.coerceAtLeast(1.0)
-        } ?: 0.0
-    }.forEach { (_, efficientNutrient, label) ->
+    val missingByMeal = deficits.mapNotNull { (_, efficientNutrient, label) ->
         val mealsWithoutSource = activeMeals.filter { mealType ->
             activeRules.none { rule ->
                 val usableForMeal = mealType in rule.allowedMealTypes ||
@@ -2836,20 +2774,25 @@ private fun repertoireActionMessages(
                     FoodSuggestionEngine.efficientNutrients(foodsById.getValue(rule.itemId))
             }
         }
-        messages += if (mealsWithoutSource.isNotEmpty()) {
-            "Necesitas fuentes eficientes de $label asignadas a " +
-                mealListText(mealsWithoutSource) + "."
-        } else {
-            "Necesitas añadir más fuentes eficientes de $label al repertorio."
-        }
+        mealsWithoutSource.takeIf { it.isNotEmpty() }?.let { label to it }
+    }
+    val generalDeficitLabels = deficits.map { it.third }
+        .filterNot { label -> missingByMeal.any { it.first == label } }
+    if (generalDeficitLabels.isNotEmpty()) {
+        messages += "Necesitas más fuentes eficientes de " +
+            naturalListText(generalDeficitLabels) + "."
+    }
+    missingByMeal.forEach { (label, meals) ->
+        messages += "Necesitas fuentes eficientes de $label asignadas a " +
+            mealListText(meals) + "."
     }
 
-    if (excesses.isNotEmpty()) {
+    val forcedRules = activeRules.any {
+        it.frequency == PlanningFrequency.ALWAYS || it.fixedSlots.isNotEmpty()
+    }
+    if (excesses.isNotEmpty() && (deficits.isEmpty() || forcedRules)) {
         val excessLabels = excesses.map { it.third }
         val deficitLabels = deficits.map { it.third }
-        val forcedRules = activeRules.any {
-            it.frequency == PlanningFrequency.ALWAYS || it.fixedSlots.isNotEmpty()
-        }
         messages += when {
             forcedRules && deficitLabels.isNotEmpty() ->
                 "Las reglas actuales hacen que el menú supere " +
