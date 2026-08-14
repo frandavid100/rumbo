@@ -340,6 +340,57 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun measuredProteinImprovementDoesNotHideOtherNeededMacros() {
+        val protein = food(
+            100, "Pechuga", FoodCategory.PROTEIN, "Mercadona",
+            110.0, 24.0, 0.0, 1.0, subcategory = "Aves"
+        )
+        val carbohydrate = food(
+            101, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona",
+            360.0, 7.0, 79.0, 1.0, subcategory = "Arroz"
+        )
+        val assessment = RepertoireAssessment(
+            status = RepertoireStatus.INSUFFICIENT,
+            nutrition = mapOf(
+                NutrientKind.CALORIES to NutrientCapacity(1875.0, 1330.0, -545.0, TargetFit.OUTSIDE),
+                NutrientKind.PROTEIN to NutrientCapacity(154.0, 68.0, -86.0, TargetFit.OUTSIDE),
+                NutrientKind.CARBOHYDRATES to NutrientCapacity(198.0, 64.0, -134.0, TargetFit.OUTSIDE),
+                NutrientKind.FAT to NutrientCapacity(52.0, 52.0, 0.0, TargetFit.ON_TARGET)
+            ),
+            coverage = emptyList(),
+            fruitConcepts = 0,
+            vegetableConcepts = 0,
+            acceptableSolutions = 0,
+            limitingFactors = emptyList(),
+            suggestions = listOf(FoodCategory.PROTEIN, FoodCategory.CARBOHYDRATE),
+            reactivationFoodIds = emptyList(),
+            metrics = RepertoireMetrics(2.0, 4.0, 8, 3, 1, 4)
+        )
+        val improvedProtein = assessment.copy(
+            nutrition = assessment.nutrition + (
+                NutrientKind.PROTEIN to NutrientCapacity(
+                    154.0, 120.0, -34.0, TargetFit.OUTSIDE
+                )
+            )
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = listOf(protein, carbohydrate),
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            repertoireAssessment = assessment,
+            candidateAssessments = mapOf(
+                protein.id to improvedProtein,
+                carbohydrate.id to assessment
+            )
+        )
+        assertTrue(result.any { it.food.id == protein.id })
+        assertTrue(result.any { it.food.id == carbohydrate.id })
+    }
+
+    @Test
     fun dismissedFoodIsNotSuggestedAgain() {
         val foods = listOf(
             food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
