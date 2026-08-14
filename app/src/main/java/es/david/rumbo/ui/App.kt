@@ -1188,7 +1188,7 @@ private fun ProfileSwitcher(
     activeProfile: UserProfile?,
     onSelect: (Long) -> Unit,
     onManage: () -> Unit,
-    onShoppingList: () -> Unit,
+    onShoppingList: (() -> Unit)?,
     onSettings: () -> Unit,
     avatarSize: Int = 36
 ) {
@@ -1221,14 +1221,16 @@ private fun ProfileSwitcher(
                     onManage()
                 }
             )
-            DropdownMenuItem(
-                leadingIcon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) },
-                text = { Text("Lista de la compra") },
-                onClick = {
-                    expanded = false
-                    onShoppingList()
-                }
-            )
+            onShoppingList?.let { openShoppingList ->
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) },
+                    text = { Text("Lista de la compra") },
+                    onClick = {
+                        expanded = false
+                        openShoppingList()
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = { Text("Opciones") },
                 onClick = {
@@ -1333,6 +1335,8 @@ private fun HomeScreen(
             }
         }
     }
+    val menuReady = repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
+        repertoireAssessment?.status == RepertoireStatus.ROBUST
     val candidateAssessments by produceState<Map<Long, RepertoireAssessment>?>(
         initialValue = null,
         repertoireAssessment,
@@ -1382,11 +1386,7 @@ private fun HomeScreen(
         repertoireAssessment,
         candidateAssessments
     ) {
-        if (recommendation != null && repertoireAssessment != null &&
-            candidateAssessments == null
-        ) {
-            emptyList()
-        } else FoodSuggestionEngine.suggest(
+        FoodSuggestionEngine.suggest(
             foods = data.foods,
             repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
             planningRules = data.activeProfileData?.planningRules.orEmpty(),
@@ -1461,7 +1461,7 @@ private fun HomeScreen(
                         activeProfile = data.profile,
                         onSelect = onSwitchProfile,
                         onManage = onManageProfiles,
-                        onShoppingList = onOpenShoppingList,
+                        onShoppingList = if (menuReady) onOpenShoppingList else null,
                         onSettings = onOpenSettings,
                         avatarSize = 36
                     )
@@ -1512,28 +1512,81 @@ private fun HomeScreen(
         }
         if (recommendation != null) {
             item {
-            WeeklyHomeMenuSection(
-                meals = meals,
-                foodsById = foodsById,
-                dishesById = dishesById,
-                recommendation = recommendation,
-                sectionTitle = "Tu menú de esta semana",
-                repertoireWarning = repertoireCoverageWarning(
-                    repertoireAssessment,
-                    data.activeProfileData?.planningRules.orEmpty(),
-                    foodsById
-                ),
-                onOpenNextWeek = onOpenNextWeek,
-                onOpenCurrentShoppingList = onOpenCurrentShoppingList,
-                onRegenerateWeek = onRegenerateWeek,
-                isGeneratingMenu = isGeneratingMenu,
-                onOpenMeal = onOpenMeal,
-                onOpenFood = openFood,
-                onOpenDish = onOpenDish,
-                onApplyAdjustedMeals = onApplyAdjustedMeals
-            )
+                if (menuReady) {
+                    WeeklyHomeMenuSection(
+                        meals = meals,
+                        foodsById = foodsById,
+                        dishesById = dishesById,
+                        recommendation = recommendation,
+                        sectionTitle = "Tu menú de esta semana",
+                        onOpenNextWeek = onOpenNextWeek,
+                        onOpenCurrentShoppingList = onOpenCurrentShoppingList,
+                        onRegenerateWeek = onRegenerateWeek,
+                        isGeneratingMenu = isGeneratingMenu,
+                        onOpenMeal = onOpenMeal,
+                        onOpenFood = openFood,
+                        onOpenDish = onOpenDish,
+                        onApplyAdjustedMeals = onApplyAdjustedMeals
+                    )
+                } else {
+                    MenuReadinessSection(
+                        assessment = repertoireAssessment,
+                        rules = data.activeProfileData?.planningRules.orEmpty(),
+                        foodsById = foodsById
+                    )
+                }
             }
         }
+        }
+    }
+}
+
+@Composable
+private fun MenuReadinessSection(
+    assessment: RepertoireAssessment?,
+    rules: List<PlanningRule>,
+    foodsById: Map<Long, Food>
+) {
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Tu menú de esta semana", style = MaterialTheme.typography.titleLarge)
+        Card(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Rumbo todavía no puede crear un menú adecuado",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text(
+                    "Necesitas más alimentos. Puedes elegir alguno de los recomendados " +
+                        "o utilizar la búsqueda para añadir el que quieras.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (assessment == null) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text(
+                        "Comprobando qué necesita tu repertorio…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    repertoireActionMessages(assessment, rules, foodsById).forEach { message ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text("•", style = MaterialTheme.typography.bodyMedium)
+                            Text(message, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -2743,52 +2796,93 @@ private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
 }
 
 
-private fun repertoireCoverageWarning(
-    assessment: RepertoireAssessment?,
+private fun repertoireActionMessages(
+    assessment: RepertoireAssessment,
     rules: List<PlanningRule>,
     foodsById: Map<Long, Food>
-): String? {
-    assessment ?: return null
-    val missingNutrients = listOf(
-        NutrientKind.PROTEIN to EfficientNutrient.PROTEIN,
-        NutrientKind.CARBOHYDRATES to EfficientNutrient.CARBOHYDRATES,
-        NutrientKind.FAT to EfficientNutrient.FAT
-    ).filter { (kind, _) ->
+): List<String> {
+    val activeRules = rules.filter {
+        it.isActive && it.itemKind == PlannedItemKind.FOOD &&
+            foodsById[it.itemId]?.hasComparableNutrition() == true
+    }
+    val activeMeals = assessment.coverage.map { it.mealType }
+    val nutrientSpecs = listOf(
+        Triple(NutrientKind.PROTEIN, EfficientNutrient.PROTEIN, "proteína"),
+        Triple(NutrientKind.CARBOHYDRATES, EfficientNutrient.CARBOHYDRATES, "hidratos"),
+        Triple(NutrientKind.FAT, EfficientNutrient.FAT, "grasas")
+    )
+    val deficits = nutrientSpecs.filter { (kind, _, _) ->
         assessment.nutrition[kind]?.let {
             it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET
         } == true
     }
-    if (missingNutrients.isEmpty()) return null
-
-    val activeRules = rules.filter {
-        it.isActive && it.itemKind == PlannedItemKind.FOOD &&
-            foodsById[it.itemId] != null
+    val excesses = nutrientSpecs.filter { (kind, _, _) ->
+        assessment.nutrition[kind]?.let {
+            it.deviation > 0.0 && it.fit != TargetFit.ON_TARGET
+        } == true
     }
-    val problem = missingNutrients.firstNotNullOfOrNull { (kind, efficientNutrient) ->
-        assessment.coverage.firstOrNull { coverage ->
+    val messages = mutableListOf<String>()
+
+    deficits.sortedBy { (kind, _, _) ->
+        assessment.nutrition[kind]?.let {
+            it.deviation / it.target.coerceAtLeast(1.0)
+        } ?: 0.0
+    }.forEach { (_, efficientNutrient, label) ->
+        val mealsWithoutSource = activeMeals.filter { mealType ->
             activeRules.none { rule ->
-                val allowed = coverage.mealType in rule.allowedMealTypes ||
-                    rule.requiredSlots().any { it.mealType == coverage.mealType }
-                allowed && efficientNutrient in
+                val usableForMeal = mealType in rule.allowedMealTypes ||
+                    rule.requiredSlots().any { it.mealType == mealType }
+                usableForMeal && efficientNutrient in
                     FoodSuggestionEngine.efficientNutrients(foodsById.getValue(rule.itemId))
             }
-        }?.let { kind to it.mealType }
-    } ?: return null
+        }
+        messages += if (mealsWithoutSource.isNotEmpty()) {
+            "Necesitas fuentes eficientes de $label asignadas a " +
+                mealListText(mealsWithoutSource) + "."
+        } else {
+            "Necesitas añadir más fuentes eficientes de $label al repertorio."
+        }
+    }
 
-    val nutrient = when (problem.first) {
-        NutrientKind.PROTEIN -> "proteína"
-        NutrientKind.CARBOHYDRATES -> "hidratos"
-        NutrientKind.FAT -> "grasas"
-        NutrientKind.CALORIES -> return null
+    if (excesses.isNotEmpty()) {
+        val excessLabels = excesses.map { it.third }
+        val deficitLabels = deficits.map { it.third }
+        val forcedRules = activeRules.any {
+            it.frequency == PlanningFrequency.ALWAYS || it.fixedSlots.isNotEmpty()
+        }
+        messages += when {
+            forcedRules && deficitLabels.isNotEmpty() ->
+                "Las reglas actuales hacen que el menú supere " +
+                    naturalListText(excessLabels) + " antes de alcanzar " +
+                    naturalListText(deficitLabels) + ". Revisa los alimentos marcados " +
+                    "como «Siempre» y las cantidades obligatorias."
+            deficitLabels.isNotEmpty() ->
+                "Las opciones actuales hacen que el menú supere " +
+                    naturalListText(excessLabels) + " antes de alcanzar " +
+                    naturalListText(deficitLabels) + "."
+            else ->
+                "Las opciones actuales hacen que el menú supere " +
+                    naturalListText(excessLabels) + "."
+        }
     }
-    val meal = problem.second.label.lowercase()
-    val cannotBuild = assessment.status == RepertoireStatus.INSUFFICIENT ||
-        assessment.acceptableSolutions == 0
-    return if (cannotBuild) {
-        "No podemos crear un menú adecuado porque faltan fuentes de $nutrient para $meal."
-    } else {
-        "Será más fácil crear menús variados si añades fuentes de $nutrient para $meal."
+
+    if (messages.isEmpty()) {
+        assessment.coverage.filter { it.alternatives == 0 }.forEach {
+            messages += "No tienes alimentos asignados a ${it.mealType.label.lowercase()}."
+        }
     }
+    if (messages.isEmpty()) messages += assessment.limitingFactors
+    return messages.distinct().take(3)
+}
+
+private fun mealListText(meals: List<MealType>): String =
+    naturalListText(meals.distinct().map { it.label.lowercase() })
+
+private fun naturalListText(values: List<String>): String = when (values.size) {
+    0 -> ""
+    1 -> values.first()
+    2 -> values.joinToString(" y ")
+    else -> values.dropLast(1).joinToString(", ") + " y " + values.last()
 }
 
 private fun weeklyAssessmentText(assessment: PlanNutritionAssessment?): String {
