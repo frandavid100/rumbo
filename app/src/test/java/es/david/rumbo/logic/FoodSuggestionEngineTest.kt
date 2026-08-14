@@ -188,6 +188,10 @@ class FoodSuggestionEngineTest {
             2, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona",
             360.0, 7.0, 79.0, 1.0, subcategory = "Arroz"
         )
+        val toastWithSomeProtein = food(
+            3, "Tosta", FoodCategory.CARBOHYDRATE, "Mercadona",
+            360.0, 10.0, 70.0, 3.0, subcategory = "Pan"
+        )
         val assessment = RepertoireAssessment(
             status = RepertoireStatus.INSUFFICIENT,
             nutrition = mapOf(
@@ -206,7 +210,7 @@ class FoodSuggestionEngineTest {
             metrics = RepertoireMetrics(1.0, 1.0, 15, 3, 0, 4)
         )
         val result = FoodSuggestionEngine.suggest(
-            foods = listOf(protein, carbohydrate),
+            foods = listOf(protein, carbohydrate, toastWithSomeProtein),
             repertoireFoodIds = emptySet(),
             planningRules = emptyList(),
             plannedMeals = listOf(
@@ -220,6 +224,7 @@ class FoodSuggestionEngineTest {
             repertoireAssessment = assessment
         )
         assertEquals(listOf(protein.id), result.map { it.food.id })
+        assertTrue(result.none { it.food.id == toastWithSomeProtein.id })
         assertTrue(result.first().reason.contains("proteína"))
     }
 
