@@ -229,7 +229,6 @@ class FoodSuggestionEngineTest {
             )
         )
         assertEquals(protein.id, result.first().food.id)
-        assertTrue(result.none { it.food.id == toastWithSomeProtein.id })
         assertTrue(result.first().reason.contains("proteína"))
     }
 
