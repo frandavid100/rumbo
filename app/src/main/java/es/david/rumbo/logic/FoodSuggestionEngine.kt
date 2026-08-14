@@ -72,6 +72,17 @@ object FoodSuggestionEngine {
                 it == NutrientKind.CARBOHYDRATES ||
                 it == NutrientKind.FAT
         }
+        val mealCoverageNeed = repertoireAssessment?.coverage
+            ?.filter { it.alternatives <= 1 }
+            ?.minByOrNull { it.alternatives }
+        val coverageCorrectionNeeded = mealCoverageNeed != null
+        val coverageReason = mealCoverageNeed?.let {
+            if (it.alternatives == 0) {
+                "Te falta una opción para " + it.mealType.label.lowercase() + "."
+            } else {
+                "Te falta variedad para " + it.mealType.label.lowercase() + "."
+            }
+        }
 
         val hasMeasuredImprover = if (
             repertoireAssessment != null && candidateAssessments != null
@@ -104,10 +115,16 @@ object FoodSuggestionEngine {
                 } else null
                 FoodSuggestion(
                     food = candidate,
-                    reason = reason(
-                        candidate, activeFoods, categoryCounts, deficits,
-                        repertoireNeedsExpansion, macroCorrectionNeeded
-                    ),
+                    reason = if (
+                        coverageReason != null && !candidate.addresses(deficits)
+                    ) {
+                        coverageReason
+                    } else {
+                        reason(
+                            candidate, activeFoods, categoryCounts, deficits,
+                            repertoireNeedsExpansion, macroCorrectionNeeded
+                        )
+                    },
                     score = nutritionalUtility(
                         candidate, recommendation, deficits, macroCorrectionNeeded
                     ) +
@@ -118,9 +135,10 @@ object FoodSuggestionEngine {
                 )
             }
             .filter {
-                val nutritionallyRelevant = if (macroCorrectionNeeded) {
-                    it.food.addresses(deficits)
-                } else repertoireNeedsExpansion
+                val nutritionallyRelevant =
+                    macroCorrectionNeeded && it.food.addresses(deficits) ||
+                        coverageCorrectionNeeded ||
+                        repertoireNeedsExpansion
                 val producesMeasuredImprovement = if (hasMeasuredImprover) {
                     val baseline = repertoireAssessment
                     baseline != null && candidateAssessments?.get(it.food.id)?.let { candidate ->
