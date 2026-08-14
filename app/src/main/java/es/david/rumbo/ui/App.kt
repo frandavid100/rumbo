@@ -1343,67 +1343,6 @@ private fun HomeScreen(
     val menuReady = currentMenuAcceptable ||
         repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
         repertoireAssessment?.status == RepertoireStatus.ROBUST
-    val candidateAssessments by produceState<Map<Long, RepertoireAssessment>?>(
-        initialValue = null,
-        menuReady,
-        repertoireAssessment,
-        data.foods,
-        data.activeProfileData?.repertoireFoodIds,
-        data.activeProfileData?.dismissedSuggestionFoodIds,
-        data.activeProfileData?.planningRules,
-        recommendation,
-        mealShares
-    ) {
-        val baseline = repertoireAssessment
-        val target = recommendation
-        value = if (baseline == null || target == null) {
-            emptyMap()
-        } else {
-            withContext(Dispatchers.Default) {
-                val repertoireIds =
-                    data.activeProfileData?.repertoireFoodIds.orEmpty()
-                val rules = data.activeProfileData?.planningRules.orEmpty()
-                val excludedIds =
-                    data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty()
-                val candidates = FoodSuggestionEngine.suggest(
-                    foods = data.foods,
-                    repertoireFoodIds = repertoireIds,
-                    planningRules = rules,
-                    plannedMeals = emptyList(),
-                    dishesById = dishesById,
-                    recommendation = target,
-                    excludedFoodIds = excludedIds,
-                    repertoireAssessment = baseline,
-                    limit = 12
-                ).map { it.food }
-                val measured = linkedMapOf<Long, RepertoireAssessment>()
-                for (batch in candidates.chunked(3)) {
-                    measured += RepertoireEvaluator.evaluateCandidates(
-                        rules = rules,
-                        candidates = batch,
-                        foodsById = foodsById,
-                        dishesById = dishesById,
-                        recommendation = target,
-                        mealShares = mealShares
-                    )
-                    val verified = FoodSuggestionEngine.suggest(
-                        foods = data.foods,
-                        repertoireFoodIds = repertoireIds,
-                        planningRules = rules,
-                        plannedMeals = emptyList(),
-                        dishesById = dishesById,
-                        recommendation = target,
-                        excludedFoodIds = excludedIds,
-                        repertoireAssessment = baseline,
-                        candidateAssessments = measured,
-                        limit = 3
-                    )
-                    if (verified.size >= 3) break
-                }
-                measured
-            }
-        }
-    }
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
@@ -1411,26 +1350,20 @@ private fun HomeScreen(
         data.activeProfileData?.planningRules,
         data.dishes,
         recommendation,
-        repertoireAssessment,
-        candidateAssessments,
-        menuReady
+        repertoireAssessment
     ) {
-        if (candidateAssessments == null) {
-            emptyList()
-        } else {
-            FoodSuggestionEngine.suggest(
-                foods = data.foods,
-                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                planningRules = data.activeProfileData?.planningRules.orEmpty(),
-                plannedMeals = emptyList(),
-                dishesById = dishesById,
-                recommendation = recommendation,
-                excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
-                repertoireAssessment = repertoireAssessment,
-                candidateAssessments = candidateAssessments,
-                limit = 100
-            )
-        }
+        FoodSuggestionEngine.suggest(
+            foods = data.foods,
+            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+            planningRules = data.activeProfileData?.planningRules.orEmpty(),
+            plannedMeals = emptyList(),
+            dishesById = dishesById,
+            recommendation = recommendation,
+            excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
+            repertoireAssessment = repertoireAssessment,
+            candidateAssessments = null,
+            limit = 100
+        )
     }
     var pinnedSuggestions by remember { mutableStateOf<List<FoodSuggestion>>(emptyList()) }
     var mayRefreshPinnedSuggestions by remember { mutableStateOf(true) }
@@ -1448,8 +1381,8 @@ private fun HomeScreen(
             mayRefreshPinnedSuggestions = true
         }
     }
-    LaunchedEffect(candidateAssessments, foodSuggestions, mayRefreshPinnedSuggestions) {
-        if (candidateAssessments != null && mayRefreshPinnedSuggestions) {
+    LaunchedEffect(repertoireAssessment, foodSuggestions, mayRefreshPinnedSuggestions) {
+        if (repertoireAssessment != null && mayRefreshPinnedSuggestions) {
             pinnedSuggestions = (
                 pinnedSuggestions + foodSuggestions.filter { candidate ->
                     pinnedSuggestions.none { it.food.id == candidate.food.id }
@@ -1568,7 +1501,7 @@ private fun HomeScreen(
                 FoodSuggestionsCard(
                     suggestions = pinnedSuggestions,
                     showMenuReadiness = recommendation != null && !menuReady,
-                    assessment = if (candidateAssessments == null) null else repertoireAssessment,
+                    assessment = repertoireAssessment,
                     rules = data.activeProfileData?.planningRules.orEmpty(),
                     foodsById = foodsById,
                     onOpenFood = openFood,
