@@ -1431,7 +1431,7 @@ private fun HomeScreen(
                 onCloseSearch = closeSearch,
                 onOpenFood = {
                     suppressRestoredSearchKeyboard = true
-                    onOpenFood(it)
+                    openFood(it)
                 },
                 onOpenDish = {
                     suppressRestoredSearchKeyboard = true
