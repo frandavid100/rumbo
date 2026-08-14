@@ -178,6 +178,7 @@ import es.david.rumbo.data.AppRepository
 import es.david.rumbo.logic.FoodSimilarityEngine
 import es.david.rumbo.logic.FoodSuggestion
 import es.david.rumbo.logic.FoodSuggestionEngine
+import es.david.rumbo.logic.EfficientNutrient
 import es.david.rumbo.logic.MealPlanEvaluator
 import es.david.rumbo.logic.MealQuantityOptimizer
 import es.david.rumbo.logic.NutrientKind
@@ -295,6 +296,7 @@ fun RumboApp(repository: AppRepository) {
     }
     var selectedMeasurementId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var foodNavigationStack by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var selectedPlannedMealId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedDishId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -352,6 +354,11 @@ fun RumboApp(repository: AppRepository) {
                 destination
             }
             screen in setOf(Screen.ADD_DISH, Screen.DISH_DETAIL) -> Screen.FOODS.name
+            screen == Screen.FOOD_DETAIL && foodNavigationStack.isNotEmpty() -> {
+                selectedFoodId = foodNavigationStack.last()
+                foodNavigationStack = foodNavigationStack.dropLast(1)
+                Screen.FOOD_DETAIL.name
+            }
             screen == Screen.FOOD_DETAIL && foodReturnScreenName != null -> {
                 val destination = foodReturnScreenName!!
                 foodReturnScreenName = null
@@ -554,12 +561,17 @@ fun RumboApp(repository: AppRepository) {
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             AnimatedContent(
-                targetState = screenName,
+                targetState = if (screenName == Screen.FOOD_DETAIL.name) {
+                    "$screenName:${selectedFoodId ?: 0L}"
+                } else {
+                    screenName
+                },
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
                 label = "Navegación"
-            ) { animatedScreenName ->
+            ) { animatedScreenKey ->
+            val animatedScreenName = animatedScreenKey.substringBefore(":")
             val screen = Screen.valueOf(animatedScreenName)
-            screenStateHolder.SaveableStateProvider(animatedScreenName) {
+            screenStateHolder.SaveableStateProvider(animatedScreenKey) {
             when {
                 !profileReady -> ProfileScreen(
                     profile = data.profile,
@@ -636,6 +648,7 @@ fun RumboApp(repository: AppRepository) {
                     onOpenFoods = { screenName = Screen.FOODS.name },
                     onOpenFood = {
                         selectedFoodId = it
+                        foodNavigationStack = emptyList()
                         foodReturnScreenName = Screen.HOME.name
                         screenName = Screen.FOOD_DETAIL.name
                     },
@@ -745,6 +758,7 @@ fun RumboApp(repository: AppRepository) {
                         },
                         onOpenFood = {
                             selectedFoodId = it
+                        foodNavigationStack = emptyList()
                             foodReturnScreenName = Screen.PLANNER.name
                             screenName = Screen.FOOD_DETAIL.name
                         },
@@ -789,6 +803,7 @@ fun RumboApp(repository: AppRepository) {
                     onCreateDish = { data = repository.saveDish(it) },
                     onOpenFood = {
                         selectedFoodId = it
+                        foodNavigationStack = emptyList()
                         foodReturnScreenName = Screen.ADD_PLANNED_MEAL.name
                         screenName = Screen.FOOD_DETAIL.name
                     },
@@ -825,6 +840,7 @@ fun RumboApp(repository: AppRepository) {
                             onCreateDish = { data = repository.saveDish(it) },
                             onOpenFood = {
                                 selectedFoodId = it
+                        foodNavigationStack = emptyList()
                                 foodReturnScreenName = Screen.EDIT_PLANNED_MEAL.name
                                 screenName = Screen.FOOD_DETAIL.name
                             },
@@ -870,6 +886,7 @@ fun RumboApp(repository: AppRepository) {
                             plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                             onOpenFood = {
                                 selectedFoodId = it
+                        foodNavigationStack = emptyList()
                                 foodReturnScreenName = Screen.DISH_DETAIL.name
                                 screenName = Screen.FOOD_DETAIL.name
                             },
@@ -949,6 +966,7 @@ fun RumboApp(repository: AppRepository) {
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     onOpenFood = {
                         selectedFoodId = it
+                        foodNavigationStack = emptyList()
                         foodReturnScreenName = null
                         screenName = Screen.FOOD_DETAIL.name
                     },
@@ -969,6 +987,7 @@ fun RumboApp(repository: AppRepository) {
                     onSave = {
                         data = repository.saveFood(it)
                         selectedFoodId = it.id
+                        foodNavigationStack = emptyList()
                         screenName = Screen.FOOD_DETAIL.name
                     }
                 )
@@ -984,7 +1003,12 @@ fun RumboApp(repository: AppRepository) {
                             onBack = navigateBack,
                             plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                             dishes = data.dishes,
-                            onOpenFood = { selectedFoodId = it },
+                            onOpenFood = {
+                                selectedFoodId?.let { current ->
+                                    foodNavigationStack = foodNavigationStack + current
+                                }
+                                selectedFoodId = it
+                            },
                             onOpenDish = {
                                 selectedDishId = it
                                 dishReturnScreenName = Screen.FOOD_DETAIL.name
@@ -1444,6 +1468,11 @@ private fun HomeScreen(
                 dishesById = dishesById,
                 recommendation = recommendation,
                 sectionTitle = "Tu menú de esta semana",
+                repertoireWarning = repertoireCoverageWarning(
+                    repertoireAssessment,
+                    data.activeProfileData?.planningRules.orEmpty(),
+                    foodsById
+                ),
                 onOpenNextWeek = onOpenNextWeek,
                 onOpenCurrentShoppingList = onOpenCurrentShoppingList,
                 onRegenerateWeek = onRegenerateWeek,
@@ -1924,7 +1953,8 @@ private fun WeeklyHomeMenuSection(
     onOpenMeal: (Long) -> Unit,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
-    onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
+    onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit,
+    repertoireWarning: String? = null
 ) {
     val today = WeekDay.entries[LocalDate.now().dayOfWeek.value - 1]
     val visibleDays = if (onOpenNextWeek != null) {
@@ -2385,6 +2415,13 @@ private fun WeeklyHomeMenuSection(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    repertoireWarning?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -2641,6 +2678,54 @@ private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
     }.joinToString(" ")
 }
 
+
+private fun repertoireCoverageWarning(
+    assessment: RepertoireAssessment?,
+    rules: List<PlanningRule>,
+    foodsById: Map<Long, Food>
+): String? {
+    assessment ?: return null
+    val missingNutrients = listOf(
+        NutrientKind.PROTEIN to EfficientNutrient.PROTEIN,
+        NutrientKind.CARBOHYDRATES to EfficientNutrient.CARBOHYDRATES,
+        NutrientKind.FAT to EfficientNutrient.FAT
+    ).filter { (kind, _) ->
+        assessment.nutrition[kind]?.let {
+            it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET
+        } == true
+    }
+    if (missingNutrients.isEmpty()) return null
+
+    val activeRules = rules.filter {
+        it.isActive && it.itemKind == PlannedItemKind.FOOD &&
+            foodsById[it.itemId] != null
+    }
+    val problem = missingNutrients.firstNotNullOfOrNull { (kind, efficientNutrient) ->
+        assessment.coverage.firstOrNull { coverage ->
+            activeRules.none { rule ->
+                val allowed = coverage.mealType in rule.allowedMealTypes ||
+                    rule.requiredSlots().any { it.mealType == coverage.mealType }
+                allowed && efficientNutrient in
+                    FoodSuggestionEngine.efficientNutrients(foodsById.getValue(rule.itemId))
+            }
+        }?.let { kind to it.mealType }
+    } ?: return null
+
+    val nutrient = when (problem.first) {
+        NutrientKind.PROTEIN -> "proteína"
+        NutrientKind.CARBOHYDRATES -> "hidratos"
+        NutrientKind.FAT -> "grasas"
+        NutrientKind.CALORIES -> return null
+    }
+    val meal = problem.second.label.lowercase()
+    val cannotBuild = assessment.status == RepertoireStatus.INSUFFICIENT ||
+        assessment.acceptableSolutions == 0
+    return if (cannotBuild) {
+        "No podemos crear un menú adecuado porque faltan fuentes de $nutrient para $meal."
+    } else {
+        "Será más fácil crear menús variados si añades fuentes de $nutrient para $meal."
+    }
+}
 
 private fun weeklyAssessmentText(assessment: PlanNutritionAssessment?): String {
     if (assessment == null) return "Añade una medición para poder valorar este menú."
