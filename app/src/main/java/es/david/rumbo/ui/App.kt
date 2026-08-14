@@ -1335,9 +1335,8 @@ private fun HomeScreen(
             }
         }
     }
-    val menuReady = repertoireAssessment?.status?.let {
-        it != RepertoireStatus.INSUFFICIENT
-    } == true
+    val menuReady = repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
+        repertoireAssessment?.status == RepertoireStatus.ROBUST
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
@@ -1593,12 +1592,12 @@ private fun FoodSuggestionsCard(
                         Text(
                             "Para que podamos crearte un menú adecuado, añade alimentos " +
                                 "recomendados o usa la búsqueda para elegir los que tú quieras.",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyLarge
                         )
                         if (assessment == null) {
                             Text(
                                 "Analizando tus alimentos…",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -1607,7 +1606,7 @@ private fun FoodSuggestionsCard(
                                 assessment, rules, foodsById
                             ).joinToString(" ")
                             if (message.isNotBlank()) {
-                                Text(message, style = MaterialTheme.typography.bodyMedium)
+                                Text(message, style = MaterialTheme.typography.bodyLarge)
                             }
                         }
                     }
@@ -2461,13 +2460,13 @@ private fun WeeklyHomeMenuSection(
                 ) {
                     Text(
                         weeklyAssessmentText(weeklyAssessment),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     repertoireWarning?.let {
                         Text(
                             it,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -2780,8 +2779,14 @@ private fun repertoireActionMessages(
     val generalDeficitLabels = deficits.map { it.third }
         .filterNot { label -> missingByMeal.any { it.first == label } }
     if (generalDeficitLabels.isNotEmpty()) {
-        messages += "Necesitas más fuentes eficientes de " +
-            naturalListText(generalDeficitLabels) + "."
+        val fatExcess = excesses.any { it.first == NutrientKind.FAT }
+        messages += if (fatExcess) {
+            "Necesitas alternativas que aporten " +
+                naturalListText(generalDeficitLabels) + " con menos grasa."
+        } else {
+            "Necesitas más fuentes eficientes de " +
+                naturalListText(generalDeficitLabels) + "."
+        }
     }
     missingByMeal.forEach { (label, meals) ->
         messages += "Necesitas fuentes eficientes de $label asignadas a " +
