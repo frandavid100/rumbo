@@ -86,14 +86,6 @@ object FoodSuggestionEngine {
             }
         }
 
-        val hasMeasuredImprover = if (
-            repertoireAssessment != null && candidateAssessments != null
-        ) {
-            candidateAssessments.values.any {
-                assessmentImprovement(repertoireAssessment, it) > 0.01
-            }
-        } else false
-
         val ranked = foods.asSequence()
             .filter {
                 it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
@@ -132,7 +124,8 @@ object FoodSuggestionEngine {
                         candidate, recommendation, deficits, macroCorrectionNeeded
                     ) +
                         categoryNovelty +
-                        (measuredImpact ?: 0.0) * 3.0 +
+                        (measuredImpact ?: 0.0) * 3.0 -
+                        redundancyPenalty(candidate, activeFoods) +
                         if (repertoireNeedsExpansion) 0.0 else affinity(candidate, activeFoods) +
                         if (candidate.unitAmount != null && candidate.unitName != null) 0.05 else 0.0
                 )
@@ -144,17 +137,14 @@ object FoodSuggestionEngine {
                     coverageCorrectionNeeded || repertoireNeedsExpansion ||
                         efficientNutrients(it.food).isNotEmpty()
                 }
-                val producesMeasuredImprovement = if (hasMeasuredImprover) {
-                    val baseline = repertoireAssessment
-                    baseline != null && candidateAssessments?.get(it.food.id)?.let { candidate ->
-                        assessmentImprovement(baseline, candidate) > 0.01
-                    } == true
-                } else {
-                    // Never make the whole recommender disappear when the generator
-                    // ignores every hypothetical candidate. In that case retain the
-                    // strict macro-efficiency shortlist as a transparent fallback.
-                    true
-                }
+                val producesMeasuredImprovement =
+                    if (repertoireAssessment != null && candidateAssessments != null) {
+                        candidateAssessments[it.food.id]?.let { candidate ->
+                            assessmentImprovement(repertoireAssessment, candidate) > 0.01
+                        } == true
+                    } else {
+                        true
+                    }
                 nutritionallyRelevant && producesMeasuredImprovement
             }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
@@ -252,6 +242,25 @@ object FoodSuggestionEngine {
                 (fatGrams ?: 0.0) >= 3.0 &&
                     efficiency.fat >= MINIMUM_MACRO_EFFICIENCY
             NutrientKind.CALORIES -> false
+        }
+    }
+
+    private fun redundancyPenalty(candidate: Food, activeFoods: List<Food>): Double {
+        if (activeFoods.isEmpty()) return 0.0
+        val candidateEfficiency = MacroEfficiency.from(candidate)
+        val nearestDistance = activeFoods.minOf { existing ->
+            val existingEfficiency = MacroEfficiency.from(existing)
+            (
+                abs(candidateEfficiency.protein - existingEfficiency.protein) +
+                    abs(candidateEfficiency.carbohydrate - existingEfficiency.carbohydrate) +
+                    abs(candidateEfficiency.fat - existingEfficiency.fat) +
+                    abs(candidateEfficiency.fiber - existingEfficiency.fiber)
+                ) / 4.0
+        }
+        return when {
+            nearestDistance < 0.06 -> 0.35
+            nearestDistance < 0.12 -> 0.18
+            else -> 0.0
         }
     }
 
