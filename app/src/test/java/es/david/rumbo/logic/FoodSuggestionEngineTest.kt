@@ -76,7 +76,7 @@ class FoodSuggestionEngineTest {
             Recommendation(2000, 140, 220, 65, "")
         )
         assertEquals(2L, result.first().food.id)
-        assertEquals("Aporta proteína con pocas calorías.", result.first().reason)
+        assertEquals("Es una fuente eficiente de proteína.", result.first().reason)
     }
 
     @Test
@@ -108,7 +108,7 @@ class FoodSuggestionEngineTest {
         }
         val candidate = food(
             100, "Alternativa", FoodCategory.PROTEIN, "Mercadona",
-            150.0, 12.0, 8.0, 6.0
+            150.0, 20.0, 8.0, 6.0
         )
         val result = FoodSuggestionEngine.suggest(
             foods = repertoire + candidate,
