@@ -85,15 +85,6 @@ object FoodSuggestionEngine {
                 "Te falta variedad para " + it.mealType.label.lowercase() + "."
             }
         }
-        val hasMeasuredImprover = if (
-            repertoireAssessment != null && candidateAssessments != null
-        ) {
-            candidateAssessments.values.any {
-                assessmentImprovement(repertoireAssessment, it) > 0.01
-            }
-        } else {
-            false
-        }
         val assessmentStillNeedsHelp = repertoireAssessment?.status?.let {
             it == RepertoireStatus.INSUFFICIENT || it == RepertoireStatus.LIMITED
         } ?: false
@@ -157,8 +148,8 @@ object FoodSuggestionEngine {
                     } else {
                         true
                     }
-                val passesMeasuredCheck = producesMeasuredImprovement ||
-                    assessmentStillNeedsHelp && !hasMeasuredImprover
+                val passesMeasuredCheck = assessmentStillNeedsHelp ||
+                    producesMeasuredImprovement
                 nutritionallyRelevant && passesMeasuredCheck
             }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
