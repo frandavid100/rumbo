@@ -9,6 +9,7 @@ import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.resolvedGrams
+import kotlin.math.abs
 import kotlin.math.max
 
 data class FoodSuggestion(val food: Food, val reason: String, val score: Double)
@@ -27,6 +28,7 @@ object FoodSuggestionEngine {
         recommendation: Recommendation?,
         excludedFoodIds: Set<Long> = emptySet(),
         repertoireAssessment: RepertoireAssessment? = null,
+        candidateAssessments: Map<Long, RepertoireAssessment>? = null,
         limit: Int = 3
     ): List<FoodSuggestion> {
         if (limit <= 0) return emptyList()
@@ -85,6 +87,13 @@ object FoodSuggestionEngine {
                     categoryCounts[candidate.category] == null -> 0.20
                     else -> 0.05 / max(1, categoryCounts.getValue(candidate.category))
                 }
+                val measuredImpact = if (
+                    repertoireAssessment != null && candidateAssessments != null
+                ) {
+                    candidateAssessments[candidate.id]?.let {
+                        assessmentImprovement(repertoireAssessment, it)
+                    }
+                } else null
                 FoodSuggestion(
                     food = candidate,
                     reason = reason(
@@ -95,18 +104,52 @@ object FoodSuggestionEngine {
                         candidate, recommendation, deficits, macroCorrectionNeeded
                     ) +
                         categoryNovelty +
+                        (measuredImpact ?: 0.0) * 3.0 +
                         if (repertoireNeedsExpansion) 0.0 else affinity(candidate, activeFoods) +
                         if (candidate.unitAmount != null && candidate.unitName != null) 0.05 else 0.0
                 )
             }
             .filter {
-                if (macroCorrectionNeeded) it.food.addresses(deficits)
-                else repertoireNeedsExpansion
+                val nutritionallyRelevant = if (macroCorrectionNeeded) {
+                    it.food.addresses(deficits)
+                } else repertoireNeedsExpansion
+                val producesMeasuredImprovement = candidateAssessments?.let { assessments ->
+                    val baseline = repertoireAssessment ?: return@let false
+                    assessments[it.food.id]?.let { candidate ->
+                        assessmentImprovement(baseline, candidate) > 0.01
+                    } == true
+                } ?: true
+                nutritionallyRelevant && producesMeasuredImprovement
             }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
             .distinctBy { equivalenceKey(it.food) }
             .toList()
         return diversify(ranked, limit)
+    }
+
+    private fun assessmentImprovement(
+        before: RepertoireAssessment,
+        after: RepertoireAssessment
+    ): Double = assessmentDistance(before) - assessmentDistance(after)
+
+    private fun assessmentDistance(assessment: RepertoireAssessment): Double {
+        val nutrientDistance = assessment.nutrition.entries.sumOf { (kind, capacity) ->
+            val weight = when (kind) {
+                NutrientKind.PROTEIN -> 3.0
+                NutrientKind.CALORIES -> 2.0
+                NutrientKind.CARBOHYDRATES, NutrientKind.FAT -> 1.5
+            }
+            weight * (abs(capacity.deviation) / capacity.target.coerceAtLeast(1.0))
+                .coerceAtMost(2.0)
+        }
+        val missingMealCoverage = assessment.coverage.count { it.alternatives == 0 } * 0.75
+        val limitedMealCoverage = assessment.coverage.count { it.alternatives == 1 } * 0.20
+        val solverPenalty = assessment.metrics.worstPenalty
+            .takeIf { it.isFinite() }
+            ?.coerceAtMost(4.0)
+            ?.times(0.20)
+            ?: 0.80
+        return nutrientDistance + missingMealCoverage + limitedMealCoverage + solverPenalty
     }
 
     private fun diversify(
