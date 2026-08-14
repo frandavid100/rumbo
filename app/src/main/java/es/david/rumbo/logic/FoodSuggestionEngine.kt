@@ -85,6 +85,18 @@ object FoodSuggestionEngine {
                 "Te falta variedad para " + it.mealType.label.lowercase() + "."
             }
         }
+        val hasMeasuredImprover = if (
+            repertoireAssessment != null && candidateAssessments != null
+        ) {
+            candidateAssessments.values.any {
+                assessmentImprovement(repertoireAssessment, it) > 0.01
+            }
+        } else {
+            false
+        }
+        val assessmentStillNeedsHelp = repertoireAssessment?.status?.let {
+            it == RepertoireStatus.INSUFFICIENT || it == RepertoireStatus.LIMITED
+        } ?: false
 
         val ranked = foods.asSequence()
             .filter {
@@ -145,7 +157,9 @@ object FoodSuggestionEngine {
                     } else {
                         true
                     }
-                nutritionallyRelevant && producesMeasuredImprovement
+                val passesMeasuredCheck = producesMeasuredImprovement ||
+                    assessmentStillNeedsHelp && !hasMeasuredImprover
+                nutritionallyRelevant && passesMeasuredCheck
             }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
             .distinctBy { equivalenceKey(it.food) }
@@ -289,6 +303,48 @@ object FoodSuggestionEngine {
                 efficiency.fiber >= MINIMUM_MACRO_EFFICIENCY
             ) add(EfficientNutrient.FIBER)
         }
+    }
+
+    /**
+     * Lightweight query-time score. It lets an actively searched food compete on
+     * its usefulness without running the full menu generator for every catalogue item.
+     */
+    fun personalizedSearchScore(
+        food: Food,
+        repertoireAssessment: RepertoireAssessment?,
+        recommendation: Recommendation?
+    ): Double {
+        if (!food.hasComparableNutrition() || !food.isRecommendableCandidate()) {
+            return Double.NEGATIVE_INFINITY
+        }
+        val available = efficientNutrients(food)
+        if (available.isEmpty()) return Double.NEGATIVE_INFINITY
+        val efficiency = MacroEfficiency.from(food)
+        if (repertoireAssessment == null) {
+            return maxOf(
+                efficiency.protein,
+                efficiency.carbohydrate,
+                efficiency.fat,
+                efficiency.fiber * 0.75
+            )
+        }
+        val deficits = Deficits.from(repertoireAssessment)
+        val macroCorrectionNeeded = repertoireAssessment.nutrition.any { (kind, capacity) ->
+            kind != NutrientKind.CALORIES &&
+                capacity.deviation < 0.0 && capacity.fit != TargetFit.ON_TARGET
+        }
+        val deficitFit = maxOf(
+            if (EfficientNutrient.PROTEIN in available) deficits.protein * efficiency.protein else 0.0,
+            if (EfficientNutrient.CARBOHYDRATES in available) {
+                deficits.carbohydrate * efficiency.carbohydrate
+            } else 0.0,
+            if (EfficientNutrient.FAT in available) deficits.fat * efficiency.fat else 0.0,
+            if (!macroCorrectionNeeded && EfficientNutrient.FIBER in available) {
+                efficiency.fiber * 0.25
+            } else 0.0
+        )
+        return deficitFit * 2.0 +
+            nutritionalUtility(food, recommendation, deficits, macroCorrectionNeeded)
     }
 
     private fun reason(
