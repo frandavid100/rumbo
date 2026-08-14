@@ -43,13 +43,7 @@ jobs:
           build/signing-tools/apksigner verify --verbose --print-certs build/signed/Rumbo-0.45.0.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: rumbo-release-unsigned
-          path: |
-            app/build/outputs/apk/release/app-release-unsigned.apk
-            build/signing-tools
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
           name: rumbo-0.45.0-signed-temporary
           path: build/signed/Rumbo-0.45.0.apk
           if-no-files-found: error
+          retention-days: 1
