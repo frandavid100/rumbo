@@ -1335,8 +1335,9 @@ private fun HomeScreen(
             }
         }
     }
-    val menuReady = repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
-        repertoireAssessment?.status == RepertoireStatus.ROBUST
+    val menuReady = repertoireAssessment?.status?.let {
+        it != RepertoireStatus.INSUFFICIENT
+    } == true
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
