@@ -303,6 +303,43 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun insufficientRepertoireKeepsSuggestionsWhenNoSimulationImprovesIt() {
+        val candidate = food(
+            100, "Pechuga", FoodCategory.PROTEIN, "Mercadona",
+            110.0, 24.0, 0.0, 1.0
+        )
+        val assessment = RepertoireAssessment(
+            status = RepertoireStatus.INSUFFICIENT,
+            nutrition = mapOf(
+                NutrientKind.CALORIES to NutrientCapacity(1875.0, 1330.0, -545.0, TargetFit.OUTSIDE),
+                NutrientKind.PROTEIN to NutrientCapacity(154.0, 68.0, -86.0, TargetFit.OUTSIDE),
+                NutrientKind.CARBOHYDRATES to NutrientCapacity(198.0, 141.0, -57.0, TargetFit.OUTSIDE),
+                NutrientKind.FAT to NutrientCapacity(52.0, 31.0, -21.0, TargetFit.OUTSIDE)
+            ),
+            coverage = emptyList(),
+            fruitConcepts = 0,
+            vegetableConcepts = 0,
+            acceptableSolutions = 0,
+            limitingFactors = listOf("Faltan fuentes de proteína."),
+            suggestions = listOf(FoodCategory.PROTEIN),
+            reactivationFoodIds = emptyList(),
+            metrics = RepertoireMetrics(2.0, 4.0, 8, 3, 1, 4)
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = listOf(candidate),
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            repertoireAssessment = assessment,
+            candidateAssessments = mapOf(candidate.id to assessment)
+        )
+        assertEquals(listOf(candidate.id), result.map { it.food.id })
+        assertEquals("Es una fuente eficiente de proteína.", result.single().reason)
+    }
+
+    @Test
     fun dismissedFoodIsNotSuggestedAgain() {
         val foods = listOf(
             food(1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona", 360.0, 7.0, 79.0, 1.0),
