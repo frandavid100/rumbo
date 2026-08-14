@@ -980,6 +980,7 @@ fun RumboApp(repository: AppRepository) {
                         FoodDetailScreen(
                             food = food,
                             foods = data.foods,
+                            activeMealTypes = mealShares.filterValues { it > 0.0 }.keys,
                             onBack = navigateBack,
                             plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                             dishes = data.dishes,
@@ -3781,6 +3782,7 @@ private fun PlanningRuleCards(
     itemId: Long,
     defaultGrams: Double,
     rules: List<PlanningRule>,
+    activeMealTypes: Set<MealType>,
     onSave: (PlanningRule) -> Unit,
     onDelete: (Long) -> Unit
 ) {
@@ -3793,11 +3795,12 @@ private fun PlanningRuleCards(
             initial = shownRule ?: PlanningRule(
                 itemKind,
                 itemId,
-                MealType.entries.toSet(),
+                activeMealTypes,
                 frequency = PlanningFrequency.OCCASIONAL,
                 preferredGrams = defaultGrams,
                 ruleId = System.currentTimeMillis()
             ),
+            activeMealTypes = activeMealTypes,
             onSave = {
                 onSave(it)
                 editingRule = null
@@ -3943,6 +3946,7 @@ private fun AutomaticPlanningScreen(
         PlanningRuleDialog(
             name = name,
             initial = rule,
+            activeMealTypes = mealShares.filterValues { it > 0.0 }.keys,
             onSave = {
                 onSaveRule(it)
                 editing = null
@@ -4203,11 +4207,14 @@ private fun RepertoireAssessmentSummary(
 private fun PlanningRuleDialog(
     name: String,
     initial: PlanningRule,
+    activeMealTypes: Set<MealType>,
     onSave: (PlanningRule) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
-    var meals by remember(initial) { mutableStateOf(initial.allowedMealTypes) }
+    var meals by remember(initial, activeMealTypes) {
+        mutableStateOf(initial.allowedMealTypes.intersect(activeMealTypes))
+    }
     var days by remember(initial) { mutableStateOf(initial.allowedDays) }
     var frequency by remember(initial) {
         mutableStateOf(when (initial.frequency) {
@@ -4231,7 +4238,7 @@ private fun PlanningRuleDialog(
             )
             MultiSelectField(
                 label = "Comidas",
-                options = MealType.entries,
+                options = MealType.entries.filter { it in activeMealTypes },
                 selected = meals,
                 optionLabel = { it.label },
                 onSelectedChange = { meals = it }
@@ -7558,6 +7565,7 @@ private val defaultUnitDefinitions = listOf(
 private fun FoodDetailScreen(
     food: Food,
     foods: List<Food>,
+    activeMealTypes: Set<MealType>,
     onBack: () -> Unit,
     plannedMeals: List<PlannedMeal>,
     dishes: List<Dish>,
@@ -7768,6 +7776,7 @@ private fun FoodDetailScreen(
                 itemId = food.id,
                 defaultGrams = 100.0,
                 rules = planningRules,
+                activeMealTypes = activeMealTypes,
                 onSave = onSavePlanningRule,
                 onDelete = onDeletePlanningRule
             )
