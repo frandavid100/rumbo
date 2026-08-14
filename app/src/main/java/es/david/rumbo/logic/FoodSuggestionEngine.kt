@@ -16,7 +16,7 @@ data class FoodSuggestion(val food: Food, val reason: String, val score: Double)
 /** Ranks foods outside the repertoire using only data already stored by Rumbo. */
 object FoodSuggestionEngine {
     private const val MINIMUM_ACTIVE_REPERTOIRE_SIZE = 15
-    private const val MINIMUM_MACRO_EFFICIENCY = 0.65
+    private const val MINIMUM_MACRO_EFFICIENCY = 0.50
 
     fun suggest(
         foods: List<Food>,
@@ -234,7 +234,7 @@ object FoodSuggestionEngine {
                 "Aporta fibra con pocas calorías."
             )
         )
-        efficientSources.filter { it.second >= 0.65 }
+        efficientSources.filter { it.second >= MINIMUM_MACRO_EFFICIENCY }
             .maxByOrNull { it.first }
             ?.takeIf { it.first >= 0.10 }
             ?.let { return it.third }
