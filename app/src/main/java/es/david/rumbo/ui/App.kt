@@ -1411,8 +1411,37 @@ private fun HomeScreen(
             )
         }
     }
+    var pinnedSuggestions by remember { mutableStateOf<List<FoodSuggestion>>(emptyList()) }
+    var mayRefreshPinnedSuggestions by remember { mutableStateOf(true) }
+    val handledSuggestionIds = remember(
+        data.activeProfileData?.repertoireFoodIds,
+        data.activeProfileData?.dismissedSuggestionFoodIds
+    ) {
+        data.activeProfileData?.repertoireFoodIds.orEmpty() +
+            data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty()
+    }
+    LaunchedEffect(handledSuggestionIds) {
+        val surviving = pinnedSuggestions.filterNot { it.food.id in handledSuggestionIds }
+        if (surviving.size != pinnedSuggestions.size) {
+            pinnedSuggestions = surviving
+            mayRefreshPinnedSuggestions = true
+        }
+    }
+    LaunchedEffect(candidateAssessments, foodSuggestions, mayRefreshPinnedSuggestions) {
+        if (candidateAssessments != null && mayRefreshPinnedSuggestions) {
+            pinnedSuggestions = (
+                pinnedSuggestions + foodSuggestions.filter { candidate ->
+                    pinnedSuggestions.none { it.food.id == candidate.food.id }
+                }
+            ).take(3)
+            mayRefreshPinnedSuggestions = false
+        }
+    }
     val openFood = { foodId: Long ->
-        onOpenFood(foodId, foodSuggestions.firstOrNull { it.food.id == foodId }?.reason)
+        onOpenFood(
+            foodId,
+            pinnedSuggestions.firstOrNull { it.food.id == foodId }?.reason
+        )
     }
     val searchTextState = rememberTextFieldState()
     var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
@@ -1443,7 +1472,7 @@ private fun HomeScreen(
                 foods = data.foods,
                 dishes = data.dishes,
                 repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                foodSuggestions = foodSuggestions,
+                foodSuggestions = pinnedSuggestions,
                 repertoireAssessment = repertoireAssessment,
                 recommendation = recommendation,
                 textFieldState = searchTextState,
@@ -1513,10 +1542,10 @@ private fun HomeScreen(
                 )
             }
         }
-        if (foodSuggestions.isNotEmpty() || !menuReady && recommendation != null) {
+        if (pinnedSuggestions.isNotEmpty() || !menuReady && recommendation != null) {
             item {
                 FoodSuggestionsCard(
-                    suggestions = foodSuggestions.take(3),
+                    suggestions = pinnedSuggestions,
                     showMenuReadiness = recommendation != null && !menuReady,
                     assessment = if (candidateAssessments == null) null else repertoireAssessment,
                     rules = data.activeProfileData?.planningRules.orEmpty(),
