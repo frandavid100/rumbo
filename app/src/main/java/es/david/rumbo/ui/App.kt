@@ -1431,6 +1431,8 @@ private fun HomeScreen(
                 dishes = data.dishes,
                 repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                 foodSuggestions = foodSuggestions,
+                repertoireAssessment = repertoireAssessment,
+                recommendation = recommendation,
                 textFieldState = searchTextState,
                 filter = searchFilter,
                 onFilterChange = { searchFilter = it },
@@ -5946,6 +5948,17 @@ private fun matchesSearch(searchable: String, query: String): Boolean {
     val terms = query.split(Regex("\\s+")).filter { it.isNotBlank() }
     return terms.isEmpty() || terms.all(searchable::contains)
 }
+
+private fun searchMatchRank(name: String, query: String): Int {
+    val normalizedName = normalizeSearch(name)
+    return when {
+        normalizedName == query -> 0
+        normalizedName.startsWith(query) -> 1
+        query.split(Regex("\\s+")).filter { it.isNotBlank() }
+            .all { term -> normalizedName.contains(term) } -> 2
+        else -> 3
+    }
+}
 private enum class CatalogMode { SEARCH, REPERTOIRE }
 private enum class RepertoireFilter(val label: String) {
     ALL("Todos"), ACTIVE("Activos"), INACTIVE("Inactivos"), PENDING("Pendientes")
@@ -5961,6 +5974,8 @@ private data class CatalogEntry(
 private fun HomeCatalogSearch(
     foods: List<Food>, dishes: List<Dish>, repertoireFoodIds: Set<Long>,
     foodSuggestions: List<FoodSuggestion>,
+    repertoireAssessment: RepertoireAssessment?,
+    recommendation: Recommendation?,
     textFieldState: TextFieldState,
     filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
     categoryFilter: FoodCategory?, onCategoryFilterChange: (FoodCategory?) -> Unit,
@@ -6004,9 +6019,16 @@ private fun HomeCatalogSearch(
     val topSuggestionIds = remember(foodSuggestions) {
         foodSuggestions.take(3).mapTo(mutableSetOf()) { it.food.id }
     }
+    val personalizedScores = remember(foods, repertoireAssessment, recommendation) {
+        foods.associate { food ->
+            food.id to FoodSuggestionEngine.personalizedSearchScore(
+                food, repertoireAssessment, recommendation
+            )
+        }
+    }
     val entries = remember(
         foods, dishes, normalized, filter, categoryFilter, repertoireFoodIds,
-        suggestionsByFoodId, topSuggestionIds
+        foodSuggestions, suggestionsByFoodId, topSuggestionIds, personalizedScores
     ) {
         buildList {
             if (filter != CatalogFilter.DISHES) foods.forEach { food ->
@@ -6032,16 +6054,27 @@ private fun HomeCatalogSearch(
                 }
             }
         }.sortedWith(
-            compareBy<CatalogEntry> {
-                if (it.isDish) Int.MAX_VALUE
-                else foodSuggestions.indexOfFirst { suggestion -> suggestion.food.id == it.id }
-                    .takeIf { index -> index >= 0 } ?: Int.MAX_VALUE
-            }.thenBy { !normalizeSearch(it.name).startsWith(normalized) }
-                .thenByDescending {
+            if (normalized.isBlank()) {
+                compareBy<CatalogEntry> {
+                    if (it.isDish) Int.MAX_VALUE
+                    else foodSuggestions.indexOfFirst { suggestion ->
+                        suggestion.food.id == it.id
+                    }.takeIf { index -> index >= 0 } ?: Int.MAX_VALUE
+                }.thenByDescending {
                     if (it.isDish) Double.NEGATIVE_INFINITY
                     else suggestionsByFoodId[it.id]?.score ?: Double.NEGATIVE_INFINITY
-                }
-                .thenBy { it.name.lowercase() }
+                }.thenBy { it.name.lowercase() }
+            } else {
+                compareBy<CatalogEntry> {
+                    searchMatchRank(it.name, normalized)
+                }.thenByDescending {
+                    if (it.isDish) Double.NEGATIVE_INFINITY
+                    else personalizedScores[it.id] ?: Double.NEGATIVE_INFINITY
+                }.thenByDescending {
+                    if (it.isDish) Double.NEGATIVE_INFINITY
+                    else suggestionsByFoodId[it.id]?.score ?: Double.NEGATIVE_INFINITY
+                }.thenBy { it.name.lowercase() }
+            }
         )
     }
 
