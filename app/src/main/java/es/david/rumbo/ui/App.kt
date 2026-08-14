@@ -2637,6 +2637,7 @@ private fun WeeklyMenuReplicaScreen(
     sectionTitle: String,
     onOpenShoppingList: () -> Unit,
     onRegenerateWeek: () -> String?,
+    isGeneratingMenu: Boolean,
     onOpenMeal: (Long) -> Unit,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
