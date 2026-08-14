@@ -190,7 +190,7 @@ object RepertoireEvaluator {
             itemKind = PlannedItemKind.FOOD,
             itemId = candidate.id,
             allowedMealTypes = MealType.entries.toSet(),
-            frequency = PlanningFrequency.NORMAL,
+            frequency = PlanningFrequency.FREQUENT,
             preferredGrams = (candidate.unitAmount ?: 100.0).coerceIn(30.0, 250.0)
         )
         candidate.id to evaluate(
