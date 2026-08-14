@@ -179,6 +179,51 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun repertoireAssessmentOverridesDisplayedMenu() {
+        val protein = food(
+            1, "Pechuga", FoodCategory.PROTEIN, "Mercadona",
+            110.0, 24.0, 0.0, 1.0, subcategory = "Aves"
+        )
+        val carbohydrate = food(
+            2, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona",
+            360.0, 7.0, 79.0, 1.0, subcategory = "Arroz"
+        )
+        val assessment = RepertoireAssessment(
+            status = RepertoireStatus.INSUFFICIENT,
+            nutrition = mapOf(
+                NutrientKind.CALORIES to NutrientCapacity(1875.0, 1875.0, 0.0, TargetFit.ON_TARGET),
+                NutrientKind.PROTEIN to NutrientCapacity(154.0, 100.0, -54.0, TargetFit.OUTSIDE),
+                NutrientKind.CARBOHYDRATES to NutrientCapacity(198.0, 198.0, 0.0, TargetFit.ON_TARGET),
+                NutrientKind.FAT to NutrientCapacity(52.0, 52.0, 0.0, TargetFit.ON_TARGET)
+            ),
+            coverage = emptyList(),
+            fruitConcepts = 0,
+            vegetableConcepts = 0,
+            acceptableSolutions = 0,
+            limitingFactors = emptyList(),
+            suggestions = listOf(FoodCategory.PROTEIN),
+            reactivationFoodIds = emptyList(),
+            metrics = RepertoireMetrics(1.0, 1.0, 15, 3, 0, 4)
+        )
+        val result = FoodSuggestionEngine.suggest(
+            foods = listOf(protein, carbohydrate),
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = listOf(
+                PlannedMeal(
+                    1, MealType.LUNCH, WeekDay.entries.toSet(),
+                    items = listOf(PlannedFood(carbohydrate.id, 500.0))
+                )
+            ),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            repertoireAssessment = assessment
+        )
+        assertEquals(listOf(protein.id), result.map { it.food.id })
+        assertTrue(result.first().reason.contains("proteína"))
+    }
+
+    @Test
     fun coldStartPrioritizesMacrosBeforeFiber() {
         val foods = listOf(
             food(1, "Soja", FoodCategory.PROTEIN, "Mercadona", 330.0, 45.0, 20.0, 5.0,
