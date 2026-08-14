@@ -1274,6 +1274,45 @@ private fun HomeScreen(
             }
         }
     }
+    val candidateAssessments by produceState<Map<Long, RepertoireAssessment>?>(
+        initialValue = null,
+        repertoireAssessment,
+        data.foods,
+        data.activeProfileData?.repertoireFoodIds,
+        data.activeProfileData?.dismissedSuggestionFoodIds,
+        data.activeProfileData?.planningRules,
+        recommendation,
+        mealShares
+    ) {
+        val baseline = repertoireAssessment
+        val target = recommendation
+        value = if (baseline == null || target == null) {
+            emptyMap()
+        } else {
+            withContext(Dispatchers.Default) {
+                val shortlist = FoodSuggestionEngine.suggest(
+                    foods = data.foods,
+                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                    planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                    plannedMeals = emptyList(),
+                    dishesById = dishesById,
+                    recommendation = target,
+                    excludedFoodIds = data.activeProfileData
+                        ?.dismissedSuggestionFoodIds.orEmpty(),
+                    repertoireAssessment = baseline,
+                    limit = 12
+                ).map { it.food }
+                RepertoireEvaluator.evaluateCandidates(
+                    rules = data.activeProfileData?.planningRules.orEmpty(),
+                    candidates = shortlist,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = target,
+                    mealShares = mealShares
+                )
+            }
+        }
+    }
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
@@ -1281,7 +1320,8 @@ private fun HomeScreen(
         data.activeProfileData?.planningRules,
         data.dishes,
         recommendation,
-        repertoireAssessment
+        repertoireAssessment,
+        candidateAssessments
     ) {
         FoodSuggestionEngine.suggest(
             foods = data.foods,
@@ -1292,6 +1332,7 @@ private fun HomeScreen(
             recommendation = recommendation,
             excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
             repertoireAssessment = repertoireAssessment,
+            candidateAssessments = candidateAssessments,
             limit = 100
         )
     }
@@ -7530,7 +7571,7 @@ private fun FoodDetailScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
-    val similarFoods = remember(food, foods) { FoodSimilarityEngine.findSimilar(food, foods) }
+    val similarFoods = remember(food, foods) { FoodSimilarityEngine.findMoreEfficient(food, foods) }
     val containingDishes = remember(food.id, dishes) {
         dishes.filter { dish -> dish.ingredients.any { it.foodId == food.id } }
     }
@@ -7763,16 +7804,16 @@ private fun FoodDetailScreen(
                 Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Alimentos similares", style = MaterialTheme.typography.titleLarge)
+                Text("Alternativas más eficientes", style = MaterialTheme.typography.titleLarge)
                 HorizontalDivider()
                 Text(
-                    "Puedes sustituirlo por estos alimentos sin alterar demasiado el reparto nutricional.",
+                    "Cumplen una función parecida, pero aprovechan mejor sus calorías o su nutriente principal.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (similarFoods.isEmpty()) {
                     Text(
-                        "No hay sustitutos suficientemente próximos.",
+                        "No hay alternativas parecidas que sean claramente más eficientes.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
