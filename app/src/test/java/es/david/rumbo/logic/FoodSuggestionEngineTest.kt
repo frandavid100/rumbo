@@ -221,7 +221,12 @@ class FoodSuggestionEngineTest {
             ),
             dishesById = emptyMap(),
             recommendation = Recommendation(1875, 154, 198, 52, ""),
-            repertoireAssessment = assessment
+            repertoireAssessment = assessment,
+            candidateAssessments = mapOf(
+                protein.id to assessment,
+                carbohydrate.id to assessment,
+                toastWithSomeProtein.id to assessment
+            )
         )
         assertEquals(listOf(protein.id), result.map { it.food.id })
         assertTrue(result.none { it.food.id == toastWithSomeProtein.id })
