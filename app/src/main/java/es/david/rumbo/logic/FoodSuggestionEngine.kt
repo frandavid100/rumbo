@@ -73,6 +73,14 @@ object FoodSuggestionEngine {
                 it == NutrientKind.FAT
         }
 
+        val hasMeasuredImprover = if (
+            repertoireAssessment != null && candidateAssessments != null
+        ) {
+            candidateAssessments.values.any {
+                assessmentImprovement(repertoireAssessment, it) > 0.01
+            }
+        } else false
+
         val ranked = foods.asSequence()
             .filter {
                 it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
@@ -113,12 +121,17 @@ object FoodSuggestionEngine {
                 val nutritionallyRelevant = if (macroCorrectionNeeded) {
                     it.food.addresses(deficits)
                 } else repertoireNeedsExpansion
-                val producesMeasuredImprovement = candidateAssessments?.let { assessments ->
-                    val baseline = repertoireAssessment ?: return@let false
-                    assessments[it.food.id]?.let { candidate ->
+                val producesMeasuredImprovement = if (hasMeasuredImprover) {
+                    val baseline = repertoireAssessment
+                    baseline != null && candidateAssessments?.get(it.food.id)?.let { candidate ->
                         assessmentImprovement(baseline, candidate) > 0.01
                     } == true
-                } ?: true
+                } else {
+                    // Never make the whole recommender disappear when the generator
+                    // ignores every hypothetical candidate. In that case retain the
+                    // strict macro-efficiency shortlist as a transparent fallback.
+                    true
+                }
                 nutritionallyRelevant && producesMeasuredImprovement
             }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
