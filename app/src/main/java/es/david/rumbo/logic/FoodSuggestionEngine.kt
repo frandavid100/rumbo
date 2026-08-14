@@ -25,6 +25,7 @@ object FoodSuggestionEngine {
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation?,
         excludedFoodIds: Set<Long> = emptySet(),
+        repertoireAssessment: RepertoireAssessment? = null,
         limit: Int = 3
     ): List<FoodSuggestion> {
         if (limit <= 0) return emptyList()
@@ -43,8 +44,12 @@ object FoodSuggestionEngine {
         val totals = weeklyTotals(
             plannedMeals.filter { it.planWeek == PlanWeek.CURRENT }, foodsById, dishesById
         )
-        val deficits = Deficits.from(recommendation, totals)
-        val underTargetKinds = recommendation?.let {
+        val deficits = repertoireAssessment?.let(Deficits::from) ?:
+            Deficits.from(recommendation, totals)
+        val underTargetKinds = repertoireAssessment?.nutrition
+            ?.filterValues { it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET }
+            ?.keys.orEmpty().ifEmpty {
+            recommendation?.let {
             listOf(
                 NutrientKind.CALORIES to (totals.calories to it.calories * 7.0),
                 NutrientKind.PROTEIN to (totals.protein to it.proteinGrams * 7.0),
@@ -58,13 +63,14 @@ object FoodSuggestionEngine {
                     ).fit != TargetFit.ON_TARGET
             }.mapTo(mutableSetOf()) { it.first }
         }.orEmpty()
+        }
         val macroCorrectionNeeded = underTargetKinds.any {
             it == NutrientKind.PROTEIN ||
                 it == NutrientKind.CARBOHYDRATES ||
                 it == NutrientKind.FAT
         }
 
-        return foods.asSequence()
+        val ranked = foods.asSequence()
             .filter {
                 it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
                     it.hasComparableNutrition() && it.isRecommendableCandidate()
@@ -98,9 +104,51 @@ object FoodSuggestionEngine {
             }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
             .distinctBy { equivalenceKey(it.food) }
-            .take(limit)
             .toList()
+        return diversify(ranked, limit)
     }
+
+    private fun diversify(
+        ranked: List<FoodSuggestion>,
+        limit: Int
+    ): List<FoodSuggestion> {
+        val selected = mutableListOf<FoodSuggestion>()
+        val usedReasons = mutableSetOf<String>()
+        val usedCategories = mutableSetOf<FoodCategory>()
+        ranked.forEach { suggestion ->
+            if (selected.size >= limit) return@forEach
+            if (suggestion.reason !in usedReasons &&
+                suggestion.food.category !in usedCategories
+            ) {
+                selected += suggestion
+                usedReasons += suggestion.reason
+                usedCategories += suggestion.food.category
+            }
+        }
+        ranked.forEach { suggestion ->
+            if (selected.size >= limit) return@forEach
+            if (selected.none { it.food.id == suggestion.food.id } &&
+                suggestion.food.category !in usedCategories
+            ) {
+                selected += suggestion.copy(reason = varietyReason(suggestion.food))
+                usedCategories += suggestion.food.category
+            }
+        }
+        ranked.forEach { suggestion ->
+            if (selected.size >= limit) return@forEach
+            if (selected.none { it.food.id == suggestion.food.id }) {
+                selected += suggestion.copy(reason = varietyReason(suggestion.food))
+            }
+        }
+        return selected
+    }
+
+    private fun varietyReason(food: Food): String =
+        if (food.category != FoodCategory.OTHER) {
+            "Aporta más variedad con " + food.category.label.lowercase() + "."
+        } else {
+            "Puede darte más variedad."
+        }
 
     private fun nutritionalUtility(
         food: Food,
@@ -332,6 +380,25 @@ object FoodSuggestionEngine {
         val fat: Double, val fiber: Double
     ) {
         companion object {
+            fun from(assessment: RepertoireAssessment): Deficits {
+                fun deficit(kind: NutrientKind): Double {
+                    val capacity = assessment.nutrition[kind] ?: return 0.0
+                    return if (capacity.deviation >= 0.0 ||
+                        capacity.fit == TargetFit.ON_TARGET
+                    ) 0.0 else {
+                        (-capacity.deviation / capacity.target.coerceAtLeast(1.0))
+                            .coerceIn(0.0, 1.0)
+                    }
+                }
+                return Deficits(
+                    calories = deficit(NutrientKind.CALORIES),
+                    protein = deficit(NutrientKind.PROTEIN),
+                    carbohydrate = deficit(NutrientKind.CARBOHYDRATES),
+                    fat = deficit(NutrientKind.FAT),
+                    fiber = 0.0
+                )
+            }
+
             fun from(recommendation: Recommendation?, totals: Totals): Deficits {
                 if (recommendation == null) return Deficits(0.0, 0.0, 0.0, 0.0, 0.0)
                 fun deficit(actual: Double, target: Double): Double =
