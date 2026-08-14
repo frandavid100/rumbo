@@ -1360,26 +1360,47 @@ private fun HomeScreen(
             emptyMap()
         } else {
             withContext(Dispatchers.Default) {
+                val repertoireIds =
+                    data.activeProfileData?.repertoireFoodIds.orEmpty()
+                val rules = data.activeProfileData?.planningRules.orEmpty()
+                val excludedIds =
+                    data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty()
                 val candidates = FoodSuggestionEngine.suggest(
                     foods = data.foods,
-                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                    planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                    repertoireFoodIds = repertoireIds,
+                    planningRules = rules,
                     plannedMeals = emptyList(),
                     dishesById = dishesById,
                     recommendation = target,
-                    excludedFoodIds = data.activeProfileData
-                        ?.dismissedSuggestionFoodIds.orEmpty(),
+                    excludedFoodIds = excludedIds,
                     repertoireAssessment = baseline,
-                    limit = 3
+                    limit = 12
                 ).map { it.food }
-                RepertoireEvaluator.evaluateCandidates(
-                    rules = data.activeProfileData?.planningRules.orEmpty(),
-                    candidates = candidates,
-                    foodsById = foodsById,
-                    dishesById = dishesById,
-                    recommendation = target,
-                    mealShares = mealShares
-                )
+                val measured = linkedMapOf<Long, RepertoireAssessment>()
+                for (batch in candidates.chunked(3)) {
+                    measured += RepertoireEvaluator.evaluateCandidates(
+                        rules = rules,
+                        candidates = batch,
+                        foodsById = foodsById,
+                        dishesById = dishesById,
+                        recommendation = target,
+                        mealShares = mealShares
+                    )
+                    val verified = FoodSuggestionEngine.suggest(
+                        foods = data.foods,
+                        repertoireFoodIds = repertoireIds,
+                        planningRules = rules,
+                        plannedMeals = emptyList(),
+                        dishesById = dishesById,
+                        recommendation = target,
+                        excludedFoodIds = excludedIds,
+                        repertoireAssessment = baseline,
+                        candidateAssessments = measured,
+                        limit = 3
+                    )
+                    if (verified.size >= 3) break
+                }
+                measured
             }
         }
     }
@@ -2846,32 +2867,19 @@ private fun repertoireActionMessages(
     }
     val messages = mutableListOf<String>()
 
-    val missingByMeal = deficits.mapNotNull { (_, efficientNutrient, label) ->
-        val mealsWithoutSource = activeMeals.filter { mealType ->
-            activeRules.none { rule ->
-                val usableForMeal = mealType in rule.allowedMealTypes ||
-                    rule.requiredSlots().any { it.mealType == mealType }
-                usableForMeal && efficientNutrient in
-                    FoodSuggestionEngine.efficientNutrients(foodsById.getValue(rule.itemId))
-            }
-        }
-        mealsWithoutSource.takeIf { it.isNotEmpty() }?.let { label to it }
+    if (activeRules.isEmpty()) {
+        return assessment.limitingFactors.distinct().take(3)
     }
-    val generalDeficitLabels = deficits.map { it.third }
-        .filterNot { label -> missingByMeal.any { it.first == label } }
-    if (generalDeficitLabels.isNotEmpty()) {
+    val deficitLabels = deficits.map { it.third }
+    if (deficitLabels.isNotEmpty()) {
         val fatExcess = excesses.any { it.first == NutrientKind.FAT }
         messages += if (fatExcess) {
             "Necesitas alternativas que aporten " +
-                naturalListText(generalDeficitLabels) + " con menos grasa."
+                naturalListText(deficitLabels) + " con menos grasa."
         } else {
             "Necesitas más fuentes eficientes de " +
-                naturalListText(generalDeficitLabels) + "."
+                naturalListText(deficitLabels) + "."
         }
-    }
-    missingByMeal.forEach { (label, meals) ->
-        messages += "Necesitas fuentes eficientes de $label asignadas a " +
-            mealListText(meals) + "."
     }
 
     val forcedRules = activeRules.any {
