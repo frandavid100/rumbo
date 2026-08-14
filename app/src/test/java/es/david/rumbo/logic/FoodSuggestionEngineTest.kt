@@ -223,7 +223,13 @@ class FoodSuggestionEngineTest {
             recommendation = Recommendation(1875, 154, 198, 52, ""),
             repertoireAssessment = assessment,
             candidateAssessments = mapOf(
-                protein.id to assessment,
+                protein.id to assessment.copy(
+                    nutrition = assessment.nutrition + (
+                        NutrientKind.PROTEIN to NutrientCapacity(
+                            154.0, 140.0, -14.0, TargetFit.OUTSIDE
+                        )
+                    )
+                ),
                 carbohydrate.id to assessment,
                 toastWithSomeProtein.id to assessment
             )
