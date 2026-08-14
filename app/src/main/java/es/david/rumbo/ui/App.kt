@@ -1356,7 +1356,7 @@ private fun HomeScreen(
     ) {
         val baseline = repertoireAssessment
         val target = recommendation
-        value = if (menuReady || baseline == null || target == null) {
+        value = if (baseline == null || target == null) {
             emptyMap()
         } else {
             withContext(Dispatchers.Default) {
@@ -1394,18 +1394,22 @@ private fun HomeScreen(
         candidateAssessments,
         menuReady
     ) {
-        FoodSuggestionEngine.suggest(
-            foods = data.foods,
-            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-            planningRules = data.activeProfileData?.planningRules.orEmpty(),
-            plannedMeals = emptyList(),
-            dishesById = dishesById,
-            recommendation = recommendation,
-            excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
-            repertoireAssessment = repertoireAssessment,
-            candidateAssessments = candidateAssessments,
-            limit = 100
-        )
+        if (candidateAssessments == null) {
+            emptyList()
+        } else {
+            FoodSuggestionEngine.suggest(
+                foods = data.foods,
+                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                plannedMeals = emptyList(),
+                dishesById = dishesById,
+                recommendation = recommendation,
+                excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
+                repertoireAssessment = repertoireAssessment,
+                candidateAssessments = candidateAssessments,
+                limit = 100
+            )
+        }
     }
     val openFood = { foodId: Long ->
         onOpenFood(foodId, foodSuggestions.firstOrNull { it.food.id == foodId }?.reason)
@@ -1509,7 +1513,7 @@ private fun HomeScreen(
                 )
             }
         }
-        if (!menuReady && (foodSuggestions.isNotEmpty() || recommendation != null)) {
+        if (foodSuggestions.isNotEmpty() || !menuReady && recommendation != null) {
             item {
                 FoodSuggestionsCard(
                     suggestions = foodSuggestions.take(3),
