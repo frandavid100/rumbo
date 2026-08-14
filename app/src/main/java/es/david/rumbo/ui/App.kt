@@ -581,6 +581,7 @@ fun RumboApp(repository: AppRepository) {
                 )
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
+                    mealShares = mealShares,
                     onSwitchProfile = {
                         data = repository.switchProfile(it)
                         screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
@@ -1223,6 +1224,7 @@ private fun profileColor(id: Long?): Color {
 @Composable
 private fun HomeScreen(
     data: AppData,
+    mealShares: Map<MealType, Double>,
     onSwitchProfile: (Long) -> Unit,
     onManageProfiles: () -> Unit,
     onOpenShoppingList: () -> Unit,
@@ -1252,23 +1254,44 @@ private fun HomeScreen(
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
         .filter { it.planWeek == PlanWeek.CURRENT }
+    val repertoireAssessment by produceState<RepertoireAssessment?>(
+        initialValue = null,
+        data.activeProfileData?.planningRules,
+        data.foods,
+        data.dishes,
+        recommendation,
+        mealShares
+    ) {
+        value = recommendation?.let { target ->
+            withContext(Dispatchers.Default) {
+                RepertoireEvaluator.evaluate(
+                    rules = data.activeProfileData?.planningRules.orEmpty(),
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = target,
+                    mealShares = mealShares
+                )
+            }
+        }
+    }
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
         data.activeProfileData?.dismissedSuggestionFoodIds,
         data.activeProfileData?.planningRules,
-        meals,
         data.dishes,
-        recommendation
+        recommendation,
+        repertoireAssessment
     ) {
         FoodSuggestionEngine.suggest(
             foods = data.foods,
             repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
             planningRules = data.activeProfileData?.planningRules.orEmpty(),
-            plannedMeals = meals,
+            plannedMeals = emptyList(),
             dishesById = dishesById,
             recommendation = recommendation,
             excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
+            repertoireAssessment = repertoireAssessment,
             limit = 100
         )
     }
@@ -1402,7 +1425,7 @@ private fun FoodSuggestionsCard(
         Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Alimentos que podrían interesarte", style = MaterialTheme.typography.titleLarge)
+        Text("Tus alimentos recomendados", style = MaterialTheme.typography.titleLarge)
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 repeat(3) { index ->
@@ -1417,6 +1440,12 @@ private fun FoodSuggestionsCard(
                         exit = fadeOut() + shrinkVertically()
                     ) {
                         displayedSuggestion?.let { currentSuggestion ->
+                            Column {
+                                if (index > 0) {
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outlineVariant
+                                    )
+                                }
                             AnimatedContent(
                                 targetState = currentSuggestion,
                                 transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -1460,10 +1489,6 @@ private fun FoodSuggestionsCard(
                                     }
                                 }
                             }
-                            if (index < suggestions.lastIndex) {
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
                             }
                         }
                     }
