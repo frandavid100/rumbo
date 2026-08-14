@@ -148,8 +148,11 @@ object FoodSuggestionEngine {
                     } else {
                         true
                     }
-                val passesMeasuredCheck = assessmentStillNeedsHelp ||
+                val passesMeasuredCheck = if (candidateAssessments != null) {
                     producesMeasuredImprovement
+                } else {
+                    assessmentStillNeedsHelp || producesMeasuredImprovement
+                }
                 nutritionallyRelevant && passesMeasuredCheck
             }
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
