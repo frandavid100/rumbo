@@ -1932,7 +1932,10 @@ private fun WeeklyHomeMenuSection(
         WeekDay.entries
     }
     val summaryKey = "WEEKLY_SUMMARY"
-    var expandedSection by rememberSaveable(today.name) { mutableStateOf(today.name) }
+    val hasMenu = meals.isNotEmpty()
+    var expandedSection by rememberSaveable(today.name, hasMenu) {
+        mutableStateOf(if (hasMenu) today.name else summaryKey)
+    }
     var rebuildSheet by remember { mutableStateOf(false) }
     var optimizationPreview by remember { mutableStateOf<QuantityOptimizationResult?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -2386,9 +2389,12 @@ private fun WeeklyHomeMenuSection(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { rebuildSheet = true },
+                            onClick = {
+                                if (hasMenu) rebuildSheet = true
+                                else message = onRegenerateWeek()
+                            },
                             modifier = Modifier.weight(1f)
-                        ) { Text("Rehacer menú") }
+                        ) { Text(if (hasMenu) "Cambiar menú" else "Crear menú") }
                         OutlinedButton(
                             onClick = onOpenCurrentShoppingList,
                             modifier = Modifier.weight(1f)
@@ -4220,7 +4226,7 @@ private fun PlanningRuleDialog(
             SelectorField(
                 label = "Frecuencia",
                 selectedLabel = frequency.label,
-                options = listOf(PlanningFrequency.ALWAYS, PlanningFrequency.NORMAL, PlanningFrequency.OCCASIONAL),
+                options = listOf(PlanningFrequency.OCCASIONAL, PlanningFrequency.NORMAL, PlanningFrequency.ALWAYS),
                 optionLabel = { it.label }, onSelect = { frequency = it }, onClear = null
             )
             MultiSelectField(
