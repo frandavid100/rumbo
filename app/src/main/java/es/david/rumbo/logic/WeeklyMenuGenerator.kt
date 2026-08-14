@@ -53,7 +53,7 @@ object WeeklyMenuGenerator {
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
         mealShares: Map<MealType, Double> = defaultMealShares,
-        seed: Long = System.currentTimeMillis()
+        seed: Long = 11L
     ): GeneratedWeeklyMenu {
         val foodRules = rules.filter { it.itemKind == PlannedItemKind.FOOD && it.isActive }
         require(foodRules.isNotEmpty()) { "Añade al menos un alimento al menú." }
