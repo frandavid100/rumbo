@@ -303,7 +303,7 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
-    fun insufficientRepertoireKeepsSuggestionsWhenNoSimulationImprovesIt() {
+    fun candidateWithoutMeasuredImprovementIsNotSuggested() {
         val candidate = food(
             100, "Pechuga", FoodCategory.PROTEIN, "Mercadona",
             110.0, 24.0, 0.0, 1.0
@@ -335,8 +335,7 @@ class FoodSuggestionEngineTest {
             repertoireAssessment = assessment,
             candidateAssessments = mapOf(candidate.id to assessment)
         )
-        assertEquals(listOf(candidate.id), result.map { it.food.id })
-        assertEquals("Es una fuente eficiente de proteína.", result.single().reason)
+        assertTrue(result.isEmpty())
     }
 
     @Test
@@ -387,7 +386,7 @@ class FoodSuggestionEngineTest {
             )
         )
         assertTrue(result.any { it.food.id == protein.id })
-        assertTrue(result.any { it.food.id == carbohydrate.id })
+        assertTrue(result.none { it.food.id == carbohydrate.id })
     }
 
     @Test
