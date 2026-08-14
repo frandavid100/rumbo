@@ -3794,7 +3794,7 @@ private fun PlanningRuleCards(
                 itemKind,
                 itemId,
                 MealType.entries.toSet(),
-                frequency = PlanningFrequency.NORMAL,
+                frequency = PlanningFrequency.OCCASIONAL,
                 preferredGrams = defaultGrams,
                 ruleId = System.currentTimeMillis()
             ),
