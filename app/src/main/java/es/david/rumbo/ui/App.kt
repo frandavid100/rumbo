@@ -1281,6 +1281,28 @@ private fun profileColor(id: Long?): Color {
     return colors[index.toInt()]
 }
 
+private data class RepertoireAssessmentCacheKey(
+    val profileId: Long?,
+    val planningRulesHash: Int,
+    val foodsHash: Int,
+    val dishesHash: Int,
+    val recommendationHash: Int,
+    val mealSharesHash: Int
+)
+
+private object RepertoireAssessmentMemory {
+    private var key: RepertoireAssessmentCacheKey? = null
+    private var assessment: RepertoireAssessment? = null
+
+    fun get(expectedKey: RepertoireAssessmentCacheKey): RepertoireAssessment? =
+        assessment.takeIf { key == expectedKey }
+
+    fun put(newKey: RepertoireAssessmentCacheKey, newAssessment: RepertoireAssessment) {
+        key = newKey
+        assessment = newAssessment
+    }
+}
+
 @Composable
 private fun HomeScreen(
     data: AppData,
@@ -1320,23 +1342,43 @@ private fun HomeScreen(
             isAcceptableWeeklyMenu(meals, foodsById, dishesById, it)
         } == true
     }
-    val repertoireAssessment by produceState<RepertoireAssessment?>(
-        initialValue = null,
+    val repertoireAssessmentKey = remember(
+        data.activeProfileId,
         data.activeProfileData?.planningRules,
         data.foods,
         data.dishes,
         recommendation,
         mealShares
     ) {
-        value = recommendation?.let { target ->
-            withContext(Dispatchers.Default) {
-                RepertoireEvaluator.evaluate(
-                    rules = data.activeProfileData?.planningRules.orEmpty(),
-                    foodsById = foodsById,
-                    dishesById = dishesById,
-                    recommendation = target,
-                    mealShares = mealShares
-                )
+        RepertoireAssessmentCacheKey(
+            profileId = data.activeProfileId,
+            planningRulesHash = data.activeProfileData?.planningRules.orEmpty().hashCode(),
+            foodsHash = data.foods.hashCode(),
+            dishesHash = data.dishes.hashCode(),
+            recommendationHash = recommendation.hashCode(),
+            mealSharesHash = mealShares.hashCode()
+        )
+    }
+    val cachedRepertoireAssessment = remember(repertoireAssessmentKey) {
+        RepertoireAssessmentMemory.get(repertoireAssessmentKey)
+    }
+    val repertoireAssessment by produceState<RepertoireAssessment?>(
+        initialValue = cachedRepertoireAssessment,
+        repertoireAssessmentKey
+    ) {
+        if (cachedRepertoireAssessment == null) {
+            value = recommendation?.let { target ->
+                withContext(Dispatchers.Default) {
+                    RepertoireEvaluator.evaluate(
+                        rules = data.activeProfileData?.planningRules.orEmpty(),
+                        foodsById = foodsById,
+                        dishesById = dishesById,
+                        recommendation = target,
+                        mealShares = mealShares
+                    )
+                }.also { assessment ->
+                    RepertoireAssessmentMemory.put(repertoireAssessmentKey, assessment)
+                }
             }
         }
     }
@@ -1366,6 +1408,7 @@ private fun HomeScreen(
         )
     }
     var pinnedSuggestions by remember { mutableStateOf<List<FoodSuggestion>>(emptyList()) }
+    var pinnedRecommendationMessage by remember { mutableStateOf<String?>(null) }
     var mayRefreshPinnedSuggestions by remember { mutableStateOf(true) }
     val handledSuggestionIds = remember(
         data.activeProfileData?.repertoireFoodIds,
@@ -1375,19 +1418,23 @@ private fun HomeScreen(
             data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty()
     }
     LaunchedEffect(handledSuggestionIds) {
-        val surviving = pinnedSuggestions.filterNot { it.food.id in handledSuggestionIds }
-        if (surviving.size != pinnedSuggestions.size) {
-            pinnedSuggestions = surviving
+        if (pinnedSuggestions.any { it.food.id in handledSuggestionIds }) {
+            pinnedSuggestions = emptyList()
+            pinnedRecommendationMessage = null
             mayRefreshPinnedSuggestions = true
         }
     }
     LaunchedEffect(repertoireAssessment, foodSuggestions, mayRefreshPinnedSuggestions) {
-        if (repertoireAssessment != null && mayRefreshPinnedSuggestions) {
-            pinnedSuggestions = (
-                pinnedSuggestions + foodSuggestions.filter { candidate ->
-                    pinnedSuggestions.none { it.food.id == candidate.food.id }
+        val currentAssessment = repertoireAssessment
+        if (currentAssessment != null && mayRefreshPinnedSuggestions) {
+            val focus = recommendationFocus(currentAssessment, foodSuggestions)
+            val focusedSuggestions = focus?.let { nutrient ->
+                foodSuggestions.filter { candidate ->
+                    nutrient in FoodSuggestionEngine.efficientNutrients(candidate.food)
                 }
-            ).take(3)
+            }.orEmpty()
+            pinnedSuggestions = focusedSuggestions.take(3)
+            pinnedRecommendationMessage = recommendationFocusMessage(focus, currentAssessment)
             mayRefreshPinnedSuggestions = false
         }
     }
@@ -1502,8 +1549,7 @@ private fun HomeScreen(
                     suggestions = pinnedSuggestions,
                     showMenuReadiness = recommendation != null && !menuReady,
                     assessment = repertoireAssessment,
-                    rules = data.activeProfileData?.planningRules.orEmpty(),
-                    foodsById = foodsById,
+                    recommendationMessage = pinnedRecommendationMessage,
                     onOpenFood = openFood,
                     onDismiss = onDismissFoodSuggestion
                 )
@@ -1539,8 +1585,7 @@ private fun FoodSuggestionsCard(
     suggestions: List<FoodSuggestion>,
     showMenuReadiness: Boolean,
     assessment: RepertoireAssessment?,
-    rules: List<PlanningRule>,
-    foodsById: Map<Long, Food>,
+    recommendationMessage: String?,
     onOpenFood: (Long) -> Unit,
     onDismiss: (Long) -> Unit
 ) {
@@ -1551,6 +1596,34 @@ private fun FoodSuggestionsCard(
         Text("Tus alimentos recomendados", style = MaterialTheme.typography.titleLarge)
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                if (showMenuReadiness || suggestions.isNotEmpty()) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "Para que podamos crearte un menú adecuado, añade alimentos " +
+                                "recomendados o usa la búsqueda para elegir los que tú quieras.",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        if (assessment == null) {
+                            Text(
+                                "Analizando tus alimentos…",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                        } else if (!recommendationMessage.isNullOrBlank()) {
+                            Text(
+                                recommendationMessage,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+                if (suggestions.isNotEmpty()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
                 repeat(3) { index ->
                     val suggestion = suggestions.getOrNull(index)
                     var displayedSuggestion by remember(index) {
@@ -1569,79 +1642,53 @@ private fun FoodSuggestionsCard(
                                         color = MaterialTheme.colorScheme.outlineVariant
                                     )
                                 }
-                            AnimatedContent(
-                                targetState = currentSuggestion,
-                                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                                label = "Texto de recomendación"
-                            ) { animatedSuggestion ->
-                                Row(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onOpenFood(animatedSuggestion.food.id) }
-                                        .padding(vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Column(
-                                        Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                AnimatedContent(
+                                    targetState = currentSuggestion,
+                                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                    label = "Texto de recomendación"
+                                ) { animatedSuggestion ->
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onOpenFood(animatedSuggestion.food.id)
+                                            }
+                                            .padding(vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        Text(
-                                            animatedSuggestion.food.name,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.SemiBold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            animatedSuggestion.reason,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { onDismiss(animatedSuggestion.food.id) }
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = "No me interesa",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        Column(
+                                            Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            Text(
+                                                animatedSuggestion.food.name,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                animatedSuggestion.reason,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                onDismiss(animatedSuggestion.food.id)
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = "No me interesa",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                            }
-                        }
-                    }
-                }
-                if (showMenuReadiness) {
-                    if (suggestions.isNotEmpty()) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    }
-                    Column(
-                        Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            "Para que podamos crearte un menú adecuado, añade alimentos " +
-                                "recomendados o usa la búsqueda para elegir los que tú quieras.",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        if (assessment == null) {
-                            Text(
-                                "Analizando tus alimentos…",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            LinearProgressIndicator(Modifier.fillMaxWidth())
-                        } else {
-                            val message = repertoireActionMessages(
-                                assessment, rules, foodsById
-                            ).joinToString(" ")
-                            if (message.isNotBlank()) {
-                                Text(message, style = MaterialTheme.typography.bodyLarge)
                             }
                         }
                     }
@@ -2772,6 +2819,67 @@ private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
     }.joinToString(" ")
 }
 
+
+private fun recommendationFocus(
+    assessment: RepertoireAssessment,
+    suggestions: List<FoodSuggestion>
+): EfficientNutrient? {
+    val deficitPriority = listOf(
+        NutrientKind.PROTEIN to EfficientNutrient.PROTEIN,
+        NutrientKind.CARBOHYDRATES to EfficientNutrient.CARBOHYDRATES,
+        NutrientKind.FAT to EfficientNutrient.FAT
+    )
+    val deficit = deficitPriority
+        .mapNotNull { (kind, nutrient) ->
+            assessment.nutrition[kind]?.takeIf {
+                it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET
+            }?.let { capacity ->
+                nutrient to (-capacity.deviation / capacity.target.coerceAtLeast(1.0))
+            }
+        }
+        .maxByOrNull { it.second }
+        ?.first
+    if (deficit != null && suggestions.any {
+            deficit in FoodSuggestionEngine.efficientNutrients(it.food)
+        }) {
+        return deficit
+    }
+    val fallbackPriority = listOf(
+        EfficientNutrient.PROTEIN,
+        EfficientNutrient.CARBOHYDRATES,
+        EfficientNutrient.FAT,
+        EfficientNutrient.FIBER
+    )
+    return fallbackPriority.firstOrNull { nutrient ->
+        suggestions.any { nutrient in FoodSuggestionEngine.efficientNutrients(it.food) }
+    }
+}
+
+private fun recommendationFocusMessage(
+    focus: EfficientNutrient?,
+    assessment: RepertoireAssessment
+): String? {
+    val fatExcess = assessment.nutrition[NutrientKind.FAT]?.let {
+        it.deviation > 0.0 && it.fit != TargetFit.ON_TARGET
+    } == true
+    return when (focus) {
+        EfficientNutrient.PROTEIN -> if (fatExcess) {
+            "Añade alimentos que aporten proteína con poca grasa."
+        } else {
+            "Añade alimentos que aporten proteína de forma eficiente."
+        }
+        EfficientNutrient.CARBOHYDRATES -> if (fatExcess) {
+            "Añade alimentos que aporten hidratos con poca grasa."
+        } else {
+            "Añade alimentos que aporten hidratos de forma eficiente."
+        }
+        EfficientNutrient.FAT ->
+            "Añade alimentos que aporten grasas de forma eficiente."
+        EfficientNutrient.FIBER ->
+            "Añade alimentos ricos en fibra."
+        null -> null
+    }
+}
 
 private fun repertoireActionMessages(
     assessment: RepertoireAssessment,
