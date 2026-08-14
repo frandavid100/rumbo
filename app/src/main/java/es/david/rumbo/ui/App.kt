@@ -5747,8 +5747,8 @@ private fun FoodPickerDialog(
                 when {
                     normalized.isBlank() -> indexed.food.id in preferredFoodIds
                     normalized.length < 2 -> indexed.food.id in preferredFoodIds &&
-                        indexed.matchesSearch(searchText, normalized)
-                    else -> indexed.matchesSearch(searchText, normalized)
+                        matchesSearch(indexed.searchText, normalized)
+                    else -> matchesSearch(indexed.searchText, normalized)
                 }
             }
             .sortedWith(
@@ -5832,7 +5832,7 @@ private fun MealItemPickerDialog(
     ) {
         val dishResults = dishes.asSequence()
             .filterNot { it.id in excludedDishIds }
-            .filter { normalized.isBlank() || normalizeSearch(it.name).contains(normalized) }
+            .filter { normalized.isBlank() || matchesSearch(normalizeSearch(it.name), normalized) }
             .map {
                 MealPickerResult(
                     it.id, it.name, category = it.dominantCategory(foodsById),
@@ -5845,8 +5845,8 @@ private fun MealItemPickerDialog(
                 when {
                     normalized.isBlank() -> it.food.id in preferredFoodIds
                     normalized.length < 2 -> it.food.id in preferredFoodIds &&
-                        it.matchesSearch(searchText, normalized)
-                    else -> it.matchesSearch(searchText, normalized)
+                        matchesSearch(it.searchText, normalized)
+                    else -> matchesSearch(it.searchText, normalized)
                 }
             }
             .map {
