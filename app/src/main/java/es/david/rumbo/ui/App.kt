@@ -297,6 +297,10 @@ fun RumboApp(repository: AppRepository) {
     var selectedMeasurementId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
     var foodNavigationStack by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+    var selectedFoodRecommendationReason by rememberSaveable { mutableStateOf<String?>(null) }
+    var foodRecommendationReasonStack by rememberSaveable {
+        mutableStateOf(emptyList<String>())
+    }
     var selectedPlannedMealId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedDishId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -357,6 +361,9 @@ fun RumboApp(repository: AppRepository) {
             screen == Screen.FOOD_DETAIL && foodNavigationStack.isNotEmpty() -> {
                 selectedFoodId = foodNavigationStack.last()
                 foodNavigationStack = foodNavigationStack.dropLast(1)
+                selectedFoodRecommendationReason =
+                    foodRecommendationReasonStack.lastOrNull()?.takeIf { it.isNotEmpty() }
+                foodRecommendationReasonStack = foodRecommendationReasonStack.dropLast(1)
                 Screen.FOOD_DETAIL.name
             }
             screen == Screen.FOOD_DETAIL && foodReturnScreenName != null -> {
@@ -646,9 +653,11 @@ fun RumboApp(repository: AppRepository) {
                         screenName = Screen.EDIT_PLANNED_MEAL.name
                     },
                     onOpenFoods = { screenName = Screen.FOODS.name },
-                    onOpenFood = {
-                        selectedFoodId = it
+                    onOpenFood = { foodId, reason ->
+                        selectedFoodId = foodId
+                        selectedFoodRecommendationReason = reason
                         foodNavigationStack = emptyList()
+                        foodRecommendationReasonStack = emptyList()
                         foodReturnScreenName = Screen.HOME.name
                         screenName = Screen.FOOD_DETAIL.name
                     },
@@ -804,6 +813,8 @@ fun RumboApp(repository: AppRepository) {
                     onOpenFood = {
                         selectedFoodId = it
                         foodNavigationStack = emptyList()
+                        foodRecommendationReasonStack = emptyList()
+                        selectedFoodRecommendationReason = null
                         foodReturnScreenName = Screen.ADD_PLANNED_MEAL.name
                         screenName = Screen.FOOD_DETAIL.name
                     },
@@ -967,6 +978,8 @@ fun RumboApp(repository: AppRepository) {
                     onOpenFood = {
                         selectedFoodId = it
                         foodNavigationStack = emptyList()
+                        foodRecommendationReasonStack = emptyList()
+                        selectedFoodRecommendationReason = null
                         foodReturnScreenName = null
                         screenName = Screen.FOOD_DETAIL.name
                     },
@@ -1006,8 +1019,17 @@ fun RumboApp(repository: AppRepository) {
                             onOpenFood = {
                                 selectedFoodId?.let { current ->
                                     foodNavigationStack = foodNavigationStack + current
+                                    foodRecommendationReasonStack =
+                                        foodRecommendationReasonStack +
+                                            selectedFoodRecommendationReason.orEmpty()
                                 }
+                                selectedFoodRecommendationReason = null
                                 selectedFoodId = it
+                            },
+                            recommendationReason = selectedFoodRecommendationReason,
+                            onDismissRecommendation = {
+                                data = repository.dismissFoodSuggestion(food.id)
+                                selectedFoodRecommendationReason = null
                             },
                             onOpenDish = {
                                 selectedDishId = it
@@ -1261,7 +1283,7 @@ private fun HomeScreen(
     onOpenNextWeek: () -> Unit,
     onRegenerateWeek: () -> String?,
     onOpenMeal: (Long) -> Unit,
-    onOpenFood: (Long) -> Unit,
+    onOpenFood: (Long, String?) -> Unit,
     onDismissFoodSuggestion: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onOpenFoods: () -> Unit,
@@ -1348,7 +1370,7 @@ private fun HomeScreen(
         repertoireAssessment,
         candidateAssessments
     ) {
-        FoodSuggestionEngine.suggest(
+        if (recommendation == null) emptyList() else FoodSuggestionEngine.suggest(
             foods = data.foods,
             repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
             planningRules = data.activeProfileData?.planningRules.orEmpty(),
@@ -1361,8 +1383,15 @@ private fun HomeScreen(
             limit = 100
         )
     }
+    val openFood = { foodId: Long ->
+        onOpenFood(foodId, foodSuggestions.firstOrNull { it.food.id == foodId }?.reason)
+    }
     val searchTextState = rememberTextFieldState()
     var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
+    var searchCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
+    val searchCategory = searchCategoryName?.let { name ->
+        FoodCategory.entries.firstOrNull { it.name == name }
+    }
     var searchMessage by remember { mutableStateOf<String?>(null) }
     val searchBarState = rememberSearchBarState()
     val searchListState = rememberLazyListState()
@@ -1390,6 +1419,8 @@ private fun HomeScreen(
                 textFieldState = searchTextState,
                 filter = searchFilter,
                 onFilterChange = { searchFilter = it },
+                categoryFilter = searchCategory,
+                onCategoryFilterChange = { searchCategoryName = it?.name },
                 scanMessage = searchMessage,
                 onScanMessageChange = { searchMessage = it },
                 state = searchBarState,
@@ -1452,11 +1483,11 @@ private fun HomeScreen(
                 )
             }
         }
-        if (foodSuggestions.isNotEmpty()) {
+        if (recommendation != null && foodSuggestions.isNotEmpty()) {
             item {
                 FoodSuggestionsCard(
                     suggestions = foodSuggestions.take(3),
-                    onOpenFood = onOpenFood,
+                    onOpenFood = openFood,
                     onDismiss = onDismissFoodSuggestion
                 )
             }
@@ -1477,7 +1508,7 @@ private fun HomeScreen(
                 onOpenCurrentShoppingList = onOpenCurrentShoppingList,
                 onRegenerateWeek = onRegenerateWeek,
                 onOpenMeal = onOpenMeal,
-                onOpenFood = onOpenFood,
+                onOpenFood = openFood,
                 onOpenDish = onOpenDish,
                 onApplyAdjustedMeals = onApplyAdjustedMeals
             )
@@ -2427,6 +2458,7 @@ private fun WeeklyHomeMenuSection(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
+                            enabled = recommendation != null,
                             onClick = {
                                 if (hasMenu) rebuildSheet = true
                                 else message = onRegenerateWeek()
@@ -2662,7 +2694,7 @@ private fun NutritionAmountMetric(
 }
 
 private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
-    if (assessment == null) return "Añade una medición para poder valorar este menú."
+    if (assessment == null) return "Introduce una primera medición para que Rumbo pueda calcular tus necesidades y crear un menú."
     if (assessment.missingMealTypes.isNotEmpty()) {
         return "Faltan: ${assessment.missingMealTypes.joinToString { it.label.lowercase() }}."
     }
@@ -5715,8 +5747,8 @@ private fun FoodPickerDialog(
                 when {
                     normalized.isBlank() -> indexed.food.id in preferredFoodIds
                     normalized.length < 2 -> indexed.food.id in preferredFoodIds &&
-                        indexed.searchText.contains(normalized)
-                    else -> indexed.searchText.contains(normalized)
+                        indexed.matchesSearch(searchText, normalized)
+                    else -> indexed.matchesSearch(searchText, normalized)
                 }
             }
             .sortedWith(
@@ -5813,8 +5845,8 @@ private fun MealItemPickerDialog(
                 when {
                     normalized.isBlank() -> it.food.id in preferredFoodIds
                     normalized.length < 2 -> it.food.id in preferredFoodIds &&
-                        it.searchText.contains(normalized)
-                    else -> it.searchText.contains(normalized)
+                        it.matchesSearch(searchText, normalized)
+                    else -> it.matchesSearch(searchText, normalized)
                 }
             }
             .map {
@@ -5880,6 +5912,11 @@ private fun MealItemPickerDialog(
 }
 
 private enum class CatalogFilter { ALL, FOODS, DISHES }
+
+private fun matchesSearch(searchable: String, query: String): Boolean {
+    val terms = query.split(Regex("\\s+")).filter { it.isNotBlank() }
+    return terms.isEmpty() || terms.all(searchable::contains)
+}
 private enum class CatalogMode { SEARCH, REPERTOIRE }
 private enum class RepertoireFilter(val label: String) {
     ALL("Todos"), ACTIVE("Activos"), INACTIVE("Inactivos"), PENDING("Pendientes")
@@ -5897,6 +5934,7 @@ private fun HomeCatalogSearch(
     foodSuggestions: List<FoodSuggestion>,
     textFieldState: TextFieldState,
     filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
+    categoryFilter: FoodCategory?, onCategoryFilterChange: (FoodCategory?) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     state: SearchBarState,
     listState: LazyListState,
@@ -5938,8 +5976,8 @@ private fun HomeCatalogSearch(
         foodSuggestions.take(3).mapTo(mutableSetOf()) { it.food.id }
     }
     val entries = remember(
-        foods, dishes, normalized, filter, repertoireFoodIds, suggestionsByFoodId,
-        topSuggestionIds
+        foods, dishes, normalized, filter, categoryFilter, repertoireFoodIds,
+        suggestionsByFoodId, topSuggestionIds
     ) {
         buildList {
             if (filter != CatalogFilter.DISHES) foods.forEach { food ->
@@ -5947,16 +5985,19 @@ private fun HomeCatalogSearch(
                     listOfNotNull(food.name, food.brand, food.barcode).joinToString(" ")
                 )
                 val suggested = food.id in topSuggestionIds
-                if (normalized.isBlank() && (suggested || food.id in repertoireFoodIds) ||
-                    normalized.isNotBlank() && searchText.contains(normalized)
+                if ((categoryFilter == null || food.category == categoryFilter) &&
+                    (normalized.isBlank() && (suggested || food.id in repertoireFoodIds) ||
+                    normalized.isNotBlank() && matchesSearch(searchText, normalized))
                 ) {
                     add(CatalogEntry(food.id, food.name, false))
                 }
             }
             if (filter != CatalogFilter.FOODS) dishes.forEach { dish ->
                 val favorite = dish.ingredients.any { it.foodId in repertoireFoodIds }
-                if (normalized.isBlank() && favorite ||
-                    normalized.isNotBlank() && normalizeSearch(dish.name).contains(normalized)
+                val dishCategory = dish.dominantCategory(foodsById)
+                if ((categoryFilter == null || dishCategory == categoryFilter) &&
+                    (normalized.isBlank() && favorite ||
+                    normalized.isNotBlank() && matchesSearch(normalizeSearch(dish.name), normalized))
                 ) {
                     add(CatalogEntry(dish.id, dish.name, true))
                 }
@@ -6100,7 +6141,10 @@ private fun HomeCatalogSearch(
                 header = {
                     Column(Modifier.fillMaxWidth()) {
                         Spacer(Modifier.height(8.dp))
-                        CatalogFilterMenu(filter, onFilterChange)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CatalogFilterMenu(filter, onFilterChange)
+                            CatalogCategoryMenu(categoryFilter, onCategoryFilterChange)
+                        }
                         if (query.isBlank()) {
                             Text(
                                 "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
@@ -6132,6 +6176,10 @@ private fun FoodDishCatalogScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var normalizedQuery by remember { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
+    var categoryFilterName by rememberSaveable { mutableStateOf<String?>(null) }
+    val categoryFilter = categoryFilterName?.let { name ->
+        FoodCategory.entries.firstOrNull { it.name == name }
+    }
     var mode by rememberSaveable { mutableStateOf(CatalogMode.SEARCH) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var scanMessage by remember { mutableStateOf<String?>(null) }
@@ -6143,7 +6191,7 @@ private fun FoodDishCatalogScreen(
         normalizedQuery = normalizeSearch(query)
     }
 
-    val entries = remember(foods, dishes, normalizedQuery, filter, mode, repertoireFoodIds) {
+    val entries = remember(foods, dishes, normalizedQuery, filter, categoryFilter, mode, repertoireFoodIds) {
         buildList {
             if (filter != CatalogFilter.DISHES) {
                 foods.forEach { food ->
@@ -6154,9 +6202,10 @@ private fun FoodDishCatalogScreen(
                         ).joinToString(" ")
                     )
                     val belongs = food.id in repertoireFoodIds
-                    if ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
+                    if ((categoryFilter == null || food.category == categoryFilter) &&
+                        ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
                             mode == CatalogMode.REPERTOIRE && belongs) &&
-                        (normalizedQuery.isBlank() || searchable.contains(normalizedQuery))) {
+                        (normalizedQuery.isBlank() || matchesSearch(searchable, normalizedQuery)))) {
                         add(CatalogEntry(food.id, food.name, false))
                     }
                 }
@@ -6168,9 +6217,11 @@ private fun FoodDishCatalogScreen(
                         (listOf(dish.name) + ingredientNames).joinToString(" ")
                     )
                     val belongs = dish.ingredients.any { it.foodId in repertoireFoodIds }
-                    if ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
+                    val dishCategory = dish.dominantCategory(foodsById)
+                    if ((categoryFilter == null || dishCategory == categoryFilter) &&
+                        ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
                             mode == CatalogMode.REPERTOIRE && belongs) &&
-                        (normalizedQuery.isBlank() || searchable.contains(normalizedQuery))) {
+                        (normalizedQuery.isBlank() || matchesSearch(searchable, normalizedQuery)))) {
                         add(CatalogEntry(dish.id, dish.name, true))
                     }
                 }
@@ -6253,6 +6304,10 @@ private fun FoodDishCatalogScreen(
             ) {
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     CatalogFilterChips(filter = filter, onFilterChange = { filter = it })
+                CatalogCategoryMenu(categoryFilter) { categoryFilterName = it?.name }
+                Spacer(Modifier.height(8.dp))
+                    CatalogCategoryMenu(categoryFilter) { categoryFilterName = it?.name }
+                    Spacer(Modifier.height(8.dp))
                     scanMessage?.let {
                         Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(8.dp))
@@ -6276,6 +6331,8 @@ private fun FoodDishCatalogScreen(
             Spacer(Modifier.height(8.dp))
             if (mode == CatalogMode.REPERTOIRE) {
                 CatalogFilterChips(filter = filter, onFilterChange = { filter = it })
+                CatalogCategoryMenu(categoryFilter) { categoryFilterName = it?.name }
+                Spacer(Modifier.height(8.dp))
                 CatalogEntries(
                     entries = entries,
                     foods = foods,
@@ -6308,9 +6365,9 @@ private fun CatalogFilterChips(
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(
-            CatalogFilter.ALL to "Todos",
-            CatalogFilter.FOODS to "Alimentos",
-            CatalogFilter.DISHES to "Platos"
+            CatalogFilter.ALL to "Alimentos y platos",
+            CatalogFilter.FOODS to "Solo alimentos",
+            CatalogFilter.DISHES to "Solo platos"
         ).forEach { (option, label) ->
             FilterChip(
                 selected = filter == option,
@@ -6329,9 +6386,9 @@ private fun CatalogFilterMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val options = listOf(
-        CatalogFilter.ALL to "Todos",
-        CatalogFilter.FOODS to "Alimentos",
-        CatalogFilter.DISHES to "Platos"
+        CatalogFilter.ALL to "Alimentos y platos",
+        CatalogFilter.FOODS to "Solo alimentos",
+        CatalogFilter.DISHES to "Solo platos"
     )
     Box {
         FilterChip(
@@ -6348,6 +6405,36 @@ private fun CatalogFilterMenu(
                     },
                     text = { Text(label) },
                     onClick = { onFilterChange(option); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CatalogCategoryMenu(
+    category: FoodCategory?,
+    onCategoryChange: (FoodCategory?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = category != null,
+            onClick = { expanded = true },
+            label = { Text(category?.label ?: "Todos los tipos") },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            (listOf<FoodCategory?>(null) + FoodCategory.entries).forEach { option ->
+                DropdownMenuItem(
+                    leadingIcon = {
+                        if (category == option) Icon(Icons.Default.Check, contentDescription = null)
+                    },
+                    text = { Text(option?.label ?: "Todos los tipos") },
+                    onClick = {
+                        onCategoryChange(option)
+                        expanded = false
+                    }
                 )
             }
         }
@@ -7655,6 +7742,8 @@ private fun FoodDetailScreen(
     plannedMeals: List<PlannedMeal>,
     dishes: List<Dish>,
     onOpenFood: (Long) -> Unit,
+    recommendationReason: String?,
+    onDismissRecommendation: () -> Unit,
     onOpenDish: (Long) -> Unit,
     onOpenMeal: (Long) -> Unit,
     onAddToMeal: (Long) -> Unit,
@@ -7771,6 +7860,27 @@ private fun FoodDetailScreen(
                 .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            recommendationReason?.let { reason ->
+                Card(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 16.dp, top = 10.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                "Alimento recomendado",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(reason, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = onDismissRecommendation) {
+                            Icon(Icons.Default.Close, "Dejar de recomendar")
+                        }
+                    }
+                }
+            }
             Column(
                 Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
