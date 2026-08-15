@@ -71,7 +71,10 @@ data class RepertoireMetrics(
  * nutrition solver from developing beside the real one.
  */
 object RepertoireEvaluator {
-    private val seeds = listOf(11L)
+    // A repertoire is a set of possibilities, not the first random menu found.
+    // Several stable seeds explore different combinations without making the
+    // result fluctuate between app launches.
+    private val seeds = listOf(11L, 37L, 89L)
     private val defaultShares = mapOf(
         MealType.BREAKFAST to .20,
         MealType.MORNING_SNACK to .10,

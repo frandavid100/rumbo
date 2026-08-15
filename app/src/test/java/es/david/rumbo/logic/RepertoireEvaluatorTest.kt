@@ -82,7 +82,7 @@ class RepertoireEvaluatorTest {
             mapOf(1L to yoghurt), emptyMap(), Recommendation(240, 24, 24, 5, ""), lunchOnly
         )
 
-        assertTrue(result.metrics.evaluatedSolutions > 0)
+        assertEquals(3, result.metrics.evaluatedSolutions)
         assertEquals(0.0, result.nutrition.getValue(NutrientKind.CALORIES).bestAchievable % 120.0, .001)
     }
 
