@@ -600,11 +600,21 @@ object WeeklyMenuGenerator {
         val proteinDeficit = if (protein < proteinTarget) {
             squared(protein, proteinTarget)
         } else 0.0
+        val carbohydrateTarget = recommendation.carbohydrateGrams * share
+        val carbohydrateDeficit = if (carbohydrates < carbohydrateTarget) {
+            squared(carbohydrates, carbohydrateTarget)
+        } else 0.0
+        val fatTarget = recommendation.fatGrams * share
+        val fatExcess = if (fat > fatTarget) {
+            squared(fat, fatTarget)
+        } else 0.0
         // A meal should roughly occupy its chosen energy share, but it need
-        // not reproduce the complete daily macro ratio. The whole day and
-        // week are responsible for nutritional balance.
+        // not reproduce the complete daily macro ratio. Deficits in protein
+        // and carbohydrates and excess fat still matter here: once a poor
+        // composition fills all four positions, quantity optimisation cannot
+        // replace it with the missing culinary role.
         return squared(calories, recommendation.calories * share) * 5.0 +
-            proteinDeficit * 0.75
+            proteinDeficit * 0.75 + carbohydrateDeficit + fatExcess * 2.0
     }
 
     private fun chooseRule(
