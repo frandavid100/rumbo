@@ -118,6 +118,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
@@ -1433,6 +1434,12 @@ private fun HomeScreen(
     var pinnedSuggestions by remember { mutableStateOf<List<FoodSuggestion>>(emptyList()) }
     var pinnedRecommendationMessage by remember { mutableStateOf<String?>(null) }
     var mayRefreshPinnedSuggestions by remember { mutableStateOf(true) }
+    var recommendationFocusName by rememberSaveable(data.profile?.id) {
+        mutableStateOf<String?>(null)
+    }
+    var resolvedRecommendationFocusNames by rememberSaveable(data.profile?.id) {
+        mutableStateOf(emptyList<String>())
+    }
     val handledSuggestionIds = remember(
         data.activeProfileData?.repertoireFoodIds,
         data.activeProfileData?.dismissedSuggestionFoodIds
@@ -1450,7 +1457,19 @@ private fun HomeScreen(
     LaunchedEffect(repertoireAssessment, foodSuggestions, mayRefreshPinnedSuggestions) {
         val currentAssessment = repertoireAssessment
         if (currentAssessment != null && mayRefreshPinnedSuggestions) {
-            val focus = recommendationFocus(currentAssessment, foodSuggestions)
+            val previousFocus = recommendationFocusName?.let { name ->
+                EfficientNutrient.entries.firstOrNull { it.name == name }
+            }
+            val resolved = resolvedRecommendationFocusNames.mapNotNullTo(mutableSetOf()) { name ->
+                EfficientNutrient.entries.firstOrNull { it.name == name }
+            }
+            if (previousFocus != null && !currentAssessment.hasDeficit(previousFocus)) {
+                resolved += previousFocus
+                resolvedRecommendationFocusNames = resolved.map { it.name }
+            }
+            val focus = previousFocus
+                ?.takeIf { it !in resolved && currentAssessment.hasDeficit(it) }
+                ?: recommendationFocus(currentAssessment, foodSuggestions, resolved)
             val focusedSuggestions = focus?.let { nutrient ->
                 FoodSuggestionEngine.focusedSuggestions(
                     suggestions = foodSuggestions,
@@ -1460,6 +1479,7 @@ private fun HomeScreen(
             }.orEmpty()
             pinnedSuggestions = focusedSuggestions
             pinnedRecommendationMessage = recommendationFocusMessage(focus, currentAssessment)
+            recommendationFocusName = focus?.name
             mayRefreshPinnedSuggestions = false
         }
     }
@@ -2854,7 +2874,8 @@ private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
 
 private fun recommendationFocus(
     assessment: RepertoireAssessment,
-    suggestions: List<FoodSuggestion>
+    suggestions: List<FoodSuggestion>,
+    resolved: Set<EfficientNutrient> = emptySet()
 ): EfficientNutrient? {
     val deficitPriority = listOf(
         NutrientKind.PROTEIN to EfficientNutrient.PROTEIN,
@@ -2869,6 +2890,7 @@ private fun recommendationFocus(
                 nutrient to (-capacity.deviation / capacity.target.coerceAtLeast(1.0))
             }
         }
+        .filterNot { it.first in resolved }
         .maxByOrNull { it.second }
         ?.first
     if (deficit != null && suggestions.any {
@@ -2883,8 +2905,21 @@ private fun recommendationFocus(
         EfficientNutrient.FIBER
     )
     return fallbackPriority.firstOrNull { nutrient ->
+        nutrient !in resolved &&
         suggestions.any { nutrient in FoodSuggestionEngine.efficientNutrients(it.food) }
     }
+}
+
+private fun RepertoireAssessment.hasDeficit(nutrient: EfficientNutrient): Boolean {
+    val kind = when (nutrient) {
+        EfficientNutrient.PROTEIN -> NutrientKind.PROTEIN
+        EfficientNutrient.CARBOHYDRATES -> NutrientKind.CARBOHYDRATES
+        EfficientNutrient.FAT -> NutrientKind.FAT
+        EfficientNutrient.FIBER -> return false
+    }
+    return nutrition[kind]?.let {
+        it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET
+    } == true
 }
 
 private fun recommendationFocusMessage(
@@ -6241,8 +6276,8 @@ private fun HomeCatalogSearch(
     )
     val appBarColors = SearchBarDefaults.appBarWithSearchColors(
         searchBarColors = searchBarColors,
-        appBarContainerColor = MaterialTheme.colorScheme.surface,
-        scrolledAppBarContainerColor = MaterialTheme.colorScheme.surface,
+        appBarContainerColor = MaterialTheme.colorScheme.background,
+        scrolledAppBarContainerColor = MaterialTheme.colorScheme.background,
         scrolledSearchBarContainerColor = searchContainerColor
     )
     val foodsById = remember(foods) { foods.associateBy { it.id } }
@@ -6381,6 +6416,8 @@ private fun HomeCatalogSearch(
                     IconButton(onClick = scan) {
                         Icon(Icons.Default.QrCodeScanner, "Escanear código de barras")
                     }
+                } else {
+                    trailingContent()
                 }
             }
         )
@@ -6391,7 +6428,7 @@ private fun HomeCatalogSearch(
         inputField = inputField,
         scrollBehavior = scrollBehavior,
         colors = appBarColors,
-        actions = { trailingContent() },
+        actions = {},
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         tonalElevation = 0.dp
@@ -8061,6 +8098,7 @@ private fun FoodDetailScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
     var planningSheetOpen by remember { mutableStateOf(false) }
+    val planningSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var frequencyExpanded by remember { mutableStateOf(false) }
     var selectedFrequency by remember(food.id) {
         mutableStateOf(PlanningFrequency.OCCASIONAL)
@@ -8131,13 +8169,16 @@ private fun FoodDetailScreen(
     }
 
     if (planningSheetOpen) {
-        ModalBottomSheet(onDismissRequest = { planningSheetOpen = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { planningSheetOpen = false },
+            sheetState = planningSheetState
+        ) {
             Column(
                 Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(horizontal = 24.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     if (isInMenu) "En tu menú" else "Añadir a tu menú",
@@ -8189,7 +8230,7 @@ private fun FoodDetailScreen(
                                     selectedMeals + mealType
                                 }
                             }
-                            .padding(vertical = 4.dp),
+                            .heightIn(min = 48.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -8295,6 +8336,10 @@ private fun FoodDetailScreen(
                         }
                     }
                 },
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                ),
                 scrollBehavior = scrollBehavior
             )
         },
