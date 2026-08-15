@@ -1452,11 +1452,13 @@ private fun HomeScreen(
         if (currentAssessment != null && mayRefreshPinnedSuggestions) {
             val focus = recommendationFocus(currentAssessment, foodSuggestions)
             val focusedSuggestions = focus?.let { nutrient ->
-                foodSuggestions.filter { candidate ->
-                    nutrient in FoodSuggestionEngine.efficientNutrients(candidate.food)
-                }
+                FoodSuggestionEngine.focusedSuggestions(
+                    suggestions = foodSuggestions,
+                    nutrient = nutrient,
+                    limit = 3
+                )
             }.orEmpty()
-            pinnedSuggestions = focusedSuggestions.take(3)
+            pinnedSuggestions = focusedSuggestions
             pinnedRecommendationMessage = recommendationFocusMessage(focus, currentAssessment)
             mayRefreshPinnedSuggestions = false
         }

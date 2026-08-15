@@ -461,6 +461,58 @@ class FoodSuggestionEngineTest {
         assertTrue(afterDismissal.last().food.id !in initial.map { it.food.id })
     }
 
+    @Test
+    fun isolateRanksAheadOfLessEfficientProteinWithoutServingData() {
+        val regular = food(
+            1, "Polvo de proteína", FoodCategory.PROTEIN, "Mercadona",
+            394.8, 78.1, 7.2, 6.0
+        )
+        val isolate = food(
+            2, "Polvo de proteínas Natural Isolate", FoodCategory.PROTEIN, "Mercadona",
+            358.0, 83.0, 2.0, 2.0
+        )
+        val suggestions = FoodSuggestionEngine.suggest(
+            foods = listOf(regular, isolate),
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            limit = 10,
+            diversifyResults = false
+        )
+        val focused = FoodSuggestionEngine.focusedSuggestions(
+            suggestions, EfficientNutrient.PROTEIN, limit = 2
+        )
+        assertEquals(listOf(isolate.id, regular.id), focused.map { it.food.id })
+        assertTrue(
+            focused[0].nutrientScores.getValue(EfficientNutrient.PROTEIN) >
+                focused[1].nutrientScores.getValue(EfficientNutrient.PROTEIN)
+        )
+
+        val betterThanRegular = FoodSuggestionEngine.moreEfficientAlternatives(
+            source = regular,
+            foods = listOf(regular, isolate),
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, "")
+        )
+        assertEquals(listOf(isolate.id), betterThanRegular.map { it.food.id })
+
+        val betterThanIsolate = FoodSuggestionEngine.moreEfficientAlternatives(
+            source = isolate,
+            foods = listOf(regular, isolate),
+            repertoireFoodIds = emptySet(),
+            planningRules = emptyList(),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, "")
+        )
+        assertTrue(betterThanIsolate.isEmpty())
+    }
+
     private fun rule(id: Long) = PlanningRule(
         PlannedItemKind.FOOD, id, MealType.entries.toSet(),
         frequency = PlanningFrequency.NORMAL, preferredGrams = 100.0
