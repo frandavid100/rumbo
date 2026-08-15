@@ -58,6 +58,8 @@ def culinary_type(category: str, subcategory: str, name: str, legal_name: str, i
     # Ingredients describe components, not the product's own culinary role.
     # Using them here would classify a prepared dish as oil, pasta or meat.
     text_value = normalized(f"{category} {subcategory} {name} {legal_name}")
+    if re.search(r"\b(pan rallado|rebozador|harina para rebozar)\b", text_value):
+        return "COOKING_INGREDIENT"
     if re.search(r"\b(polvo de proteina|proteina en polvo|whey protein|natural isolate)\b", text_value):
         return "PROTEIN_POWDER"
     if re.search(r"\b(corn flakes|copos de maiz|copos de avena|muesli|granola)\b", text_value):
@@ -80,6 +82,8 @@ def culinary_type(category: str, subcategory: str, name: str, legal_name: str, i
         return "MAIN_EGG"
     if re.search(r"\b(patata|patatas|boniato|batata)\b", text_value) and "aperitivo" not in text_value:
         return "FRESH_STARCH"
+    if re.search(r"\b(membrid?llo|dulce de membrillo)\b", text_value):
+        return "SNACK_DESSERT"
     if re.search(r"\b(pan|pita|tostada|tortilla de trigo)\b", text_value):
         return "BREAD"
     if re.search(r"\b(fruta|frutas)\b", text_value):

@@ -120,7 +120,8 @@ enum class CulinaryType {
     CULINARY_OIL,
     FAT_COMPLEMENT,
     SAUCE,
-    SNACK_DESSERT
+    SNACK_DESSERT,
+    COOKING_INGREDIENT
 }
 
 enum class MealType(val label: String) {

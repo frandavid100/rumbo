@@ -1,6 +1,7 @@
 package es.david.rumbo.logic
 
 import es.david.rumbo.model.Food
+import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedItemKind
@@ -121,6 +122,29 @@ class RepertoireEvaluatorTest {
             result.status == RepertoireStatus.SUFFICIENT ||
                 result.status == RepertoireStatus.ROBUST
         )
+    }
+
+    @Test
+    fun proteinPowderReportsItsMissingCompanionBeforeMenuCreation() {
+        val powder = food(
+            20, "Proteína en polvo", FoodCategory.PROTEIN,
+            358.0, 83.0, 2.0, 2.0
+        ).copy(culinaryType = CulinaryType.PROTEIN_POWDER)
+        val result = RepertoireEvaluator.evaluate(
+            rules = listOf(rule(powder.id).copy(
+                allowedMealTypes = setOf(MealType.BREAKFAST),
+                frequency = PlanningFrequency.ALWAYS
+            )),
+            foodsById = mapOf(powder.id to powder),
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith {
+                if (it == MealType.BREAKFAST) 1.0 else 0.0
+            }
+        )
+
+        assertEquals(CulinaryNeedKind.COMPANION_BASE, result.culinaryNeeds.single().kind)
+        assertTrue(result.culinaryNeeds.single().message.contains("leche"))
     }
 
     private fun rule(id: Long, frequency: PlanningFrequency = PlanningFrequency.NORMAL) = PlanningRule(

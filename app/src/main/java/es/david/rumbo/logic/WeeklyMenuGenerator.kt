@@ -55,7 +55,10 @@ object WeeklyMenuGenerator {
         mealShares: Map<MealType, Double> = defaultMealShares,
         seed: Long = 11L
     ): GeneratedWeeklyMenu {
-        val foodRules = rules.filter { it.itemKind == PlannedItemKind.FOOD && it.isActive }
+        val foodRules = rules.filter {
+            it.itemKind == PlannedItemKind.FOOD && it.isActive &&
+                foodsById[it.itemId]?.let(CulinaryPolicy::standaloneAllowed) != false
+        }
             .map { rule ->
                 rule.copy(
                     allowedMealTypes = rule.allowedMealTypes + rule.fixedSlots.map { it.mealType },
@@ -440,12 +443,15 @@ object WeeklyMenuGenerator {
             .orEmpty()
     }
 
-    private fun isCulinarilyValid(
+    fun isCulinarilyValid(
         meals: List<PlannedMeal>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>
     ): Boolean = WeekDay.entries.all { day ->
-        meals.filter { day in it.days }.all { meal ->
+        meals.filter { day in it.days }.all mealValid@ { meal ->
+            if (meal.items.any {
+                    foodsById[it.foodId]?.let(CulinaryPolicy::standaloneAllowed) == false
+                }) return@mealValid false
             val rules = meal.items.map {
                 PlanningRule(
                     itemKind = PlannedItemKind.FOOD,

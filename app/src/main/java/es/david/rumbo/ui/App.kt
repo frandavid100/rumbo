@@ -1460,6 +1460,7 @@ private fun HomeScreen(
     LaunchedEffect(repertoireAssessment, foodSuggestions, mayRefreshPinnedSuggestions) {
         val currentAssessment = repertoireAssessment
         if (currentAssessment != null && mayRefreshPinnedSuggestions) {
+            val culinaryNeed = currentAssessment.culinaryNeeds.firstOrNull()
             val previousFocus = recommendationFocusName?.let { name ->
                 EfficientNutrient.entries.firstOrNull { it.name == name }
             }
@@ -1470,17 +1471,29 @@ private fun HomeScreen(
                 resolved += previousFocus
                 resolvedRecommendationFocusNames = resolved.map { it.name }
             }
-            val focus = previousFocus
-                ?.takeIf { it !in resolved && currentAssessment.hasDeficit(it) }
-                ?: recommendationFocus(currentAssessment, resolved)
-            val strictSuggestions = focus?.let { nutrient ->
+            val focus = if (culinaryNeed == null) {
+                previousFocus
+                    ?.takeIf { it !in resolved && currentAssessment.hasDeficit(it) }
+                    ?: recommendationFocus(currentAssessment, resolved)
+            } else {
+                null
+            }
+            val strictSuggestions = if (culinaryNeed != null) {
+                FoodSuggestionEngine.culinaryFocusedSuggestions(
+                    suggestions = foodSuggestions,
+                    need = culinaryNeed,
+                    limit = 3
+                )
+            } else focus?.let { nutrient ->
                 FoodSuggestionEngine.focusedSuggestions(
                     suggestions = foodSuggestions,
                     nutrient = nutrient,
                     limit = 3
                 )
             }.orEmpty()
-            val focusedSuggestions = if (strictSuggestions.isNotEmpty() || focus == null) {
+            val focusedSuggestions = if (
+                culinaryNeed != null || strictSuggestions.isNotEmpty() || focus == null
+            ) {
                 strictSuggestions
             } else {
                 FoodSuggestionEngine.relaxedFocusedSuggestions(
@@ -1496,12 +1509,16 @@ private fun HomeScreen(
                 resolvedRecommendationFocusNames = resolved.map { it.name }
             }
             pinnedSuggestions = focusedSuggestions
-            val baseMessage = if (strictSuggestions.isEmpty() && focusedSuggestions.isNotEmpty()) {
+            val baseMessage = if (culinaryNeed != null) {
+                culinaryNeed.message
+            } else if (strictSuggestions.isEmpty() && focusedSuggestions.isNotEmpty()) {
                 relaxedRecommendationFocusMessage(focus)
             } else {
                 recommendationFocusMessage(focus, currentAssessment)
             }
-            pinnedRecommendationMessage = if (focus != null && focusedSuggestions.isEmpty()) {
+            pinnedRecommendationMessage = if (
+                (focus != null || culinaryNeed != null) && focusedSuggestions.isEmpty()
+            ) {
                 "$baseMessage No quedan recomendaciones compatibles con tus elecciones; " +
                     "usa la búsqueda para añadir otro alimento."
             } else baseMessage
@@ -3006,6 +3023,9 @@ private fun repertoireActionMessages(
     rules: List<PlanningRule>,
     foodsById: Map<Long, Food>
 ): List<String> {
+    if (assessment.culinaryNeeds.isNotEmpty()) {
+        return assessment.culinaryNeeds.map { it.message }.distinct().take(3)
+    }
     val activeRules = rules.filter {
         it.isActive && it.itemKind == PlannedItemKind.FOOD &&
             foodsById[it.itemId]?.hasComparableNutrition() == true
@@ -3094,7 +3114,8 @@ private fun isAcceptableWeeklyMenu(
         MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, recommendation)
     }
     val activeMealTypes = mealShares.filterValues { it > 0.0 }.keys
-    return WeeklyMenuAcceptancePolicy.isAcceptable(assessments, activeMealTypes)
+    return WeeklyMenuAcceptancePolicy.isAcceptable(assessments, activeMealTypes) &&
+        WeeklyMenuGenerator.isCulinarilyValid(meals, foodsById, dishesById)
 }
 
 private fun weeklyAssessmentText(assessment: PlanNutritionAssessment?): String {
@@ -8371,8 +8392,16 @@ private fun FoodDetailScreen(
                         val currentRule = planningRules.firstOrNull()
                         selectedFrequency = currentRule?.frequency
                             ?: PlanningFrequency.OCCASIONAL
-                        selectedMeals = currentRule?.allowedMealTypes.orEmpty()
-                            .filterTo(mutableSetOf()) { it in activeMealTypes }
+                        val recommendedMeal = repertoireAssessment?.culinaryNeeds
+                            ?.firstOrNull { food.culinaryType in it.acceptedTypes }
+                            ?.mealType
+                            ?.takeIf { it in activeMealTypes }
+                        selectedMeals = if (currentRule != null) {
+                            currentRule.allowedMealTypes
+                                .filterTo(mutableSetOf()) { it in activeMealTypes }
+                        } else {
+                            setOfNotNull(recommendedMeal)
+                        }
                         planningSheetOpen = true
                     },
                     modifier = Modifier

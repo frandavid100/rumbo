@@ -94,12 +94,16 @@ object FoodSuggestionEngine {
         val assessmentStillNeedsHelp = repertoireAssessment?.status?.let {
             it == RepertoireStatus.INSUFFICIENT || it == RepertoireStatus.LIMITED
         } ?: false
+        val culinaryNeed = repertoireAssessment?.culinaryNeeds?.firstOrNull()
 
         val ranked = foods.asSequence()
             .filter {
                 it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
                     it.hasComparableNutrition() && it.isRecommendableCandidate() &&
-                    efficientNutrients(it).isNotEmpty()
+                    (culinaryNeed != null || efficientNutrients(it).isNotEmpty())
+            }
+            .filter { candidate ->
+                culinaryNeed == null || candidate.culinaryType in culinaryNeed.acceptedTypes
             }
             .filter { it.matchesAnyRetailer(activeRetailers) }
             .map { candidate ->
@@ -119,7 +123,9 @@ object FoodSuggestionEngine {
                 } else null
                 FoodSuggestion(
                     food = candidate,
-                    reason = if (
+                    reason = if (culinaryNeed != null) {
+                        culinaryNeed.message
+                    } else if (
                         coverageReason != null && !candidate.addresses(deficits)
                     ) {
                         coverageReason
@@ -141,7 +147,9 @@ object FoodSuggestionEngine {
                 )
             }
             .filter {
-                val nutritionallyRelevant = if (macroCorrectionNeeded) {
+                val nutritionallyRelevant = if (culinaryNeed != null) {
+                    true
+                } else if (macroCorrectionNeeded) {
                     it.food.addresses(deficits)
                 } else {
                     coverageCorrectionNeeded || repertoireNeedsExpansion ||
@@ -167,6 +175,16 @@ object FoodSuggestionEngine {
             .toList()
         return if (diversifyResults) diversify(ranked, limit) else ranked.take(limit)
     }
+
+    fun culinaryFocusedSuggestions(
+        suggestions: List<FoodSuggestion>,
+        need: CulinaryNeed,
+        limit: Int = 3
+    ): List<FoodSuggestion> = suggestions.asSequence()
+        .filter { it.food.culinaryType in need.acceptedTypes }
+        .map { it.copy(reason = need.message) }
+        .take(limit)
+        .toList()
 
     /**
      * Uses the recommender's complete ranking to find foods that would be preferred

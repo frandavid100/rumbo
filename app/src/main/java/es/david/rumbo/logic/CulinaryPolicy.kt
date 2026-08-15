@@ -17,7 +17,8 @@ data class CulinaryTypePolicy(
     val roles: Set<CulinaryRole> = emptySet(),
     val preferredGrams: Double? = null,
     val minimumGrams: Double? = null,
-    val maximumGrams: Double? = null
+    val maximumGrams: Double? = null,
+    val standaloneAllowed: Boolean = true
 )
 
 /** Central policy table. Foods store only their stable CulinaryType. */
@@ -62,12 +63,15 @@ object CulinaryPolicy {
         ),
         CulinaryType.FAT_COMPLEMENT to CulinaryTypePolicy(preferredGrams = 30.0, minimumGrams = 10.0, maximumGrams = 80.0),
         CulinaryType.SAUCE to CulinaryTypePolicy(preferredGrams = 40.0, minimumGrams = 10.0, maximumGrams = 100.0),
-        CulinaryType.SNACK_DESSERT to CulinaryTypePolicy(preferredGrams = 40.0, minimumGrams = 15.0, maximumGrams = 100.0)
+        CulinaryType.SNACK_DESSERT to CulinaryTypePolicy(preferredGrams = 40.0, minimumGrams = 15.0, maximumGrams = 100.0),
+        CulinaryType.COOKING_INGREDIENT to CulinaryTypePolicy(standaloneAllowed = false)
     )
 
     fun policy(food: Food): CulinaryTypePolicy = policies.getValue(food.culinaryType)
 
     fun roles(food: Food): Set<CulinaryRole> = policy(food).roles
+
+    fun standaloneAllowed(food: Food): Boolean = policy(food).standaloneAllowed
 
     fun applyPortion(rule: PlanningRule, food: Food): PlanningRule {
         val policy = policy(food)

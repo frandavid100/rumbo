@@ -407,6 +407,32 @@ class WeeklyMenuGeneratorTest {
         }
     }
 
+    @Test
+    fun cookingIngredientCannotAppearAsAStandaloneFood() {
+        val breadcrumbs = food(
+            50, "Pan rallado", 336.0, 8.7, 71.3, 1.7,
+            CulinaryType.COOKING_INGREDIENT
+        )
+        val rice = food(51, "Arroz", 353.0, 9.0, 78.0, 1.0, CulinaryType.DRY_RICE)
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                rule(breadcrumbs.id, setOf(MealType.LUNCH)),
+                rule(rice.id, setOf(MealType.LUNCH))
+            ),
+            history = emptyList(),
+            foodsById = listOf(breadcrumbs, rice).associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith { if (it == MealType.LUNCH) 1.0 else 0.0 },
+            seed = 65
+        )
+
+        assertTrue(result.meals.none { meal ->
+            meal.items.any { it.foodId == breadcrumbs.id }
+        })
+    }
+
     private fun rule(
         id: Long,
         types: Set<MealType>
