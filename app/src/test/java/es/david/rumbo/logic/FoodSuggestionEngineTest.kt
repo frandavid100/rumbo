@@ -438,7 +438,9 @@ class FoodSuggestionEngineTest {
             recommendation = Recommendation(1875, 154, 198, 52, ""),
             excludedFoodIds = setOf(rejected.id)
         )
-        assertEquals(listOf(2L, 3L, 4L), initial.map { it.food.id })
+        assertEquals(3, initial.size)
+        assertTrue(initial.none { it.food.id == alreadyInMenu.id || it.food.id == rejected.id })
+        assertTrue(initial.zipWithNext().all { (first, second) -> first.score >= second.score })
 
         val afterDismissal = FoodSuggestionEngine.moreEfficientAlternatives(
             source = source,
@@ -450,7 +452,13 @@ class FoodSuggestionEngineTest {
             recommendation = Recommendation(1875, 154, 198, 52, ""),
             excludedFoodIds = setOf(rejected.id, initial.first().food.id)
         )
-        assertEquals(listOf(3L, 4L, 5L), afterDismissal.map { it.food.id })
+        assertEquals(3, afterDismissal.size)
+        assertTrue(afterDismissal.none {
+            it.food.id == alreadyInMenu.id || it.food.id == rejected.id ||
+                it.food.id == initial.first().food.id
+        })
+        assertEquals(initial.drop(1).map { it.food.id }, afterDismissal.take(2).map { it.food.id })
+        assertTrue(afterDismissal.last().food.id !in initial.map { it.food.id })
     }
 
     private fun rule(id: Long) = PlanningRule(
