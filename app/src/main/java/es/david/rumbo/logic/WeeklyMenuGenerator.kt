@@ -42,7 +42,7 @@ data class NutritionDeviation(
 class PlanningConflictException(message: String) : IllegalArgumentException(message)
 
 object WeeklyMenuGenerator {
-    private const val CANDIDATE_WEEKS = 36
+    private const val CANDIDATE_WEEKS = 24
     private const val HISTORY_GENERATIONS = 8
 
     fun generate(
