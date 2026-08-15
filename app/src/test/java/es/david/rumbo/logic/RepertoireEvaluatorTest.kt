@@ -216,8 +216,6 @@ class RepertoireEvaluatorTest {
             recommendation = Recommendation(1875, 154, 198, 52, "")
         )
 
-        println("PROFILE_TWO_ASSESSMENT=$result")
-
         assertTrue(
             "Expected an acceptable menu, assessment was $result",
             result.status == RepertoireStatus.SUFFICIENT ||

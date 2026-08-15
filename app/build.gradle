@@ -14,8 +14,8 @@ android {
         applicationId = "es.david.rumbo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 57
-        versionName = "0.57.0"
+        versionCode = 58
+        versionName = "0.58.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -41,11 +41,6 @@ android {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
 
-    testOptions {
-        unitTests.all {
-            testLogging.showStandardStreams = true
-        }
-    }
 }
 
 kotlin {
