@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -1088,6 +1089,9 @@ fun RumboApp(repository: AppRepository) {
                             }.orEmpty(),
                             onSavePlanningRule = { data = repository.savePlanningRule(it) },
                             onDeletePlanningRule = { data = repository.deletePlanningRule(it) },
+                            onRemoveFromMenu = {
+                                data = repository.removeFromRepertoire(food.id)
+                            },
                             onSaveFood = { data = repository.saveFood(it) },
                             onEdit = { screenName = Screen.EDIT_FOOD.name },
                             onDelete = {
@@ -8015,12 +8019,22 @@ private fun FoodDetailScreen(
     planningRules: List<PlanningRule>,
     onSavePlanningRule: (PlanningRule) -> Unit,
     onDeletePlanningRule: (Long) -> Unit,
+    onRemoveFromMenu: () -> Unit,
     onSaveFood: (Food) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
+    var planningSheetOpen by remember { mutableStateOf(false) }
+    var frequencyExpanded by remember { mutableStateOf(false) }
+    var selectedFrequency by remember(food.id) {
+        mutableStateOf(PlanningFrequency.OCCASIONAL)
+    }
+    var selectedMeals by remember(food.id) {
+        mutableStateOf(emptySet<MealType>())
+    }
+    val isInMenu = planningRules.isNotEmpty()
     val uriHandler = LocalUriHandler.current
     val similarFoods = remember(food, foods) { FoodSimilarityEngine.findMoreEfficient(food, foods) }
     val containingDishes = remember(food.id, dishes) {
@@ -8057,6 +8071,119 @@ private fun FoodDetailScreen(
                 TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") }
             }
         )
+    }
+
+    if (planningSheetOpen) {
+        ModalBottomSheet(onDismissRequest = { planningSheetOpen = false }) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    if (isInMenu) "En tu menú" else "Añadir a tu menú",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                ExposedDropdownMenuBox(
+                    expanded = frequencyExpanded,
+                    onExpandedChange = { frequencyExpanded = !frequencyExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedFrequency.label,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Frecuencia") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(frequencyExpanded)
+                        },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = frequencyExpanded,
+                        onDismissRequest = { frequencyExpanded = false }
+                    ) {
+                        listOf(
+                            PlanningFrequency.NEVER,
+                            PlanningFrequency.OCCASIONAL,
+                            PlanningFrequency.NORMAL,
+                            PlanningFrequency.ALWAYS
+                        ).forEach { frequency ->
+                            DropdownMenuItem(
+                                text = { Text(frequency.label) },
+                                onClick = {
+                                    selectedFrequency = frequency
+                                    frequencyExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Text("Comidas", style = MaterialTheme.typography.titleMedium)
+                activeMealTypes.forEach { mealType ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = selectedFrequency != PlanningFrequency.NEVER) {
+                                selectedMeals = if (mealType in selectedMeals) {
+                                    selectedMeals - mealType
+                                } else {
+                                    selectedMeals + mealType
+                                }
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = mealType in selectedMeals,
+                            onCheckedChange = null,
+                            enabled = selectedFrequency != PlanningFrequency.NEVER
+                        )
+                        Text(mealType.label, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+                Button(
+                    onClick = {
+                        planningRules.forEach { onDeletePlanningRule(it.ruleId) }
+                        onSavePlanningRule(
+                            PlanningRule(
+                                itemKind = PlannedItemKind.FOOD,
+                                itemId = food.id,
+                                allowedMealTypes = if (
+                                    selectedFrequency == PlanningFrequency.NEVER
+                                ) activeMealTypes else selectedMeals,
+                                frequency = selectedFrequency,
+                                preferredGrams = 100.0,
+                                ruleId = planningRules.firstOrNull()?.ruleId
+                                    ?: System.currentTimeMillis()
+                            )
+                        )
+                        planningSheetOpen = false
+                    },
+                    enabled = selectedFrequency == PlanningFrequency.NEVER ||
+                        selectedMeals.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Guardar")
+                }
+                if (isInMenu) {
+                    TextButton(
+                        onClick = {
+                            onRemoveFromMenu()
+                            planningSheetOpen = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Quitar de tu menú",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
     }
 
     Scaffold(
@@ -8113,6 +8240,33 @@ private fun FoodDetailScreen(
                 },
                 scrollBehavior = scrollBehavior
             )
+        },
+        bottomBar = {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp
+            ) {
+                Button(
+                    onClick = {
+                        val currentRule = planningRules.firstOrNull()
+                        selectedFrequency = currentRule?.frequency
+                            ?: PlanningFrequency.OCCASIONAL
+                        selectedMeals = currentRule?.allowedMealTypes.orEmpty()
+                            .filterTo(mutableSetOf()) { it in activeMealTypes }
+                        planningSheetOpen = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(16.dp)
+                ) {
+                    if (isInMenu) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (isInMenu) "En tu menú" else "Añadir a tu menú")
+                }
+            }
         }
     ) { innerPadding ->
         Column(
@@ -8120,7 +8274,11 @@ private fun FoodDetailScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(top = innerPadding.calculateTopPadding())
-                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = innerPadding.calculateBottomPadding() + 16.dp
+                ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             recommendationReason?.let { reason ->
@@ -8229,21 +8387,10 @@ private fun FoodDetailScreen(
                 }
             }
 
-            PlanningRuleCards(
-                itemKind = PlannedItemKind.FOOD,
-                itemId = food.id,
-                defaultGrams = 100.0,
-                rules = planningRules,
-                activeMealTypes = activeMealTypes,
-                onSave = onSavePlanningRule,
-                onDelete = onDeletePlanningRule
-            )
-
-            Card(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+            Column(
+                Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                     Text("En qué platos puedes comerlo", style = MaterialTheme.typography.titleLarge)
                     HorizontalDivider()
                     if (containingDishes.isEmpty()) {
@@ -8271,7 +8418,6 @@ private fun FoodDetailScreen(
                         Text("Crear plato con este alimento")
                     }
                 }
-            }
 
             Column(
                 Modifier.fillMaxWidth(),
