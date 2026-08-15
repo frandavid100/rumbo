@@ -259,11 +259,11 @@ class RepertoireEvaluatorTest {
             dishesById = emptyMap(),
             recommendation = Recommendation(1875, 154, 198, 52, ""),
             mealShares = mapOf(
-                MealType.BREAKFAST to .25,
-                MealType.MORNING_SNACK to .10,
-                MealType.LUNCH to .35,
-                MealType.AFTERNOON_SNACK to .10,
-                MealType.DINNER to .20
+                MealType.BREAKFAST to 2.0 / 9.0,
+                MealType.MORNING_SNACK to 1.0 / 9.0,
+                MealType.LUNCH to 3.0 / 9.0,
+                MealType.AFTERNOON_SNACK to 1.0 / 9.0,
+                MealType.DINNER to 2.0 / 9.0
             )
         )
 

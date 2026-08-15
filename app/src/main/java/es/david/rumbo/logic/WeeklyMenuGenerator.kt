@@ -192,7 +192,15 @@ object WeeklyMenuGenerator {
         // nutritionally strong day was found, repeating its structure is a
         // valid fallback. Variety may beat it, but may never make an otherwise
         // feasible repertoire look impossible.
-        bestDayTemplate?.let { template ->
+        val variedWeekIsAcceptable = bestMeals?.let { meals ->
+            val assessments = WeekDay.entries.map { day ->
+                MealPlanEvaluator.assessDay(
+                    day, meals, foodsById, dishesById, recommendation
+                )
+            }
+            WeeklyMenuAcceptancePolicy.isAcceptable(assessments, generatedTypes)
+        } == true
+        if (!variedWeekIsAcceptable) bestDayTemplate?.let { template ->
             val repeatedAssignments = slots.associateWith { slot ->
                 template[slot.mealType].orEmpty()
             }

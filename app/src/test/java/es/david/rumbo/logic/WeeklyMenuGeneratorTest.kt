@@ -501,6 +501,37 @@ class WeeklyMenuGeneratorTest {
         }
     }
 
+    @Test
+    fun anAcceptableVariedWeekIsNotReplacedByOneRepeatedOptimalDay() {
+        val chicken = food(201, "Pollo", 108.0, 22.0, 1.0, 2.0, CulinaryType.MAIN_MEAT)
+        val turkey = food(202, "Pavo", 108.0, 22.0, 1.0, 2.0, CulinaryType.MAIN_MEAT)
+        val hake = food(203, "Merluza", 108.0, 22.0, 1.0, 2.0, CulinaryType.MAIN_FISH)
+        val rice = food(204, "Arroz", 353.0, 9.0, 78.0, .6, CulinaryType.DRY_RICE)
+        val pasta = food(205, "Pasta", 359.0, 12.0, 74.0, 1.7, CulinaryType.DRY_PASTA)
+        val catalog = listOf(chicken, turkey, hake, rice, pasta)
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                rule(chicken.id, setOf(MealType.LUNCH)),
+                rule(turkey.id, setOf(MealType.LUNCH)),
+                rule(hake.id, setOf(MealType.LUNCH)),
+                rule(rice.id, setOf(MealType.LUNCH)),
+                rule(pasta.id, setOf(MealType.LUNCH))
+            ),
+            history = emptyList(), foodsById = catalog.associateBy { it.id },
+            dishesById = emptyMap(), recommendation = Recommendation(650, 55, 90, 7, ""),
+            mealShares = MealType.entries.associateWith {
+                if (it == MealType.LUNCH) 1.0 else 0.0
+            },
+            seed = 206
+        )
+
+        val fingerprints = result.meals.map { meal ->
+            meal.items.map { it.foodId }.sorted()
+        }.toSet()
+        assertTrue("A varied acceptable repertoire produced one repeated day", fingerprints.size > 1)
+    }
+
     private fun rule(
         id: Long,
         types: Set<MealType>
