@@ -57,23 +57,25 @@ object FoodSuggestionEngine {
         )
         val deficits = repertoireAssessment?.let(Deficits::from) ?:
             Deficits.from(recommendation, totals)
-        val underTargetKinds = repertoireAssessment?.nutrition
-            ?.filterValues { it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET }
-            ?.keys.orEmpty().ifEmpty {
+        val underTargetKinds = if (repertoireAssessment != null) {
+            repertoireAssessment.nutrition
+                .filterValues { it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET }
+                .keys
+        } else {
             recommendation?.let {
-            listOf(
-                NutrientKind.CALORIES to (totals.calories to it.calories * 7.0),
-                NutrientKind.PROTEIN to (totals.protein to it.proteinGrams * 7.0),
-                NutrientKind.CARBOHYDRATES to
-                    (totals.carbohydrate to it.carbohydrateGrams * 7.0),
-                NutrientKind.FAT to (totals.fat to it.fatGrams * 7.0)
-            ).filterTo(mutableSetOf()) { (kind, values) ->
-                values.first < values.second &&
-                    NutritionTolerancePolicy.evaluate(
-                        kind, values.first, values.second
-                    ).fit != TargetFit.ON_TARGET
-            }.mapTo(mutableSetOf()) { it.first }
-        }.orEmpty()
+                listOf(
+                    NutrientKind.CALORIES to (totals.calories to it.calories * 7.0),
+                    NutrientKind.PROTEIN to (totals.protein to it.proteinGrams * 7.0),
+                    NutrientKind.CARBOHYDRATES to
+                        (totals.carbohydrate to it.carbohydrateGrams * 7.0),
+                    NutrientKind.FAT to (totals.fat to it.fatGrams * 7.0)
+                ).filterTo(mutableSetOf()) { (kind, values) ->
+                    values.first < values.second &&
+                        NutritionTolerancePolicy.evaluate(
+                            kind, values.first, values.second
+                        ).fit != TargetFit.ON_TARGET
+                }.mapTo(mutableSetOf()) { it.first }
+            }.orEmpty()
         }
         val macroCorrectionNeeded = underTargetKinds.any {
             it == NutrientKind.PROTEIN ||

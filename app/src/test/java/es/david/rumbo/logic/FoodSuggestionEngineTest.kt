@@ -239,6 +239,40 @@ class FoodSuggestionEngineTest {
     }
 
     @Test
+    fun robustAssessmentDoesNotFallBackToDeficitsFromAnOldDisplayedMenu() {
+        val rice = food(
+            1, "Arroz", FoodCategory.CARBOHYDRATE, "Mercadona",
+            360.0, 7.0, 79.0, 1.0, subcategory = "Arroz"
+        )
+        val assessment = RepertoireAssessment(
+            status = RepertoireStatus.ROBUST,
+            nutrition = NutrientKind.entries.associateWith { kind ->
+                val target = when (kind) {
+                    NutrientKind.CALORIES -> 1875.0
+                    NutrientKind.PROTEIN -> 154.0
+                    NutrientKind.CARBOHYDRATES -> 198.0
+                    NutrientKind.FAT -> 52.0
+                }
+                NutrientCapacity(target, target, 0.0, TargetFit.ON_TARGET)
+            },
+            coverage = emptyList(), fruitConcepts = 0, vegetableConcepts = 0,
+            acceptableSolutions = 3, limitingFactors = emptyList(),
+            suggestions = emptyList(), reactivationFoodIds = emptyList(),
+            metrics = RepertoireMetrics(0.0, 0.0, 15, 5, 0, 3)
+        )
+
+        val result = FoodSuggestionEngine.suggest(
+            foods = listOf(rice), repertoireFoodIds = emptySet(),
+            planningRules = emptyList(), plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            repertoireAssessment = assessment
+        )
+
+        assertEquals(rice.id, result.single().food.id)
+    }
+
+    @Test
     fun coldStartPrioritizesMacrosBeforeFiber() {
         val foods = listOf(
             food(1, "Soja", FoodCategory.PROTEIN, "Mercadona", 330.0, 45.0, 20.0, 5.0,
