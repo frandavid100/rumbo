@@ -245,7 +245,7 @@ private fun Card(
     modifier: Modifier = Modifier,
     shape: Shape = CardDefaults.shape,
     colors: CardColors = CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
     ),
     elevation: CardElevation = CardDefaults.cardElevation(),
     border: BorderStroke? = null,
@@ -1469,16 +1469,39 @@ private fun HomeScreen(
             }
             val focus = previousFocus
                 ?.takeIf { it !in resolved && currentAssessment.hasDeficit(it) }
-                ?: recommendationFocus(currentAssessment, foodSuggestions, resolved)
-            val focusedSuggestions = focus?.let { nutrient ->
+                ?: recommendationFocus(currentAssessment, resolved)
+            val strictSuggestions = focus?.let { nutrient ->
                 FoodSuggestionEngine.focusedSuggestions(
                     suggestions = foodSuggestions,
                     nutrient = nutrient,
                     limit = 3
                 )
             }.orEmpty()
+            val focusedSuggestions = if (strictSuggestions.isNotEmpty() || focus == null) {
+                strictSuggestions
+            } else {
+                FoodSuggestionEngine.relaxedFocusedSuggestions(
+                    foods = data.foods,
+                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                    excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
+                    nutrient = focus,
+                    limit = 3
+                )
+            }
+            if (focus != null && focus in resolved) {
+                resolved -= focus
+                resolvedRecommendationFocusNames = resolved.map { it.name }
+            }
             pinnedSuggestions = focusedSuggestions
-            pinnedRecommendationMessage = recommendationFocusMessage(focus, currentAssessment)
+            val baseMessage = if (strictSuggestions.isEmpty() && focusedSuggestions.isNotEmpty()) {
+                relaxedRecommendationFocusMessage(focus)
+            } else {
+                recommendationFocusMessage(focus, currentAssessment)
+            }
+            pinnedRecommendationMessage = if (focus != null && focusedSuggestions.isEmpty()) {
+                "$baseMessage No quedan recomendaciones compatibles con tus elecciones; " +
+                    "usa la búsqueda para añadir otro alimento."
+            } else baseMessage
             recommendationFocusName = focus?.name
             mayRefreshPinnedSuggestions = false
         }
@@ -2874,7 +2897,6 @@ private fun todayAssessmentText(assessment: PlanNutritionAssessment?): String {
 
 private fun recommendationFocus(
     assessment: RepertoireAssessment,
-    suggestions: List<FoodSuggestion>,
     resolved: Set<EfficientNutrient> = emptySet()
 ): EfficientNutrient? {
     val deficitPriority = listOf(
@@ -2882,7 +2904,7 @@ private fun recommendationFocus(
         NutrientKind.CARBOHYDRATES to EfficientNutrient.CARBOHYDRATES,
         NutrientKind.FAT to EfficientNutrient.FAT
     )
-    val deficit = deficitPriority
+    val deficits = deficitPriority
         .mapNotNull { (kind, nutrient) ->
             assessment.nutrition[kind]?.takeIf {
                 it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET
@@ -2890,24 +2912,24 @@ private fun recommendationFocus(
                 nutrient to (-capacity.deviation / capacity.target.coerceAtLeast(1.0))
             }
         }
-        .filterNot { it.first in resolved }
-        .maxByOrNull { it.second }
-        ?.first
-    if (deficit != null && suggestions.any {
-            deficit in FoodSuggestionEngine.efficientNutrients(it.food)
-        }) {
-        return deficit
-    }
+    val deficit = deficits.filterNot { it.first in resolved }.maxByOrNull { it.second }?.first
+        ?: deficits.maxByOrNull { it.second }?.first
+    if (deficit != null) return deficit
     val fallbackPriority = listOf(
         EfficientNutrient.PROTEIN,
         EfficientNutrient.CARBOHYDRATES,
         EfficientNutrient.FAT,
         EfficientNutrient.FIBER
     )
-    return fallbackPriority.firstOrNull { nutrient ->
-        nutrient !in resolved &&
-        suggestions.any { nutrient in FoodSuggestionEngine.efficientNutrients(it.food) }
-    }
+    return fallbackPriority.firstOrNull { it !in resolved } ?: fallbackPriority.first()
+}
+
+private fun relaxedRecommendationFocusMessage(focus: EfficientNutrient?): String? = when (focus) {
+    EfficientNutrient.PROTEIN -> "Añade alimentos que ayuden a completar la proteína del menú."
+    EfficientNutrient.CARBOHYDRATES -> "Añade alimentos que ayuden a completar los hidratos del menú."
+    EfficientNutrient.FAT -> "Añade alimentos que ayuden a completar las grasas del menú."
+    EfficientNutrient.FIBER -> "Añade alimentos que ayuden a completar la fibra del menú."
+    null -> null
 }
 
 private fun RepertoireAssessment.hasDeficit(nutrient: EfficientNutrient): Boolean {
@@ -6452,7 +6474,7 @@ private fun HomeCatalogSearch(
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.background
         ) {
             CatalogEntries(
                 entries = entries,

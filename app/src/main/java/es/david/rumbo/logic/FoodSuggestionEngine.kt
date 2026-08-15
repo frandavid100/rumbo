@@ -231,6 +231,50 @@ object FoodSuggestionEngine {
         .take(limit)
         .toList()
 
+    /** Falls back to useful, less strict candidates when the efficient pool is exhausted. */
+    fun relaxedFocusedSuggestions(
+        foods: List<Food>,
+        repertoireFoodIds: Set<Long>,
+        excludedFoodIds: Set<Long>,
+        nutrient: EfficientNutrient,
+        limit: Int = 3
+    ): List<FoodSuggestion> {
+        val foodsById = foods.associateBy { it.id }
+        val activeRetailers = repertoireFoodIds.mapNotNull(foodsById::get)
+            .mapNotNull { it.retailer.normalized() }.toSet()
+        return foods.asSequence()
+            .filter {
+                it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
+                    it.hasComparableNutrition() && it.isRecommendableCandidate() &&
+                    (activeRetailers.isEmpty() || it.retailer.normalized() in activeRetailers)
+            }
+            .map { it to nutrientScore(it, nutrient) }
+            .filter { (food, score) -> score >= 0.25 && food.hasUsefulAmount(nutrient) }
+            .sortedWith(
+                compareByDescending<Pair<Food, Double>> { it.second }
+                    .thenBy { it.first.name.lowercase() }
+            )
+            .map { (food, score) ->
+                FoodSuggestion(food, relaxedReasonFor(nutrient), score, nutrientScores(food))
+            }
+            .take(limit)
+            .toList()
+    }
+
+    private fun Food.hasUsefulAmount(nutrient: EfficientNutrient): Boolean = when (nutrient) {
+        EfficientNutrient.PROTEIN -> (proteinGrams ?: 0.0) >= 5.0 && isCleanProteinSource()
+        EfficientNutrient.CARBOHYDRATES -> (carbohydrateGrams ?: 0.0) >= 10.0
+        EfficientNutrient.FAT -> (fatGrams ?: 0.0) >= 3.0
+        EfficientNutrient.FIBER -> (fiberGrams ?: 0.0) >= 1.5
+    }
+
+    private fun relaxedReasonFor(nutrient: EfficientNutrient): String = when (nutrient) {
+        EfficientNutrient.PROTEIN -> "Puede ayudar a completar la proteína del menú."
+        EfficientNutrient.CARBOHYDRATES -> "Puede ayudar a completar los hidratos del menú."
+        EfficientNutrient.FAT -> "Puede ayudar a completar las grasas del menú."
+        EfficientNutrient.FIBER -> "Puede ayudar a completar la fibra del menú."
+    }
+
     private fun assessmentImprovement(
         before: RepertoireAssessment,
         after: RepertoireAssessment

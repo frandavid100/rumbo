@@ -513,6 +513,32 @@ class FoodSuggestionEngineTest {
         assertTrue(betterThanIsolate.isEmpty())
     }
 
+    @Test
+    fun relaxedSuggestionsRemainUsefulAndNeverRestoreRejectedFoods() {
+        val existing = food(
+            1, "Arroz habitual", FoodCategory.CARBOHYDRATE, "Mercadona",
+            350.0, 7.0, 75.0, 1.0
+        )
+        val useful = food(
+            2, "Alternativa moderada", FoodCategory.CARBOHYDRATE, "Mercadona",
+            100.0, 4.0, 15.0, 5.0
+        )
+        val rejected = food(
+            3, "Alternativa rechazada", FoodCategory.CARBOHYDRATE, "Mercadona",
+            100.0, 3.0, 18.0, 4.0
+        )
+
+        val relaxed = FoodSuggestionEngine.relaxedFocusedSuggestions(
+            foods = listOf(existing, useful, rejected),
+            repertoireFoodIds = setOf(existing.id),
+            excludedFoodIds = setOf(rejected.id),
+            nutrient = EfficientNutrient.CARBOHYDRATES
+        )
+
+        assertEquals(listOf(useful.id), relaxed.map { it.food.id })
+        assertTrue(relaxed.single().reason.contains("ayudar"))
+    }
+
     private fun rule(id: Long) = PlanningRule(
         PlannedItemKind.FOOD, id, MealType.entries.toSet(),
         frequency = PlanningFrequency.NORMAL, preferredGrams = 100.0
