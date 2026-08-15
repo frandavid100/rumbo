@@ -38,11 +38,19 @@ class CulinaryPolicyTest {
             setOf(CulinaryType.FRESH_STARCH),
             "Añade una base de hidratos para la cena."
         )
-        val pickledCorn = food(CulinaryType.FRESH_STARCH).copy(carbohydrateGrams = 4.8)
-        val potato = food(CulinaryType.FRESH_STARCH).copy(carbohydrateGrams = 17.5)
+        val pickledCorn = food(CulinaryType.FRESH_STARCH).copy(
+            category = FoodCategory.CARBOHYDRATE,
+            carbohydrateGrams = 4.8
+        )
+        val potato = food(CulinaryType.FRESH_STARCH).copy(
+            category = FoodCategory.CARBOHYDRATE,
+            carbohydrateGrams = 17.5
+        )
+        val preparedSalad = potato.copy(category = FoodCategory.OTHER)
 
         assertFalse(CulinaryPolicy.addresses(need, pickledCorn))
         assertTrue(CulinaryPolicy.addresses(need, potato))
+        assertFalse(CulinaryPolicy.addresses(need, preparedSalad))
     }
 
     private fun food(type: CulinaryType) = Food(

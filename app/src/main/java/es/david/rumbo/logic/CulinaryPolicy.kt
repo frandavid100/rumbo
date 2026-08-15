@@ -79,11 +79,14 @@ object CulinaryPolicy {
         return when (need.kind) {
             CulinaryNeedKind.COMPANION_BASE -> true
             CulinaryNeedKind.STARCH_BASE ->
-                (food.carbohydrateGrams ?: 0.0) * servingFactor >= 25.0
+                food.category == es.david.rumbo.model.FoodCategory.CARBOHYDRATE &&
+                    (food.carbohydrateGrams ?: 0.0) * servingFactor >= 25.0
             CulinaryNeedKind.PRIMARY_PROTEIN ->
-                (food.proteinGrams ?: 0.0) * servingFactor >= 20.0
+                food.category == es.david.rumbo.model.FoodCategory.PROTEIN &&
+                    (food.proteinGrams ?: 0.0) * servingFactor >= 20.0
             CulinaryNeedKind.FAT_COMPLEMENT ->
-                (food.fatGrams ?: 0.0) * servingFactor >= 8.0
+                food.category == es.david.rumbo.model.FoodCategory.FAT &&
+                    (food.fatGrams ?: 0.0) * servingFactor >= 8.0
         }
     }
 

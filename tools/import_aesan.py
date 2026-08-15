@@ -54,14 +54,21 @@ def nutritional_role(category: str, subcategory: str, name: str) -> str:
     return "OTHER"
 
 
-def culinary_type(category: str, subcategory: str, name: str, legal_name: str, ingredients: str) -> str:
+def culinary_type(family: str, subcategory: str, name: str, legal_name: str, ingredients: str) -> str:
     # Ingredients describe components, not the product's own culinary role.
     # Using them here would classify a prepared dish as oil, pasta or meat.
-    text_value = normalized(f"{category} {subcategory} {name} {legal_name}")
+    # Families are also deliberately excluded: AESAN uses broad families such
+    # as "fruit, vegetables ... including frozen chips" or "meat, fish and
+    # eggs". Those labels describe a database shelf, not the product itself.
+    text_value = normalized(f"{subcategory} {name} {legal_name}")
+    product = normalized(f"{name} {legal_name}")
+    family_value = normalized(family)
     if re.search(r"\b(pan rallado|rebozador|harina para rebozar)\b", text_value):
         return "COOKING_INGREDIENT"
     if re.search(r"\b(mazorca de maiz agridulce|mazorcas de maiz agridulces)\b", text_value):
         return "VEGETABLE"
+    if "platos preparados" in normalized(subcategory) or "alimentos preparados" in family_value:
+        return "UNKNOWN"
     if re.search(r"\b(polvo de proteina|proteina en polvo|whey protein|natural isolate)\b", text_value):
         return "PROTEIN_POWDER"
     if re.search(r"\b(corn flakes|copos de maiz|copos de avena|muesli|granola)\b", text_value):
@@ -70,27 +77,29 @@ def culinary_type(category: str, subcategory: str, name: str, legal_name: str, i
         return "MILK_BASE"
     if re.search(r"\b(yogur|yoghurt|kefir|queso fresco batido)\b", text_value):
         return "CREAMY_BASE"
-    if "pasta seca" in text_value or re.search(r"\b(macarron|macarrones|espagueti|spaghetti|helices|tallarines|fideos)\b", text_value):
+    if "pasta seca" in text_value or re.search(r"\b(macarron|macarrones|espagueti|spaghetti|helices|tallarines|fideos)\b", product):
         return "DRY_PASTA"
-    if re.search(r"\barroz\b", text_value) and "plato preparado" not in text_value:
+    if re.search(r"\barroz\b", product) and "plato preparado" not in text_value:
         return "DRY_RICE"
-    if re.search(r"\b(aceite de oliva|aceite de girasol|aceite vegetal)\b", text_value):
+    if re.search(r"\b(aceite de oliva|aceite de girasol|aceite vegetal)\b", product):
         return "CULINARY_OIL"
-    if re.search(r"\b(pescado|lubina|dorada|salmon|merluza|bacalao|atun|sardina|caballa)\b", text_value):
+    if re.search(r"\b(pescado|lubina|dorada|salmon|merluza|bacalao|atun|sardina|caballa|sepia|calamar|pulpo)\b", text_value):
         return "MAIN_FISH"
     if re.search(r"\b(carne|pollo|pavo|cerdo|vacuno|ternera|cordero|hamburguesa|burger)\b", text_value):
         return "MAIN_MEAT"
     if re.search(r"\b(huevo|huevos)\b", text_value):
         return "MAIN_EGG"
-    if re.search(r"\b(patata|patatas|boniato|batata)\b", text_value) and "aperitivo" not in text_value:
+    if re.search(r"\b(patata|patatas|boniato|batata)\b", product) and not re.search(
+        r"aperitivo|ensalada|salteado|tortilla|pure|crema|sopa|rellen", product
+    ):
         return "FRESH_STARCH"
     if re.search(r"\b(membrid?llo|dulce de membrillo)\b", text_value):
         return "SNACK_DESSERT"
     if re.search(r"\b(pan|pita|tostada|tortilla de trigo)\b", text_value):
         return "BREAD"
-    if re.search(r"\b(fruta|frutas)\b", text_value):
+    if re.search(r"\b(manzana|pera|platano|banana|naranja|mandarina|melocoton|nectarina|albaricoque|ciruela|kiwi|pina|mango|papaya|melon|sandia|uva|fresa|frambuesa|arandano|cereza)\b", product):
         return "FRUIT"
-    if re.search(r"\b(verdura|verduras|hortaliza|hortalizas)\b", text_value):
+    if re.search(r"\b(remolacha|calabacin|berenjena|pimiento|tomate|cebolla|zanahoria|brocoli|coliflor|esparrago|judia verde|alcachofa|pepino|lechuga|espinaca|acelga)\b", product):
         return "VEGETABLE"
     if re.search(r"\b(salsa|mayonesa|ketchup|tomate frito)\b", text_value):
         return "SAUCE"
