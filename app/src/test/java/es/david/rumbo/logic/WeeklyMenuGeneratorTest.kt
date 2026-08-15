@@ -510,9 +510,9 @@ class WeeklyMenuGeneratorTest {
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
-                rule(chicken.id, setOf(MealType.LUNCH)),
-                rule(turkey.id, setOf(MealType.LUNCH)),
-                rule(hake.id, setOf(MealType.LUNCH))
+                rule(chicken.id, setOf(MealType.LUNCH)).copy(preferredGrams = 100.0),
+                rule(turkey.id, setOf(MealType.LUNCH)).copy(preferredGrams = 100.0),
+                rule(hake.id, setOf(MealType.LUNCH)).copy(preferredGrams = 100.0)
             ),
             history = emptyList(), foodsById = catalog.associateBy { it.id },
             dishesById = emptyMap(), recommendation = Recommendation(650, 55, 90, 7, ""),
@@ -525,7 +525,6 @@ class WeeklyMenuGeneratorTest {
         val fingerprints = result.meals.map { meal ->
             meal.items.map { it.foodId }.sorted()
         }.toSet()
-        println("VARIETY_FINGERPRINTS=$fingerprints MEALS=${result.meals} DIAGNOSTICS=${result.diagnostics}")
         assertTrue("A varied acceptable repertoire produced one repeated day", fingerprints.size > 1)
     }
 
