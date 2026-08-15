@@ -101,7 +101,7 @@ object FoodSuggestionEngine {
                     it.hasComparableNutrition() && it.isRecommendableCandidate() &&
                     efficientNutrients(it).isNotEmpty()
             }
-            .filter { activeRetailers.isEmpty() || it.retailer.normalized() in activeRetailers }
+            .filter { it.matchesAnyRetailer(activeRetailers) }
             .map { candidate ->
                 val categoryNovelty = when {
                     candidate.category == FoodCategory.OTHER -> 0.0
@@ -246,7 +246,7 @@ object FoodSuggestionEngine {
             .filter {
                 it.id !in repertoireFoodIds && it.id !in excludedFoodIds &&
                     it.hasComparableNutrition() && it.isRecommendableCandidate() &&
-                    (activeRetailers.isEmpty() || it.retailer.normalized() in activeRetailers)
+                    it.matchesAnyRetailer(activeRetailers)
             }
             .map { it to nutrientScore(it, nutrient) }
             .filter { (food, score) -> score >= 0.25 && food.hasUsefulAmount(nutrient) }
@@ -754,4 +754,13 @@ object FoodSuggestionEngine {
     }
 
     private fun String?.normalized(): String? = this?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+
+    private fun Food.matchesAnyRetailer(activeRetailers: Set<String>): Boolean {
+        if (activeRetailers.isEmpty()) return true
+        if (retailer.normalized() in activeRetailers) return true
+        val normalizedLinks = links.map { it.lowercase() }
+        return activeRetailers.any { retailerName ->
+            normalizedLinks.any { link -> retailerName in link }
+        }
+    }
 }

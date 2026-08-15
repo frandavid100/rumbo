@@ -539,6 +539,30 @@ class FoodSuggestionEngineTest {
         assertTrue(relaxed.single().reason.contains("ayudar"))
     }
 
+    @Test
+    fun retailerCanBeInferredFromProductLinkForLegacyFoods() {
+        val existing = food(
+            1, "Proteína habitual", FoodCategory.PROTEIN, "Mercadona",
+            120.0, 20.0, 1.0, 3.0
+        )
+        val legacyTurkey = food(
+            2, "Filetes de pechuga de pavo", FoodCategory.PROTEIN, "",
+            104.1, 24.0, 0.0, 0.9
+        ).copy(links = listOf("https://tienda.mercadona.es/search-results?query=pavo"))
+
+        val suggestions = FoodSuggestionEngine.suggest(
+            foods = listOf(existing, legacyTurkey),
+            repertoireFoodIds = setOf(existing.id),
+            planningRules = listOf(rule(existing.id)),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            limit = 3
+        )
+
+        assertEquals(listOf(legacyTurkey.id), suggestions.map { it.food.id })
+    }
+
     private fun rule(id: Long) = PlanningRule(
         PlannedItemKind.FOOD, id, MealType.entries.toSet(),
         frequency = PlanningFrequency.NORMAL, preferredGrams = 100.0

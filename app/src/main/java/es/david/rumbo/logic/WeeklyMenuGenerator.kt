@@ -411,10 +411,15 @@ object WeeklyMenuGenerator {
             val error = (actual - target) / target
             return error * error
         }
+        val proteinTarget = recommendation.proteinGrams * share
+        val proteinDeficit = if (protein < proteinTarget) {
+            squared(protein, proteinTarget)
+        } else 0.0
+        // A meal should roughly occupy its chosen energy share, but it need
+        // not reproduce the complete daily macro ratio. The whole day and
+        // week are responsible for nutritional balance.
         return squared(calories, recommendation.calories * share) * 5.0 +
-            squared(protein, recommendation.proteinGrams * share) * 4.0 +
-            squared(carbohydrates, recommendation.carbohydrateGrams * share) * 1.5 +
-            squared(fat, recommendation.fatGrams * share) * 2.0
+            proteinDeficit * 0.75
     }
 
     private fun chooseRule(
@@ -460,16 +465,10 @@ object WeeklyMenuGenerator {
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation
     ): Double {
-        val deviations = WeekDay.entries.map { day ->
-            deviation(
-                day,
-                MealPlanEvaluator.assessDay(
-                    day, meals, foodsById, dishesById, recommendation
-                )
-            )
+        val daily = WeekDay.entries.map { day ->
+            MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, recommendation)
         }
-        return deviations.maxOf { it.worst } * 1_000_000.0 +
-            deviations.sumOf { it.weightedTotal } * 10_000.0
+        return nutritionQuality(daily)
     }
 
     private fun score(
@@ -487,10 +486,10 @@ object WeeklyMenuGenerator {
         val deviations = daily.mapIndexed { index, assessment ->
             deviation(WeekDay.entries[index], assessment)
         }
-        // Lexicographic priorities encoded with separated scales: first avoid
-        // sacrificing any one nutrient, then improve the total daily fit.
-        val nutritional = deviations.maxOf { it.worst } * 1_000_000.0 +
-            deviations.sumOf { it.weightedTotal } * 10_000.0
+        // The weekly result is decisive. Daily fit remains a secondary
+        // quality objective, so one imperfect day cannot outweigh a clearly
+        // better week.
+        val nutritional = nutritionQuality(daily)
         val mealBalancePenalty = assignments.keys.sumOf { slot ->
             val meal = meals.first { it.type == slot.mealType && slot.day in it.days }
             val actual = meal.nutrition(foodsById, dishesById, slot.day)
@@ -549,6 +548,28 @@ object WeeklyMenuGenerator {
             NutrientKind.FAT, assessment.actual.fatGrams, assessment.target.fatGrams
         ).penalty
     )
+
+    private fun nutritionQuality(daily: List<PlanNutritionAssessment>): Double {
+        fun weeklyError(actual: (PlanNutritionAssessment) -> Double, target: Double): Double {
+            if (target <= 0.0) return 0.0
+            val ratio = daily.map(actual).average() / target
+            return (ratio - 1.0).pow(2)
+        }
+        val target = daily.first().target
+        val weeklyErrors = listOf(
+            weeklyError({ it.actual.calories }, target.calories),
+            weeklyError({ it.actual.proteinGrams }, target.proteinGrams),
+            weeklyError({ it.actual.carbohydrateGrams }, target.carbohydrateGrams),
+            weeklyError({ it.actual.fatGrams }, target.fatGrams)
+        )
+        val dailyDeviations = daily.mapIndexed { index, assessment ->
+            deviation(WeekDay.entries[index], assessment)
+        }
+        return weeklyErrors.maxOrNull()!! * 1_000_000.0 +
+            weeklyErrors.sum() * 100_000.0 +
+            dailyDeviations.maxOf { it.worst } * 1_000.0 +
+            dailyDeviations.sumOf { it.weightedTotal } * 100.0
+    }
 
     private fun List<PlanningRule>.toMeal(slot: PlanningSlot, generation: Int): PlannedMeal {
         val id = generation.toLong() * 1000L + slot.day.ordinal * 10L + slot.mealType.ordinal + 1L

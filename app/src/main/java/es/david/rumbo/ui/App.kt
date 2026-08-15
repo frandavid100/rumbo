@@ -195,6 +195,7 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import es.david.rumbo.logic.RecommendationEngine
 import es.david.rumbo.logic.TargetFit
 import es.david.rumbo.logic.WeeklyMenuGenerator
+import es.david.rumbo.logic.WeeklyMenuAcceptancePolicy
 import es.david.rumbo.logic.PlanningConflictException
 import es.david.rumbo.model.ActivityLevel
 import es.david.rumbo.model.AppData
@@ -1361,9 +1362,11 @@ private fun HomeScreen(
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     val meals = data.activeProfileData?.plannedMeals.orEmpty()
         .filter { it.planWeek == PlanWeek.CURRENT }
-    val currentMenuAcceptable = remember(meals, foodsById, dishesById, recommendation) {
+    val currentMenuAcceptable = remember(
+        meals, foodsById, dishesById, recommendation, mealShares
+    ) {
         recommendation?.let {
-            isAcceptableWeeklyMenu(meals, foodsById, dishesById, it)
+            isAcceptableWeeklyMenu(meals, foodsById, dishesById, it, mealShares)
         } == true
     }
     val repertoireAssessmentKey = remember(
@@ -3057,27 +3060,15 @@ private fun isAcceptableWeeklyMenu(
     meals: List<PlannedMeal>,
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
-    recommendation: Recommendation
+    recommendation: Recommendation,
+    mealShares: Map<MealType, Double>
 ): Boolean {
     if (meals.isEmpty()) return false
     val assessments = WeekDay.entries.map { day ->
         MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, recommendation)
     }
-    if (assessments.any { it.missingMealTypes.isNotEmpty() || !it.actual.isComplete }) {
-        return false
-    }
-    fun averageRatio(actual: (PlanNutritionAssessment) -> Double, target: Double): Double =
-        assessments.map(actual).average() / target.coerceAtLeast(1.0)
-    val calories = averageRatio({ it.actual.calories }, recommendation.calories.toDouble())
-    val protein = averageRatio({ it.actual.proteinGrams }, recommendation.proteinGrams.toDouble())
-    val carbohydrates = averageRatio(
-        { it.actual.carbohydrateGrams }, recommendation.carbohydrateGrams.toDouble()
-    )
-    val fat = averageRatio({ it.actual.fatGrams }, recommendation.fatGrams.toDouble())
-    return calories in 0.90..1.10 &&
-        protein in 0.90..1.15 &&
-        carbohydrates in 0.85..1.15 &&
-        fat in 0.85..1.15
+    val activeMealTypes = mealShares.filterValues { it > 0.0 }.keys
+    return WeeklyMenuAcceptancePolicy.isAcceptable(assessments, activeMealTypes)
 }
 
 private fun weeklyAssessmentText(assessment: PlanNutritionAssessment?): String {

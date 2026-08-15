@@ -9,6 +9,8 @@ import es.david.rumbo.model.MealDayAmounts
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MealPlanEvaluatorTest {
@@ -187,4 +189,42 @@ class MealPlanEvaluatorTest {
 
         assertEquals(210.0, amounts.getValue(balancedMeal.id), 0.001)
     }
+
+    @Test
+    fun weeklyAcceptanceAllowsDifferentMacroDistributionsBetweenDays() {
+        val target = MealPlanEvaluator.dailyTarget(recommendation)
+        val assessments = WeekDay.entries.mapIndexed { index, _ ->
+            val factor = if (index < 3) 0.80 else 1.15
+            assessment(target, factor)
+        }
+
+        assertTrue(WeeklyMenuAcceptancePolicy.isAcceptable(assessments, emptySet()))
+    }
+
+    @Test
+    fun weeklyAverageDoesNotHideAnExtremelyUnbalancedDay() {
+        val target = MealPlanEvaluator.dailyTarget(recommendation)
+        val assessments = WeekDay.entries.mapIndexed { index, _ ->
+            assessment(target, if (index == 0) 0.50 else 13.0 / 12.0)
+        }
+
+        assertFalse(WeeklyMenuAcceptancePolicy.isAcceptable(assessments, emptySet()))
+    }
+
+    private fun assessment(target: NutritionTarget, factor: Double) = PlanNutritionAssessment(
+        actual = es.david.rumbo.model.NutritionTotals(
+            calories = target.calories * factor,
+            proteinGrams = target.proteinGrams * factor,
+            carbohydrateGrams = target.carbohydrateGrams * factor,
+            fatGrams = target.fatGrams * factor,
+            isComplete = true
+        ),
+        target = target,
+        fits = NutrientFits(
+            TargetFit.ON_TARGET,
+            TargetFit.ON_TARGET,
+            TargetFit.ON_TARGET,
+            TargetFit.ON_TARGET
+        )
+    )
 }

@@ -142,7 +142,10 @@ object RepertoireEvaluator {
             )
         }.sortedWith(compareBy<Candidate> { it.worstPenalty }.thenBy { it.totalPenalty })
         val best = ranked.first()
-        val acceptable = ranked.filter { it.worstPenalty <= thresholds.acceptableWorstPenalty }
+        val activeMealTypes = coverage.mapTo(mutableSetOf()) { it.mealType }
+        val acceptable = ranked.filter {
+            WeeklyMenuAcceptancePolicy.isAcceptable(it.assessments, activeMealTypes)
+        }
         val distinctAcceptable = acceptable.distinctBy { it.fingerprint }
         val average = averageNutrition(best.assessments)
         val target = MealPlanEvaluator.dailyTarget(recommendation)
@@ -161,11 +164,10 @@ object RepertoireEvaluator {
         val suggestions = suggestionsFor(nutrition, fruitGroups, vegetableGroups)
         val reactivations = matchingInactiveFoods(inactiveFoods, suggestions)
         val status = when {
-            best.worstPenalty > thresholds.acceptableWorstPenalty -> RepertoireStatus.INSUFFICIENT
+            acceptable.isEmpty() -> RepertoireStatus.INSUFFICIENT
             distinctAcceptable.size >= thresholds.robustSolutionCount && limitedMeals == 0 &&
                 profiles >= thresholds.robustSolutionCount -> RepertoireStatus.ROBUST
-            best.worstPenalty <= thresholds.goodWorstPenalty && limitedMeals == 0 -> RepertoireStatus.SUFFICIENT
-            else -> RepertoireStatus.LIMITED
+            else -> RepertoireStatus.SUFFICIENT
         }
         return RepertoireAssessment(
             status, nutrition, coverage, fruitGroups, vegetableGroups,
