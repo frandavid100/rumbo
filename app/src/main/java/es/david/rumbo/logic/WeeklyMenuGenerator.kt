@@ -42,7 +42,7 @@ data class NutritionDeviation(
 class PlanningConflictException(message: String) : IllegalArgumentException(message)
 
 object WeeklyMenuGenerator {
-    private const val CANDIDATE_WEEKS = 24
+    private const val CANDIDATE_WEEKS = 36
     private const val HISTORY_GENERATIONS = 8
 
     fun generate(
@@ -124,6 +124,19 @@ object WeeklyMenuGenerator {
 
         repeat(CANDIDATE_WEEKS) { candidateIndex ->
             val random = Random(seed + candidateIndex * 104729L)
+            // The former 0.04 tie breaker made nearly every candidate week
+            // follow the same greedy path. That is not evidence that the
+            // repertoire is infeasible: it merely repeats one local optimum.
+            // Keep one deterministic candidate and progressively explore
+            // nutritionally viable alternatives in the remaining attempts.
+            val exploration = when (candidateIndex % 6) {
+                0 -> 0.0
+                1 -> 0.10
+                2 -> 0.20
+                3 -> 0.35
+                4 -> 0.55
+                else -> 0.80
+            }
             val assignments = linkedMapOf<PlanningSlot, List<PlanningRule>>()
             slots.forEach { slot ->
                 assignments[slot] = completeSlot(
@@ -137,7 +150,8 @@ object WeeklyMenuGenerator {
                     foodsById = foodsById,
                     dishesById = dishesById,
                     recommendation = recommendation,
-                    mealShare = mealShares[slot.mealType] ?: defaultMealShares.getValue(slot.mealType)
+                    mealShare = mealShares[slot.mealType] ?: defaultMealShares.getValue(slot.mealType),
+                    exploration = exploration
                 )
             }
             val generated = assignments.map { (slot, assignedRules) ->
@@ -264,7 +278,8 @@ object WeeklyMenuGenerator {
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
-        mealShare: Double
+        mealShare: Double,
+        exploration: Double
     ): List<PlanningRule> {
         val chosen = fixed.distinctBy { it.itemKind to it.itemId }.toMutableList()
         val eligible = rules.filter {
@@ -322,8 +337,13 @@ object WeeklyMenuGenerator {
                     }
                 ) 0.12 else 0.0
                 val penalty = weeklyCount * 0.10 + recentCount * 0.025
-                candidate to (nutritionalImprovement + frequencyBonus + varietyBonus - penalty +
-                    random.nextDouble() * 0.04)
+                val baseScore = nutritionalImprovement + frequencyBonus + varietyBonus - penalty
+                // Gumbel noise samples different rankings without turning the
+                // choice into an unstructured shuffle. The best result is
+                // still selected by the full weekly nutrition score.
+                val uniform = random.nextDouble().coerceIn(1e-9, 1.0 - 1e-9)
+                val gumbel = -kotlin.math.ln(-kotlin.math.ln(uniform))
+                candidate to (baseScore + gumbel * exploration)
             }.sortedByDescending { it.second }
 
             val best = viable.firstOrNull() ?: break
