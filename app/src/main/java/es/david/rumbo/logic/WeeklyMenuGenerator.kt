@@ -622,7 +622,7 @@ object WeeklyMenuGenerator {
         // composition fills all four positions, quantity optimisation cannot
         // replace it with the missing culinary role.
         return squared(calories, recommendation.calories * share) * 5.0 +
-            proteinDeficit * 0.75 + carbohydrateDeficit + fatExcess * 2.0
+            proteinDeficit * 1.5 + carbohydrateDeficit * 2.0 + fatExcess * 4.0
     }
 
     private fun chooseRule(

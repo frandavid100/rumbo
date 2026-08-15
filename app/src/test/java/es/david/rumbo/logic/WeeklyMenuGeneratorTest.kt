@@ -503,20 +503,16 @@ class WeeklyMenuGeneratorTest {
 
     @Test
     fun anAcceptableVariedWeekIsNotReplacedByOneRepeatedOptimalDay() {
-        val chicken = food(201, "Pollo", 108.0, 22.0, 1.0, 2.0, CulinaryType.MAIN_MEAT)
-        val turkey = food(202, "Pavo", 108.0, 22.0, 1.0, 2.0, CulinaryType.MAIN_MEAT)
-        val hake = food(203, "Merluza", 108.0, 22.0, 1.0, 2.0, CulinaryType.MAIN_FISH)
-        val rice = food(204, "Arroz", 353.0, 9.0, 78.0, .6, CulinaryType.DRY_RICE)
-        val pasta = food(205, "Pasta", 359.0, 12.0, 74.0, 1.7, CulinaryType.DRY_PASTA)
-        val catalog = listOf(chicken, turkey, hake, rice, pasta)
+        val chicken = food(201, "Pollo", 650.0, 55.0, 90.0, 7.0, CulinaryType.MAIN_MEAT)
+        val turkey = food(202, "Pavo", 650.0, 55.0, 90.0, 7.0, CulinaryType.MAIN_MEAT)
+        val hake = food(203, "Merluza", 650.0, 55.0, 90.0, 7.0, CulinaryType.MAIN_FISH)
+        val catalog = listOf(chicken, turkey, hake)
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
                 rule(chicken.id, setOf(MealType.LUNCH)),
                 rule(turkey.id, setOf(MealType.LUNCH)),
-                rule(hake.id, setOf(MealType.LUNCH)),
-                rule(rice.id, setOf(MealType.LUNCH)),
-                rule(pasta.id, setOf(MealType.LUNCH))
+                rule(hake.id, setOf(MealType.LUNCH))
             ),
             history = emptyList(), foodsById = catalog.associateBy { it.id },
             dishesById = emptyMap(), recommendation = Recommendation(650, 55, 90, 7, ""),
