@@ -1621,6 +1621,9 @@ private fun HomeScreen(
                     showMenuReadiness = recommendation != null && !menuReady,
                     assessment = repertoireAssessment,
                     recommendationMessage = pinnedRecommendationMessage,
+                    recommendationFocus = recommendationFocusName?.let { name ->
+                        EfficientNutrient.entries.firstOrNull { it.name == name }
+                    },
                     onOpenFood = openFood,
                     onDismiss = onDismissFoodSuggestion
                 )
@@ -1657,6 +1660,7 @@ private fun FoodSuggestionsCard(
     showMenuReadiness: Boolean,
     assessment: RepertoireAssessment?,
     recommendationMessage: String?,
+    recommendationFocus: EfficientNutrient?,
     onOpenFood: (Long) -> Unit,
     onDismiss: (Long) -> Unit
 ) {
@@ -1673,8 +1677,13 @@ private fun FoodSuggestionsCard(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            "Para que podamos crearte un menú adecuado, añade alimentos " +
-                                "recomendados o usa la búsqueda para elegir los que tú quieras.",
+                            if (showMenuReadiness) {
+                                "Para que podamos crearte un menú adecuado, añade alimentos " +
+                                    "recomendados o usa la búsqueda para elegir los que tú quieras."
+                            } else {
+                                "Ya tienes suficientes alimentos para crear menús adecuados. " +
+                                    "Añade más para que Rumbo pueda ofrecerte combinaciones más variadas."
+                            },
                             style = MaterialTheme.typography.bodyLarge
                         )
                         if (assessment == null) {
@@ -1686,7 +1695,8 @@ private fun FoodSuggestionsCard(
                             LinearProgressIndicator(Modifier.fillMaxWidth())
                         } else if (!recommendationMessage.isNullOrBlank()) {
                             Text(
-                                recommendationMessage,
+                                if (showMenuReadiness) recommendationMessage else
+                                    optionalRecommendationFocusMessage(recommendationFocus),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -2981,6 +2991,14 @@ private fun recommendationFocusMessage(
             "Añade alimentos ricos en fibra."
         null -> null
     }
+}
+
+private fun optionalRecommendationFocusMessage(focus: EfficientNutrient?): String = when (focus) {
+    EfficientNutrient.PROTEIN -> "Puedes ampliar tus fuentes eficientes de proteína."
+    EfficientNutrient.CARBOHYDRATES -> "Puedes ampliar tus fuentes eficientes de hidratos."
+    EfficientNutrient.FAT -> "Puedes ampliar tus fuentes eficientes de grasas."
+    EfficientNutrient.FIBER -> "Puedes ampliar tus fuentes de fibra."
+    null -> "Puedes ampliar la variedad de tus alimentos."
 }
 
 private fun repertoireActionMessages(

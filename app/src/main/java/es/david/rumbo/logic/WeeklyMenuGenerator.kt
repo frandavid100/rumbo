@@ -231,7 +231,7 @@ object WeeklyMenuGenerator {
                 day, currentMeals, foodsById, dishesById, recommendation
             )
             assessment.missingMealTypes.isEmpty() && assessment.actual.isComplete
-        }
+        } && isCulinarilyValid(currentMeals, foodsById, dishesById)
         val retainIncumbent = incumbentIsComplete &&
             nutritionalQuality(currentMeals, foodsById, dishesById, recommendation) <=
             nutritionalQuality(generatedMeals, foodsById, dishesById, recommendation)
@@ -290,11 +290,19 @@ object WeeklyMenuGenerator {
             else -> 4
         }
 
+        if (!hasCompatibleExclusiveRoles(chosen, foodsById, dishesById)) {
+            throw PlanningConflictException(
+                "Hay alimentos obligatorios que cumplen la misma función culinaria en " +
+                    "${slot.mealType.label.lowercase()}."
+            )
+        }
+
         while (chosen.size < maximumItems) {
             var candidates = eligible.filter { candidate ->
                 chosen.none { it.sameItem(candidate) || it.overlaps(candidate, dishesById) } &&
                     !(candidate.itemKind == PlannedItemKind.DISH &&
-                        chosen.any { it.itemKind == PlannedItemKind.DISH })
+                        chosen.any { it.itemKind == PlannedItemKind.DISH }) &&
+                    hasCompatibleExclusiveRoles(chosen + candidate, foodsById, dishesById)
             }
             if (candidates.isEmpty()) break
             if (chosen.isEmpty() && candidates.any { it.itemKind == PlannedItemKind.DISH }) {
@@ -308,11 +316,15 @@ object WeeklyMenuGenerator {
                 chosen, slot, foodsById, dishesById, recommendation, mealShare
             )
             val viable = candidates.mapNotNull { candidate ->
+                val addition = culinaryAddition(
+                    candidate, chosen, eligible, maximumItems, slot,
+                    foodsById, dishesById, recommendation, mealShare
+                ) ?: return@mapNotNull null
                 val after = combinationError(
-                    chosen + candidate, slot, foodsById, dishesById, recommendation, mealShare
+                    chosen + addition, slot, foodsById, dishesById, recommendation, mealShare
                 )
                 val nutritionalImprovement = before - after
-                val minimumCalories = (chosen + candidate).sumOf {
+                val minimumCalories = (chosen + addition).sumOf {
                     it.vector(slot, foodsById, dishesById).calories
                 }
                 val calorieCeiling = recommendation.calories * mealShare * 1.10
@@ -343,13 +355,112 @@ object WeeklyMenuGenerator {
                 val uniform = random.nextDouble().coerceIn(1e-9, 1.0 - 1e-9)
                 val gumbel = -kotlin.math.ln(-kotlin.math.ln(uniform))
                 val explorationForPosition = exploration / (chosen.size + 1.0).pow(2)
-                candidate to (baseScore + gumbel * explorationForPosition)
+                addition to (baseScore + gumbel * explorationForPosition)
             }.sortedByDescending { it.second }
 
             val best = viable.firstOrNull() ?: break
             chosen += best.first
         }
+        if (hasUnmetDependency(chosen, foodsById, dishesById)) {
+            throw PlanningConflictException(
+                "Hay un alimento que necesita leche, bebida vegetal, yogur o una base similar " +
+                    "en ${slot.mealType.label.lowercase()}."
+            )
+        }
         return chosen
+    }
+
+    private fun culinaryAddition(
+        candidate: PlanningRule,
+        chosen: List<PlanningRule>,
+        eligible: List<PlanningRule>,
+        maximumItems: Int,
+        slot: PlanningSlot,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShare: Double
+    ): List<PlanningRule>? {
+        val direct = chosen + candidate
+        if (!hasUnmetDependency(direct, foodsById, dishesById)) return listOf(candidate)
+        if (direct.size >= maximumItems) return null
+
+        val companions = eligible.filter { companion ->
+            companion.itemKind == PlannedItemKind.FOOD &&
+                companion.roles(foodsById, dishesById)
+                    .contains(CulinaryRole.LIQUID_OR_CREAMY_BASE) &&
+                direct.none { it.sameItem(companion) || it.overlaps(companion, dishesById) } &&
+                hasCompatibleExclusiveRoles(direct + companion, foodsById, dishesById) &&
+                !hasUnmetDependency(direct + companion, foodsById, dishesById)
+        }
+        val companion = companions.minByOrNull {
+            combinationError(
+                direct + it, slot, foodsById, dishesById, recommendation, mealShare
+            )
+        } ?: return null
+        return listOf(candidate, companion)
+    }
+
+    private fun hasCompatibleExclusiveRoles(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): Boolean = listOf(
+        CulinaryRole.STARCH_BASE,
+        CulinaryRole.BREAKFAST_CEREAL
+    ).all { exclusiveRole ->
+        rules.count { exclusiveRole in it.roles(foodsById, dishesById) } <= 1
+    }
+
+    private fun hasUnmetDependency(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): Boolean {
+        val roles = rules.map { it.roles(foodsById, dishesById) }
+        val needsBase = roles.any {
+            CulinaryRole.DEPENDENT_PREPARATION in it ||
+                CulinaryRole.BREAKFAST_CEREAL in it
+        }
+        val hasBase = roles.any { CulinaryRole.LIQUID_OR_CREAMY_BASE in it }
+        return needsBase && !hasBase
+    }
+
+    private fun PlanningRule.roles(
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): Set<CulinaryRole> = when (itemKind) {
+        PlannedItemKind.FOOD -> foodsById[itemId]?.let(CulinaryClassifier::roles).orEmpty()
+        PlannedItemKind.DISH -> dishesById[itemId]?.ingredients
+            ?.mapNotNull { foodsById[it.foodId] }
+            ?.flatMapTo(mutableSetOf(), CulinaryClassifier::roles)
+            .orEmpty()
+    }
+
+    private fun isCulinarilyValid(
+        meals: List<PlannedMeal>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): Boolean = WeekDay.entries.all { day ->
+        meals.filter { day in it.days }.all { meal ->
+            val rules = meal.items.map {
+                PlanningRule(
+                    itemKind = PlannedItemKind.FOOD,
+                    itemId = it.foodId,
+                    allowedMealTypes = setOf(meal.type),
+                    preferredGrams = meal.resolvedGrams(it, day)
+                )
+            } + meal.dishes.map {
+                PlanningRule(
+                    itemKind = PlannedItemKind.DISH,
+                    itemId = it.dishId,
+                    allowedMealTypes = setOf(meal.type),
+                    preferredGrams = meal.resolvedGrams(it, day)
+                )
+            }
+            hasCompatibleExclusiveRoles(rules, foodsById, dishesById) &&
+                !hasUnmetDependency(rules, foodsById, dishesById)
+        }
     }
 
     private fun resolveFixedSlots(

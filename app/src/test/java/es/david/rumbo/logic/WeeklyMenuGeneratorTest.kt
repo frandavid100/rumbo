@@ -11,6 +11,7 @@ import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -288,6 +289,90 @@ class WeeklyMenuGeneratorTest {
         assertTrue(lunches.all { meal -> meal.items.any { it.foodId == 1L } })
         val dinners = result.meals.filter { it.type == MealType.DINNER }
         assertTrue(dinners.all { meal -> meal.items.any { it.foodId == 2L } })
+    }
+
+    @Test
+    fun aMealNeverContainsSeveralStandaloneStarchBases() {
+        val culinaryFoods = listOf(
+            food(10, "Filetes de pechuga de pavo", 110.0, 24.0, 0.0, 1.0),
+            food(11, "Arroz basmati Hacendado", 350.0, 7.0, 78.0, 1.0),
+            food(12, "Hacendado hélices vegetales", 350.0, 12.0, 72.0, 2.0),
+            food(13, "Hacendado macarrón", 350.0, 12.0, 72.0, 2.0)
+        )
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = culinaryFoods.map { rule(it.id, setOf(MealType.LUNCH)) },
+            history = emptyList(),
+            foodsById = culinaryFoods.associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith { if (it == MealType.LUNCH) 1.0 else 0.0 },
+            seed = 61
+        )
+
+        result.meals.forEach { meal ->
+            val starches = meal.items.count { item ->
+                CulinaryRole.STARCH_BASE in CulinaryClassifier.roles(
+                    culinaryFoods.single { it.id == item.foodId }
+                )
+            }
+            assertTrue(starches <= 1)
+        }
+    }
+
+    @Test
+    fun proteinPowderAlwaysBringsAnAvailableLiquidOrCreamyBase() {
+        val powder = food(20, "Polvo de proteínas Natural Isolate", 358.0, 83.0, 2.0, 2.0)
+        val milk = food(21, "Leche semidesnatada", 46.0, 3.2, 4.8, 1.6)
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                rule(powder.id, setOf(MealType.BREAKFAST)).copy(
+                    frequency = PlanningFrequency.ALWAYS,
+                    preferredGrams = 30.0
+                ),
+                rule(milk.id, setOf(MealType.BREAKFAST)).copy(preferredGrams = 250.0)
+            ),
+            history = emptyList(),
+            foodsById = listOf(powder, milk).associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith {
+                if (it == MealType.BREAKFAST) 1.0 else 0.0
+            },
+            seed = 62
+        )
+
+        assertTrue(result.meals.all { meal ->
+            meal.items.any { it.foodId == powder.id } && meal.items.any { it.foodId == milk.id }
+        })
+    }
+
+    @Test
+    fun proteinPowderCannotBeGeneratedWithoutACompatibleBase() {
+        val powder = food(30, "Proteína en polvo whey", 358.0, 83.0, 2.0, 2.0)
+        val cereal = food(31, "Corn flakes integrales", 380.0, 8.0, 80.0, 2.0)
+
+        assertThrows(PlanningConflictException::class.java) {
+            WeeklyMenuGenerator.generate(
+                currentMeals = emptyList(),
+                rules = listOf(
+                    rule(powder.id, setOf(MealType.BREAKFAST)).copy(
+                        frequency = PlanningFrequency.ALWAYS,
+                        preferredGrams = 30.0
+                    ),
+                    rule(cereal.id, setOf(MealType.BREAKFAST))
+                ),
+                history = emptyList(),
+                foodsById = listOf(powder, cereal).associateBy { it.id },
+                dishesById = emptyMap(),
+                recommendation = recommendation,
+                mealShares = MealType.entries.associateWith {
+                    if (it == MealType.BREAKFAST) 1.0 else 0.0
+                },
+                seed = 63
+            )
+        }
     }
 
     private fun rule(
