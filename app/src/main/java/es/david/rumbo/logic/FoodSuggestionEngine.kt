@@ -31,7 +31,8 @@ object FoodSuggestionEngine {
         excludedFoodIds: Set<Long> = emptySet(),
         repertoireAssessment: RepertoireAssessment? = null,
         candidateAssessments: Map<Long, RepertoireAssessment>? = null,
-        limit: Int = 3
+        limit: Int = 3,
+        diversifyResults: Boolean = true
     ): List<FoodSuggestion> {
         if (limit <= 0) return emptyList()
 
@@ -158,7 +159,57 @@ object FoodSuggestionEngine {
             .sortedWith(compareByDescending<FoodSuggestion> { it.score }.thenBy { it.food.name.lowercase() })
             .distinctBy { equivalenceKey(it.food) }
             .toList()
-        return diversify(ranked, limit)
+        return if (diversifyResults) diversify(ranked, limit) else ranked.take(limit)
+    }
+
+    /**
+     * Uses the recommender's complete ranking to find foods that would be preferred
+     * to [source]. Foods already in the user's menu or explicitly dismissed remain
+     * ineligible, exactly as they are in the main recommender.
+     */
+    fun moreEfficientAlternatives(
+        source: Food,
+        foods: List<Food>,
+        repertoireFoodIds: Set<Long>,
+        planningRules: List<PlanningRule>,
+        plannedMeals: List<PlannedMeal>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation?,
+        excludedFoodIds: Set<Long> = emptySet(),
+        repertoireAssessment: RepertoireAssessment? = null,
+        limit: Int = 3
+    ): List<FoodSuggestion> {
+        if (limit <= 0) return emptyList()
+        val common = suggest(
+            foods = foods,
+            repertoireFoodIds = repertoireFoodIds,
+            planningRules = planningRules,
+            plannedMeals = plannedMeals,
+            dishesById = dishesById,
+            recommendation = recommendation,
+            excludedFoodIds = excludedFoodIds,
+            repertoireAssessment = repertoireAssessment,
+            limit = foods.size,
+            diversifyResults = false
+        )
+        val sourceScore = common.firstOrNull { it.food.id == source.id }?.score
+            ?: suggest(
+                foods = foods,
+                repertoireFoodIds = repertoireFoodIds - source.id,
+                planningRules = planningRules,
+                plannedMeals = plannedMeals,
+                dishesById = dishesById,
+                recommendation = recommendation,
+                excludedFoodIds = excludedFoodIds - source.id,
+                repertoireAssessment = repertoireAssessment,
+                limit = foods.size,
+                diversifyResults = false
+            ).firstOrNull { it.food.id == source.id }?.score
+            ?: Double.NEGATIVE_INFINITY
+        return common.asSequence()
+            .filter { it.food.id != source.id && it.score > sourceScore }
+            .take(limit)
+            .toList()
     }
 
     private fun assessmentImprovement(

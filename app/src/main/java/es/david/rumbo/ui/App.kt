@@ -1022,6 +1022,22 @@ fun RumboApp(repository: AppRepository) {
                         FoodDetailScreen(
                             food = food,
                             foods = data.foods,
+                            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                            dismissedFoodIds = data.activeProfileData
+                                ?.dismissedSuggestionFoodIds.orEmpty(),
+                            allPlanningRules = data.activeProfileData?.planningRules.orEmpty(),
+                            recommendation = currentRecommendation,
+                            repertoireAssessment = RepertoireAssessmentMemory.get(
+                                RepertoireAssessmentCacheKey(
+                                    profileId = data.activeProfileId,
+                                    planningRulesHash = data.activeProfileData
+                                        ?.planningRules.orEmpty().hashCode(),
+                                    foodsHash = data.foods.hashCode(),
+                                    dishesHash = data.dishes.hashCode(),
+                                    recommendationHash = currentRecommendation.hashCode(),
+                                    mealSharesHash = mealShares.hashCode()
+                                )
+                            ),
                             activeMealTypes = mealShares.filterValues { it > 0.0 }.keys,
                             onBack = navigateBack,
                             plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
@@ -1042,6 +1058,9 @@ fun RumboApp(repository: AppRepository) {
                             onDismissRecommendation = {
                                 data = repository.dismissFoodSuggestion(food.id)
                                 selectedFoodRecommendationReason = null
+                            },
+                            onDismissAlternative = {
+                                data = repository.dismissFoodSuggestion(it)
                             },
                             onOpenDish = {
                                 selectedDishId = it
@@ -1651,53 +1670,60 @@ private fun FoodSuggestionsCard(
                                     transitionSpec = { fadeIn() togetherWith fadeOut() },
                                     label = "Texto de recomendación"
                                 ) { animatedSuggestion ->
-                                    Row(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                onOpenFood(animatedSuggestion.food.id)
-                                            }
-                                            .padding(vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Column(
-                                            Modifier.weight(1f),
-                                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Text(
-                                                animatedSuggestion.food.name,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                fontWeight = FontWeight.SemiBold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Text(
-                                                animatedSuggestion.reason,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = {
-                                                onDismiss(animatedSuggestion.food.id)
-                                            }
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Close,
-                                                contentDescription = "No me interesa",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
+                                    FoodSuggestionEntry(
+                                        suggestion = animatedSuggestion,
+                                        onClick = { onOpenFood(animatedSuggestion.food.id) },
+                                        onDismiss = { onDismiss(animatedSuggestion.food.id) }
+                                    )
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FoodSuggestionEntry(
+    suggestion: FoodSuggestion,
+    onClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                suggestion.food.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                suggestion.reason,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        IconButton(onClick = onDismiss) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "No me interesa",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -8004,6 +8030,11 @@ private val defaultUnitDefinitions = listOf(
 private fun FoodDetailScreen(
     food: Food,
     foods: List<Food>,
+    repertoireFoodIds: Set<Long>,
+    dismissedFoodIds: Set<Long>,
+    allPlanningRules: List<PlanningRule>,
+    recommendation: Recommendation?,
+    repertoireAssessment: RepertoireAssessment?,
     activeMealTypes: Set<MealType>,
     onBack: () -> Unit,
     plannedMeals: List<PlannedMeal>,
@@ -8011,6 +8042,7 @@ private fun FoodDetailScreen(
     onOpenFood: (Long) -> Unit,
     recommendationReason: String?,
     onDismissRecommendation: () -> Unit,
+    onDismissAlternative: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onOpenMeal: (Long) -> Unit,
     onAddToMeal: (Long) -> Unit,
@@ -8036,7 +8068,30 @@ private fun FoodDetailScreen(
     }
     val isInMenu = planningRules.isNotEmpty()
     val uriHandler = LocalUriHandler.current
-    val similarFoods = remember(food, foods) { FoodSimilarityEngine.findMoreEfficient(food, foods) }
+    val moreEfficientFoods = remember(
+        food,
+        foods,
+        repertoireFoodIds,
+        dismissedFoodIds,
+        allPlanningRules,
+        plannedMeals,
+        dishes,
+        recommendation,
+        repertoireAssessment
+    ) {
+        FoodSuggestionEngine.moreEfficientAlternatives(
+            source = food,
+            foods = foods,
+            repertoireFoodIds = repertoireFoodIds,
+            planningRules = allPlanningRules,
+            plannedMeals = plannedMeals,
+            dishesById = dishes.associateBy { it.id },
+            recommendation = recommendation,
+            excludedFoodIds = dismissedFoodIds,
+            repertoireAssessment = repertoireAssessment,
+            limit = 3
+        )
+    }
     val containingDishes = remember(food.id, dishes) {
         dishes.filter { dish -> dish.ingredients.any { it.foodId == food.id } }
     }
@@ -8426,22 +8481,23 @@ private fun FoodDetailScreen(
                 Text("Alternativas más eficientes", style = MaterialTheme.typography.titleLarge)
                 HorizontalDivider()
                 Text(
-                    "Cumplen una función parecida, pero aprovechan mejor sus calorías o su nutriente principal.",
+                    "Rumbo los considera más útiles para mejorar tu menú que este alimento.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (similarFoods.isEmpty()) {
+                if (moreEfficientFoods.isEmpty()) {
                     Text(
-                        "No hay alternativas parecidas que sean claramente más eficientes.",
+                        "No hay alternativas elegibles que Rumbo considere más eficientes.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    similarFoods.forEachIndexed { index, similar ->
-                        SimilarFoodEntry(
-                            food = similar,
-                            onClick = { onOpenFood(similar.id) }
+                    moreEfficientFoods.forEachIndexed { index, alternative ->
+                        FoodSuggestionEntry(
+                            suggestion = alternative,
+                            onClick = { onOpenFood(alternative.food.id) },
+                            onDismiss = { onDismissAlternative(alternative.food.id) }
                         )
-                        if (index < similarFoods.lastIndex) {
+                        if (index < moreEfficientFoods.lastIndex) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }

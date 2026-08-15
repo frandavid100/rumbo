@@ -407,6 +407,52 @@ class FoodSuggestionEngineTest {
         assertTrue(result.isEmpty())
     }
 
+    @Test
+    fun moreEfficientAlternativesUseRecommenderRankingAndReplaceDismissedFood() {
+        val source = food(
+            1, "Proteína de referencia", FoodCategory.PROTEIN, "Mercadona",
+            200.0, 20.0, 2.0, 3.0
+        )
+        val rankedCandidates = listOf(
+            food(2, "Primera", FoodCategory.PROTEIN, "Mercadona", 150.0, 30.0, 1.0, 1.0),
+            food(3, "Segunda", FoodCategory.PROTEIN, "Mercadona", 160.0, 28.0, 1.0, 1.0),
+            food(4, "Tercera", FoodCategory.PROTEIN, "Mercadona", 170.0, 26.0, 1.0, 1.0),
+            food(5, "Cuarta", FoodCategory.PROTEIN, "Mercadona", 180.0, 24.0, 1.0, 1.0)
+        )
+        val alreadyInMenu = food(
+            6, "Ya está en el menú", FoodCategory.PROTEIN, "Mercadona",
+            120.0, 32.0, 1.0, 1.0
+        )
+        val rejected = food(
+            7, "Rechazada", FoodCategory.PROTEIN, "Mercadona",
+            130.0, 31.0, 1.0, 1.0
+        )
+        val foods = listOf(source) + rankedCandidates + alreadyInMenu + rejected
+        val initial = FoodSuggestionEngine.moreEfficientAlternatives(
+            source = source,
+            foods = foods,
+            repertoireFoodIds = setOf(alreadyInMenu.id),
+            planningRules = listOf(rule(alreadyInMenu.id)),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            excludedFoodIds = setOf(rejected.id)
+        )
+        assertEquals(listOf(2L, 3L, 4L), initial.map { it.food.id })
+
+        val afterDismissal = FoodSuggestionEngine.moreEfficientAlternatives(
+            source = source,
+            foods = foods,
+            repertoireFoodIds = setOf(alreadyInMenu.id),
+            planningRules = listOf(rule(alreadyInMenu.id)),
+            plannedMeals = emptyList(),
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            excludedFoodIds = setOf(rejected.id, initial.first().food.id)
+        )
+        assertEquals(listOf(3L, 4L, 5L), afterDismissal.map { it.food.id })
+    }
+
     private fun rule(id: Long) = PlanningRule(
         PlannedItemKind.FOOD, id, MealType.entries.toSet(),
         frequency = PlanningFrequency.NORMAL, preferredGrams = 100.0
