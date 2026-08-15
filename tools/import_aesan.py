@@ -60,6 +60,8 @@ def culinary_type(category: str, subcategory: str, name: str, legal_name: str, i
     text_value = normalized(f"{category} {subcategory} {name} {legal_name}")
     if re.search(r"\b(pan rallado|rebozador|harina para rebozar)\b", text_value):
         return "COOKING_INGREDIENT"
+    if re.search(r"\b(mazorca de maiz agridulce|mazorcas de maiz agridulces)\b", text_value):
+        return "VEGETABLE"
     if re.search(r"\b(polvo de proteina|proteina en polvo|whey protein|natural isolate)\b", text_value):
         return "PROTEIN_POWDER"
     if re.search(r"\b(corn flakes|copos de maiz|copos de avena|muesli|granola)\b", text_value):

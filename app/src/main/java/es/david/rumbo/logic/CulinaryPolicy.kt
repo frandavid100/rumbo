@@ -73,6 +73,20 @@ object CulinaryPolicy {
 
     fun standaloneAllowed(food: Food): Boolean = policy(food).standaloneAllowed
 
+    fun addresses(need: CulinaryNeed, food: Food): Boolean {
+        if (food.culinaryType !in need.acceptedTypes) return false
+        val servingFactor = (policy(food).preferredGrams ?: 100.0) / 100.0
+        return when (need.kind) {
+            CulinaryNeedKind.COMPANION_BASE -> true
+            CulinaryNeedKind.STARCH_BASE ->
+                (food.carbohydrateGrams ?: 0.0) * servingFactor >= 25.0
+            CulinaryNeedKind.PRIMARY_PROTEIN ->
+                (food.proteinGrams ?: 0.0) * servingFactor >= 20.0
+            CulinaryNeedKind.FAT_COMPLEMENT ->
+                (food.fatGrams ?: 0.0) * servingFactor >= 8.0
+        }
+    }
+
     fun applyPortion(rule: PlanningRule, food: Food): PlanningRule {
         val policy = policy(food)
         val preferred = policy.preferredGrams ?: return rule

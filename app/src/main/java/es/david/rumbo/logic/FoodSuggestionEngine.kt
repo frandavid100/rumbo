@@ -103,7 +103,7 @@ object FoodSuggestionEngine {
                     (culinaryNeed != null || efficientNutrients(it).isNotEmpty())
             }
             .filter { candidate ->
-                culinaryNeed == null || candidate.culinaryType in culinaryNeed.acceptedTypes
+                culinaryNeed == null || CulinaryPolicy.addresses(culinaryNeed, candidate)
             }
             .filter { it.matchesAnyRetailer(activeRetailers) }
             .map { candidate ->
@@ -181,7 +181,7 @@ object FoodSuggestionEngine {
         need: CulinaryNeed,
         limit: Int = 3
     ): List<FoodSuggestion> = suggestions.asSequence()
-        .filter { it.food.culinaryType in need.acceptedTypes }
+        .filter { CulinaryPolicy.addresses(need, it.food) }
         .map { it.copy(reason = need.message) }
         .take(limit)
         .toList()

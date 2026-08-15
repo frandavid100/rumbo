@@ -42,12 +42,12 @@ jobs:
           test -n "$RUMBO_SIGNING_KEY_BASE64"
           test -n "$RUMBO_SIGNING_PASSWORD"
           printf '%s' "$RUMBO_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/rumbo-release.jks"
-          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-0.54.0-aligned.apk"
-          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$RUMBO_SIGNING_PASSWORD" --key-pass "pass:$RUMBO_SIGNING_PASSWORD" --out build/signed/Rumbo-0.54.0.apk "$RUNNER_TEMP/Rumbo-0.54.0-aligned.apk"
-          build/signing-tools/apksigner verify --verbose --print-certs build/signed/Rumbo-0.54.0.apk
+          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-0.55.0-aligned.apk"
+          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$RUMBO_SIGNING_PASSWORD" --key-pass "pass:$RUMBO_SIGNING_PASSWORD" --out build/signed/Rumbo-0.55.0.apk "$RUNNER_TEMP/Rumbo-0.55.0-aligned.apk"
+          build/signing-tools/apksigner verify --verbose --print-certs build/signed/Rumbo-0.55.0.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: rumbo-0.54.0-signed
-          path: build/signed/Rumbo-0.54.0.apk
+          name: rumbo-0.55.0-signed
+          path: build/signed/Rumbo-0.55.0.apk
           if-no-files-found: error
           retention-days: 1

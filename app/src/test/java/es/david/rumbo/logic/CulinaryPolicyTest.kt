@@ -4,6 +4,7 @@ import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.CulinaryType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -27,6 +28,21 @@ class CulinaryPolicyTest {
             CulinaryPolicy.roles(food(CulinaryType.PROTEIN_POWDER))
         )
         assertTrue(CulinaryPolicy.roles(food(CulinaryType.UNKNOWN)).isEmpty())
+    }
+
+    @Test
+    fun aStarchTypeMustStillProvideAUsefulServingOfCarbohydrate() {
+        val need = CulinaryNeed(
+            CulinaryNeedKind.STARCH_BASE,
+            es.david.rumbo.model.MealType.DINNER,
+            setOf(CulinaryType.FRESH_STARCH),
+            "Añade una base de hidratos para la cena."
+        )
+        val pickledCorn = food(CulinaryType.FRESH_STARCH).copy(carbohydrateGrams = 4.8)
+        val potato = food(CulinaryType.FRESH_STARCH).copy(carbohydrateGrams = 17.5)
+
+        assertFalse(CulinaryPolicy.addresses(need, pickledCorn))
+        assertTrue(CulinaryPolicy.addresses(need, potato))
     }
 
     private fun food(type: CulinaryType) = Food(
