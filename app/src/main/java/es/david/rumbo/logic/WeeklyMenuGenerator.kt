@@ -119,6 +119,8 @@ object WeeklyMenuGenerator {
         var bestMeals: List<PlannedMeal>? = null
         var bestAssignments: Map<PlanningSlot, List<PlanningRule>>? = null
         var bestScore = Double.POSITIVE_INFINITY
+        var bestDayTemplate: Map<MealType, List<PlanningRule>>? = null
+        var bestDayScore = Double.POSITIVE_INFINITY
 
         repeat(CANDIDATE_WEEKS) { candidateIndex ->
             val random = Random(seed + candidateIndex * 104729L)
@@ -145,6 +147,18 @@ object WeeklyMenuGenerator {
                 preserved + generated, foodsById, dishesById, recommendation,
                 mealShares = mealShares
             ).meals
+            WeekDay.entries.forEach { day ->
+                val dayScore = dayNutritionQuality(
+                    MealPlanEvaluator.assessDay(
+                        day, optimized, foodsById, dishesById, recommendation
+                    )
+                )
+                if (dayScore < bestDayScore) {
+                    bestDayScore = dayScore
+                    bestDayTemplate = assignments.filterKeys { it.day == day }
+                        .mapKeys { it.key.mealType }
+                }
+            }
             val score = score(
                 optimized, assignments, recent, foodsById, dishesById, recommendation,
                 mealShares
@@ -153,6 +167,32 @@ object WeeklyMenuGenerator {
                 bestScore = score
                 bestMeals = optimized
                 bestAssignments = assignments
+            }
+        }
+
+        // Frequencies below ALWAYS are preferences, not weekly quotas. If a
+        // nutritionally strong day was found, repeating its structure is a
+        // valid fallback. Variety may beat it, but may never make an otherwise
+        // feasible repertoire look impossible.
+        bestDayTemplate?.let { template ->
+            val repeatedAssignments = slots.associateWith { slot ->
+                template[slot.mealType].orEmpty()
+            }
+            val repeatedMeals = repeatedAssignments.map { (slot, assignedRules) ->
+                assignedRules.toMeal(slot, generation)
+            }
+            val optimizedRepeated = MealQuantityOptimizer.optimize(
+                preserved + repeatedMeals, foodsById, dishesById, recommendation,
+                mealShares = mealShares
+            ).meals
+            val repeatedScore = score(
+                optimizedRepeated, repeatedAssignments, recent, foodsById,
+                dishesById, recommendation, mealShares
+            )
+            if (repeatedScore < bestScore) {
+                bestScore = repeatedScore
+                bestMeals = optimizedRepeated
+                bestAssignments = repeatedAssignments
             }
         }
 
@@ -574,6 +614,23 @@ object WeeklyMenuGenerator {
             weeklyErrors.sum() * 100_000.0 +
             dailyDeviations.maxOf { it.worst } * 1_000.0 +
             dailyDeviations.sumOf { it.weightedTotal } * 100.0
+    }
+
+    private fun dayNutritionQuality(assessment: PlanNutritionAssessment): Double {
+        fun error(actual: Double, target: Double): Double {
+            if (target <= 0.0) return 0.0
+            return ((actual - target) / target).pow(2)
+        }
+        val errors = listOf(
+            error(assessment.actual.calories, assessment.target.calories),
+            error(assessment.actual.proteinGrams, assessment.target.proteinGrams),
+            error(
+                assessment.actual.carbohydrateGrams,
+                assessment.target.carbohydrateGrams
+            ),
+            error(assessment.actual.fatGrams, assessment.target.fatGrams)
+        )
+        return errors.maxOrNull()!! * 10.0 + errors.sum()
     }
 
     private fun List<PlanningRule>.toMeal(slot: PlanningSlot, generation: Int): PlannedMeal {

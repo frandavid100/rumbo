@@ -7,6 +7,7 @@ import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
+import es.david.rumbo.model.WeekDay
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -82,6 +83,44 @@ class RepertoireEvaluatorTest {
 
         assertTrue(result.metrics.evaluatedSolutions > 0)
         assertEquals(0.0, result.nutrition.getValue(NutrientKind.CALORIES).bestAchievable % 120.0, .001)
+    }
+
+    @Test
+    fun occasionalFoodsMayRepeatDailyAndLegacyDayLimitsAreIgnored() {
+        val shares = mapOf(
+            MealType.BREAKFAST to .25,
+            MealType.MORNING_SNACK to .10,
+            MealType.LUNCH to .35,
+            MealType.AFTERNOON_SNACK to .10,
+            MealType.DINNER to .20
+        )
+        val foods = MealType.entries.mapIndexed { index, type ->
+            val share = shares.getValue(type)
+            food(
+                index.toLong() + 1,
+                "Option $index",
+                FoodCategory.OTHER,
+                recommendation.calories * share,
+                recommendation.proteinGrams * share,
+                recommendation.carbohydrateGrams * share,
+                recommendation.fatGrams * share
+            )
+        }.associateBy { it.id }
+        val rules = MealType.entries.mapIndexed { index, type ->
+            rule(index.toLong() + 1, PlanningFrequency.OCCASIONAL).copy(
+                allowedMealTypes = setOf(type),
+                allowedDays = setOf(WeekDay.MONDAY)
+            )
+        }
+
+        val result = RepertoireEvaluator.evaluate(
+            rules, foods, emptyMap(), recommendation, shares
+        )
+
+        assertTrue(
+            result.status == RepertoireStatus.SUFFICIENT ||
+                result.status == RepertoireStatus.ROBUST
+        )
     }
 
     private fun rule(id: Long, frequency: PlanningFrequency = PlanningFrequency.NORMAL) = PlanningRule(
