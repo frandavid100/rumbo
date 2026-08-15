@@ -433,6 +433,74 @@ class WeeklyMenuGeneratorTest {
         })
     }
 
+    @Test
+    fun culinaryAndQuantityInvariantsHoldAcrossGoalsAndSeeds() {
+        val catalog = listOf(
+            food(101, "Proteína en polvo", 358.0, 83.0, 2.0, 2.0, CulinaryType.PROTEIN_POWDER),
+            food(102, "Leche", 46.0, 3.1, 4.8, 1.6, CulinaryType.MILK_BASE),
+            food(103, "Cereales", 373.0, 6.7, 82.0, 1.1, CulinaryType.BREAKFAST_CEREAL),
+            food(104, "Pavo loncheado", 90.0, 19.5, .1, 1.3, CulinaryType.MAIN_MEAT),
+            food(105, "Barquillo", 390.0, 11.0, 79.0, 2.6, CulinaryType.SNACK_DESSERT),
+            food(106, "Pollo", 108.0, 22.3, .9, 1.7, CulinaryType.MAIN_MEAT),
+            food(107, "Pavo", 104.0, 24.0, 0.0, .9, CulinaryType.MAIN_MEAT),
+            food(108, "Merluza", 82.0, 18.0, .5, 1.2, CulinaryType.MAIN_FISH),
+            food(109, "Lubina", 90.0, 18.0, 0.0, 2.0, CulinaryType.MAIN_FISH),
+            food(110, "Arroz", 353.0, 9.0, 78.0, .6, CulinaryType.DRY_RICE),
+            food(111, "Pasta", 359.0, 12.0, 74.0, 1.7, CulinaryType.DRY_PASTA),
+            food(112, "Batata", 155.0, 1.6, 26.0, 5.0, CulinaryType.FRESH_STARCH),
+            food(113, "AOVE", 819.0, 0.0, 0.0, 91.0, CulinaryType.CULINARY_OIL),
+            food(114, "Nueces", 703.0, 17.0, 2.2, 69.6, CulinaryType.FAT_COMPLEMENT),
+            food(115, "Verdura", 30.0, 1.5, 4.0, .3, CulinaryType.VEGETABLE)
+        )
+        val rules = listOf(
+            rule(101, setOf(MealType.BREAKFAST)).copy(frequency = PlanningFrequency.ALWAYS),
+            rule(102, setOf(MealType.BREAKFAST)),
+            rule(103, setOf(MealType.BREAKFAST)),
+            rule(104, setOf(MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK)),
+            rule(105, setOf(MealType.AFTERNOON_SNACK)),
+            rule(106, setOf(MealType.LUNCH, MealType.DINNER)),
+            rule(107, setOf(MealType.LUNCH, MealType.DINNER)),
+            rule(108, setOf(MealType.DINNER)),
+            rule(109, setOf(MealType.DINNER)),
+            rule(110, setOf(MealType.LUNCH)),
+            rule(111, setOf(MealType.LUNCH)),
+            rule(112, setOf(MealType.DINNER)),
+            rule(113, setOf(MealType.LUNCH, MealType.DINNER)),
+            rule(114, MealType.entries.toSet()),
+            rule(115, setOf(MealType.LUNCH, MealType.DINNER))
+        )
+        val goals = listOf(
+            Recommendation(1700, 130, 180, 48, ""),
+            Recommendation(1900, 154, 198, 52, ""),
+            Recommendation(2200, 165, 250, 65, "")
+        )
+
+        goals.forEachIndexed { goalIndex, goal ->
+            repeat(8) { seedIndex ->
+                val result = WeeklyMenuGenerator.generate(
+                    currentMeals = emptyList(), rules = rules, history = emptyList(),
+                    foodsById = catalog.associateBy { it.id }, dishesById = emptyMap(),
+                    recommendation = goal, seed = goalIndex * 10_000L + seedIndex
+                )
+                assertTrue(WeeklyMenuGenerator.isCulinarilyValid(
+                    result.meals, catalog.associateBy { it.id }, emptyMap()
+                ))
+                result.meals.forEach { meal ->
+                    meal.items.forEach { item ->
+                        assertTrue(item.minimumGrams <= item.grams)
+                        assertTrue(item.grams <= item.maximumGrams)
+                        meal.dayAmounts.forEach { amounts ->
+                            amounts.foodGrams[item.foodId]?.let { grams ->
+                                assertTrue(item.minimumGrams <= grams)
+                                assertTrue(grams <= item.maximumGrams)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun rule(
         id: Long,
         types: Set<MealType>
