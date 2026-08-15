@@ -2,6 +2,7 @@ package es.david.rumbo.logic
 
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
+import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.MealType
@@ -294,10 +295,10 @@ class WeeklyMenuGeneratorTest {
     @Test
     fun aMealNeverContainsSeveralStandaloneStarchBases() {
         val culinaryFoods = listOf(
-            food(10, "Filetes de pechuga de pavo", 110.0, 24.0, 0.0, 1.0),
-            food(11, "Arroz basmati Hacendado", 350.0, 7.0, 78.0, 1.0),
-            food(12, "Hacendado hélices vegetales", 350.0, 12.0, 72.0, 2.0),
-            food(13, "Hacendado macarrón", 350.0, 12.0, 72.0, 2.0)
+            food(10, "Filetes de pechuga de pavo", 110.0, 24.0, 0.0, 1.0, CulinaryType.MAIN_MEAT),
+            food(11, "Arroz basmati Hacendado", 350.0, 7.0, 78.0, 1.0, CulinaryType.DRY_RICE),
+            food(12, "Hacendado hélices vegetales", 350.0, 12.0, 72.0, 2.0, CulinaryType.DRY_PASTA),
+            food(13, "Hacendado macarrón", 350.0, 12.0, 72.0, 2.0, CulinaryType.DRY_PASTA)
         )
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
@@ -312,7 +313,7 @@ class WeeklyMenuGeneratorTest {
 
         result.meals.forEach { meal ->
             val starches = meal.items.count { item ->
-                CulinaryRole.STARCH_BASE in CulinaryClassifier.roles(
+                CulinaryRole.STARCH_BASE in CulinaryPolicy.roles(
                     culinaryFoods.single { it.id == item.foodId }
                 )
             }
@@ -322,8 +323,8 @@ class WeeklyMenuGeneratorTest {
 
     @Test
     fun proteinPowderAlwaysBringsAnAvailableLiquidOrCreamyBase() {
-        val powder = food(20, "Polvo de proteínas Natural Isolate", 358.0, 83.0, 2.0, 2.0)
-        val milk = food(21, "Leche semidesnatada", 46.0, 3.2, 4.8, 1.6)
+        val powder = food(20, "Polvo de proteínas Natural Isolate", 358.0, 83.0, 2.0, 2.0, CulinaryType.PROTEIN_POWDER)
+        val milk = food(21, "Leche semidesnatada", 46.0, 3.2, 4.8, 1.6, CulinaryType.MILK_BASE)
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
@@ -350,8 +351,8 @@ class WeeklyMenuGeneratorTest {
 
     @Test
     fun proteinPowderCannotBeGeneratedWithoutACompatibleBase() {
-        val powder = food(30, "Proteína en polvo whey", 358.0, 83.0, 2.0, 2.0)
-        val cereal = food(31, "Corn flakes integrales", 380.0, 8.0, 80.0, 2.0)
+        val powder = food(30, "Proteína en polvo whey", 358.0, 83.0, 2.0, 2.0, CulinaryType.PROTEIN_POWDER)
+        val cereal = food(31, "Corn flakes integrales", 380.0, 8.0, 80.0, 2.0, CulinaryType.BREAKFAST_CEREAL)
 
         assertThrows(PlanningConflictException::class.java) {
             WeeklyMenuGenerator.generate(
@@ -375,6 +376,37 @@ class WeeklyMenuGeneratorTest {
         }
     }
 
+    @Test
+    fun aMealUsesOneStandalonePrimaryProteinAndCulinaryOilPortions() {
+        val chicken = food(40, "Pechuga de pollo", 108.0, 22.0, 1.0, 2.0, CulinaryType.MAIN_MEAT)
+        val fish = food(41, "Lubina", 90.0, 18.0, 0.0, 2.0, CulinaryType.MAIN_FISH)
+        val rice = food(42, "Arroz basmati", 353.0, 9.0, 78.0, 1.0, CulinaryType.DRY_RICE)
+        val oil = food(43, "AOVE", 819.0, 0.0, 0.0, 91.0, CulinaryType.CULINARY_OIL)
+        val catalog = listOf(chicken, fish, rice, oil)
+        val result = WeeklyMenuGenerator.generate(
+            currentMeals = emptyList(),
+            rules = listOf(
+                rule(chicken.id, setOf(MealType.LUNCH)),
+                rule(fish.id, setOf(MealType.LUNCH)),
+                rule(rice.id, setOf(MealType.LUNCH)),
+                rule(oil.id, setOf(MealType.LUNCH)).copy(frequency = PlanningFrequency.ALWAYS)
+            ),
+            history = emptyList(),
+            foodsById = catalog.associateBy { it.id },
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith { if (it == MealType.LUNCH) 1.0 else 0.0 },
+            seed = 64
+        )
+
+        result.meals.forEach { meal ->
+            assertTrue(meal.items.count { it.foodId == chicken.id || it.foodId == fish.id } <= 1)
+            val plannedOil = meal.items.single { it.foodId == oil.id }
+            assertTrue(plannedOil.minimumGrams >= 5.0)
+            assertTrue(plannedOil.maximumGrams <= 15.0)
+        }
+    }
+
     private fun rule(
         id: Long,
         types: Set<MealType>
@@ -394,7 +426,8 @@ class WeeklyMenuGeneratorTest {
         calories: Double,
         protein: Double,
         carbs: Double,
-        fat: Double
+        fat: Double,
+        culinaryType: CulinaryType = CulinaryType.UNKNOWN
     ) = Food(
         id = id,
         name = name,
@@ -403,6 +436,7 @@ class WeeklyMenuGeneratorTest {
         fatGrams = fat,
         carbohydrateGrams = carbs,
         proteinGrams = protein,
-        fiberGrams = 1.0
+        fiberGrams = 1.0,
+        culinaryType = culinaryType
     )
 }

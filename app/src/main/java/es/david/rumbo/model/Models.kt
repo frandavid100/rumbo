@@ -102,6 +102,27 @@ enum class FoodCategory(val label: String) {
     OTHER("Otros")
 }
 
+enum class CulinaryType {
+    UNKNOWN,
+    MILK_BASE,
+    CREAMY_BASE,
+    BREAKFAST_CEREAL,
+    PROTEIN_POWDER,
+    DRY_RICE,
+    DRY_PASTA,
+    FRESH_STARCH,
+    BREAD,
+    MAIN_MEAT,
+    MAIN_FISH,
+    MAIN_EGG,
+    VEGETABLE,
+    FRUIT,
+    CULINARY_OIL,
+    FAT_COMPLEMENT,
+    SAUCE,
+    SNACK_DESSERT
+}
+
 enum class MealType(val label: String) {
     BREAKFAST("Desayuno"),
     MORNING_SNACK("Almuerzo"),
@@ -404,7 +425,8 @@ data class Food(
     val unitGender: String = "MASCULINE",
     val unitAmount: Double? = null,
     val wholeUnitsOnly: Boolean = false,
-    val unitDivisions: Int = 1
+    val unitDivisions: Int = 1,
+    val culinaryType: CulinaryType = CulinaryType.UNKNOWN
 ) {
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 160 &&
         validCalories(calories) && validNutrient(fatGrams) &&

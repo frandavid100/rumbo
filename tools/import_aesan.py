@@ -54,6 +54,47 @@ def nutritional_role(category: str, subcategory: str, name: str) -> str:
     return "OTHER"
 
 
+def culinary_type(category: str, subcategory: str, name: str, legal_name: str, ingredients: str) -> str:
+    # Ingredients describe components, not the product's own culinary role.
+    # Using them here would classify a prepared dish as oil, pasta or meat.
+    text_value = normalized(f"{category} {subcategory} {name} {legal_name}")
+    if re.search(r"\b(polvo de proteina|proteina en polvo|whey protein|natural isolate)\b", text_value):
+        return "PROTEIN_POWDER"
+    if re.search(r"\b(corn flakes|copos de maiz|copos de avena|muesli|granola)\b", text_value):
+        return "BREAKFAST_CEREAL"
+    if re.search(r"\b(leche entera|leche semidesnatada|leche desnatada|bebida de soja|bebida de avena|bebida de almendra)\b", text_value):
+        return "MILK_BASE"
+    if re.search(r"\b(yogur|yoghurt|kefir|queso fresco batido)\b", text_value):
+        return "CREAMY_BASE"
+    if "pasta seca" in text_value or re.search(r"\b(macarron|macarrones|espagueti|spaghetti|helices|tallarines|fideos)\b", text_value):
+        return "DRY_PASTA"
+    if re.search(r"\barroz\b", text_value) and "plato preparado" not in text_value:
+        return "DRY_RICE"
+    if re.search(r"\b(aceite de oliva|aceite de girasol|aceite vegetal)\b", text_value):
+        return "CULINARY_OIL"
+    if re.search(r"\b(pescado|lubina|dorada|salmon|merluza|bacalao|atun|sardina|caballa)\b", text_value):
+        return "MAIN_FISH"
+    if re.search(r"\b(carne|pollo|pavo|cerdo|vacuno|ternera|cordero|hamburguesa|burger)\b", text_value):
+        return "MAIN_MEAT"
+    if re.search(r"\b(huevo|huevos)\b", text_value):
+        return "MAIN_EGG"
+    if re.search(r"\b(patata|patatas|boniato|batata)\b", text_value) and "aperitivo" not in text_value:
+        return "FRESH_STARCH"
+    if re.search(r"\b(pan|pita|tostada|tortilla de trigo)\b", text_value):
+        return "BREAD"
+    if re.search(r"\b(fruta|frutas)\b", text_value):
+        return "FRUIT"
+    if re.search(r"\b(verdura|verduras|hortaliza|hortalizas)\b", text_value):
+        return "VEGETABLE"
+    if re.search(r"\b(salsa|mayonesa|ketchup|tomate frito)\b", text_value):
+        return "SAUCE"
+    if re.search(r"\b(frutos secos|nueces|almendras|avellanas|cacahuete|guacamole|aceitunas)\b", text_value):
+        return "FAT_COMPLEMENT"
+    if re.search(r"\b(galleta|barquillo|bolleria|pastel|chocolate|helado)\b", text_value):
+        return "SNACK_DESSERT"
+    return "UNKNOWN"
+
+
 def number(value: object | None) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
@@ -148,6 +189,11 @@ def build(workbook: Path, output: Path) -> tuple[int, int]:
                 "su": number(row[column["Azúcares"]]),
                 "sa": number(row[column["Sal"]]),
                 "ret": "Mercadona",
+                "ct": culinary_type(
+                    family or "", subcategory or "", name,
+                    text(row[column["DenominacionLegal"]]) or "",
+                    text(row[column["Ingredientes"]]) or ""
+                ),
             }
             target.write(json.dumps(item, ensure_ascii=False, separators=(",", ":")) + "\n")
             total += 1

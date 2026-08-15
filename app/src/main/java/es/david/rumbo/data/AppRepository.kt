@@ -13,6 +13,7 @@ import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.DefaultFoodCatalog
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
+import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.MenuHistoryEntry
@@ -620,6 +621,7 @@ class AppRepository(context: Context) {
                 putNullable("unitAmount", food.unitAmount)
                 put("wholeUnitsOnly", food.wholeUnitsOnly)
                 put("unitDivisions", food.unitDivisions)
+                put("culinaryType", food.culinaryType.name)
             })
         }
     }
@@ -852,7 +854,10 @@ class AppRepository(context: Context) {
                     unitGender = item.optString("unitGender", "MASCULINE"),
                     unitAmount = item.optionalDouble("unitAmount"),
                     wholeUnitsOnly = item.optBoolean("wholeUnitsOnly", false),
-                    unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100)
+                    unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100),
+                    culinaryType = item.optionalEnum("culinaryType", CulinaryType::valueOf)
+                        ?: baseFoodsById[item.getLong("id")]?.culinaryType
+                        ?: CulinaryType.UNKNOWN
                 )
             )
         }

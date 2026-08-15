@@ -62,6 +62,8 @@ object WeeklyMenuGenerator {
                     allowedDays = WeekDay.entries.toSet(),
                     fixedSlots = emptySet()
                 )
+            }.map { rule ->
+                foodsById[rule.itemId]?.let { CulinaryPolicy.applyPortion(rule, it) } ?: rule
             }
         require(foodRules.isNotEmpty()) { "Añade al menos un alimento al menú." }
         require(foodRules.all { it.isValid() }) { "Hay reglas de planificación incompletas." }
@@ -407,7 +409,8 @@ object WeeklyMenuGenerator {
         dishesById: Map<Long, Dish>
     ): Boolean = listOf(
         CulinaryRole.STARCH_BASE,
-        CulinaryRole.BREAKFAST_CEREAL
+        CulinaryRole.BREAKFAST_CEREAL,
+        CulinaryRole.PRIMARY_PROTEIN
     ).all { exclusiveRole ->
         rules.count { exclusiveRole in it.roles(foodsById, dishesById) } <= 1
     }
@@ -430,10 +433,10 @@ object WeeklyMenuGenerator {
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>
     ): Set<CulinaryRole> = when (itemKind) {
-        PlannedItemKind.FOOD -> foodsById[itemId]?.let(CulinaryClassifier::roles).orEmpty()
+        PlannedItemKind.FOOD -> foodsById[itemId]?.let(CulinaryPolicy::roles).orEmpty()
         PlannedItemKind.DISH -> dishesById[itemId]?.ingredients
             ?.mapNotNull { foodsById[it.foodId] }
-            ?.flatMapTo(mutableSetOf(), CulinaryClassifier::roles)
+            ?.flatMapTo(mutableSetOf(), CulinaryPolicy::roles)
             .orEmpty()
     }
 

@@ -2,40 +2,42 @@ package es.david.rumbo.logic
 
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
+import es.david.rumbo.model.CulinaryType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class CulinaryClassifierTest {
+class CulinaryPolicyTest {
     @Test
-    fun supermarketNamesIdentifyOnlyHighConfidenceRoles() {
+    fun explicitCatalogTypesProvideCentralPolicies() {
         assertEquals(
             setOf(CulinaryRole.STARCH_BASE),
-            CulinaryClassifier.roles(food("HACENDADO HÉLICES VEGETALES"))
+            CulinaryPolicy.roles(food(CulinaryType.DRY_PASTA))
         )
         assertEquals(
             setOf(CulinaryRole.BREAKFAST_CEREAL),
-            CulinaryClassifier.roles(food("Corn flakes integrales"))
+            CulinaryPolicy.roles(food(CulinaryType.BREAKFAST_CEREAL))
         )
         assertEquals(
             setOf(CulinaryRole.LIQUID_OR_CREAMY_BASE),
-            CulinaryClassifier.roles(food("Hacendado leche semidesnatada"))
+            CulinaryPolicy.roles(food(CulinaryType.MILK_BASE))
         )
         assertEquals(
             setOf(CulinaryRole.DEPENDENT_PREPARATION),
-            CulinaryClassifier.roles(food("Polvo de proteínas Natural Isolate"))
+            CulinaryPolicy.roles(food(CulinaryType.PROTEIN_POWDER))
         )
-        assertTrue(CulinaryClassifier.roles(food("Pechuga de pavo" )).isEmpty())
+        assertTrue(CulinaryPolicy.roles(food(CulinaryType.UNKNOWN)).isEmpty())
     }
 
-    private fun food(name: String) = Food(
-        id = name.hashCode().toLong().let { if (it == 0L) 1L else kotlin.math.abs(it) },
-        name = name,
+    private fun food(type: CulinaryType) = Food(
+        id = type.ordinal.toLong() + 1,
+        name = type.name,
         category = FoodCategory.OTHER,
         calories = 100.0,
         fatGrams = 1.0,
         carbohydrateGrams = 10.0,
         proteinGrams = 10.0,
-        fiberGrams = 1.0
+        fiberGrams = 1.0,
+        culinaryType = type
     )
 }
