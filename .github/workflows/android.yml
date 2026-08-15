@@ -26,6 +26,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Probar y compilar
         run: ./gradlew test assembleRelease
+      - name: Leer versión de Rumbo
+        run: echo "RUMBO_VERSION=$(sed -n 's/.*versionName = \"\(.*\)\"/\1/p' app/build.gradle)" >> "$GITHUB_ENV"
       - name: Preparar herramientas de firma
         run: |
           BUILD_TOOLS="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
@@ -42,12 +44,12 @@ jobs:
           test -n "$RUMBO_SIGNING_KEY_BASE64"
           test -n "$RUMBO_SIGNING_PASSWORD"
           printf '%s' "$RUMBO_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/rumbo-release.jks"
-          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-0.57.0-aligned.apk"
-          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$RUMBO_SIGNING_PASSWORD" --key-pass "pass:$RUMBO_SIGNING_PASSWORD" --out build/signed/Rumbo-0.57.0.apk "$RUNNER_TEMP/Rumbo-0.57.0-aligned.apk"
-          build/signing-tools/apksigner verify --verbose --print-certs build/signed/Rumbo-0.57.0.apk
+          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-$RUMBO_VERSION-aligned.apk"
+          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$RUMBO_SIGNING_PASSWORD" --key-pass "pass:$RUMBO_SIGNING_PASSWORD" --out "build/signed/Rumbo-$RUMBO_VERSION.apk" "$RUNNER_TEMP/Rumbo-$RUMBO_VERSION-aligned.apk"
+          build/signing-tools/apksigner verify --verbose --print-certs "build/signed/Rumbo-$RUMBO_VERSION.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: rumbo-0.57.0-signed
-          path: build/signed/Rumbo-0.57.0.apk
+          name: rumbo-${{ env.RUMBO_VERSION }}-signed
+          path: build/signed/Rumbo-${{ env.RUMBO_VERSION }}.apk
           if-no-files-found: error
           retention-days: 1
