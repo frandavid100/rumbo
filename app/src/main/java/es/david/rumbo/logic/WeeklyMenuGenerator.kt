@@ -42,7 +42,7 @@ data class NutritionDeviation(
 class PlanningConflictException(message: String) : IllegalArgumentException(message)
 
 object WeeklyMenuGenerator {
-    private const val CANDIDATE_WEEKS = 24
+    private const val CANDIDATE_WEEKS = 8
     private const val HISTORY_GENERATIONS = 8
 
     fun generate(
@@ -124,21 +124,20 @@ object WeeklyMenuGenerator {
 
         repeat(CANDIDATE_WEEKS) { candidateIndex ->
             val random = Random(seed + candidateIndex * 104729L)
-            // The former 0.04 tie breaker made nearly every candidate week
-            // follow the same greedy path. That is not evidence that the
-            // repertoire is infeasible: it merely repeats one local optimum.
-            // Keep one deterministic candidate and progressively explore
-            // nutritionally viable alternatives in the remaining attempts.
-            val exploration = when (candidateIndex % 6) {
-                0 -> 0.0
-                1 -> 0.10
-                2 -> 0.20
-                3 -> 0.35
-                4 -> 0.55
-                else -> 0.80
-            }
             val assignments = linkedMapOf<PlanningSlot, List<PlanningRule>>()
             slots.forEach { slot ->
+                // The former 0.04 tie breaker made nearly every generated day
+                // follow the same greedy path. Rotate the exploration level
+                // by day: eight weeks provide 56 genuinely different daily
+                // compositions without paying for 24 full weekly searches.
+                val exploration = when ((candidateIndex + slot.day.ordinal) % 6) {
+                    0 -> 0.0
+                    1 -> 0.10
+                    2 -> 0.20
+                    3 -> 0.35
+                    4 -> 0.55
+                    else -> 0.80
+                }
                 assignments[slot] = completeSlot(
                     slot = slot,
                     fixed = fixedBySlot[slot].orEmpty(),
