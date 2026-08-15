@@ -126,6 +126,44 @@ class RepertoireEvaluatorTest {
     }
 
     @Test
+    fun addingAnEquivalentAlternativeCannotInvalidateAnAcceptableRepertoire() {
+        val shares = mapOf(
+            MealType.BREAKFAST to .25,
+            MealType.MORNING_SNACK to .10,
+            MealType.LUNCH to .35,
+            MealType.AFTERNOON_SNACK to .10,
+            MealType.DINNER to .20
+        )
+        val foods = MealType.entries.mapIndexed { index, type ->
+            val share = shares.getValue(type)
+            food(
+                index.toLong() + 1, "Option $type", FoodCategory.OTHER,
+                recommendation.calories * share,
+                recommendation.proteinGrams * share,
+                recommendation.carbohydrateGrams * share,
+                recommendation.fatGrams * share
+            )
+        }.toMutableList()
+        val rules = MealType.entries.mapIndexed { index, type ->
+            rule(index.toLong() + 1).copy(allowedMealTypes = setOf(type))
+        }.toMutableList()
+        val before = RepertoireEvaluator.evaluate(
+            rules, foods.associateBy { it.id }, emptyMap(), recommendation, shares
+        )
+        val lunchAlternative = foods.single { it.name.endsWith(MealType.LUNCH.name) }
+            .copy(id = 99, name = "Equivalent lunch option")
+        foods += lunchAlternative
+        rules += rule(lunchAlternative.id).copy(allowedMealTypes = setOf(MealType.LUNCH))
+        val after = RepertoireEvaluator.evaluate(
+            rules, foods.associateBy { it.id }, emptyMap(), recommendation, shares
+        )
+
+        assertTrue(before.acceptableSolutions > 0)
+        assertTrue(after.acceptableSolutions > 0)
+        assertTrue(after.status == RepertoireStatus.SUFFICIENT || after.status == RepertoireStatus.ROBUST)
+    }
+
+    @Test
     fun proteinPowderReportsItsMissingCompanionBeforeMenuCreation() {
         val powder = food(
             20, "Proteína en polvo", FoodCategory.PROTEIN,
