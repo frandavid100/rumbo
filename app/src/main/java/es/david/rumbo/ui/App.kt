@@ -2745,6 +2745,16 @@ private fun WeeklyHomeMenuSection(
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(sectionTitle, style = MaterialTheme.typography.titleLarge)
+        if (!hasMenu) {
+            OutlinedButton(
+                enabled = recommendation != null && !isGeneratingMenu,
+                onClick = { message = onRegenerateWeek() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (isGeneratingMenu) "Creando menú…" else "Crear menú")
+            }
+            return@Column
+        }
         Column(
             Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
