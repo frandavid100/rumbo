@@ -2,6 +2,7 @@ package es.david.rumbo.logic
 
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.CulinaryType
+import es.david.rumbo.model.DefaultFoodCatalog
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedItemKind
@@ -145,6 +146,51 @@ class RepertoireEvaluatorTest {
 
         assertEquals(CulinaryNeedKind.COMPANION_BASE, result.culinaryNeeds.single().kind)
         assertTrue(result.culinaryNeeds.single().message.contains("leche"))
+    }
+
+    @Test
+    fun profileTwoHasEnoughLeanProteinWithoutAddingMoreFoods() {
+        val ids = setOf(
+            42L, 37L, 48L, 36L, 34L, 39L, 44L, 17L, 22L, 11L,
+            33L, 35L, 1L, 25L, 14L, 13L, 3L, 15L
+        )
+        val foods = DefaultFoodCatalog.items.filter { it.id in ids }.associateBy { it.id }
+        fun programmed(
+            id: Long,
+            meals: Set<MealType>,
+            frequency: PlanningFrequency = PlanningFrequency.OCCASIONAL
+        ) = rule(id, frequency).copy(allowedMealTypes = meals)
+        val result = RepertoireEvaluator.evaluate(
+            rules = listOf(
+                programmed(42, setOf(MealType.BREAKFAST), PlanningFrequency.ALWAYS),
+                programmed(37, setOf(MealType.LUNCH, MealType.DINNER)),
+                programmed(48, setOf(MealType.LUNCH, MealType.DINNER), PlanningFrequency.FREQUENT),
+                programmed(36, setOf(MealType.LUNCH, MealType.DINNER), PlanningFrequency.NORMAL),
+                programmed(34, setOf(MealType.LUNCH, MealType.DINNER)),
+                programmed(39, setOf(MealType.LUNCH, MealType.DINNER), PlanningFrequency.NORMAL),
+                programmed(44, setOf(MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK), PlanningFrequency.FREQUENT),
+                programmed(17, setOf(MealType.LUNCH), PlanningFrequency.NORMAL),
+                programmed(22, setOf(MealType.LUNCH, MealType.DINNER)),
+                programmed(11, setOf(MealType.BREAKFAST)),
+                programmed(33, setOf(MealType.LUNCH, MealType.DINNER)),
+                programmed(35, setOf(MealType.DINNER)),
+                programmed(1, setOf(MealType.BREAKFAST)),
+                programmed(25, MealType.entries.toSet()),
+                programmed(14, setOf(MealType.LUNCH)),
+                programmed(13, setOf(MealType.LUNCH)),
+                programmed(3, setOf(MealType.LUNCH)),
+                programmed(15, setOf(MealType.DINNER))
+            ),
+            foodsById = foods,
+            dishesById = emptyMap(),
+            recommendation = Recommendation(1875, 154, 198, 52, "")
+        )
+
+        assertTrue(
+            "Expected an acceptable menu, assessment was $result",
+            result.status == RepertoireStatus.SUFFICIENT ||
+                result.status == RepertoireStatus.ROBUST
+        )
     }
 
     private fun rule(id: Long, frequency: PlanningFrequency = PlanningFrequency.NORMAL) = PlanningRule(
