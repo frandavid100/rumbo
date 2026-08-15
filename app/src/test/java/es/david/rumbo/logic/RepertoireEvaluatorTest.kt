@@ -154,7 +154,28 @@ class RepertoireEvaluatorTest {
             42L, 37L, 48L, 36L, 34L, 39L, 44L, 17L, 22L, 11L,
             33L, 35L, 1L, 25L, 14L, 13L, 3L, 15L
         )
-        val foods = DefaultFoodCatalog.items.filter { it.id in ids }.associateBy { it.id }
+        val importedFoods = listOf(
+            food(108480000229663, "Corn flakes", FoodCategory.CARBOHYDRATE, 373.0, 6.7, 82.0, 1.1)
+                .copy(culinaryType = CulinaryType.BREAKFAST_CEREAL),
+            food(108480000822277, "Pan rallado", FoodCategory.CARBOHYDRATE, 336.0, 8.7, 71.3, 1.7)
+                .copy(culinaryType = CulinaryType.COOKING_INGREDIENT),
+            food(108480000159533, "Barquillo", FoodCategory.CARBOHYDRATE, 390.0, 11.0, 79.0, 2.6)
+                .copy(culinaryType = CulinaryType.SNACK_DESSERT),
+            food(108480000063441, "Hélices", FoodCategory.CARBOHYDRATE, 359.0, 12.0, 74.0, 1.7)
+                .copy(culinaryType = CulinaryType.DRY_PASTA),
+            food(108480000242747, "Sepia", FoodCategory.PROTEIN, 78.0, 18.0, .8, .5)
+                .copy(culinaryType = CulinaryType.MAIN_FISH),
+            food(108480000062505, "Macarrones", FoodCategory.CARBOHYDRATE, 366.0, 12.0, 74.0, 1.5)
+                .copy(culinaryType = CulinaryType.DRY_PASTA),
+            food(108480000621283, "Merluza", FoodCategory.PROTEIN, 82.0, 18.0, .5, 1.2)
+                .copy(culinaryType = CulinaryType.MAIN_FISH),
+            food(108480000168764, "Membrillo", FoodCategory.CARBOHYDRATE, 142.0, .25, 41.0, .25)
+                .copy(culinaryType = CulinaryType.SNACK_DESSERT),
+            food(108480000167576, "Mazorca encurtida", FoodCategory.VEGETABLE, 33.0, 1.1, 4.8, .5)
+                .copy(culinaryType = CulinaryType.VEGETABLE)
+        )
+        val foods = (DefaultFoodCatalog.items.filter { it.id in ids } + importedFoods)
+            .associateBy { it.id }
         fun programmed(
             id: Long,
             meals: Set<MealType>,
@@ -172,6 +193,13 @@ class RepertoireEvaluatorTest {
                 programmed(17, setOf(MealType.LUNCH), PlanningFrequency.NORMAL),
                 programmed(22, setOf(MealType.LUNCH, MealType.DINNER)),
                 programmed(11, setOf(MealType.BREAKFAST)),
+                programmed(108480000229663, setOf(MealType.BREAKFAST)),
+                programmed(108480000822277, setOf(MealType.DINNER)),
+                programmed(108480000159533, setOf(MealType.AFTERNOON_SNACK)),
+                programmed(108480000063441, setOf(MealType.LUNCH)),
+                programmed(108480000242747, setOf(MealType.DINNER)),
+                programmed(108480000062505, setOf(MealType.LUNCH)),
+                programmed(108480000621283, setOf(MealType.DINNER)),
                 programmed(33, setOf(MealType.LUNCH, MealType.DINNER)),
                 programmed(35, setOf(MealType.DINNER)),
                 programmed(1, setOf(MealType.BREAKFAST)),
@@ -179,6 +207,8 @@ class RepertoireEvaluatorTest {
                 programmed(14, setOf(MealType.LUNCH)),
                 programmed(13, setOf(MealType.LUNCH)),
                 programmed(3, setOf(MealType.LUNCH)),
+                programmed(108480000168764, setOf(MealType.BREAKFAST)),
+                programmed(108480000167576, setOf(MealType.DINNER)),
                 programmed(15, setOf(MealType.DINNER))
             ),
             foodsById = foods,
