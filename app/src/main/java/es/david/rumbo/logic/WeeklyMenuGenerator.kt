@@ -342,7 +342,8 @@ object WeeklyMenuGenerator {
                 // still selected by the full weekly nutrition score.
                 val uniform = random.nextDouble().coerceIn(1e-9, 1.0 - 1e-9)
                 val gumbel = -kotlin.math.ln(-kotlin.math.ln(uniform))
-                candidate to (baseScore + gumbel * exploration)
+                val explorationForPosition = exploration / (chosen.size + 1.0).pow(2)
+                candidate to (baseScore + gumbel * explorationForPosition)
             }.sortedByDescending { it.second }
 
             val best = viable.firstOrNull() ?: break
