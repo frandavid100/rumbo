@@ -525,7 +525,7 @@ class WeeklyMenuGeneratorTest {
         val fingerprints = result.meals.map { meal ->
             meal.items.map { it.foodId }.sorted()
         }.toSet()
-        println("VARIETY_FINGERPRINTS=$fingerprints DIAGNOSTICS=${result.diagnostics}")
+        println("VARIETY_FINGERPRINTS=$fingerprints MEALS=${result.meals} DIAGNOSTICS=${result.diagnostics}")
         assertTrue("A varied acceptable repertoire produced one repeated day", fingerprints.size > 1)
     }
 
