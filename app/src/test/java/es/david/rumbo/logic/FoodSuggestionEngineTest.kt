@@ -411,7 +411,7 @@ class FoodSuggestionEngineTest {
     fun moreEfficientAlternativesUseRecommenderRankingAndReplaceDismissedFood() {
         val source = food(
             1, "Proteína de referencia", FoodCategory.PROTEIN, "Mercadona",
-            200.0, 20.0, 2.0, 3.0
+            60.0, 5.5, 1.0, 1.0
         )
         val rankedCandidates = listOf(
             food(2, "Primera", FoodCategory.PROTEIN, "Mercadona", 150.0, 30.0, 1.0, 1.0),
