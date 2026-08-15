@@ -127,10 +127,10 @@ enum class WeekDay(val label: String, val shortLabel: String) {
 
 enum class PlanningFrequency(val label: String, val weight: Double) {
     NEVER("Nunca", 0.0),
-    OCCASIONAL("A veces", 1.0),
+    OCCASIONAL("De vez en cuando", 1.0),
     NORMAL("A menudo", 3.0),
-    FREQUENT("A menudo", 6.0),
-    ALWAYS("Siempre", 0.0)
+    FREQUENT("Muy a menudo", 6.0),
+    ALWAYS("Todos los días", 0.0)
 }
 
 enum class PlannedItemKind {
@@ -158,17 +158,16 @@ data class PlanningRule(
 ) {
     fun isValid(): Boolean =
         itemId > 0 &&
-            ruleId > 0 && allowedDays.isNotEmpty() &&
+            ruleId > 0 &&
             (frequency == PlanningFrequency.NEVER || allowedMealTypes.isNotEmpty()) &&
-            (allowedMealTypes.isNotEmpty() || fixedSlots.isNotEmpty()) &&
             preferredGrams in 1.0..5000.0 &&
             minimumFactor in 0.1..1.0 && maximumFactor in 1.0..5.0
 
     fun requiredSlots(): Set<PlanningSlot> = if (frequency == PlanningFrequency.ALWAYS) {
-        allowedDays.flatMapTo(mutableSetOf()) { day ->
+        WeekDay.entries.flatMapTo(mutableSetOf()) { day ->
             allowedMealTypes.map { type -> PlanningSlot(day, type) }
         }
-    } else fixedSlots
+    } else emptySet()
 }
 
 data class MenuHistoryEntry(

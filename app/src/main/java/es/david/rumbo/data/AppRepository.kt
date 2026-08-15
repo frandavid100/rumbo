@@ -691,16 +691,7 @@ class AppRepository(context: Context) {
                 put("allowedMealTypes", JSONArray().apply {
                     rule.allowedMealTypes.forEach { put(it.name) }
                 })
-                put("fixedSlots", JSONArray().apply {
-                    rule.fixedSlots.forEach { slot ->
-                        put(JSONObject().apply {
-                            put("day", slot.day.name)
-                            put("mealType", slot.mealType.name)
-                        })
-                    }
-                })
                 put("frequency", rule.frequency.name)
-                put("allowedDays", JSONArray().apply { rule.allowedDays.forEach { put(it.name) } })
                 put("isActive", rule.isActive)
                 put("preferredGrams", rule.preferredGrams)
                 put("minimumFactor", rule.minimumFactor)
@@ -733,7 +724,6 @@ class AppRepository(context: Context) {
                 put("wholeUnitsOnly", dish.wholeUnitsOnly)
                 put("unitDivisions", dish.unitDivisions)
                 put("allowedMealTypes", JSONArray(dish.allowedMealTypes.map { it.name }))
-                put("allowedDays", JSONArray(dish.allowedDays.map { it.name }))
                 put("ingredients", JSONArray().apply {
                     dish.ingredients.forEach { ingredient ->
                         put(JSONObject().apply {
@@ -962,51 +952,29 @@ class AppRepository(context: Context) {
             val item = array.getJSONObject(index)
             val allowed = item.optJSONArray("allowedMealTypes") ?: JSONArray()
             val fixed = item.optJSONArray("fixedSlots") ?: JSONArray()
-            val days = item.optJSONArray("allowedDays")
+            val legacyFixedMealTypes = buildSet {
+                for (i in 0 until fixed.length()) {
+                    add(MealType.valueOf(fixed.getJSONObject(i).getString("mealType")))
+                }
+            }
             add(
                 PlanningRule(
                     itemKind = PlannedItemKind.valueOf(item.getString("itemKind")),
                     itemId = item.getLong("itemId"),
                     allowedMealTypes = buildSet {
                         for (i in 0 until allowed.length()) add(MealType.valueOf(allowed.getString(i)))
+                        addAll(legacyFixedMealTypes)
                     },
-                    fixedSlots = buildSet {
-                        for (i in 0 until fixed.length()) {
-                            val slot = fixed.getJSONObject(i)
-                            add(
-                                PlanningSlot(
-                                    WeekDay.valueOf(slot.getString("day")),
-                                    MealType.valueOf(slot.getString("mealType"))
-                                )
-                            )
-                        }
-                    },
+                    fixedSlots = emptySet(),
                     frequency = PlanningFrequency.valueOf(item.optString("frequency", PlanningFrequency.NORMAL.name)),
                     isActive = item.optBoolean("isActive", true),
                     preferredGrams = item.optDouble("preferredGrams", 100.0),
                     minimumFactor = item.optDouble("minimumFactor", 0.5),
                     maximumFactor = item.optDouble("maximumFactor", 1.5),
                     ruleId = item.optLong("ruleId", item.getLong("itemId")),
-                    allowedDays = if (days == null) WeekDay.entries.toSet() else buildSet {
-                        for (i in 0 until days.length()) add(WeekDay.valueOf(days.getString(i)))
-                    }
+                    allowedDays = WeekDay.entries.toSet()
                 )
             )
-        }
-    }.flatMap { rule ->
-        if (rule.fixedSlots.isEmpty()) listOf(rule) else buildList {
-            if (rule.frequency != PlanningFrequency.NEVER && rule.allowedMealTypes.isNotEmpty()) {
-                add(rule.copy(fixedSlots = emptySet()))
-            }
-            rule.fixedSlots.groupBy { it.mealType }.entries.forEachIndexed { index, (mealType, slots) ->
-                add(rule.copy(
-                    ruleId = rule.ruleId * 1000 + index + 1,
-                    allowedMealTypes = setOf(mealType),
-                    allowedDays = slots.mapTo(mutableSetOf()) { it.day },
-                    fixedSlots = emptySet(),
-                    frequency = PlanningFrequency.ALWAYS
-                ))
-            }
         }
     }
 
@@ -1046,13 +1014,7 @@ class AppRepository(context: Context) {
                             }
                         }
                     } ?: MealType.entries.toSet(),
-                    allowedDays = item.optJSONArray("allowedDays")?.let { values ->
-                        buildSet {
-                            for (valueIndex in 0 until values.length()) {
-                                runCatching { WeekDay.valueOf(values.getString(valueIndex)) }.getOrNull()?.let(::add)
-                            }
-                        }
-                    } ?: WeekDay.entries.toSet(),
+                    allowedDays = WeekDay.entries.toSet(),
                     ingredients = buildList {
                         for (ingredientIndex in 0 until ingredientsJson.length()) {
                             val ingredient = ingredientsJson.getJSONObject(ingredientIndex)

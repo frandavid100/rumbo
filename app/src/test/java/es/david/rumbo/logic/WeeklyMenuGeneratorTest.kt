@@ -8,7 +8,6 @@ import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
-import es.david.rumbo.model.PlanningSlot
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
 import org.junit.Assert.assertEquals
@@ -26,13 +25,9 @@ class WeeklyMenuGeneratorTest {
     private val recommendation = Recommendation(2000, 140, 220, 65, "")
 
     @Test
-    fun fixedSlotsAndAllowedMealTypesAreRespected() {
+    fun allowedMealTypesAreRespected() {
         val rules = listOf(
-            rule(
-                1,
-                setOf(MealType.LUNCH),
-                fixed = setOf(PlanningSlot(WeekDay.TUESDAY, MealType.LUNCH))
-            ),
+            rule(1, setOf(MealType.LUNCH)),
             rule(2, setOf(MealType.LUNCH)),
             rule(3, setOf(MealType.DINNER)),
             rule(4, setOf(MealType.DINNER))
@@ -49,10 +44,6 @@ class WeeklyMenuGeneratorTest {
         )
 
         assertEquals(14, result.meals.size)
-        val tuesdayLunch = result.meals.single {
-            it.type == MealType.LUNCH && WeekDay.TUESDAY in it.days
-        }
-        assertTrue(tuesdayLunch.items.any { it.foodId == 1L })
         assertTrue(result.meals.filter { it.type == MealType.LUNCH }.all {
             it.items.isNotEmpty() && it.items.all { item -> item.foodId in setOf(1L, 2L) }
         })
@@ -64,7 +55,6 @@ class WeeklyMenuGeneratorTest {
 
     @Test
     fun calorieDenseOptionalFoodIsNotAddedWhenItsMinimumExceedsMealTarget() {
-        val mondayBreakfast = PlanningSlot(WeekDay.MONDAY, MealType.BREAKFAST)
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
@@ -72,8 +62,7 @@ class WeeklyMenuGeneratorTest {
                     itemKind = PlannedItemKind.FOOD,
                     itemId = 2,
                     allowedMealTypes = setOf(MealType.BREAKFAST),
-                    fixedSlots = setOf(mondayBreakfast),
-                    frequency = PlanningFrequency.NORMAL,
+                    frequency = PlanningFrequency.ALWAYS,
                     preferredGrams = 110.0
                 ),
                 rule(5, setOf(MealType.BREAKFAST))
@@ -92,13 +81,12 @@ class WeeklyMenuGeneratorTest {
     }
 
     @Test
-    fun severalFixedFoodsCanShareTheSameMeal() {
-        val slot = PlanningSlot(WeekDay.MONDAY, MealType.LUNCH)
+    fun severalDailyFoodsCanShareTheSameMeal() {
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
-                rule(1, setOf(MealType.LUNCH), fixed = setOf(slot)),
-                rule(2, setOf(MealType.LUNCH), fixed = setOf(slot)),
+                rule(1, setOf(MealType.LUNCH)).copy(frequency = PlanningFrequency.ALWAYS),
+                rule(2, setOf(MealType.LUNCH)).copy(frequency = PlanningFrequency.ALWAYS),
                 rule(3, setOf(MealType.DINNER))
             ),
             history = emptyList(),
@@ -115,8 +103,7 @@ class WeeklyMenuGeneratorTest {
     }
 
     @Test
-    fun oneDishCanSatisfyTwoFixedFoodRules() {
-        val slot = PlanningSlot(WeekDay.MONDAY, MealType.LUNCH)
+    fun oneDishCanSatisfyTwoDailyFoodRules() {
         val dish = Dish(
             id = 20,
             name = "Pollo con arroz",
@@ -125,8 +112,8 @@ class WeeklyMenuGeneratorTest {
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
-                rule(1, setOf(MealType.LUNCH), fixed = setOf(slot)),
-                rule(2, setOf(MealType.LUNCH), fixed = setOf(slot))
+                rule(1, setOf(MealType.LUNCH)).copy(frequency = PlanningFrequency.ALWAYS),
+                rule(2, setOf(MealType.LUNCH)).copy(frequency = PlanningFrequency.ALWAYS)
             ),
             history = emptyList(),
             foodsById = foods.associateBy { it.id },
@@ -196,18 +183,15 @@ class WeeklyMenuGeneratorTest {
     }
 
     @Test
-    fun fixedPresenceNeverLocksTheGeneratedQuantity() {
-        val lunch = PlanningSlot(WeekDay.MONDAY, MealType.MORNING_SNACK)
-        val dinner = PlanningSlot(WeekDay.MONDAY, MealType.DINNER)
+    fun dailyPresenceNeverLocksTheGeneratedQuantity() {
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
                 PlanningRule(
                     itemKind = PlannedItemKind.FOOD,
                     itemId = 2,
-                    allowedMealTypes = emptySet(),
-                    fixedSlots = setOf(lunch, dinner),
-                    frequency = PlanningFrequency.NEVER,
+                    allowedMealTypes = setOf(MealType.MORNING_SNACK, MealType.DINNER),
+                    frequency = PlanningFrequency.ALWAYS,
                     preferredGrams = 150.0
                 ),
                 rule(1, setOf(MealType.MORNING_SNACK, MealType.DINNER))
@@ -275,16 +259,15 @@ class WeeklyMenuGeneratorTest {
     }
 
     @Test
-    fun unifiedAlwaysAndFlexibleRulesRespectTheirDays() {
+    fun dailyFrequencyUsesEveryDayAndLegacyDayRestrictionsAreIgnored() {
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
                 rule(1, setOf(MealType.LUNCH)).copy(
                     ruleId = 101,
-                    frequency = PlanningFrequency.ALWAYS,
-                    allowedDays = setOf(WeekDay.TUESDAY)
+                    frequency = PlanningFrequency.ALWAYS
                 ),
-                rule(2, setOf(MealType.LUNCH)).copy(
+                rule(2, setOf(MealType.DINNER)).copy(
                     ruleId = 102,
                     frequency = PlanningFrequency.OCCASIONAL,
                     allowedDays = setOf(WeekDay.MONDAY)
@@ -295,25 +278,25 @@ class WeeklyMenuGeneratorTest {
             foodsById = foods.associateBy { it.id },
             dishesById = emptyMap(),
             recommendation = recommendation,
-            mealShares = MealType.entries.associateWith { if (it == MealType.LUNCH) 1.0 else 0.0 },
+            mealShares = MealType.entries.associateWith {
+                if (it == MealType.LUNCH || it == MealType.DINNER) .5 else 0.0
+            },
             seed = 51
         )
 
-        val tuesday = result.meals.single { it.type == MealType.LUNCH && WeekDay.TUESDAY in it.days }
-        assertTrue(tuesday.items.any { it.foodId == 1L })
-        val nonMondayMeals = result.meals.filterNot { WeekDay.MONDAY in it.days }
-        assertTrue(nonMondayMeals.flatMap { it.items }.none { it.foodId == 2L })
+        val lunches = result.meals.filter { it.type == MealType.LUNCH }
+        assertTrue(lunches.all { meal -> meal.items.any { it.foodId == 1L } })
+        val dinners = result.meals.filter { it.type == MealType.DINNER }
+        assertTrue(dinners.all { meal -> meal.items.any { it.foodId == 2L } })
     }
 
     private fun rule(
         id: Long,
-        types: Set<MealType>,
-        fixed: Set<PlanningSlot> = emptySet()
+        types: Set<MealType>
     ) = PlanningRule(
         itemKind = PlannedItemKind.FOOD,
         itemId = id,
         allowedMealTypes = types,
-        fixedSlots = fixed,
         frequency = PlanningFrequency.NORMAL,
         preferredGrams = 150.0,
         minimumFactor = 0.5,

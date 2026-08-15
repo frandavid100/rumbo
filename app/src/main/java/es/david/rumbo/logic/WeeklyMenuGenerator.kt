@@ -56,6 +56,13 @@ object WeeklyMenuGenerator {
         seed: Long = 11L
     ): GeneratedWeeklyMenu {
         val foodRules = rules.filter { it.itemKind == PlannedItemKind.FOOD && it.isActive }
+            .map { rule ->
+                rule.copy(
+                    allowedMealTypes = rule.allowedMealTypes + rule.fixedSlots.map { it.mealType },
+                    allowedDays = WeekDay.entries.toSet(),
+                    fixedSlots = emptySet()
+                )
+            }
         require(foodRules.isNotEmpty()) { "Añade al menos un alimento al menú." }
         require(foodRules.all { it.isValid() }) { "Hay reglas de planificación incompletas." }
         require(foodRules.all { foodsById[it.itemId]?.hasComparableNutrition() == true }) {
@@ -71,13 +78,11 @@ object WeeklyMenuGenerator {
             }
             val allowedMealTypes = ingredientRules.flatMapTo(mutableSetOf()) { it.allowedMealTypes }
                 .intersect(dish.allowedMealTypes)
-            val allowedDays = ingredientRules.flatMapTo(mutableSetOf()) { it.allowedDays }
-                .intersect(dish.allowedDays)
-            if (ingredientRules.isEmpty() || allowedMealTypes.isEmpty() || allowedDays.isEmpty()) null else PlanningRule(
+            if (ingredientRules.isEmpty() || allowedMealTypes.isEmpty()) null else PlanningRule(
                 itemKind = PlannedItemKind.DISH,
                 itemId = dish.id,
                 allowedMealTypes = allowedMealTypes,
-                allowedDays = allowedDays,
+                allowedDays = WeekDay.entries.toSet(),
                 frequency = PlanningFrequency.NORMAL,
                 preferredGrams = dish.totalWeightGrams().coerceAtLeast(1.0)
             )
@@ -96,7 +101,7 @@ object WeeklyMenuGenerator {
         }
         slots.forEach { slot ->
             if (fixedBySlot[slot].isNullOrEmpty() && derivedRules.none {
-                    slot.mealType in it.allowedMealTypes && slot.day in it.allowedDays &&
+                    slot.mealType in it.allowedMealTypes &&
                         it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
                 }) {
                 throw PlanningConflictException(
@@ -223,7 +228,7 @@ object WeeklyMenuGenerator {
     ): List<PlanningRule> {
         val chosen = fixed.distinctBy { it.itemKind to it.itemId }.toMutableList()
         val eligible = rules.filter {
-            slot.mealType in it.allowedMealTypes && slot.day in it.allowedDays &&
+            slot.mealType in it.allowedMealTypes &&
                 it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
         }
         val maximumItems = when (slot.mealType) {
@@ -298,10 +303,10 @@ object WeeklyMenuGenerator {
             val selected = mutableListOf<PlanningRule>()
             while (true) {
                 val best = dishes.filter { dish ->
-                    slot.mealType in dish.allowedMealTypes && slot.day in dish.allowedDays
+                    slot.mealType in dish.allowedMealTypes
                 }.map { dish ->
                     dish to remaining.count { rule ->
-                        slot.mealType in rule.allowedMealTypes && slot.day in rule.allowedDays &&
+                        slot.mealType in rule.allowedMealTypes &&
                             dish.ingredients.any { it.foodId == rule.itemId }
                     }
                 }.maxByOrNull { it.second }?.takeIf { it.second >= 2 } ?: break
@@ -430,7 +435,7 @@ object WeeklyMenuGenerator {
         random: Random
     ): PlanningRule {
         val candidates = rules.filter {
-            slot.mealType in it.allowedMealTypes && slot.day in it.allowedDays &&
+            slot.mealType in it.allowedMealTypes &&
                 it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
         }
         if (candidates.isEmpty()) {

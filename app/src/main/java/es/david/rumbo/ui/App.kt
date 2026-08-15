@@ -3015,9 +3015,7 @@ private fun repertoireActionMessages(
         }
     }
 
-    val forcedRules = activeRules.any {
-        it.frequency == PlanningFrequency.ALWAYS || it.fixedSlots.isNotEmpty()
-    }
+    val forcedRules = activeRules.any { it.frequency == PlanningFrequency.ALWAYS }
     if (excesses.isNotEmpty() && (deficits.isEmpty() || forcedRules)) {
         val excessLabels = excesses.map { it.third }
         val deficitLabels = deficits.map { it.third }
@@ -3026,7 +3024,7 @@ private fun repertoireActionMessages(
                 "Las reglas actuales hacen que el menú supere " +
                     naturalListText(excessLabels) + " antes de alcanzar " +
                     naturalListText(deficitLabels) + ". Revisa los alimentos marcados " +
-                    "como «Siempre» y las cantidades obligatorias."
+                    "como «Todos los días»."
             deficitLabels.isNotEmpty() ->
                 "Las opciones actuales hacen que el menú supere " +
                     naturalListText(excessLabels) + " antes de alcanzar " +
@@ -4273,15 +4271,6 @@ private fun PlanningRuleCards(
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Text(
-                            if (rule.allowedDays.size == WeekDay.entries.size) {
-                                "Cualquier día"
-                            } else {
-                                rule.allowedDays.joinToString { it.shortLabel }
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                     if (index < rules.lastIndex) HorizontalDivider()
                 }
@@ -4644,7 +4633,6 @@ private fun PlanningRuleDialog(
     var meals by remember(initial, activeMealTypes) {
         mutableStateOf(initial.allowedMealTypes.intersect(activeMealTypes))
     }
-    var days by remember(initial) { mutableStateOf(initial.allowedDays) }
     var frequency by remember(initial) {
         mutableStateOf(when (initial.frequency) {
             PlanningFrequency.ALWAYS -> PlanningFrequency.ALWAYS
@@ -4662,7 +4650,12 @@ private fun PlanningRuleDialog(
             SelectorField(
                 label = "Frecuencia",
                 selectedLabel = frequency.label,
-                options = listOf(PlanningFrequency.OCCASIONAL, PlanningFrequency.NORMAL, PlanningFrequency.ALWAYS),
+                options = listOf(
+                    PlanningFrequency.OCCASIONAL,
+                    PlanningFrequency.NORMAL,
+                    PlanningFrequency.FREQUENT,
+                    PlanningFrequency.ALWAYS
+                ),
                 optionLabel = { it.label }, onSelect = { frequency = it }, onClear = null
             )
             MultiSelectField(
@@ -4672,19 +4665,11 @@ private fun PlanningRuleDialog(
                 optionLabel = { it.label },
                 onSelectedChange = { meals = it }
             )
-            MultiSelectField(
-                label = "Días",
-                options = WeekDay.entries,
-                selected = days,
-                optionLabel = { it.label },
-                allLabel = "Cualquier día",
-                onSelectedChange = { days = it }
-            )
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(onClick = {
                 val draft = initial.copy(
                     allowedMealTypes = meals,
-                    allowedDays = days,
+                    allowedDays = WeekDay.entries.toSet(),
                     fixedSlots = emptySet(),
                     frequency = frequency,
                     preferredGrams = 100.0,
@@ -4692,7 +4677,7 @@ private fun PlanningRuleDialog(
                     maximumFactor = 5.0
                 )
                 if (draft.isValid()) onSave(draft)
-                else error = "Selecciona al menos una comida y un día."
+                else error = "Selecciona al menos una comida."
             }, Modifier.fillMaxWidth()) { Text("Guardar") }
             onDelete?.let { delete ->
                 TextButton(onClick = delete, Modifier.fillMaxWidth()) {
@@ -7260,17 +7245,8 @@ private fun DishDetailScreen(
                         onSaveDish(dish.copy(allowedMealTypes = keys.mapNotNull { key -> runCatching { MealType.valueOf(key) }.getOrNull() }.toSet()))
                     }
                 )
-                MultiSelectDishField(
-                    label = "Días",
-                    selectedLabels = WeekDay.entries.filter { it in dish.allowedDays }.map { it.label },
-                    options = WeekDay.entries.map { it.name to it.label },
-                    selectedKeys = dish.allowedDays.mapTo(mutableSetOf()) { it.name },
-                    onSelectionChange = { keys ->
-                        onSaveDish(dish.copy(allowedDays = keys.mapNotNull { key -> runCatching { WeekDay.valueOf(key) }.getOrNull() }.toSet()))
-                    }
-                )
                 Text(
-                    "Las comidas y días que desmarques quedan excluidos del generador semanal.",
+                    "Las comidas que desmarques quedan excluidas del generador semanal.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -8219,6 +8195,7 @@ private fun FoodDetailScreen(
                             PlanningFrequency.NEVER,
                             PlanningFrequency.OCCASIONAL,
                             PlanningFrequency.NORMAL,
+                            PlanningFrequency.FREQUENT,
                             PlanningFrequency.ALWAYS
                         ).forEach { frequency ->
                             DropdownMenuItem(
