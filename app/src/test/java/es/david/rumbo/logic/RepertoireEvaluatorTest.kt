@@ -210,9 +210,15 @@ class RepertoireEvaluatorTest {
             food(108480000168764, "Membrillo", FoodCategory.CARBOHYDRATE, 142.0, .25, 41.0, .25)
                 .copy(culinaryType = CulinaryType.SNACK_DESSERT),
             food(108480000167576, "Mazorca encurtida", FoodCategory.VEGETABLE, 33.0, 1.1, 4.8, .5)
-                .copy(culinaryType = CulinaryType.VEGETABLE)
+                .copy(culinaryType = CulinaryType.VEGETABLE, category = FoodCategory.FRUIT)
         )
         val foods = (DefaultFoodCatalog.items.filter { it.id in ids } + importedFoods)
+            .map { food ->
+                if (food.id == 1L) food.copy(
+                    unitName = "taza", unitAmount = 230.0,
+                    wholeUnitsOnly = true, unitDivisions = 1
+                ) else food
+            }
             .associateBy { it.id }
         fun programmed(
             id: Long,
@@ -251,8 +257,17 @@ class RepertoireEvaluatorTest {
             ),
             foodsById = foods,
             dishesById = emptyMap(),
-            recommendation = Recommendation(1875, 154, 198, 52, "")
+            recommendation = Recommendation(1875, 154, 198, 52, ""),
+            mealShares = mapOf(
+                MealType.BREAKFAST to .25,
+                MealType.MORNING_SNACK to .10,
+                MealType.LUNCH to .35,
+                MealType.AFTERNOON_SNACK to .10,
+                MealType.DINNER to .20
+            )
         )
+
+        println("PROFILE_TWO_RUNTIME_ASSESSMENT=$result")
 
         assertTrue(
             "Expected an acceptable menu, assessment was $result",
