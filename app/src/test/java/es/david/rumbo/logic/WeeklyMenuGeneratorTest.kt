@@ -7,6 +7,8 @@ import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedItemKind
+import es.david.rumbo.model.PlannedFood
+import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
@@ -35,8 +37,18 @@ class WeeklyMenuGeneratorTest {
             rule(4, setOf(MealType.DINNER))
         )
 
+        val repeatedIncumbent = WeekDay.entries.map { day ->
+            PlannedMeal(
+                id = 10_000L + day.ordinal,
+                type = MealType.LUNCH,
+                days = setOf(day),
+                items = listOf(
+                    PlannedFood(turkey.id, 150.0, true, 75.0, 250.0)
+                )
+            )
+        }
         val result = WeeklyMenuGenerator.generate(
-            currentMeals = emptyList(),
+            currentMeals = repeatedIncumbent,
             rules = rules,
             history = emptyList(),
             foodsById = foods.associateBy { it.id },
