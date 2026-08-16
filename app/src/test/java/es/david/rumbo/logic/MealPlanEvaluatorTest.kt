@@ -84,6 +84,28 @@ class MealPlanEvaluatorTest {
     }
 
     @Test
+    fun optimizationPrefersTheExactTargetInsideTheOptimalBand() {
+        assertEquals(
+            TargetFit.ON_TARGET,
+            NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, 144.0, 154.0).fit
+        )
+        assertTrue(
+            NutritionTolerancePolicy.optimizationPenalty(
+                NutrientKind.PROTEIN, 144.0, 154.0
+            ) > NutritionTolerancePolicy.optimizationPenalty(
+                NutrientKind.PROTEIN, 154.0, 154.0
+            )
+        )
+        assertTrue(
+            NutritionTolerancePolicy.optimizationPenalty(
+                NutrientKind.FAT, 57.0, 52.0
+            ) > NutritionTolerancePolicy.optimizationPenalty(
+                NutrientKind.FAT, 52.0, 52.0
+            )
+        )
+    }
+
+    @Test
     fun relevantProteinDeficitIsOutsideAndAsymmetric() {
         val low = NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, 115.0, 150.0)
         val equallyHigh = NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, 185.0, 150.0)
