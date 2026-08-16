@@ -208,6 +208,7 @@ import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MenuHistoryEntry
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.PlannedFood
 import es.david.rumbo.model.PlannedDish
 import es.david.rumbo.model.PlannedMeal
@@ -8855,13 +8856,7 @@ private fun normalizeSearch(value: String): String = java.text.Normalizer
     .normalize(value.lowercase(Locale.getDefault()), java.text.Normalizer.Form.NFD)
     .replace("\\p{M}+".toRegex(), "")
 
-private val defaultMealShares: Map<MealType, Double> = mapOf(
-    MealType.BREAKFAST to 0.25,
-    MealType.MORNING_SNACK to 0.10,
-    MealType.LUNCH to 0.35,
-    MealType.AFTERNOON_SNACK to 0.10,
-    MealType.DINNER to 0.20
-)
+private val defaultMealShares: Map<MealType, Double> = MealDistributionPolicy.defaults
 
 private fun loadMealShares(context: android.content.Context): Map<MealType, Double> {
     val preferences = context.getSharedPreferences("meal_distribution", 0)
