@@ -37,18 +37,8 @@ class WeeklyMenuGeneratorTest {
             rule(4, setOf(MealType.DINNER))
         )
 
-        val repeatedIncumbent = WeekDay.entries.map { day ->
-            PlannedMeal(
-                id = 10_000L + day.ordinal,
-                type = MealType.LUNCH,
-                days = setOf(day),
-                items = listOf(
-                    PlannedFood(turkey.id, 150.0, true, 75.0, 250.0)
-                )
-            )
-        }
         val result = WeeklyMenuGenerator.generate(
-            currentMeals = repeatedIncumbent,
+            currentMeals = emptyList(),
             rules = rules,
             history = emptyList(),
             foodsById = foods.associateBy { it.id },
@@ -521,8 +511,18 @@ class WeeklyMenuGeneratorTest {
         val turkey = food(202, "Pavo", 433.333, 36.667, 60.0, 4.667, CulinaryType.MAIN_MEAT)
         val hake = food(203, "Merluza", 433.333, 36.667, 60.0, 4.667, CulinaryType.MAIN_FISH)
         val catalog = listOf(chicken, turkey, hake)
+        val repeatedIncumbent = WeekDay.entries.map { day ->
+            PlannedMeal(
+                id = 10_000L + day.ordinal,
+                type = MealType.LUNCH,
+                days = setOf(day),
+                items = listOf(
+                    PlannedFood(turkey.id, 150.0, true, 75.0, 250.0)
+                )
+            )
+        }
         val result = WeeklyMenuGenerator.generate(
-            currentMeals = emptyList(),
+            currentMeals = repeatedIncumbent,
             rules = listOf(
                 rule(chicken.id, setOf(MealType.LUNCH)),
                 rule(turkey.id, setOf(MealType.LUNCH)),
