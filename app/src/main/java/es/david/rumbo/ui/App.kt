@@ -55,6 +55,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -731,18 +732,22 @@ fun RumboApp(repository: AppRepository) {
             enterTransition = {
                 val target = targetState.arguments?.getString("screenKey")
                 if (target?.substringBefore(":") == Screen.ACCOUNT.name) {
-                    slideInHorizontally { it } + fadeIn()
+                    slideInHorizontally(animationSpec = tween(350)) { it } +
+                        fadeIn(animationSpec = tween(350))
                 } else {
-                    fadeIn() + scaleIn(initialScale = 0.96f)
+                    fadeIn(animationSpec = tween(350)) + scaleIn(
+                        initialScale = 0.90f,
+                        animationSpec = tween(350)
+                    )
                 }
             },
-            exitTransition = { fadeOut() },
+            exitTransition = { fadeOut(animationSpec = tween(250)) },
             popEnterTransition = {
                 val initial = initialState.arguments?.getString("screenKey")
                 if (initial?.substringBefore(":") == Screen.FOODS.name) {
                     EnterTransition.None
                 } else {
-                    fadeIn()
+                    fadeIn(animationSpec = tween(350))
                 }
             },
             popExitTransition = {
@@ -750,7 +755,10 @@ fun RumboApp(repository: AppRepository) {
                 if (initial?.substringBefore(":") == Screen.FOODS.name) {
                     androidx.compose.animation.ExitTransition.None
                 } else {
-                    fadeOut() + scaleOut(targetScale = 0.90f)
+                    fadeOut(animationSpec = tween(350)) + scaleOut(
+                        targetScale = 0.90f,
+                        animationSpec = tween(350)
+                    )
                 }
             }
         ) {
@@ -759,6 +767,7 @@ fun RumboApp(repository: AppRepository) {
                 ?: initialScreenKey
             val animatedScreenName = animatedScreenKey.substringBefore(":")
             val screen = Screen.valueOf(animatedScreenName)
+            val navigationActive = currentNavEntry?.id == backStackEntry.id
             screenStateHolder.SaveableStateProvider(animatedScreenKey) {
             when {
                 !profileReady -> ProfileScreen(
@@ -833,6 +842,7 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
                     mealShares = mealShares,
+                    navigationActive = navigationActive,
                     onOpenAccount = { screenName = Screen.ACCOUNT.name },
                     onOpenShoppingList = {
                         shoppingCurrentOnly = false
@@ -1165,6 +1175,7 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.FOODS -> FoodDishCatalogScreen(
                     foods = data.foods,
                     dishes = data.dishes,
+                    navigationActive = navigationActive,
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     onOpenFood = {
@@ -1627,6 +1638,7 @@ private object RepertoireAssessmentMemory {
 private fun HomeScreen(
     data: AppData,
     mealShares: Map<MealType, Double>,
+    navigationActive: Boolean,
     onOpenAccount: () -> Unit,
     onOpenShoppingList: () -> Unit,
     onOpenCurrentShoppingList: () -> Unit,
@@ -1878,6 +1890,7 @@ private fun HomeScreen(
                 scanMessage = searchMessage,
                 onScanMessageChange = { searchMessage = it },
                 state = searchBarState,
+                navigationActive = navigationActive,
                 listState = searchListState,
                 suppressRestoredKeyboard = suppressRestoredSearchKeyboard,
                 onRestoredKeyboardSuppressed = { suppressRestoredSearchKeyboard = false },
@@ -6600,6 +6613,7 @@ private fun HomeCatalogSearch(
     onCulinaryTypeFilterChange: (CulinaryType?) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     state: SearchBarState,
+    navigationActive: Boolean,
     listState: LazyListState,
     suppressRestoredKeyboard: Boolean,
     onRestoredKeyboardSuppressed: () -> Unit,
@@ -6851,13 +6865,16 @@ private fun HomeCatalogSearch(
         }
     }
 
-    BackHandler(enabled = state.targetValue == SearchBarValue.Expanded) { close() }
+    BackHandler(
+        enabled = navigationActive && state.targetValue == SearchBarValue.Expanded
+    ) { close() }
 }
 
 @Composable
 private fun FoodDishCatalogScreen(
     foods: List<Food>,
     dishes: List<Dish>,
+    navigationActive: Boolean,
     planningRules: List<PlanningRule>,
     repertoireFoodIds: Set<Long>,
     onOpenFood: (Long) -> Unit,
@@ -6935,7 +6952,7 @@ private fun FoodDishCatalogScreen(
         )
     }
 
-    BackHandler(enabled = searchExpanded) { searchExpanded = false }
+    BackHandler(enabled = navigationActive && searchExpanded) { searchExpanded = false }
 
     Box(Modifier.fillMaxSize()) {
         Column(
