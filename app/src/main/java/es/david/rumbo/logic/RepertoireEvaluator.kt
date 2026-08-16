@@ -5,6 +5,7 @@ import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
@@ -75,13 +76,7 @@ object RepertoireEvaluator {
     // Several stable seeds explore different combinations without making the
     // result fluctuate between app launches.
     private val seeds = listOf(11L, 37L, 89L)
-    private val defaultShares = mapOf(
-        MealType.BREAKFAST to .20,
-        MealType.MORNING_SNACK to .10,
-        MealType.LUNCH to .35,
-        MealType.AFTERNOON_SNACK to .10,
-        MealType.DINNER to .25
-    )
+    private val defaultShares = MealDistributionPolicy.defaults
 
     fun evaluate(
         rules: List<PlanningRule>,
