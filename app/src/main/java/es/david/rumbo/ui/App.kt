@@ -4,7 +4,6 @@ package es.david.rumbo.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
@@ -47,7 +46,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -57,8 +55,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.Animatable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -147,6 +143,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
@@ -159,6 +156,10 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -172,7 +173,6 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -250,8 +250,6 @@ import es.david.rumbo.model.sanitizedDayAmounts
 import es.david.rumbo.model.totalWeightGrams
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -349,6 +347,63 @@ fun RumboApp(repository: AppRepository) {
     var dishReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var accountChildReturn by rememberSaveable { mutableStateOf(false) }
     var createProfileOnOpen by rememberSaveable { mutableStateOf(false) }
+    var lastNavKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val navController = rememberNavController()
+    val initialScreenKey = remember {
+        if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
+    }
+    val currentNavEntry by navController.currentBackStackEntryAsState()
+    val desiredScreenKey = if (screenName == Screen.FOOD_DETAIL.name) {
+        "$screenName:${selectedFoodId ?: 0L}"
+    } else {
+        screenName
+    }
+    DisposableEffect(navController) {
+        val listener = androidx.navigation.NavController.OnDestinationChangedListener {
+                _, destination, arguments ->
+            if (destination.route != "screen/{screenKey}") return@OnDestinationChangedListener
+            val key = arguments?.getString("screenKey") ?: return@OnDestinationChangedListener
+            val previousKey = lastNavKey
+            if (
+                previousKey?.substringBefore(":") == Screen.FOOD_DETAIL.name &&
+                key.substringBefore(":") == Screen.FOOD_DETAIL.name &&
+                key.substringAfter(":", "").toLongOrNull() == foodNavigationStack.lastOrNull()
+            ) {
+                foodNavigationStack = foodNavigationStack.dropLast(1)
+                selectedFoodRecommendationReason = foodRecommendationReasonStack
+                    .lastOrNull()?.takeIf { it.isNotEmpty() }
+                foodRecommendationReasonStack = foodRecommendationReasonStack.dropLast(1)
+            }
+            if (
+                accountChildReturn &&
+                previousKey?.substringBefore(":") in setOf(
+                    Screen.PROFILE.name, Screen.SETTINGS.name, Screen.HELP.name
+                ) && key.substringBefore(":") == Screen.ACCOUNT.name
+            ) {
+                accountChildReturn = false
+                createProfileOnOpen = false
+            }
+            lastNavKey = key
+            screenName = key.substringBefore(":")
+            if (screenName == Screen.FOOD_DETAIL.name) {
+                key.substringAfter(":", "").toLongOrNull()?.let { selectedFoodId = it }
+            }
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+    LaunchedEffect(desiredScreenKey, currentNavEntry) {
+        val currentKey = currentNavEntry?.arguments?.getString("screenKey")
+            ?: return@LaunchedEffect
+        if (currentKey == desiredScreenKey) return@LaunchedEffect
+        val previousKey = navController.previousBackStackEntry
+            ?.arguments?.getString("screenKey")
+        if (previousKey == desiredScreenKey) {
+            navController.popBackStack()
+        } else {
+            navController.navigate("screen/$desiredScreenKey") { launchSingleTop = true }
+        }
+    }
     val screen = Screen.valueOf(screenName)
     val profileReady = data.isActiveProfileReady
     val currentRecommendation = data.measurements
@@ -379,8 +434,6 @@ fun RumboApp(repository: AppRepository) {
     var detailMenuExpanded by remember { mutableStateOf(false) }
     var pendingTopDelete by remember { mutableStateOf<Screen?>(null) }
     var addingMeasurement by rememberSaveable { mutableStateOf(false) }
-    val predictiveBackProgress = remember { Animatable(0f) }
-    var predictiveBackActive by remember { mutableStateOf(false) }
     var generatingMenuWeekName by remember { mutableStateOf<String?>(null) }
     val screenStateHolder = rememberSaveableStateHolder()
     val generateMenuAsync: (PlanWeek) -> String? = { week ->
@@ -465,48 +518,6 @@ fun RumboApp(repository: AppRepository) {
             }
             screen in setOf(Screen.ADD_FOOD, Screen.FOOD_DETAIL) -> Screen.FOODS.name
             else -> Screen.HOME.name
-        }
-    }
-
-    PredictiveBackHandler(
-        enabled = profileReady && (screen != Screen.HOME || predictiveBackActive)
-    ) { events ->
-        val originScreenName = screenName
-        val previewScreenName = when {
-            accountChildReturn && screen in setOf(Screen.PROFILE, Screen.SETTINGS, Screen.HELP) ->
-                Screen.ACCOUNT.name
-            screen == Screen.EDIT_MEASUREMENT && selectedMeasurementId != null ->
-                Screen.MEASUREMENT_DETAIL.name
-            screen == Screen.EDIT_FOOD && selectedFoodId != null -> Screen.FOOD_DETAIL.name
-            screen in setOf(Screen.ADD_PLANNED_MEAL, Screen.EDIT_PLANNED_MEAL) ->
-                Screen.PLANNER.name
-            screen == Screen.EDIT_DISH && selectedDishId != null -> Screen.DISH_DETAIL.name
-            screen == Screen.DISH_DETAIL && dishReturnScreenName != null -> dishReturnScreenName!!
-            screen == Screen.ADD_DISH && dishReturnScreenName != null -> dishReturnScreenName!!
-            screen in setOf(Screen.ADD_DISH, Screen.DISH_DETAIL) -> Screen.FOODS.name
-            screen == Screen.FOOD_DETAIL && foodReturnScreenName != null -> foodReturnScreenName!!
-            screen in setOf(Screen.ADD_FOOD, Screen.FOOD_DETAIL) -> Screen.FOODS.name
-            else -> Screen.HOME.name
-        }
-        try {
-            var previewStarted = false
-            events.collect {
-                if (!previewStarted) {
-                    previewStarted = true
-                    predictiveBackActive = true
-                    screenName = previewScreenName
-                }
-                predictiveBackProgress.snapTo(it.progress.coerceIn(0f, 1f))
-            }
-            predictiveBackProgress.animateTo(1f, tween(durationMillis = 120))
-            navigateBack()
-            delay(2_050)
-        } catch (_: CancellationException) {
-            predictiveBackProgress.animateTo(0f, tween(durationMillis = 120))
-            screenName = originScreenName
-        } finally {
-            predictiveBackActive = false
-            predictiveBackProgress.snapTo(0f)
         }
     }
 
@@ -712,47 +723,43 @@ fun RumboApp(repository: AppRepository) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
-            AnimatedContent(
-                targetState = if (screenName == Screen.FOOD_DETAIL.name) {
-                    "$screenName:${selectedFoodId ?: 0L}"
+        NavHost(
+            navController = navController,
+            startDestination = "screen/$initialScreenKey",
+            route = "rumbo",
+            modifier = Modifier.padding(padding).fillMaxSize(),
+            enterTransition = {
+                val target = targetState.arguments?.getString("screenKey")
+                if (target?.substringBefore(":") == Screen.ACCOUNT.name) {
+                    slideInHorizontally { it } + fadeIn()
                 } else {
-                    screenName
-                },
-                transitionSpec = {
-                    when {
-                        predictiveBackActive ->
-                            EnterTransition.None togetherWith fadeOut(
-                                targetAlpha = 0.999f,
-                                animationSpec = tween(durationMillis = 2_000)
-                            )
-                        initialState.substringBefore(":") == Screen.FOODS.name &&
-                            targetState.substringBefore(":") == Screen.HOME.name ->
-                            EnterTransition.None togetherWith ExitTransition.None
-                        targetState.substringBefore(":") == Screen.ACCOUNT.name ->
-                            (slideInHorizontally { it } + fadeIn()) togetherWith fadeOut()
-                        initialState.substringBefore(":") == Screen.ACCOUNT.name ->
-                            fadeIn() togetherWith
-                                (slideOutHorizontally { it } + fadeOut())
-                        else ->
-                            (fadeIn() + scaleIn(initialScale = 0.96f)) togetherWith
-                                (fadeOut() + scaleOut(targetScale = 1.02f))
-                    }
-                },
-                label = "Navegación"
-            ) { animatedScreenKey ->
+                    fadeIn() + scaleIn(initialScale = 0.96f)
+                }
+            },
+            exitTransition = { fadeOut() },
+            popEnterTransition = {
+                val initial = initialState.arguments?.getString("screenKey")
+                if (initial?.substringBefore(":") == Screen.FOODS.name) {
+                    EnterTransition.None
+                } else {
+                    fadeIn()
+                }
+            },
+            popExitTransition = {
+                val initial = initialState.arguments?.getString("screenKey")
+                if (initial?.substringBefore(":") == Screen.FOODS.name) {
+                    androidx.compose.animation.ExitTransition.None
+                } else {
+                    fadeOut() + scaleOut(targetScale = 0.90f)
+                }
+            }
+        ) {
+        composable("screen/{screenKey}") { backStackEntry ->
+            val animatedScreenKey = backStackEntry.arguments?.getString("screenKey")
+                ?: initialScreenKey
             val animatedScreenName = animatedScreenKey.substringBefore(":")
             val screen = Screen.valueOf(animatedScreenName)
             screenStateHolder.SaveableStateProvider(animatedScreenKey) {
-            Box(Modifier.fillMaxSize().graphicsLayer {
-                val outgoing = predictiveBackActive && animatedScreenKey != screenName
-                if (outgoing) {
-                    alpha = 1f - predictiveBackProgress.value
-                    val scale = 1f - predictiveBackProgress.value * 0.10f
-                    scaleX = scale
-                    scaleY = scale
-                }
-            }) {
             when {
                 !profileReady -> ProfileScreen(
                     profile = data.profile,
