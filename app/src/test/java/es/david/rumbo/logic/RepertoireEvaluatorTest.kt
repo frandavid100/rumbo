@@ -267,8 +267,6 @@ class RepertoireEvaluatorTest {
             )
         )
 
-        println("PROFILE_TWO_RUNTIME_ASSESSMENT=$result")
-
         assertTrue(
             "Expected an acceptable menu, assessment was $result",
             result.status == RepertoireStatus.SUFFICIENT ||
