@@ -8143,7 +8143,7 @@ private fun FoodDetailScreen(
     val planningSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var frequencyExpanded by remember { mutableStateOf(false) }
     var selectedFrequency by remember(food.id) {
-        mutableStateOf(PlanningFrequency.FREQUENT)
+        mutableStateOf(PlanningFrequency.NORMAL)
     }
     var selectedMeals by remember(food.id) {
         mutableStateOf(emptySet<MealType>())
@@ -8395,7 +8395,7 @@ private fun FoodDetailScreen(
                     onClick = {
                         val currentRule = planningRules.firstOrNull()
                         selectedFrequency = currentRule?.frequency
-                            ?: PlanningFrequency.FREQUENT
+                            ?: PlanningFrequency.NORMAL
                         val recommendedMeal = repertoireAssessment?.culinaryNeeds
                             ?.firstOrNull { food.culinaryType in it.acceptedTypes }
                             ?.mealType
