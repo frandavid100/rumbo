@@ -4,6 +4,7 @@ import es.david.rumbo.model.Dish
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.MenuHistoryEntry
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.PlannedDish
 import es.david.rumbo.model.PlannedFood
 import es.david.rumbo.model.PlannedItemKind
@@ -760,12 +761,6 @@ object WeeklyMenuGenerator {
 
     private fun relativeError(actual: Double, target: Double): Double =
         if (target <= 0.0) 0.0 else abs(actual - target) / target
-    private val defaultMealShares = mapOf(
-        MealType.BREAKFAST to 0.25,
-        MealType.MORNING_SNACK to 0.10,
-        MealType.LUNCH to 0.35,
-        MealType.AFTERNOON_SNACK to 0.10,
-        MealType.DINNER to 0.20
-    )
+    private val defaultMealShares = MealDistributionPolicy.defaults
 
 }
