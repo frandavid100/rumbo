@@ -57,6 +57,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -347,6 +348,7 @@ fun RumboApp(repository: AppRepository) {
     var foodReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var dishReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var accountChildReturn by rememberSaveable { mutableStateOf(false) }
+    var createProfileOnOpen by rememberSaveable { mutableStateOf(false) }
     val screen = Screen.valueOf(screenName)
     val profileReady = data.isActiveProfileReady
     val currentRecommendation = data.measurements
@@ -378,6 +380,7 @@ fun RumboApp(repository: AppRepository) {
     var pendingTopDelete by remember { mutableStateOf<Screen?>(null) }
     var addingMeasurement by rememberSaveable { mutableStateOf(false) }
     var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+    var predictiveBackActive by remember { mutableStateOf(false) }
     var generatingMenuWeekName by remember { mutableStateOf<String?>(null) }
     val screenStateHolder = rememberSaveableStateHolder()
     val generateMenuAsync: (PlanWeek) -> String? = { week ->
@@ -465,13 +468,41 @@ fun RumboApp(repository: AppRepository) {
         }
     }
 
-    PredictiveBackHandler(enabled = profileReady && screen != Screen.HOME) { events ->
+    PredictiveBackHandler(
+        enabled = profileReady && (screen != Screen.HOME || predictiveBackActive)
+    ) { events ->
+        val originScreenName = screenName
+        val previewScreenName = when {
+            accountChildReturn && screen in setOf(Screen.PROFILE, Screen.SETTINGS, Screen.HELP) ->
+                Screen.ACCOUNT.name
+            screen == Screen.EDIT_MEASUREMENT && selectedMeasurementId != null ->
+                Screen.MEASUREMENT_DETAIL.name
+            screen == Screen.EDIT_FOOD && selectedFoodId != null -> Screen.FOOD_DETAIL.name
+            screen in setOf(Screen.ADD_PLANNED_MEAL, Screen.EDIT_PLANNED_MEAL) ->
+                Screen.PLANNER.name
+            screen == Screen.EDIT_DISH && selectedDishId != null -> Screen.DISH_DETAIL.name
+            screen == Screen.DISH_DETAIL && dishReturnScreenName != null -> dishReturnScreenName!!
+            screen == Screen.ADD_DISH && dishReturnScreenName != null -> dishReturnScreenName!!
+            screen in setOf(Screen.ADD_DISH, Screen.DISH_DETAIL) -> Screen.FOODS.name
+            screen == Screen.FOOD_DETAIL && foodReturnScreenName != null -> foodReturnScreenName!!
+            screen in setOf(Screen.ADD_FOOD, Screen.FOOD_DETAIL) -> Screen.FOODS.name
+            else -> Screen.HOME.name
+        }
         try {
-            events.collect { predictiveBackProgress = it.progress }
+            var previewStarted = false
+            events.collect {
+                if (!previewStarted) {
+                    previewStarted = true
+                    predictiveBackActive = true
+                    screenName = previewScreenName
+                }
+                predictiveBackProgress = (it.progress / 0.9f).coerceIn(0f, 1f)
+            }
             navigateBack()
         } catch (_: CancellationException) {
-            // The gesture was cancelled; restore the current destination.
+            screenName = originScreenName
         } finally {
+            predictiveBackActive = false
             predictiveBackProgress = 0f
         }
     }
@@ -587,7 +618,11 @@ fun RumboApp(repository: AppRepository) {
                         Screen.EDIT_MEASUREMENT ->
                             Text("Editar medición", fontWeight = FontWeight.SemiBold)
                         Screen.PROFILE ->
-                            Text(if (data.profile == null) "Nuevo perfil" else "Perfiles", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (data.profile == null || createProfileOnOpen) "Nuevo perfil"
+                                else "Datos del perfil",
+                                fontWeight = FontWeight.SemiBold
+                            )
                         Screen.HELP ->
                             Text("Ayuda", fontWeight = FontWeight.SemiBold)
                         Screen.BODY_EXPLANATION, Screen.RECOMMENDATION_EXPLANATION ->
@@ -674,19 +709,7 @@ fun RumboApp(repository: AppRepository) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Box(
-            Modifier.padding(padding).fillMaxSize().graphicsLayer {
-                val animatePredictiveBack = screen != Screen.FOODS
-                alpha = if (animatePredictiveBack) 1f - predictiveBackProgress else 1f
-                val scale = if (animatePredictiveBack) {
-                    1f - predictiveBackProgress * 0.10f
-                } else {
-                    1f
-                }
-                scaleX = scale
-                scaleY = scale
-            }
-        ) {
+        Box(Modifier.padding(padding).fillMaxSize()) {
             AnimatedContent(
                 targetState = if (screenName == Screen.FOOD_DETAIL.name) {
                     "$screenName:${selectedFoodId ?: 0L}"
@@ -695,6 +718,11 @@ fun RumboApp(repository: AppRepository) {
                 },
                 transitionSpec = {
                     when {
+                        predictiveBackActive ->
+                            EnterTransition.None togetherWith fadeOut(
+                                targetAlpha = 0.999f,
+                                animationSpec = tween(durationMillis = 2_000)
+                            )
                         initialState.substringBefore(":") == Screen.FOODS.name &&
                             targetState.substringBefore(":") == Screen.HOME.name ->
                             EnterTransition.None togetherWith ExitTransition.None
@@ -713,6 +741,15 @@ fun RumboApp(repository: AppRepository) {
             val animatedScreenName = animatedScreenKey.substringBefore(":")
             val screen = Screen.valueOf(animatedScreenName)
             screenStateHolder.SaveableStateProvider(animatedScreenKey) {
+            Box(Modifier.fillMaxSize().graphicsLayer {
+                val outgoing = predictiveBackActive && animatedScreenKey != screenName
+                if (outgoing) {
+                    alpha = 1f - predictiveBackProgress
+                    val scale = 1f - predictiveBackProgress * 0.10f
+                    scaleX = scale
+                    scaleY = scale
+                }
+            }) {
             when {
                 !profileReady -> ProfileScreen(
                     profile = data.profile,
@@ -748,7 +785,8 @@ fun RumboApp(repository: AppRepository) {
                     onSaveMealShares = {
                         data = repository.saveMealShares(it)
                         mealShares = it
-                    }
+                    },
+                    onCancelCreate = navigateBack
                 )
                 screen == Screen.ACCOUNT -> AccountScreen(
                     profiles = data.profiles.map { it.profile },
@@ -764,6 +802,12 @@ fun RumboApp(repository: AppRepository) {
                         }
                     },
                     onOpenProfile = {
+                        createProfileOnOpen = false
+                        accountChildReturn = true
+                        screenName = Screen.PROFILE.name
+                    },
+                    onAddProfile = {
+                        createProfileOnOpen = true
                         accountChildReturn = true
                         screenName = Screen.PROFILE.name
                     },
@@ -1272,6 +1316,7 @@ fun RumboApp(repository: AppRepository) {
                     profile = data.profile,
                     profiles = data.profiles.map { it.profile },
                     isOnboarding = false,
+                    startCreating = createProfileOnOpen,
                     mealShares = mealShares,
                     culinaryPolicyOverrides = data.activeProfileData
                         ?.culinaryPolicyOverrides.orEmpty(),
@@ -1281,7 +1326,8 @@ fun RumboApp(repository: AppRepository) {
                         data = repository.saveProfile(profile)
                         data = repository.saveMealShares(shares)
                         mealShares = shares
-                        screenName = Screen.HOME.name
+                        createProfileOnOpen = false
+                        screenName = if (accountChildReturn) Screen.ACCOUNT.name else Screen.HOME.name
                     },
                     onSave = {
                         data = repository.saveProfile(it)
@@ -1305,6 +1351,10 @@ fun RumboApp(repository: AppRepository) {
                     onSaveMealShares = {
                         data = repository.saveMealShares(it)
                         mealShares = it
+                    },
+                    onCancelCreate = {
+                        createProfileOnOpen = false
+                        navigateBack()
                     }
                 )
                 screen == Screen.SHOPPING_LIST -> ShoppingListScreen(
@@ -1336,6 +1386,7 @@ fun RumboApp(repository: AppRepository) {
             }
             }
             }
+            }
         }
     }
 
@@ -1358,11 +1409,12 @@ private fun AccountScreen(
     onClose: () -> Unit,
     onSwitch: (Long) -> Unit,
     onOpenProfile: () -> Unit,
+    onAddProfile: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenHelp: () -> Unit
 ) {
     var profilesExpanded by remember { mutableStateOf(false) }
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = backgroundColor,
@@ -1396,8 +1448,7 @@ private fun AccountScreen(
                     trailingIcon = Icons.Default.KeyboardArrowRight,
                     onClick = onOpenProfile
                 )
-            }
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp)) {
+                HorizontalDivider()
                 AccountRow(
                     icon = null,
                     label = "Cambiar de perfil",
@@ -1434,9 +1485,9 @@ private fun AccountScreen(
                         HorizontalDivider()
                         AccountRow(
                             icon = Icons.Default.PersonAdd,
-                            label = "Añadir o gestionar perfiles",
+                            label = "Añadir perfil",
                             trailingIcon = Icons.Default.KeyboardArrowRight,
-                            onClick = onOpenProfile
+                            onClick = onAddProfile
                         )
                     }
                 }
@@ -9339,6 +9390,7 @@ private fun ProfileScreen(
     profile: UserProfile?,
     profiles: List<UserProfile>,
     isOnboarding: Boolean,
+    startCreating: Boolean = false,
     mealShares: Map<MealType, Double>,
     culinaryPolicyOverrides: List<CulinaryPolicyOverride>,
     nutritionToleranceSettings: NutritionToleranceSettings,
@@ -9349,9 +9401,12 @@ private fun ProfileScreen(
     onSaveCulinaryPolicy: (CulinaryPolicyOverride) -> Unit,
     onResetCulinaryPolicy: (CulinaryType) -> Unit,
     onSaveNutritionTolerances: (NutritionToleranceSettings) -> Unit,
-    onSaveMealShares: (Map<MealType, Double>) -> Unit
+    onSaveMealShares: (Map<MealType, Double>) -> Unit,
+    onCancelCreate: () -> Unit
 ) {
-    var creating by rememberSaveable { mutableStateOf(isOnboarding) }
+    var creating by rememberSaveable(profile?.id, startCreating) {
+        mutableStateOf(isOnboarding || startCreating)
+    }
     val editedProfile = if (creating) null else profile
     var name by rememberSaveable(editedProfile?.id, creating) { mutableStateOf(editedProfile?.name ?: "") }
     var height by rememberSaveable(editedProfile?.id, creating) {
@@ -9404,43 +9459,6 @@ private fun ProfileScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (!isOnboarding && profiles.isNotEmpty()) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(vertical = 8.dp)) {
-                    Text(
-                        "Perfiles",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                    HorizontalDivider()
-                    profiles.forEach { listed ->
-                        TextButton(
-                            onClick = { onSwitch(listed.id) },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-                        ) {
-                            Icon(
-                                if (listed.id == profile?.id) Icons.Default.Check else Icons.Default.Person,
-                                contentDescription = null
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(listed.name, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
-                            if (listed.id == profile?.id) Text("Activo")
-                        }
-                    }
-                    HorizontalDivider()
-                    TextButton(
-                        onClick = { creating = true },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-                    ) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Añadir otro perfil", modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
-                    }
-                }
-            }
-        }
-
         Card(Modifier.fillMaxWidth()) {
             Column(
                 Modifier.padding(16.dp),
@@ -9574,7 +9592,9 @@ private fun ProfileScreen(
             }
         }
         if (!isOnboarding && creating) {
-            TextButton(onClick = { creating = false }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+            TextButton(onClick = onCancelCreate, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancelar")
+            }
         }
     }
 }
