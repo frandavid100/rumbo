@@ -36,7 +36,10 @@ object MercadonaFoodCatalog {
             sugarGrams = item.optionalDouble("su"),
             saltGrams = item.optionalDouble("sa"),
             retailer = item.optionalString("ret"),
-            source = "Mercadona · declaración nutricional recopilada por AESAN (2022)"
+            source = "Mercadona · declaración nutricional recopilada por AESAN (2022)",
+            culinaryType = item.optionalString("ct")
+                ?.let { runCatching { CulinaryType.valueOf(it) }.getOrNull() }
+                ?: CulinaryType.UNKNOWN
         )
     }
 
