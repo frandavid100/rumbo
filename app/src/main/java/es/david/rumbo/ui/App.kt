@@ -4,6 +4,7 @@ package es.david.rumbo.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
@@ -47,6 +48,10 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
@@ -84,6 +89,7 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -141,6 +147,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -162,6 +169,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -212,6 +220,7 @@ import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.CulinaryPolicyOverride
+import es.david.rumbo.model.NutritionToleranceSettings
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MenuHistoryEntry
 import es.david.rumbo.model.MealType
@@ -238,6 +247,8 @@ import es.david.rumbo.model.sanitizedDayAmounts
 import es.david.rumbo.model.totalWeightGrams
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -289,6 +300,7 @@ private enum class Screen(val label: String, val icon: ImageVector, val inNaviga
     FOOD_DETAIL("Alimento", Icons.Default.Restaurant, false),
     EDIT_FOOD("Editar alimento", Icons.Default.Restaurant, false),
     PROFILE("Perfiles", Icons.Default.Person, false),
+    ACCOUNT("Perfil", Icons.Default.Person, false),
     SHOPPING_LIST("Lista de la compra", Icons.Default.ShoppingCart, false),
     SETTINGS("Opciones", Icons.Default.Person, false),
     GOAL_EXPLANATION("Objetivos", Icons.Default.Home, false),
@@ -306,6 +318,9 @@ private enum class PlannerView(val label: String) {
 fun RumboApp(repository: AppRepository) {
     var data by remember { mutableStateOf(repository.load()) }
     CulinaryPolicy.configure(data.activeProfileData?.culinaryPolicyOverrides.orEmpty())
+    WeeklyMenuAcceptancePolicy.configure(
+        data.activeProfileData?.nutritionToleranceSettings ?: NutritionToleranceSettings()
+    )
     var screenName by rememberSaveable {
         mutableStateOf(if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name)
     }
@@ -328,6 +343,7 @@ fun RumboApp(repository: AppRepository) {
     var draftDishFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
     var foodReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var dishReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
+    var accountChildReturn by rememberSaveable { mutableStateOf(false) }
     val screen = Screen.valueOf(screenName)
     val profileReady = data.isActiveProfileReady
     val currentRecommendation = data.measurements
@@ -351,6 +367,7 @@ fun RumboApp(repository: AppRepository) {
     var detailMenuExpanded by remember { mutableStateOf(false) }
     var pendingTopDelete by remember { mutableStateOf<Screen?>(null) }
     var addingMeasurement by rememberSaveable { mutableStateOf(false) }
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
     var generatingMenuWeekName by remember { mutableStateOf<String?>(null) }
     val screenStateHolder = rememberSaveableStateHolder()
     val generateMenuAsync: (PlanWeek) -> String? = { week ->
@@ -397,6 +414,10 @@ fun RumboApp(repository: AppRepository) {
     }
     val navigateBack = {
         screenName = when {
+            accountChildReturn && screen in setOf(Screen.PROFILE, Screen.SETTINGS) -> {
+                accountChildReturn = false
+                Screen.ACCOUNT.name
+            }
             screen == Screen.EDIT_MEASUREMENT && selectedMeasurementId != null ->
                 Screen.MEASUREMENT_DETAIL.name
             screen == Screen.EDIT_FOOD && selectedFoodId != null ->
@@ -434,7 +455,16 @@ fun RumboApp(repository: AppRepository) {
         }
     }
 
-    BackHandler(enabled = profileReady && screen != Screen.HOME) { navigateBack() }
+    PredictiveBackHandler(enabled = profileReady && screen != Screen.HOME) { events ->
+        try {
+            events.collect { predictiveBackProgress = it.progress }
+            navigateBack()
+        } catch (_: CancellationException) {
+            // The gesture was cancelled; restore the current destination.
+        } finally {
+            predictiveBackProgress = 0f
+        }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -516,13 +546,19 @@ fun RumboApp(repository: AppRepository) {
         } else {
             Modifier
         },
-        contentWindowInsets = if (screen in setOf(Screen.HOME, Screen.SHOPPING_LIST, Screen.PLANNER, Screen.FOOD_DETAIL)) {
+        contentWindowInsets = if (screen in setOf(
+                Screen.HOME, Screen.ACCOUNT, Screen.SHOPPING_LIST,
+                Screen.PLANNER, Screen.FOOD_DETAIL
+            )) {
             WindowInsets(0, 0, 0, 0)
         } else {
             ScaffoldDefaults.contentWindowInsets
         },
         topBar = {
-            if (screen != Screen.HOME && screen !in setOf(Screen.ADD, Screen.EDIT_MEASUREMENT, Screen.SHOPPING_LIST, Screen.FOOD_DETAIL)) TopAppBar(
+            if (screen !in setOf(
+                    Screen.HOME, Screen.ACCOUNT, Screen.ADD, Screen.EDIT_MEASUREMENT,
+                    Screen.SHOPPING_LIST, Screen.FOOD_DETAIL
+                )) TopAppBar(
                 navigationIcon = {
                     if (!screen.inNavigation) {
                         IconButton(onClick = navigateBack) {
@@ -626,14 +662,32 @@ fun RumboApp(repository: AppRepository) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
+        Box(
+            Modifier.padding(padding).fillMaxSize().graphicsLayer {
+                alpha = 1f - predictiveBackProgress * 0.35f
+                val scale = 1f - predictiveBackProgress * 0.06f
+                scaleX = scale
+                scaleY = scale
+            }
+        ) {
             AnimatedContent(
                 targetState = if (screenName == Screen.FOOD_DETAIL.name) {
                     "$screenName:${selectedFoodId ?: 0L}"
                 } else {
                     screenName
                 },
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                transitionSpec = {
+                    when {
+                        targetState.substringBefore(":") == Screen.ACCOUNT.name ->
+                            (slideInHorizontally { it } + fadeIn()) togetherWith fadeOut()
+                        initialState.substringBefore(":") == Screen.ACCOUNT.name ->
+                            fadeIn() togetherWith
+                                (slideOutHorizontally { it } + fadeOut())
+                        else ->
+                            (fadeIn() + scaleIn(initialScale = 0.96f)) togetherWith
+                                (fadeOut() + scaleOut(targetScale = 1.02f))
+                    }
+                },
                 label = "Navegación"
             ) { animatedScreenKey ->
             val animatedScreenName = animatedScreenKey.substringBefore(":")
@@ -647,6 +701,8 @@ fun RumboApp(repository: AppRepository) {
                     mealShares = mealShares,
                     culinaryPolicyOverrides = data.activeProfileData
                         ?.culinaryPolicyOverrides.orEmpty(),
+                    nutritionToleranceSettings = data.activeProfileData
+                        ?.nutritionToleranceSettings ?: NutritionToleranceSettings(),
                     onCreate = { profile, shares ->
                         data = repository.saveProfile(profile)
                         saveMealShares(context, shares)
@@ -664,6 +720,30 @@ fun RumboApp(repository: AppRepository) {
                     },
                     onResetCulinaryPolicy = {
                         data = repository.resetCulinaryPolicyOverride(it)
+                    },
+                    onSaveNutritionTolerances = {
+                        data = repository.saveNutritionToleranceSettings(it)
+                    }
+                )
+                screen == Screen.ACCOUNT -> AccountScreen(
+                    profiles = data.profiles.map { it.profile },
+                    activeProfile = data.profile,
+                    onClose = navigateBack,
+                    onSwitch = {
+                        data = repository.switchProfile(it)
+                        screenName = if (data.isActiveProfileReady) {
+                            Screen.ACCOUNT.name
+                        } else {
+                            Screen.PROFILE.name
+                        }
+                    },
+                    onOpenProfile = {
+                        accountChildReturn = true
+                        screenName = Screen.PROFILE.name
+                    },
+                    onOpenSettings = {
+                        accountChildReturn = true
+                        screenName = Screen.SETTINGS.name
                     }
                 )
                 screen == Screen.HOME -> HomeScreen(
@@ -673,7 +753,7 @@ fun RumboApp(repository: AppRepository) {
                         data = repository.switchProfile(it)
                         screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
                     },
-                    onManageProfiles = { screenName = Screen.PROFILE.name },
+                    onOpenAccount = { screenName = Screen.ACCOUNT.name },
                     onOpenShoppingList = {
                         shoppingCurrentOnly = false
                         shoppingWeekName = PlanWeek.CURRENT.name
@@ -1059,7 +1139,9 @@ fun RumboApp(repository: AppRepository) {
                                     recommendationHash = currentRecommendation.hashCode(),
                                     mealSharesHash = mealShares.hashCode(),
                                     culinaryPolicyOverridesHash = data.activeProfileData
-                                        ?.culinaryPolicyOverrides.orEmpty().hashCode()
+                                        ?.culinaryPolicyOverrides.orEmpty().hashCode(),
+                                    nutritionToleranceSettingsHash = data.activeProfileData
+                                        ?.nutritionToleranceSettings.hashCode()
                                 )
                             ),
                             activeMealTypes = mealShares.filterValues { it > 0.0 }.keys,
@@ -1167,6 +1249,8 @@ fun RumboApp(repository: AppRepository) {
                     mealShares = mealShares,
                     culinaryPolicyOverrides = data.activeProfileData
                         ?.culinaryPolicyOverrides.orEmpty(),
+                    nutritionToleranceSettings = data.activeProfileData
+                        ?.nutritionToleranceSettings ?: NutritionToleranceSettings(),
                     onCreate = { profile, shares ->
                         data = repository.saveProfile(profile)
                         saveMealShares(context, shares)
@@ -1187,6 +1271,9 @@ fun RumboApp(repository: AppRepository) {
                     },
                     onResetCulinaryPolicy = {
                         data = repository.resetCulinaryPolicyOverride(it)
+                    },
+                    onSaveNutritionTolerances = {
+                        data = repository.saveNutritionToleranceSettings(it)
                     }
                 )
                 screen == Screen.SHOPPING_LIST -> ShoppingListScreen(
@@ -1238,62 +1325,115 @@ fun RumboApp(repository: AppRepository) {
 }
 
 @Composable
-private fun ProfileSwitcher(
+private fun AccountScreen(
     profiles: List<UserProfile>,
     activeProfile: UserProfile?,
-    onSelect: (Long) -> Unit,
-    onManage: () -> Unit,
-    onShoppingList: (() -> Unit)?,
-    onSettings: () -> Unit,
+    onClose: () -> Unit,
+    onSwitch: (Long) -> Unit,
+    onOpenProfile: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    var profilesExpanded by remember { mutableStateOf(false) }
+    Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
+        topBar = {
+            TopAppBar(
+                title = {},
+                actions = {
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Spacer(Modifier.height(4.dp))
+            ProfileAvatar(activeProfile, 96.dp)
+            Text(
+                "¡Hola, ${activeProfile?.name.orEmpty()}!",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Box(Modifier.fillMaxWidth()) {
+                Card(
+                    Modifier.fillMaxWidth().clickable { profilesExpanded = true },
+                    shape = RoundedCornerShape(28.dp)
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Cambiar de perfil", Modifier.weight(1f))
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                    }
+                }
+                DropdownMenu(
+                    expanded = profilesExpanded,
+                    onDismissRequest = { profilesExpanded = false },
+                    modifier = Modifier.fillMaxWidth(0.9f)
+                ) {
+                    profiles.forEach { profile ->
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                if (profile.id == activeProfile?.id) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                } else {
+                                    ProfileAvatar(profile, 28.dp)
+                                }
+                            },
+                            text = { Text(profile.name) },
+                            onClick = {
+                                profilesExpanded = false
+                                onSwitch(profile.id)
+                            }
+                        )
+                    }
+                }
+            }
+            Text(
+                "Rumbo",
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 8.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().clickable(onClick = onOpenProfile)
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null)
+                    Spacer(Modifier.width(16.dp))
+                    Text("Datos del perfil", Modifier.weight(1f))
+                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
+                }
+                HorizontalDivider()
+                Row(
+                    Modifier.fillMaxWidth().clickable(onClick = onOpenSettings)
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Spacer(Modifier.width(16.dp))
+                    Text("Ajustes", Modifier.weight(1f))
+                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileSwitcher(
+    activeProfile: UserProfile?,
+    onOpen: () -> Unit,
     avatarSize: Int = 36
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            ProfileAvatar(activeProfile, avatarSize.dp)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            profiles.forEach { profile ->
-                DropdownMenuItem(
-                    leadingIcon = {
-                        if (profile.id == activeProfile?.id) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                        }
-                    },
-                    text = { Text(profile.name) },
-                    onClick = {
-                        expanded = false
-                        onSelect(profile.id)
-                    }
-                )
-            }
-            HorizontalDivider()
-            DropdownMenuItem(
-                leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
-                text = { Text("Gestionar perfiles") },
-                onClick = {
-                    expanded = false
-                    onManage()
-                }
-            )
-            onShoppingList?.let { openShoppingList ->
-                DropdownMenuItem(
-                    leadingIcon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) },
-                    text = { Text("Lista de la compra") },
-                    onClick = {
-                        expanded = false
-                        openShoppingList()
-                    }
-                )
-            }
-            DropdownMenuItem(
-                text = { Text("Opciones") },
-                onClick = {
-                    expanded = false
-                    onSettings()
-                }
-            )
-        }
+    IconButton(onClick = onOpen) {
+        ProfileAvatar(activeProfile, avatarSize.dp)
     }
 }
 
@@ -1343,7 +1483,8 @@ private data class RepertoireAssessmentCacheKey(
     val dishesHash: Int,
     val recommendationHash: Int,
     val mealSharesHash: Int,
-    val culinaryPolicyOverridesHash: Int
+    val culinaryPolicyOverridesHash: Int,
+    val nutritionToleranceSettingsHash: Int
 )
 
 private object RepertoireAssessmentMemory {
@@ -1365,6 +1506,7 @@ private fun HomeScreen(
     mealShares: Map<MealType, Double>,
     onSwitchProfile: (Long) -> Unit,
     onManageProfiles: () -> Unit,
+    onOpenAccount: () -> Unit,
     onOpenShoppingList: () -> Unit,
     onOpenCurrentShoppingList: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -1407,7 +1549,8 @@ private fun HomeScreen(
         data.dishes,
         recommendation,
         mealShares,
-        data.activeProfileData?.culinaryPolicyOverrides
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
     ) {
         RepertoireAssessmentCacheKey(
             profileId = data.activeProfileId,
@@ -1417,7 +1560,9 @@ private fun HomeScreen(
             recommendationHash = recommendation.hashCode(),
             mealSharesHash = mealShares.hashCode(),
             culinaryPolicyOverridesHash = data.activeProfileData
-                ?.culinaryPolicyOverrides.orEmpty().hashCode()
+                ?.culinaryPolicyOverrides.orEmpty().hashCode(),
+            nutritionToleranceSettingsHash = data.activeProfileData
+                ?.nutritionToleranceSettings.hashCode()
         )
     }
     val cachedRepertoireAssessment = remember(repertoireAssessmentKey) {
@@ -1627,12 +1772,8 @@ private fun HomeScreen(
                 },
                 trailingContent = {
                     ProfileSwitcher(
-                        profiles = data.profiles.map { it.profile },
                         activeProfile = data.profile,
-                        onSelect = onSwitchProfile,
-                        onManage = onManageProfiles,
-                        onShoppingList = if (menuReady) onOpenShoppingList else null,
-                        onSettings = onOpenSettings,
+                        onOpen = onOpenAccount,
                         avatarSize = 36
                     )
                 }
@@ -9164,12 +9305,14 @@ private fun ProfileScreen(
     isOnboarding: Boolean,
     mealShares: Map<MealType, Double>,
     culinaryPolicyOverrides: List<CulinaryPolicyOverride>,
+    nutritionToleranceSettings: NutritionToleranceSettings,
     onCreate: (UserProfile, Map<MealType, Double>) -> Unit,
     onSave: (UserProfile) -> Unit,
     onSwitch: (Long) -> Unit,
     onDelete: (Long) -> Unit,
     onSaveCulinaryPolicy: (CulinaryPolicyOverride) -> Unit,
-    onResetCulinaryPolicy: (CulinaryType) -> Unit
+    onResetCulinaryPolicy: (CulinaryType) -> Unit,
+    onSaveNutritionTolerances: (NutritionToleranceSettings) -> Unit
 ) {
     var creating by rememberSaveable { mutableStateOf(isOnboarding) }
     val editedProfile = if (creating) null else profile
@@ -9339,6 +9482,10 @@ private fun ProfileScreen(
         }
 
         if (!isOnboarding && !creating) {
+            NutritionTolerancesCard(
+                settings = nutritionToleranceSettings,
+                onSave = onSaveNutritionTolerances
+            )
             CulinaryRulesCard(
                 overrides = culinaryPolicyOverrides,
                 onSave = onSaveCulinaryPolicy,
@@ -9390,6 +9537,167 @@ private fun ProfileScreen(
         }
     }
 }
+
+@Composable
+private fun NutritionTolerancesCard(
+    settings: NutritionToleranceSettings,
+    onSave: (NutritionToleranceSettings) -> Unit
+) {
+    var editing by remember { mutableStateOf(false) }
+    if (editing) {
+        NutritionTolerancesDialog(
+            initial = settings,
+            onDismiss = { editing = false },
+            onSave = {
+                onSave(it)
+                editing = false
+            }
+        )
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "Tolerancia nutricional",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                "Decide qué desviaciones puede aceptar Rumbo al validar un menú semanal.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "Calorías ${ratioRange(settings.caloriesMinimum, settings.caloriesMaximum)} · " +
+                    "Proteína ${ratioRange(settings.proteinMinimum, settings.proteinMaximum)}\n" +
+                    "Hidratos ${ratioRange(settings.carbohydratesMinimum, settings.carbohydratesMaximum)} · " +
+                    "Grasa ${ratioRange(settings.fatMinimum, settings.fatMaximum)}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(onClick = { editing = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Cambiar tolerancia")
+            }
+        }
+    }
+}
+
+@Composable
+private fun NutritionTolerancesDialog(
+    initial: NutritionToleranceSettings,
+    onDismiss: () -> Unit,
+    onSave: (NutritionToleranceSettings) -> Unit
+) {
+    var current by remember(initial) { mutableStateOf(initial) }
+    fun percent(value: Double) = (value * 100.0).roundToInt().toString()
+    var caloriesMin by remember(initial) { mutableStateOf(percent(initial.caloriesMinimum)) }
+    var caloriesMax by remember(initial) { mutableStateOf(percent(initial.caloriesMaximum)) }
+    var proteinMin by remember(initial) { mutableStateOf(percent(initial.proteinMinimum)) }
+    var proteinMax by remember(initial) { mutableStateOf(percent(initial.proteinMaximum)) }
+    var carbohydratesMin by remember(initial) { mutableStateOf(percent(initial.carbohydratesMinimum)) }
+    var carbohydratesMax by remember(initial) { mutableStateOf(percent(initial.carbohydratesMaximum)) }
+    var fatMin by remember(initial) { mutableStateOf(percent(initial.fatMinimum)) }
+    var fatMax by remember(initial) { mutableStateOf(percent(initial.fatMaximum)) }
+
+    fun setPreset(value: NutritionToleranceSettings) {
+        current = value
+        caloriesMin = percent(value.caloriesMinimum); caloriesMax = percent(value.caloriesMaximum)
+        proteinMin = percent(value.proteinMinimum); proteinMax = percent(value.proteinMaximum)
+        carbohydratesMin = percent(value.carbohydratesMinimum); carbohydratesMax = percent(value.carbohydratesMaximum)
+        fatMin = percent(value.fatMinimum); fatMax = percent(value.fatMaximum)
+    }
+    fun parsed() = NutritionToleranceSettings(
+        caloriesMinimum = caloriesMin.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        caloriesMaximum = caloriesMax.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        proteinMinimum = proteinMin.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        proteinMaximum = proteinMax.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        carbohydratesMinimum = carbohydratesMin.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        carbohydratesMaximum = carbohydratesMax.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        fatMinimum = fatMin.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        fatMaximum = fatMax.toDoubleOrNull()?.div(100.0) ?: 0.0
+    )
+    val candidate = parsed()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tolerancia nutricional") },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = false,
+                        onClick = { setPreset(NutritionToleranceSettings(.95, 1.05, .95, 1.05, .95, 1.05, .95, 1.05)) },
+                        label = { Text("Estricto") }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = { setPreset(NutritionToleranceSettings()) },
+                        label = { Text("Equilibrado") }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = { setPreset(NutritionToleranceSettings(.85, 1.15, .85, 1.15, .85, 1.15, .85, 1.15)) },
+                        label = { Text("Flexible") }
+                    )
+                }
+                ToleranceFields("Calorías", caloriesMin, { caloriesMin = it }, caloriesMax, { caloriesMax = it })
+                ToleranceFields("Proteína", proteinMin, { proteinMin = it }, proteinMax, { proteinMax = it })
+                ToleranceFields("Hidratos", carbohydratesMin, { carbohydratesMin = it }, carbohydratesMax, { carbohydratesMax = it })
+                ToleranceFields("Grasa", fatMin, { fatMin = it }, fatMax, { fatMax = it })
+                if (!candidate.isValid()) {
+                    Text(
+                        "Los mínimos deben estar entre 50 y 100 %, y los máximos entre 100 y 160 %.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = candidate.isValid(), onClick = { onSave(candidate) }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+@Composable
+private fun ToleranceFields(
+    label: String,
+    minimum: String,
+    onMinimumChange: (String) -> Unit,
+    maximum: String,
+    onMaximumChange: (String) -> Unit
+) {
+    Text(label, fontWeight = FontWeight.SemiBold)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = minimum,
+            onValueChange = { onMinimumChange(it.filter(Char::isDigit).take(3)) },
+            label = { Text("Mínimo") },
+            suffix = { Text("%") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = maximum,
+            onValueChange = { onMaximumChange(it.filter(Char::isDigit).take(3)) },
+            label = { Text("Máximo") },
+            suffix = { Text("%") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private fun ratioRange(minimum: Double, maximum: Double) =
+    "${(minimum * 100).roundToInt()}–${(maximum * 100).roundToInt()} %"
 
 @Composable
 private fun CulinaryRulesCard(

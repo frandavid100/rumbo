@@ -15,6 +15,7 @@ import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.CulinaryPolicyOverride
+import es.david.rumbo.model.NutritionToleranceSettings
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.MenuHistoryEntry
@@ -64,7 +65,9 @@ class AppRepository(context: Context) {
             repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
             dismissedSuggestionFoodIds = existing?.dismissedSuggestionFoodIds.orEmpty(),
             menuHistory = existing?.menuHistory.orEmpty(),
-            culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty()
+            culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty(),
+            nutritionToleranceSettings = existing?.nutritionToleranceSettings
+                ?: NutritionToleranceSettings()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -97,6 +100,13 @@ class AppRepository(context: Context) {
         )
     }
 
+    fun saveNutritionToleranceSettings(settings: NutritionToleranceSettings): AppData {
+        require(settings.isValid()) { "Las tolerancias nutricionales no son válidas" }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(current, active.copy(nutritionToleranceSettings = settings))
+    }
+
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
         require(baseline.weightKg != null || baseline.waistCm != null) {
             "El perfil inicial necesita al menos el peso o la cintura"
@@ -113,7 +123,9 @@ class AppRepository(context: Context) {
             repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
             dismissedSuggestionFoodIds = existing?.dismissedSuggestionFoodIds.orEmpty(),
             menuHistory = existing?.menuHistory.orEmpty(),
-            culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty()
+            culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty(),
+            nutritionToleranceSettings = existing?.nutritionToleranceSettings
+                ?: NutritionToleranceSettings()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -566,7 +578,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 20)
+        put("schemaVersion", 21)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -585,6 +597,10 @@ class AppRepository(context: Context) {
                     put(
                         "culinaryPolicyOverrides",
                         encodeCulinaryPolicyOverrides(profileData.culinaryPolicyOverrides)
+                    )
+                    put(
+                        "nutritionToleranceSettings",
+                        encodeNutritionToleranceSettings(profileData.nutritionToleranceSettings)
                     )
                 })
             }
@@ -759,6 +775,19 @@ class AppRepository(context: Context) {
         }
     }
 
+    private fun encodeNutritionToleranceSettings(
+        settings: NutritionToleranceSettings
+    ) = JSONObject().apply {
+        put("caloriesMinimum", settings.caloriesMinimum)
+        put("caloriesMaximum", settings.caloriesMaximum)
+        put("proteinMinimum", settings.proteinMinimum)
+        put("proteinMaximum", settings.proteinMaximum)
+        put("carbohydratesMinimum", settings.carbohydratesMinimum)
+        put("carbohydratesMaximum", settings.carbohydratesMaximum)
+        put("fatMinimum", settings.fatMinimum)
+        put("fatMaximum", settings.fatMaximum)
+    }
+
     private fun encodeDishes(dishes: List<Dish>): JSONArray = JSONArray().apply {
         dishes.forEach { dish ->
             put(JSONObject().apply {
@@ -814,6 +843,9 @@ class AppRepository(context: Context) {
                             menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray()),
                             culinaryPolicyOverrides = decodeCulinaryPolicyOverrides(
                                 item.optJSONArray("culinaryPolicyOverrides") ?: JSONArray()
+                            ),
+                            nutritionToleranceSettings = decodeNutritionToleranceSettings(
+                                item.optJSONObject("nutritionToleranceSettings")
                             )
                         )
                     )
@@ -1065,6 +1097,27 @@ class AppRepository(context: Context) {
                 )
             )
         }
+    }
+
+    private fun decodeNutritionToleranceSettings(
+        item: JSONObject?
+    ): NutritionToleranceSettings {
+        if (item == null) return NutritionToleranceSettings()
+        val defaults = NutritionToleranceSettings()
+        return NutritionToleranceSettings(
+            caloriesMinimum = item.optDouble("caloriesMinimum", defaults.caloriesMinimum),
+            caloriesMaximum = item.optDouble("caloriesMaximum", defaults.caloriesMaximum),
+            proteinMinimum = item.optDouble("proteinMinimum", defaults.proteinMinimum),
+            proteinMaximum = item.optDouble("proteinMaximum", defaults.proteinMaximum),
+            carbohydratesMinimum = item.optDouble(
+                "carbohydratesMinimum", defaults.carbohydratesMinimum
+            ),
+            carbohydratesMaximum = item.optDouble(
+                "carbohydratesMaximum", defaults.carbohydratesMaximum
+            ),
+            fatMinimum = item.optDouble("fatMinimum", defaults.fatMinimum),
+            fatMaximum = item.optDouble("fatMaximum", defaults.fatMaximum)
+        ).takeIf { it.isValid() } ?: defaults
     }
 
     private fun decodeDishes(array: JSONArray): List<Dish> = buildList {

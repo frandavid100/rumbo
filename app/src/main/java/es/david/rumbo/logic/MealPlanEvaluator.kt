@@ -4,6 +4,7 @@ import es.david.rumbo.model.Food
 import es.david.rumbo.model.Dish
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.NutritionTotals
+import es.david.rumbo.model.NutritionToleranceSettings
 import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
@@ -252,6 +253,13 @@ object MealPlanEvaluator {
  * acceptance criterion; daily limits only reject clearly lopsided days. Meal
  * macro distribution is deliberately not part of this gate. */
 object WeeklyMenuAcceptancePolicy {
+    @Volatile
+    private var settings = NutritionToleranceSettings()
+
+    fun configure(value: NutritionToleranceSettings) {
+        settings = value.takeIf { it.isValid() } ?: NutritionToleranceSettings()
+    }
+
     fun isAcceptable(
         assessments: List<PlanNutritionAssessment>,
         activeMealTypes: Set<MealType> = MealType.entries.toSet()
@@ -269,13 +277,17 @@ object WeeklyMenuAcceptancePolicy {
         ) = assessments.map { actual(it) }.average() /
             assessments.map { target(it) }.average().coerceAtLeast(1.0)
 
+        val tolerance = settings
         val weeklyAcceptable =
-            averageRatio({ it.actual.calories }, { it.target.calories }) in 0.90..1.10 &&
-            averageRatio({ it.actual.proteinGrams }, { it.target.proteinGrams }) in 0.90..1.15 &&
+            averageRatio({ it.actual.calories }, { it.target.calories }) in
+                tolerance.caloriesMinimum..tolerance.caloriesMaximum &&
+            averageRatio({ it.actual.proteinGrams }, { it.target.proteinGrams }) in
+                tolerance.proteinMinimum..tolerance.proteinMaximum &&
             averageRatio(
                 { it.actual.carbohydrateGrams }, { it.target.carbohydrateGrams }
-            ) in 0.85..1.15 &&
-            averageRatio({ it.actual.fatGrams }, { it.target.fatGrams }) in 0.85..1.15
+            ) in tolerance.carbohydratesMinimum..tolerance.carbohydratesMaximum &&
+            averageRatio({ it.actual.fatGrams }, { it.target.fatGrams }) in
+                tolerance.fatMinimum..tolerance.fatMaximum
         if (!weeklyAcceptable) return false
 
         fun PlanNutritionAssessment.ratio(actual: Double, target: Double) =

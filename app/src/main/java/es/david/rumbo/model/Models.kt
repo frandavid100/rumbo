@@ -133,6 +133,26 @@ data class CulinaryPolicyOverride(
     val standaloneAllowed: Boolean = true
 )
 
+data class NutritionToleranceSettings(
+    val caloriesMinimum: Double = 0.90,
+    val caloriesMaximum: Double = 1.10,
+    val proteinMinimum: Double = 0.90,
+    val proteinMaximum: Double = 1.15,
+    val carbohydratesMinimum: Double = 0.85,
+    val carbohydratesMaximum: Double = 1.15,
+    val fatMinimum: Double = 0.85,
+    val fatMaximum: Double = 1.15
+) {
+    fun isValid(): Boolean = listOf(
+        caloriesMinimum to caloriesMaximum,
+        proteinMinimum to proteinMaximum,
+        carbohydratesMinimum to carbohydratesMaximum,
+        fatMinimum to fatMaximum
+    ).all { (minimum, maximum) ->
+        minimum in 0.50..1.0 && maximum in 1.0..1.60 && minimum <= maximum
+    }
+}
+
 enum class MealType(val label: String) {
     BREAKFAST("Desayuno"),
     MORNING_SNACK("Almuerzo"),
@@ -484,7 +504,8 @@ data class ProfileData(
         .filter { it.itemKind == PlannedItemKind.FOOD }.mapTo(mutableSetOf()) { it.itemId },
     val menuHistory: List<MenuHistoryEntry> = emptyList(),
     val dismissedSuggestionFoodIds: Set<Long> = emptySet(),
-    val culinaryPolicyOverrides: List<CulinaryPolicyOverride> = emptyList()
+    val culinaryPolicyOverrides: List<CulinaryPolicyOverride> = emptyList(),
+    val nutritionToleranceSettings: NutritionToleranceSettings = NutritionToleranceSettings()
 )
 
 data class AppData(
