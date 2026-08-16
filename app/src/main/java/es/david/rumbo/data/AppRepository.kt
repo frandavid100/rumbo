@@ -67,7 +67,8 @@ class AppRepository(context: Context) {
             menuHistory = existing?.menuHistory.orEmpty(),
             culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty(),
             nutritionToleranceSettings = existing?.nutritionToleranceSettings
-                ?: NutritionToleranceSettings()
+                ?: NutritionToleranceSettings(),
+            mealShares = existing?.mealShares
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -107,6 +108,17 @@ class AppRepository(context: Context) {
         return updateActive(current, active.copy(nutritionToleranceSettings = settings))
     }
 
+    fun saveMealShares(shares: Map<MealType, Double>): AppData {
+        require(shares.keys.containsAll(MealType.entries)) { "Faltan comidas en la distribución" }
+        require(shares.values.all { it in 0.0..0.9 }) { "La distribución no es válida" }
+        require(kotlin.math.abs(shares.values.sum() - 1.0) < 0.001) {
+            "La distribución debe sumar 100 %"
+        }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(current, active.copy(mealShares = shares))
+    }
+
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
         require(baseline.weightKg != null || baseline.waistCm != null) {
             "El perfil inicial necesita al menos el peso o la cintura"
@@ -125,7 +137,8 @@ class AppRepository(context: Context) {
             menuHistory = existing?.menuHistory.orEmpty(),
             culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty(),
             nutritionToleranceSettings = existing?.nutritionToleranceSettings
-                ?: NutritionToleranceSettings()
+                ?: NutritionToleranceSettings(),
+            mealShares = existing?.mealShares
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -578,7 +591,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 21)
+        put("schemaVersion", 22)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -602,6 +615,11 @@ class AppRepository(context: Context) {
                         "nutritionToleranceSettings",
                         encodeNutritionToleranceSettings(profileData.nutritionToleranceSettings)
                     )
+                    profileData.mealShares?.let { shares ->
+                        put("mealShares", JSONObject().apply {
+                            shares.forEach { (type, share) -> put(type.name, share) }
+                        })
+                    }
                 })
             }
         })
@@ -846,7 +864,8 @@ class AppRepository(context: Context) {
                             ),
                             nutritionToleranceSettings = decodeNutritionToleranceSettings(
                                 item.optJSONObject("nutritionToleranceSettings")
-                            )
+                            ),
+                            mealShares = decodeMealShares(item.optJSONObject("mealShares"))
                         )
                     )
                 }
@@ -1118,6 +1137,17 @@ class AppRepository(context: Context) {
             fatMinimum = item.optDouble("fatMinimum", defaults.fatMinimum),
             fatMaximum = item.optDouble("fatMaximum", defaults.fatMaximum)
         ).takeIf { it.isValid() } ?: defaults
+    }
+
+    private fun decodeMealShares(item: JSONObject?): Map<MealType, Double>? {
+        item ?: return null
+        val shares = MealType.entries.associateWith { type ->
+            item.optDouble(type.name, Double.NaN)
+        }
+        return shares.takeIf {
+            it.values.all { share -> share.isFinite() && share in 0.0..0.9 } &&
+                kotlin.math.abs(it.values.sum() - 1.0) < 0.001
+        }
     }
 
     private fun decodeDishes(array: JSONArray): List<Dish> = buildList {

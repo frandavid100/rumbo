@@ -505,7 +505,8 @@ data class ProfileData(
     val menuHistory: List<MenuHistoryEntry> = emptyList(),
     val dismissedSuggestionFoodIds: Set<Long> = emptySet(),
     val culinaryPolicyOverrides: List<CulinaryPolicyOverride> = emptyList(),
-    val nutritionToleranceSettings: NutritionToleranceSettings = NutritionToleranceSettings()
+    val nutritionToleranceSettings: NutritionToleranceSettings = NutritionToleranceSettings(),
+    val mealShares: Map<MealType, Double>? = null
 )
 
 data class AppData(
