@@ -58,6 +58,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -150,7 +151,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -379,7 +379,7 @@ fun RumboApp(repository: AppRepository) {
     var detailMenuExpanded by remember { mutableStateOf(false) }
     var pendingTopDelete by remember { mutableStateOf<Screen?>(null) }
     var addingMeasurement by rememberSaveable { mutableStateOf(false) }
-    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+    val predictiveBackProgress = remember { Animatable(0f) }
     var predictiveBackActive by remember { mutableStateOf(false) }
     var generatingMenuWeekName by remember { mutableStateOf<String?>(null) }
     val screenStateHolder = rememberSaveableStateHolder()
@@ -496,14 +496,17 @@ fun RumboApp(repository: AppRepository) {
                     predictiveBackActive = true
                     screenName = previewScreenName
                 }
-                predictiveBackProgress = (it.progress / 0.9f).coerceIn(0f, 1f)
+                predictiveBackProgress.snapTo(it.progress.coerceIn(0f, 1f))
             }
+            predictiveBackProgress.animateTo(1f, tween(durationMillis = 120))
             navigateBack()
+            delay(2_050)
         } catch (_: CancellationException) {
+            predictiveBackProgress.animateTo(0f, tween(durationMillis = 120))
             screenName = originScreenName
         } finally {
             predictiveBackActive = false
-            predictiveBackProgress = 0f
+            predictiveBackProgress.snapTo(0f)
         }
     }
 
@@ -744,8 +747,8 @@ fun RumboApp(repository: AppRepository) {
             Box(Modifier.fillMaxSize().graphicsLayer {
                 val outgoing = predictiveBackActive && animatedScreenKey != screenName
                 if (outgoing) {
-                    alpha = 1f - predictiveBackProgress
-                    val scale = 1f - predictiveBackProgress * 0.10f
+                    alpha = 1f - predictiveBackProgress.value
+                    val scale = 1f - predictiveBackProgress.value * 0.10f
                     scaleX = scale
                     scaleY = scale
                 }
