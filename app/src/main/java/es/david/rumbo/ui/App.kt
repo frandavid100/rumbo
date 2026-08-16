@@ -45,17 +45,11 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -144,7 +138,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
@@ -157,10 +150,6 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -348,63 +337,6 @@ fun RumboApp(repository: AppRepository) {
     var dishReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var accountChildReturn by rememberSaveable { mutableStateOf(false) }
     var createProfileOnOpen by rememberSaveable { mutableStateOf(false) }
-    var lastNavKey by rememberSaveable { mutableStateOf<String?>(null) }
-    val navController = rememberNavController()
-    val initialScreenKey = remember {
-        if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
-    }
-    val currentNavEntry by navController.currentBackStackEntryAsState()
-    val desiredScreenKey = if (screenName == Screen.FOOD_DETAIL.name) {
-        "$screenName:${selectedFoodId ?: 0L}"
-    } else {
-        screenName
-    }
-    DisposableEffect(navController) {
-        val listener = androidx.navigation.NavController.OnDestinationChangedListener {
-                _, destination, arguments ->
-            if (destination.route != "screen/{screenKey}") return@OnDestinationChangedListener
-            val key = arguments?.getString("screenKey") ?: return@OnDestinationChangedListener
-            val previousKey = lastNavKey
-            if (
-                previousKey?.substringBefore(":") == Screen.FOOD_DETAIL.name &&
-                key.substringBefore(":") == Screen.FOOD_DETAIL.name &&
-                key.substringAfter(":", "").toLongOrNull() == foodNavigationStack.lastOrNull()
-            ) {
-                foodNavigationStack = foodNavigationStack.dropLast(1)
-                selectedFoodRecommendationReason = foodRecommendationReasonStack
-                    .lastOrNull()?.takeIf { it.isNotEmpty() }
-                foodRecommendationReasonStack = foodRecommendationReasonStack.dropLast(1)
-            }
-            if (
-                accountChildReturn &&
-                previousKey?.substringBefore(":") in setOf(
-                    Screen.PROFILE.name, Screen.SETTINGS.name, Screen.HELP.name
-                ) && key.substringBefore(":") == Screen.ACCOUNT.name
-            ) {
-                accountChildReturn = false
-                createProfileOnOpen = false
-            }
-            lastNavKey = key
-            screenName = key.substringBefore(":")
-            if (screenName == Screen.FOOD_DETAIL.name) {
-                key.substringAfter(":", "").toLongOrNull()?.let { selectedFoodId = it }
-            }
-        }
-        navController.addOnDestinationChangedListener(listener)
-        onDispose { navController.removeOnDestinationChangedListener(listener) }
-    }
-    LaunchedEffect(desiredScreenKey, currentNavEntry) {
-        val currentKey = currentNavEntry?.arguments?.getString("screenKey")
-            ?: return@LaunchedEffect
-        if (currentKey == desiredScreenKey) return@LaunchedEffect
-        val previousKey = navController.previousBackStackEntry
-            ?.arguments?.getString("screenKey")
-        if (previousKey == desiredScreenKey) {
-            navController.popBackStack()
-        } else {
-            navController.navigate("screen/$desiredScreenKey") { launchSingleTop = true }
-        }
-    }
     val screen = Screen.valueOf(screenName)
     val profileReady = data.isActiveProfileReady
     val currentRecommendation = data.measurements
@@ -521,6 +453,8 @@ fun RumboApp(repository: AppRepository) {
             else -> Screen.HOME.name
         }
     }
+
+    BackHandler(enabled = profileReady && screen != Screen.HOME) { navigateBack() }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -724,50 +658,18 @@ fun RumboApp(repository: AppRepository) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = "screen/$initialScreenKey",
-            route = "rumbo",
-            modifier = Modifier.padding(padding).fillMaxSize(),
-            enterTransition = {
-                val target = targetState.arguments?.getString("screenKey")
-                if (target?.substringBefore(":") == Screen.ACCOUNT.name) {
-                    slideInHorizontally(animationSpec = tween(350)) { it } +
-                        fadeIn(animationSpec = tween(350))
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            AnimatedContent(
+                targetState = if (screenName == Screen.FOOD_DETAIL.name) {
+                    "$screenName:${selectedFoodId ?: 0L}"
                 } else {
-                    fadeIn(animationSpec = tween(350)) + scaleIn(
-                        initialScale = 0.90f,
-                        animationSpec = tween(350)
-                    )
-                }
-            },
-            exitTransition = { fadeOut(animationSpec = tween(250)) },
-            popEnterTransition = {
-                val initial = initialState.arguments?.getString("screenKey")
-                if (initial?.substringBefore(":") == Screen.FOODS.name) {
-                    EnterTransition.None
-                } else {
-                    fadeIn(animationSpec = tween(350))
-                }
-            },
-            popExitTransition = {
-                val initial = initialState.arguments?.getString("screenKey")
-                if (initial?.substringBefore(":") == Screen.FOODS.name) {
-                    androidx.compose.animation.ExitTransition.None
-                } else {
-                    fadeOut(animationSpec = tween(350)) + scaleOut(
-                        targetScale = 0.90f,
-                        animationSpec = tween(350)
-                    )
-                }
-            }
-        ) {
-        composable("screen/{screenKey}") { backStackEntry ->
-            val animatedScreenKey = backStackEntry.arguments?.getString("screenKey")
-                ?: initialScreenKey
+                    screenName
+                },
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "Navegación"
+            ) { animatedScreenKey ->
             val animatedScreenName = animatedScreenKey.substringBefore(":")
             val screen = Screen.valueOf(animatedScreenName)
-            val navigationActive = currentNavEntry?.id == backStackEntry.id
             screenStateHolder.SaveableStateProvider(animatedScreenKey) {
             when {
                 !profileReady -> ProfileScreen(
@@ -842,7 +744,6 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
                     mealShares = mealShares,
-                    navigationActive = navigationActive,
                     onOpenAccount = { screenName = Screen.ACCOUNT.name },
                     onOpenShoppingList = {
                         shoppingCurrentOnly = false
@@ -1175,7 +1076,6 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.FOODS -> FoodDishCatalogScreen(
                     foods = data.foods,
                     dishes = data.dishes,
-                    navigationActive = navigationActive,
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     onOpenFood = {
@@ -1407,8 +1307,8 @@ fun RumboApp(repository: AppRepository) {
             }
             }
             }
-            }
         }
+    }
 
     if (addingMeasurement) {
         AddMeasurementScreen(
@@ -1638,7 +1538,6 @@ private object RepertoireAssessmentMemory {
 private fun HomeScreen(
     data: AppData,
     mealShares: Map<MealType, Double>,
-    navigationActive: Boolean,
     onOpenAccount: () -> Unit,
     onOpenShoppingList: () -> Unit,
     onOpenCurrentShoppingList: () -> Unit,
@@ -1890,7 +1789,6 @@ private fun HomeScreen(
                 scanMessage = searchMessage,
                 onScanMessageChange = { searchMessage = it },
                 state = searchBarState,
-                navigationActive = navigationActive,
                 listState = searchListState,
                 suppressRestoredKeyboard = suppressRestoredSearchKeyboard,
                 onRestoredKeyboardSuppressed = { suppressRestoredSearchKeyboard = false },
@@ -6613,7 +6511,6 @@ private fun HomeCatalogSearch(
     onCulinaryTypeFilterChange: (CulinaryType?) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     state: SearchBarState,
-    navigationActive: Boolean,
     listState: LazyListState,
     suppressRestoredKeyboard: Boolean,
     onRestoredKeyboardSuppressed: () -> Unit,
@@ -6865,16 +6762,13 @@ private fun HomeCatalogSearch(
         }
     }
 
-    BackHandler(
-        enabled = navigationActive && state.targetValue == SearchBarValue.Expanded
-    ) { close() }
+    BackHandler(enabled = state.targetValue == SearchBarValue.Expanded) { close() }
 }
 
 @Composable
 private fun FoodDishCatalogScreen(
     foods: List<Food>,
     dishes: List<Dish>,
-    navigationActive: Boolean,
     planningRules: List<PlanningRule>,
     repertoireFoodIds: Set<Long>,
     onOpenFood: (Long) -> Unit,
@@ -6952,7 +6846,7 @@ private fun FoodDishCatalogScreen(
         )
     }
 
-    BackHandler(enabled = navigationActive && searchExpanded) { searchExpanded = false }
+    BackHandler(enabled = searchExpanded) { searchExpanded = false }
 
     Box(Modifier.fillMaxSize()) {
         Column(
