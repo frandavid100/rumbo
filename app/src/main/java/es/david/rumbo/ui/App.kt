@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
@@ -71,6 +72,7 @@ import androidx.compose.material.icons.filled.Grain
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -197,6 +199,9 @@ import es.david.rumbo.logic.TargetFit
 import es.david.rumbo.logic.WeeklyMenuGenerator
 import es.david.rumbo.logic.WeeklyMenuAcceptancePolicy
 import es.david.rumbo.logic.PlanningConflictException
+import es.david.rumbo.logic.CulinaryPolicy
+import es.david.rumbo.logic.CulinaryRole
+import es.david.rumbo.logic.CulinaryTypePolicy
 import es.david.rumbo.model.ActivityLevel
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.BodyAssessment
@@ -205,6 +210,8 @@ import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
+import es.david.rumbo.model.CulinaryType
+import es.david.rumbo.model.CulinaryPolicyOverride
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MenuHistoryEntry
 import es.david.rumbo.model.MealType
@@ -298,6 +305,7 @@ private enum class PlannerView(val label: String) {
 @Composable
 fun RumboApp(repository: AppRepository) {
     var data by remember { mutableStateOf(repository.load()) }
+    CulinaryPolicy.configure(data.activeProfileData?.culinaryPolicyOverrides.orEmpty())
     var screenName by rememberSaveable {
         mutableStateOf(if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name)
     }
@@ -637,6 +645,8 @@ fun RumboApp(repository: AppRepository) {
                     profiles = data.profiles.map { it.profile },
                     isOnboarding = data.profile == null,
                     mealShares = mealShares,
+                    culinaryPolicyOverrides = data.activeProfileData
+                        ?.culinaryPolicyOverrides.orEmpty(),
                     onCreate = { profile, shares ->
                         data = repository.saveProfile(profile)
                         saveMealShares(context, shares)
@@ -648,7 +658,13 @@ fun RumboApp(repository: AppRepository) {
                         data = repository.switchProfile(it)
                         screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
                     },
-                    onDelete = { data = repository.deleteProfile(it) }
+                    onDelete = { data = repository.deleteProfile(it) },
+                    onSaveCulinaryPolicy = {
+                        data = repository.saveCulinaryPolicyOverride(it)
+                    },
+                    onResetCulinaryPolicy = {
+                        data = repository.resetCulinaryPolicyOverride(it)
+                    }
                 )
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
@@ -1041,7 +1057,9 @@ fun RumboApp(repository: AppRepository) {
                                     foodsHash = data.foods.hashCode(),
                                     dishesHash = data.dishes.hashCode(),
                                     recommendationHash = currentRecommendation.hashCode(),
-                                    mealSharesHash = mealShares.hashCode()
+                                    mealSharesHash = mealShares.hashCode(),
+                                    culinaryPolicyOverridesHash = data.activeProfileData
+                                        ?.culinaryPolicyOverrides.orEmpty().hashCode()
                                 )
                             ),
                             activeMealTypes = mealShares.filterValues { it > 0.0 }.keys,
@@ -1147,6 +1165,8 @@ fun RumboApp(repository: AppRepository) {
                     profiles = data.profiles.map { it.profile },
                     isOnboarding = false,
                     mealShares = mealShares,
+                    culinaryPolicyOverrides = data.activeProfileData
+                        ?.culinaryPolicyOverrides.orEmpty(),
                     onCreate = { profile, shares ->
                         data = repository.saveProfile(profile)
                         saveMealShares(context, shares)
@@ -1161,7 +1181,13 @@ fun RumboApp(repository: AppRepository) {
                         data = repository.switchProfile(it)
                         screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
                     },
-                    onDelete = { data = repository.deleteProfile(it) }
+                    onDelete = { data = repository.deleteProfile(it) },
+                    onSaveCulinaryPolicy = {
+                        data = repository.saveCulinaryPolicyOverride(it)
+                    },
+                    onResetCulinaryPolicy = {
+                        data = repository.resetCulinaryPolicyOverride(it)
+                    }
                 )
                 screen == Screen.SHOPPING_LIST -> ShoppingListScreen(
                     data = data,
@@ -1316,7 +1342,8 @@ private data class RepertoireAssessmentCacheKey(
     val foodsHash: Int,
     val dishesHash: Int,
     val recommendationHash: Int,
-    val mealSharesHash: Int
+    val mealSharesHash: Int,
+    val culinaryPolicyOverridesHash: Int
 )
 
 private object RepertoireAssessmentMemory {
@@ -1379,7 +1406,8 @@ private fun HomeScreen(
         data.foods,
         data.dishes,
         recommendation,
-        mealShares
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides
     ) {
         RepertoireAssessmentCacheKey(
             profileId = data.activeProfileId,
@@ -1387,7 +1415,9 @@ private fun HomeScreen(
             foodsHash = data.foods.hashCode(),
             dishesHash = data.dishes.hashCode(),
             recommendationHash = recommendation.hashCode(),
-            mealSharesHash = mealShares.hashCode()
+            mealSharesHash = mealShares.hashCode(),
+            culinaryPolicyOverridesHash = data.activeProfileData
+                ?.culinaryPolicyOverrides.orEmpty().hashCode()
         )
     }
     val cachedRepertoireAssessment = remember(repertoireAssessmentKey) {
@@ -1542,6 +1572,10 @@ private fun HomeScreen(
     val searchCategory = searchCategoryName?.let { name ->
         FoodCategory.entries.firstOrNull { it.name == name }
     }
+    var searchCulinaryTypeName by rememberSaveable { mutableStateOf<String?>(null) }
+    val searchCulinaryType = searchCulinaryTypeName?.let { name ->
+        CulinaryType.entries.firstOrNull { it.name == name }
+    }
     var searchMessage by remember { mutableStateOf<String?>(null) }
     val searchBarState = rememberSearchBarState()
     val searchListState = rememberLazyListState()
@@ -1573,6 +1607,8 @@ private fun HomeScreen(
                 onFilterChange = { searchFilter = it },
                 categoryFilter = searchCategory,
                 onCategoryFilterChange = { searchCategoryName = it?.name },
+                culinaryTypeFilter = searchCulinaryType,
+                onCulinaryTypeFilterChange = { searchCulinaryTypeName = it?.name },
                 scanMessage = searchMessage,
                 onScanMessageChange = { searchMessage = it },
                 state = searchBarState,
@@ -6298,6 +6334,8 @@ private fun HomeCatalogSearch(
     textFieldState: TextFieldState,
     filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
     categoryFilter: FoodCategory?, onCategoryFilterChange: (FoodCategory?) -> Unit,
+    culinaryTypeFilter: CulinaryType?,
+    onCulinaryTypeFilterChange: (CulinaryType?) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     state: SearchBarState,
     listState: LazyListState,
@@ -6346,7 +6384,7 @@ private fun HomeCatalogSearch(
         }
     }
     val entries = remember(
-        foods, dishes, normalized, filter, categoryFilter, repertoireFoodIds,
+        foods, dishes, normalized, filter, categoryFilter, culinaryTypeFilter, repertoireFoodIds,
         foodSuggestions, suggestionsByFoodId, topSuggestionIds, personalizedScores
     ) {
         buildList {
@@ -6356,6 +6394,7 @@ private fun HomeCatalogSearch(
                 )
                 val suggested = food.id in topSuggestionIds
                 if ((categoryFilter == null || food.category == categoryFilter) &&
+                    (culinaryTypeFilter == null || food.culinaryType == culinaryTypeFilter) &&
                     (normalized.isBlank() && (suggested || food.id in repertoireFoodIds) ||
                     normalized.isNotBlank() && matchesSearch(searchText, normalized))
                 ) {
@@ -6366,6 +6405,7 @@ private fun HomeCatalogSearch(
                 val favorite = dish.ingredients.any { it.foodId in repertoireFoodIds }
                 val dishCategory = dish.dominantCategory(foodsById)
                 if ((categoryFilter == null || dishCategory == categoryFilter) &&
+                    culinaryTypeFilter == null &&
                     (normalized.isBlank() && favorite ||
                     normalized.isNotBlank() && matchesSearch(normalizeSearch(dish.name), normalized))
                 ) {
@@ -6524,9 +6564,16 @@ private fun HomeCatalogSearch(
                 header = {
                     Column(Modifier.fillMaxWidth()) {
                         Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             CatalogFilterMenu(filter, onFilterChange)
                             CatalogCategoryMenu(categoryFilter, onCategoryFilterChange)
+                            CatalogCulinaryTypeMenu(
+                                culinaryTypeFilter,
+                                onCulinaryTypeFilterChange
+                            )
                         }
                         if (query.isBlank()) {
                             Text(
@@ -6563,6 +6610,10 @@ private fun FoodDishCatalogScreen(
     val categoryFilter = categoryFilterName?.let { name ->
         FoodCategory.entries.firstOrNull { it.name == name }
     }
+    var culinaryTypeFilterName by rememberSaveable { mutableStateOf<String?>(null) }
+    val culinaryTypeFilter = culinaryTypeFilterName?.let { name ->
+        CulinaryType.entries.firstOrNull { it.name == name }
+    }
     var mode by rememberSaveable { mutableStateOf(CatalogMode.SEARCH) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var scanMessage by remember { mutableStateOf<String?>(null) }
@@ -6574,7 +6625,10 @@ private fun FoodDishCatalogScreen(
         normalizedQuery = normalizeSearch(query)
     }
 
-    val entries = remember(foods, dishes, normalizedQuery, filter, categoryFilter, mode, repertoireFoodIds) {
+    val entries = remember(
+        foods, dishes, normalizedQuery, filter, categoryFilter,
+        culinaryTypeFilter, mode, repertoireFoodIds
+    ) {
         buildList {
             if (filter != CatalogFilter.DISHES) {
                 foods.forEach { food ->
@@ -6586,6 +6640,7 @@ private fun FoodDishCatalogScreen(
                     )
                     val belongs = food.id in repertoireFoodIds
                     if ((categoryFilter == null || food.category == categoryFilter) &&
+                        (culinaryTypeFilter == null || food.culinaryType == culinaryTypeFilter) &&
                         ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
                             mode == CatalogMode.REPERTOIRE && belongs) &&
                         (normalizedQuery.isBlank() || matchesSearch(searchable, normalizedQuery)))) {
@@ -6602,6 +6657,7 @@ private fun FoodDishCatalogScreen(
                     val belongs = dish.ingredients.any { it.foodId in repertoireFoodIds }
                     val dishCategory = dish.dominantCategory(foodsById)
                     if ((categoryFilter == null || dishCategory == categoryFilter) &&
+                        culinaryTypeFilter == null &&
                         ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
                             mode == CatalogMode.REPERTOIRE && belongs) &&
                         (normalizedQuery.isBlank() || matchesSearch(searchable, normalizedQuery)))) {
@@ -6687,9 +6743,10 @@ private fun FoodDishCatalogScreen(
             ) {
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     CatalogFilterChips(filter = filter, onFilterChange = { filter = it })
-                CatalogCategoryMenu(categoryFilter) { categoryFilterName = it?.name }
-                Spacer(Modifier.height(8.dp))
                     CatalogCategoryMenu(categoryFilter) { categoryFilterName = it?.name }
+                    CatalogCulinaryTypeMenu(culinaryTypeFilter) {
+                        culinaryTypeFilterName = it?.name
+                    }
                     Spacer(Modifier.height(8.dp))
                     scanMessage?.let {
                         Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -6715,6 +6772,9 @@ private fun FoodDishCatalogScreen(
             if (mode == CatalogMode.REPERTOIRE) {
                 CatalogFilterChips(filter = filter, onFilterChange = { filter = it })
                 CatalogCategoryMenu(categoryFilter) { categoryFilterName = it?.name }
+                CatalogCulinaryTypeMenu(culinaryTypeFilter) {
+                    culinaryTypeFilterName = it?.name
+                }
                 Spacer(Modifier.height(8.dp))
                 CatalogEntries(
                     entries = entries,
@@ -6816,6 +6876,38 @@ private fun CatalogCategoryMenu(
                     text = { Text(option?.label ?: "Todos los tipos") },
                     onClick = {
                         onCategoryChange(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CatalogCulinaryTypeMenu(
+    culinaryType: CulinaryType?,
+    onCulinaryTypeChange: (CulinaryType?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = culinaryType != null,
+            onClick = { expanded = true },
+            label = { Text(culinaryType?.label ?: "Todos los tipos culinarios") },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            (listOf<CulinaryType?>(null) + CulinaryType.entries).forEach { option ->
+                DropdownMenuItem(
+                    leadingIcon = {
+                        if (culinaryType == option) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                        }
+                    },
+                    text = { Text(option?.label ?: "Todos los tipos culinarios") },
+                    onClick = {
+                        onCulinaryTypeChange(option)
                         expanded = false
                     }
                 )
@@ -8474,6 +8566,11 @@ private fun FoodDetailScreen(
                     color = foodCategoryColor(food.category),
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Text(
+                    "Tipo culinario: ${food.culinaryType.label}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 HorizontalDivider()
                 Text(
                     "Valores por 100 g o 100 ml",
@@ -9066,10 +9163,13 @@ private fun ProfileScreen(
     profiles: List<UserProfile>,
     isOnboarding: Boolean,
     mealShares: Map<MealType, Double>,
+    culinaryPolicyOverrides: List<CulinaryPolicyOverride>,
     onCreate: (UserProfile, Map<MealType, Double>) -> Unit,
     onSave: (UserProfile) -> Unit,
     onSwitch: (Long) -> Unit,
-    onDelete: (Long) -> Unit
+    onDelete: (Long) -> Unit,
+    onSaveCulinaryPolicy: (CulinaryPolicyOverride) -> Unit,
+    onResetCulinaryPolicy: (CulinaryType) -> Unit
 ) {
     var creating by rememberSaveable { mutableStateOf(isOnboarding) }
     val editedProfile = if (creating) null else profile
@@ -9238,6 +9338,14 @@ private fun ProfileScreen(
             }
         }
 
+        if (!isOnboarding && !creating) {
+            CulinaryRulesCard(
+                overrides = culinaryPolicyOverrides,
+                onSave = onSaveCulinaryPolicy,
+                onReset = onResetCulinaryPolicy
+            )
+        }
+
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         OutlinedButton(
             onClick = {
@@ -9281,6 +9389,178 @@ private fun ProfileScreen(
             TextButton(onClick = { creating = false }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
         }
     }
+}
+
+@Composable
+private fun CulinaryRulesCard(
+    overrides: List<CulinaryPolicyOverride>,
+    onSave: (CulinaryPolicyOverride) -> Unit,
+    onReset: (CulinaryType) -> Unit
+) {
+    var editingType by remember { mutableStateOf<CulinaryType?>(null) }
+    editingType?.let { type ->
+        CulinaryPolicyEditorDialog(
+            type = type,
+            override = overrides.firstOrNull { it.culinaryType == type },
+            onDismiss = { editingType = null },
+            onSave = {
+                onSave(it)
+                editingType = null
+            },
+            onReset = {
+                onReset(type)
+                editingType = null
+            }
+        )
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 8.dp)) {
+            Text(
+                "Reglas culinarias",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            Text(
+                "Se aplican a todos los alimentos del mismo tipo dentro de este perfil.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+            HorizontalDivider()
+            CulinaryType.entries.filterNot { it == CulinaryType.UNKNOWN }.forEach { type ->
+                val custom = overrides.firstOrNull { it.culinaryType == type }
+                val policy = custom?.toPolicy() ?: CulinaryPolicy.defaultPolicy(type)
+                TextButton(
+                    onClick = { editingType = type },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                ) {
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                        Text(type.label, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            culinaryPolicySummary(policy),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Start
+                        )
+                    }
+                    if (custom != null) Text("Modificada")
+                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CulinaryPolicyEditorDialog(
+    type: CulinaryType,
+    override: CulinaryPolicyOverride?,
+    onDismiss: () -> Unit,
+    onSave: (CulinaryPolicyOverride) -> Unit,
+    onReset: () -> Unit
+) {
+    val initial = override?.toPolicy() ?: CulinaryPolicy.defaultPolicy(type)
+    var roles by remember(type, override) { mutableStateOf(initial.roles) }
+    var preferred by remember(type, override) {
+        mutableStateOf(initial.preferredGrams?.let(::formatDecimal).orEmpty())
+    }
+    var minimum by remember(type, override) {
+        mutableStateOf(initial.minimumGrams?.let(::formatDecimal).orEmpty())
+    }
+    var maximum by remember(type, override) {
+        mutableStateOf(initial.maximumGrams?.let(::formatDecimal).orEmpty())
+    }
+    var standalone by remember(type, override) { mutableStateOf(initial.standaloneAllowed) }
+    val preferredValue = parseDecimal(preferred)
+    val minimumValue = parseDecimal(minimum)
+    val maximumValue = parseDecimal(maximum)
+    val quantitiesValid = listOf(preferred, minimum, maximum).all { it.isBlank() } ||
+        preferredValue != null && minimumValue != null && maximumValue != null &&
+        minimumValue > 0.0 && minimumValue <= preferredValue && preferredValue <= maximumValue
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(type.label) },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Funciones y reglas de combinación", fontWeight = FontWeight.SemiBold)
+                CulinaryRole.entries.forEach { role ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            roles = if (role in roles) roles - role else roles + role
+                        },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = role in roles, onCheckedChange = null)
+                        Text(role.label)
+                    }
+                }
+                HorizontalDivider()
+                Text("Rango culinario", fontWeight = FontWeight.SemiBold)
+                NumericField("Cantidad habitual (g)", preferred, { preferred = it }, Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NumericField("Mínimo (g)", minimum, { minimum = it }, Modifier.weight(1f))
+                    NumericField("Máximo (g)", maximum, { maximum = it }, Modifier.weight(1f))
+                }
+                Row(
+                    Modifier.fillMaxWidth().clickable { standalone = !standalone },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = standalone, onCheckedChange = null)
+                    Text("Puede aparecer como alimento independiente")
+                }
+                if (!quantitiesValid) {
+                    Text(
+                        "Indica las tres cantidades y cumple mínimo ≤ habitual ≤ máximo, o déjalas todas vacías.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (override != null) {
+                    TextButton(onClick = onReset) { Text("Restaurar regla predeterminada") }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = quantitiesValid,
+                onClick = {
+                    onSave(
+                        CulinaryPolicyOverride(
+                            culinaryType = type,
+                            roles = roles.mapTo(mutableSetOf()) { it.name },
+                            preferredGrams = preferredValue,
+                            minimumGrams = minimumValue,
+                            maximumGrams = maximumValue,
+                            standaloneAllowed = standalone
+                        )
+                    )
+                }
+            ) { Text("Guardar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+private fun CulinaryPolicyOverride.toPolicy() = CulinaryTypePolicy(
+    roles = roles.mapNotNullTo(mutableSetOf()) { runCatching { CulinaryRole.valueOf(it) }.getOrNull() },
+    preferredGrams = preferredGrams,
+    minimumGrams = minimumGrams,
+    maximumGrams = maximumGrams,
+    standaloneAllowed = standaloneAllowed
+)
+
+private fun culinaryPolicySummary(policy: CulinaryTypePolicy): String {
+    val rules = policy.roles.map { it.label }.toMutableList()
+    if (!policy.standaloneAllowed) rules += "Solo como ingrediente"
+    policy.preferredGrams?.let { preferred ->
+        rules += "${formatDecimal(policy.minimumGrams ?: preferred)}–" +
+            "${formatDecimal(policy.maximumGrams ?: preferred)} g"
+    }
+    return rules.ifEmpty { listOf("Sin reglas especiales") }.joinToString(" · ")
 }
 
 @Composable

@@ -222,7 +222,8 @@ object FoodSuggestionEngine {
         val sourceScore = nutrientScore(source, nutrient)
         return common.asSequence()
             .filter {
-                it.food.id != source.id && nutrient in efficientNutrients(it.food) &&
+                it.food.id != source.id && it.food.culinaryType == source.culinaryType &&
+                    nutrient in efficientNutrients(it.food) &&
                     it.nutrientScores.getValue(nutrient) > sourceScore
             }
             .sortedWith(

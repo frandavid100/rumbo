@@ -102,27 +102,36 @@ enum class FoodCategory(val label: String) {
     OTHER("Otros")
 }
 
-enum class CulinaryType {
-    UNKNOWN,
-    MILK_BASE,
-    CREAMY_BASE,
-    BREAKFAST_CEREAL,
-    PROTEIN_POWDER,
-    DRY_RICE,
-    DRY_PASTA,
-    FRESH_STARCH,
-    BREAD,
-    MAIN_MEAT,
-    MAIN_FISH,
-    MAIN_EGG,
-    VEGETABLE,
-    FRUIT,
-    CULINARY_OIL,
-    FAT_COMPLEMENT,
-    SAUCE,
-    SNACK_DESSERT,
-    COOKING_INGREDIENT
+enum class CulinaryType(val label: String) {
+    UNKNOWN("Sin clasificar"),
+    MILK_BASE("Leche o bebida base"),
+    CREAMY_BASE("Base cremosa"),
+    BREAKFAST_CEREAL("Cereal de desayuno"),
+    PROTEIN_POWDER("Proteína en polvo"),
+    DRY_RICE("Arroz seco"),
+    DRY_PASTA("Pasta seca"),
+    FRESH_STARCH("Tubérculo o almidón fresco"),
+    BREAD("Pan"),
+    MAIN_MEAT("Proteína principal · carne"),
+    MAIN_FISH("Proteína principal · pescado"),
+    MAIN_EGG("Proteína principal · huevo"),
+    VEGETABLE("Verdura"),
+    FRUIT("Fruta"),
+    CULINARY_OIL("Aceite culinario"),
+    FAT_COMPLEMENT("Complemento graso"),
+    SAUCE("Salsa"),
+    SNACK_DESSERT("Tentempié o postre"),
+    COOKING_INGREDIENT("Ingrediente de cocina")
 }
+
+data class CulinaryPolicyOverride(
+    val culinaryType: CulinaryType,
+    val roles: Set<String> = emptySet(),
+    val preferredGrams: Double? = null,
+    val minimumGrams: Double? = null,
+    val maximumGrams: Double? = null,
+    val standaloneAllowed: Boolean = true
+)
 
 enum class MealType(val label: String) {
     BREAKFAST("Desayuno"),
@@ -474,7 +483,8 @@ data class ProfileData(
     val repertoireFoodIds: Set<Long> = planningRules
         .filter { it.itemKind == PlannedItemKind.FOOD }.mapTo(mutableSetOf()) { it.itemId },
     val menuHistory: List<MenuHistoryEntry> = emptyList(),
-    val dismissedSuggestionFoodIds: Set<Long> = emptySet()
+    val dismissedSuggestionFoodIds: Set<Long> = emptySet(),
+    val culinaryPolicyOverrides: List<CulinaryPolicyOverride> = emptyList()
 )
 
 data class AppData(

@@ -1,16 +1,17 @@
 package es.david.rumbo.logic
 
 import es.david.rumbo.model.CulinaryType
+import es.david.rumbo.model.CulinaryPolicyOverride
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.PlanningRule
 
-enum class CulinaryRole {
-    STARCH_BASE,
-    BREAKFAST_CEREAL,
-    LIQUID_OR_CREAMY_BASE,
-    DEPENDENT_PREPARATION,
-    PRIMARY_PROTEIN,
-    CULINARY_FAT
+enum class CulinaryRole(val label: String) {
+    STARCH_BASE("Base de hidratos · máximo una"),
+    BREAKFAST_CEREAL("Cereal de desayuno · máximo uno"),
+    LIQUID_OR_CREAMY_BASE("Base líquida o cremosa"),
+    DEPENDENT_PREPARATION("Necesita una base líquida o cremosa"),
+    PRIMARY_PROTEIN("Proteína principal · máximo una"),
+    CULINARY_FAT("Grasa culinaria")
 }
 
 data class CulinaryTypePolicy(
@@ -67,7 +68,27 @@ object CulinaryPolicy {
         CulinaryType.COOKING_INGREDIENT to CulinaryTypePolicy(standaloneAllowed = false)
     )
 
-    fun policy(food: Food): CulinaryTypePolicy = policies.getValue(food.culinaryType)
+    @Volatile
+    private var profileOverrides: Map<CulinaryType, CulinaryTypePolicy> = emptyMap()
+
+    fun configure(overrides: List<CulinaryPolicyOverride>) {
+        profileOverrides = overrides.associate { override ->
+            override.culinaryType to CulinaryTypePolicy(
+                roles = override.roles.mapNotNullTo(mutableSetOf()) { name ->
+                    runCatching { CulinaryRole.valueOf(name) }.getOrNull()
+                },
+                preferredGrams = override.preferredGrams,
+                minimumGrams = override.minimumGrams,
+                maximumGrams = override.maximumGrams,
+                standaloneAllowed = override.standaloneAllowed
+            )
+        }
+    }
+
+    fun defaultPolicy(type: CulinaryType): CulinaryTypePolicy = policies.getValue(type)
+
+    fun policy(food: Food): CulinaryTypePolicy =
+        profileOverrides[food.culinaryType] ?: defaultPolicy(food.culinaryType)
 
     fun roles(food: Food): Set<CulinaryRole> = policy(food).roles
 

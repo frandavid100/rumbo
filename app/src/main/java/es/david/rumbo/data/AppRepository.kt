@@ -14,6 +14,7 @@ import es.david.rumbo.model.DefaultFoodCatalog
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.CulinaryType
+import es.david.rumbo.model.CulinaryPolicyOverride
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.MenuHistoryEntry
@@ -62,7 +63,8 @@ class AppRepository(context: Context) {
             planningRules = existing?.planningRules.orEmpty(),
             repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
             dismissedSuggestionFoodIds = existing?.dismissedSuggestionFoodIds.orEmpty(),
-            menuHistory = existing?.menuHistory.orEmpty()
+            menuHistory = existing?.menuHistory.orEmpty(),
+            culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -70,6 +72,29 @@ class AppRepository(context: Context) {
             current.profiles.map { if (it.profile.id == profile.id) updatedProfile else it }
         }
         return persistAndReturn(AppData(profiles, profile.id, current.foods, current.dishes))
+    }
+
+    fun saveCulinaryPolicyOverride(override: CulinaryPolicyOverride): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        val type = override.culinaryType
+        val updated = active.copy(
+            culinaryPolicyOverrides = active.culinaryPolicyOverrides
+                .filterNot { it.culinaryType == type } + override
+        )
+        return updateActive(current, updated)
+    }
+
+    fun resetCulinaryPolicyOverride(type: CulinaryType): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(
+            current,
+            active.copy(
+                culinaryPolicyOverrides = active.culinaryPolicyOverrides
+                    .filterNot { it.culinaryType == type }
+            )
+        )
     }
 
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
@@ -87,7 +112,8 @@ class AppRepository(context: Context) {
             planningRules = existing?.planningRules.orEmpty(),
             repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
             dismissedSuggestionFoodIds = existing?.dismissedSuggestionFoodIds.orEmpty(),
-            menuHistory = existing?.menuHistory.orEmpty()
+            menuHistory = existing?.menuHistory.orEmpty(),
+            culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -540,7 +566,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 19)
+        put("schemaVersion", 20)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -556,6 +582,10 @@ class AppRepository(context: Context) {
                         profileData.dismissedSuggestionFoodIds.forEach(::put)
                     })
                     put("menuHistory", encodeMenuHistory(profileData.menuHistory))
+                    put(
+                        "culinaryPolicyOverrides",
+                        encodeCulinaryPolicyOverrides(profileData.culinaryPolicyOverrides)
+                    )
                 })
             }
         })
@@ -714,6 +744,21 @@ class AppRepository(context: Context) {
         }
     }
 
+    private fun encodeCulinaryPolicyOverrides(
+        overrides: List<CulinaryPolicyOverride>
+    ): JSONArray = JSONArray().apply {
+        overrides.forEach { override ->
+            put(JSONObject().apply {
+                put("culinaryType", override.culinaryType.name)
+                put("roles", JSONArray(override.roles.toList()))
+                putNullable("preferredGrams", override.preferredGrams)
+                putNullable("minimumGrams", override.minimumGrams)
+                putNullable("maximumGrams", override.maximumGrams)
+                put("standaloneAllowed", override.standaloneAllowed)
+            })
+        }
+    }
+
     private fun encodeDishes(dishes: List<Dish>): JSONArray = JSONArray().apply {
         dishes.forEach { dish ->
             put(JSONObject().apply {
@@ -766,7 +811,10 @@ class AppRepository(context: Context) {
                                 .optJSONArray("dismissedSuggestionFoodIds")
                                 ?.let(::decodeIds)
                                 .orEmpty(),
-                            menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray())
+                            menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray()),
+                            culinaryPolicyOverrides = decodeCulinaryPolicyOverrides(
+                                item.optJSONArray("culinaryPolicyOverrides") ?: JSONArray()
+                            )
                         )
                     )
                 }
@@ -993,6 +1041,27 @@ class AppRepository(context: Context) {
                     itemId = item.getLong("itemId"),
                     day = WeekDay.valueOf(item.getString("day")),
                     mealType = MealType.valueOf(item.getString("mealType"))
+                )
+            )
+        }
+    }
+
+    private fun decodeCulinaryPolicyOverrides(
+        array: JSONArray
+    ): List<CulinaryPolicyOverride> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.getJSONObject(index)
+            val roles = item.optJSONArray("roles") ?: JSONArray()
+            add(
+                CulinaryPolicyOverride(
+                    culinaryType = CulinaryType.valueOf(item.getString("culinaryType")),
+                    roles = buildSet {
+                        for (roleIndex in 0 until roles.length()) add(roles.getString(roleIndex))
+                    },
+                    preferredGrams = item.optionalDouble("preferredGrams"),
+                    minimumGrams = item.optionalDouble("minimumGrams"),
+                    maximumGrams = item.optionalDouble("maximumGrams"),
+                    standaloneAllowed = item.optBoolean("standaloneAllowed", true)
                 )
             )
         }
