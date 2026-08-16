@@ -1398,7 +1398,6 @@ fun RumboApp(repository: AppRepository) {
             }
             }
         }
-    }
 
     if (addingMeasurement) {
         AddMeasurementScreen(
