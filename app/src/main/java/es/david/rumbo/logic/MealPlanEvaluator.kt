@@ -73,6 +73,19 @@ object NutritionTolerancePolicy {
         val penalty = ((magnitude - optimal).coerceAtLeast(0.0) / scale).let { it * it }
         return NutrientEvaluation(kind, actual, target, fit, difference, penalty)
     }
+
+    /**
+     * Objective used while choosing quantities. Acceptance deliberately keeps
+     * its dead bands, but optimisation must still prefer the centre of them;
+     * otherwise it systematically settles at low protein/carbohydrates and
+     * high fat because every point inside the band appears equally good.
+     */
+    fun optimizationPenalty(kind: NutrientKind, actual: Double, target: Double): Double {
+        val tolerancePenalty = evaluate(kind, actual, target).penalty
+        if (target <= 0.0) return tolerancePenalty
+        val relativeDifference = (actual - target) / target
+        return tolerancePenalty + relativeDifference * relativeDifference * 0.25
+    }
 }
 
 data class NutritionTarget(
