@@ -749,10 +749,6 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
                     mealShares = mealShares,
-                    onSwitchProfile = {
-                        data = repository.switchProfile(it)
-                        screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
-                    },
                     onOpenAccount = { screenName = Screen.ACCOUNT.name },
                     onOpenShoppingList = {
                         shoppingCurrentOnly = false
@@ -1504,8 +1500,6 @@ private object RepertoireAssessmentMemory {
 private fun HomeScreen(
     data: AppData,
     mealShares: Map<MealType, Double>,
-    onSwitchProfile: (Long) -> Unit,
-    onManageProfiles: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenShoppingList: () -> Unit,
     onOpenCurrentShoppingList: () -> Unit,
