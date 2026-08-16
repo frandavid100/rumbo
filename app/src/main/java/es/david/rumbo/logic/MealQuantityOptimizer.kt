@@ -4,6 +4,7 @@ import es.david.rumbo.model.Dish
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.MealDayAmounts
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.NutritionTotals
 import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.Recommendation
@@ -330,12 +331,6 @@ object MealQuantityOptimizer {
         carbohydrates * factor,
         fat * factor
     )
-    private val defaultMealShares = mapOf(
-        MealType.BREAKFAST to 0.25,
-        MealType.MORNING_SNACK to 0.10,
-        MealType.LUNCH to 0.35,
-        MealType.AFTERNOON_SNACK to 0.10,
-        MealType.DINNER to 0.20
-    )
+    private val defaultMealShares = MealDistributionPolicy.defaults
 
 }
