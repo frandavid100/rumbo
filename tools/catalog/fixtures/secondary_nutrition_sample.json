@@ -1,0 +1,50 @@
+[
+  {
+    "code": "8480000105424",
+    "sources": [
+      {
+        "name": "Nutriinfo",
+        "url": "https://www.nutriinfo.es/producto/leche-semidesnatada-hacendado-botella-10542",
+        "claim": "Datos obtenidos del etiquetado del producto"
+      },
+      {
+        "name": "Precios Mercado",
+        "url": "https://preciosmercado.com/leche-semidesnatada-hacendado-de-mercadona-info-precio-y-alternativas-3/"
+      }
+    ],
+    "nutriments": {
+      "energy-kcal_100g": 46.0,
+      "fat_100g": 1.6,
+      "carbohydrates_100g": 4.8,
+      "proteins_100g": 3.1,
+      "saturated-fat_100g": 1.1,
+      "sugars_100g": 4.8,
+      "salt_100g": 0.1
+    },
+    "ingredients": "Leche semidesnatada de vaca"
+  },
+  {
+    "code": "8480000047403",
+    "sources": [
+      {
+        "name": "Bayen",
+        "url": "https://bayen.ma/produit/8480000047403"
+      },
+      {
+        "name": "FoodFactor",
+        "url": "https://www.foodfactor.net/produits/8480000047403/aceite%2Bde%2Boliva%2Bvirgen%2Bextra.php"
+      }
+    ],
+    "nutriments": {
+      "energy-kcal_100g": 822.0,
+      "fat_100g": 91.0,
+      "carbohydrates_100g": 0.0,
+      "proteins_100g": 0.0,
+      "fiber_100g": 0.0,
+      "saturated-fat_100g": 13.0,
+      "sugars_100g": 0.0,
+      "salt_100g": 0.0
+    },
+    "ingredients": "Aceite de oliva virgen extra"
+  }
+]
