@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import re, unicodedata
 from typing import Iterable
 
-CLASSIFIER_VERSION = "4.3.0"
+CLASSIFIER_VERSION = "4.3.1"
 
 NUTRITIONAL_ROLES = {
     "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN",
@@ -130,7 +130,7 @@ def nutritional_roles(f,typ,serving):
         roles.append(_a("COMPLEMENTARY_PROTEIN",.90,"nutrition.threshold.complementary_protein",f"protein/serving:{protein:.2f}g",f"serving:{serving}g"))
     if typ in {"FRUIT","MILK_BASE","CREAMY_BASE","BEVERAGE","SNACK_DESSERT"} and carbs is not None and carbs>=10:
         roles.append(_a("COMPLEMENTARY_CARBOHYDRATE",.88,"nutrition.threshold.complementary_carbohydrate",f"carbohydrate/serving:{carbs:.2f}g",f"serving:{serving}g"))
-    if typ in {"CHEESE","FAT_COMPLEMENT","SAUCE","CREAMY_BASE","SPREAD","SNACK_DESSERT"} and fat is not None and fat>=5:
+    if typ in {"MILK_BASE","CHEESE","FAT_COMPLEMENT","SAUCE","CREAMY_BASE","SPREAD","SNACK_DESSERT"} and fat is not None and fat>=5:
         roles.append(_a("COMPLEMENTARY_FAT",.88,"nutrition.threshold.complementary_fat",f"fat/serving:{fat:.2f}g",f"serving:{serving}g"))
     if typ=="BREAKFAST_CEREAL": roles.append(_a("PRIMARY_CARBOHYDRATE",.95,"nutrition.semantic.breakfast_cereal","type:BREAKFAST_CEREAL"))
     if typ=="PROTEIN_POWDER" and protein is not None and protein>=15: roles.append(_a("COMPLEMENTARY_PROTEIN",.96,"nutrition.semantic.protein_powder",f"protein/serving:{protein:.2f}g"))
