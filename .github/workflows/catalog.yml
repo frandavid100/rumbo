@@ -50,6 +50,12 @@ jobs:
       - name: Probar adaptador GENERIC FoodData Central
         working-directory: tools/catalog
         run: python -m unittest -v test_fooddata_central_adapter.py
+      - name: Verificar suelo nutricional observado del piloto 300
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -o pipefail
+          python evaluate_pilot_300_observed_nutrition.py | tee pilot-300-observed-nutrition-report.json
       - name: Probar lector de etiquetas nutricionales
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_label_reader.py
@@ -89,5 +95,6 @@ jobs:
           path: |
             tools/catalog/full-classification-report.json
             tools/catalog/nutrition-resolver-report.json
+            tools/catalog/pilot-300-observed-nutrition-report.json
           if-no-files-found: warn
           retention-days: 7
