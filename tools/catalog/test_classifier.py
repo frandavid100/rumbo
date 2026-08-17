@@ -1,5 +1,5 @@
 import unittest
-from classifier import ProductFeatures, classify, COMPLEMENTARY_THRESHOLDS_PER_SERVING
+from classifier import ProductFeatures, classify, classify_type, COMPLEMENTARY_THRESHOLDS_PER_SERVING
 
 class Golden(unittest.TestCase):
     def check(self,f,typ,nroles,croles,classified=True):
@@ -46,6 +46,43 @@ class Golden(unittest.TestCase):
         high=classify(ProductFeatures('Yogur proteico',calories=70,protein_g=3.34,carbohydrate_g=4,fat_g=3.34))
         self.assertIn('COMPLEMENTARY_PROTEIN',{x.value for x in high.nutritional_roles})
         self.assertIn('COMPLEMENTARY_FAT',{x.value for x in high.nutritional_roles})
+
+    def test_zero_nutritional_roles_can_still_be_classified(self):
+        r=classify(ProductFeatures('Bífidus natural edulcorado',calories=51,protein_g=.2,carbohydrate_g=6.6,fat_g=.3))
+        self.assertEqual(r.culinary_type.value,'CREAMY_BASE')
+        self.assertEqual(r.nutritional_roles,[])
+        self.assertTrue(r.classified,r.review_reasons)
+
+    def test_category_does_not_override_product_identity(self):
+        pear=classify_type(ProductFeatures('Peras Conferencia',family='Fruta y verdura'))
+        self.assertEqual(pear.value,'FRUIT')
+        lentil=classify_type(ProductFeatures('Lenteja cocida Hacendado',family='Arroz, legumbres y pasta'))
+        self.assertEqual(lentil.value,'LEGUME')
+        pasta=classify_type(ProductFeatures('Fideo cabello de ángel Hacendado',family='Arroz, legumbres y pasta'))
+        self.assertEqual(pasta.value,'DRY_PASTA')
+
+    def test_pilot_300_expansion_patterns(self):
+        cases={
+            'Café soluble classic en sobres Hacendado':'BREWED_DRINK_BASE',
+            'Limonada Hacendado light sin gas':'BEVERAGE',
+            'Jamón serrano cortado a máquina':'CURED_MEAT',
+            'Pepinillos agridulces Hacendado':'PICKLED_VEGETABLE',
+            'Dátiles Medjoul con hueso Hacendado':'DRIED_FRUIT',
+            'Aceitunas verdes sin hueso Hacendado':'FAT_COMPLEMENT',
+            'Nocilla original crema al cacao con avellanas':'SPREAD',
+            'Napolitana de chocolate 35%':'SNACK_DESSERT',
+            'Bífidus desnatado probióticos natural Hacendado':'CREAMY_BASE',
+            'Habitas muy tiernas Hacendado ultracongeladas':'LEGUME',
+            'Barquillos con crema de avellanas Hacendado':'SNACK_DESSERT',
+            'Pasta fresca gnocchi Hacendado':'FRESH_STARCH',
+            'Puerros':'VEGETABLE',
+            'Bebida de almendras con calcio Hacendado':'MILK_BASE',
+        }
+        for name,expected in cases.items():
+            with self.subTest(name):
+                got=classify_type(ProductFeatures(name))
+                self.assertEqual(got.value if got else None,expected)
+        self.assertIsNone(classify_type(ProductFeatures('Vela de cumpleaños 6 Hacendado')))
 
     def test_multipack_does_not_change_classification(self):
         a=classify(ProductFeatures('Yogur natural 0%',calories=36,protein_g=4.3,carbohydrate_g=4.5,fat_g=.1))
