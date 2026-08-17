@@ -1,6 +1,6 @@
 {
   "importer_version": "radarsuper-carrefour-1.1.0",
-  "classifier_version": "4.6.0-quality",
+  "classifier_version": "4.6.1-quality",
   "nutrition_validator_version": "1.0.0",
   "allowed_food_categories": [
     "Aceite, especias y salsas",
@@ -67,9 +67,9 @@
     "DISCOVERABLE": 180,
     "IDENTIFIED": 180,
     "NUTRITIONALLY_USABLE": 23,
-    "CLASSIFIED": 18,
-    "MENU_ELIGIBLE": 18,
-    "REVIEW": 5,
+    "CLASSIFIED": 17,
+    "MENU_ELIGIBLE": 17,
+    "REVIEW": 6,
     "NUTRITION_MISSING": 154,
     "NUTRITION_INVALID": 3,
     "FETCH_ERROR": 0
@@ -82,7 +82,8 @@
     "UNKNOWN_CULINARY_TYPE": 5,
     "ENERGY_TOO_LOW_FOR_MACROS": 1,
     "CALORIES_OUT_OF_RANGE": 1,
-    "ENERGY_TOO_HIGH_FOR_MACROS": 2
+    "ENERGY_TOO_HIGH_FOR_MACROS": 2,
+    "PREPARED_DISH_NEEDS_PORTION_REVIEW": 1
   },
   "provenance_note": "Identity/listing is obtained from RadarSuper's Carrefour mirror. Nutrition attributed there to Open Food Facts is stored as MATCHED, never DECLARED Carrefour evidence.",
   "distribution_note": "Development artifact only; do not redistribute as a Carrefour-derived database without rights review."

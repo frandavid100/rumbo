@@ -1,5 +1,5 @@
 {
-  "menu_eligible": 18,
+  "menu_eligible": 17,
   "blocking_issue_count": 0,
   "blocking_product_count": 0,
   "blocking_by_reason": {},
@@ -8,16 +8,14 @@
     "FAT_COMPLEMENT": 5,
     "LEGUME": 5,
     "SNACK_DESSERT": 3,
-    "BEVERAGE": 1,
-    "SAUCE": 1
+    "BEVERAGE": 1
   },
   "menu_eligible_by_family": {
     "Aceite, especias y salsas": 3,
     "Aperitivos": 5,
     "Arroz, legumbres y pasta": 5,
     "Azúcar, caramelos y chocolate": 3,
-    "Cacao, café e infusiones": 1,
-    "Carne": 1
+    "Cacao, café e infusiones": 1
   },
   "blocking_examples": [],
   "stratified_sample": [
@@ -175,18 +173,6 @@
         "protein_g": 4.0,
         "carbohydrate_g": 4.9,
         "fat_g": 0.4
-      }
-    },
-    {
-      "product_id": "carrefour:albondigas-con-salsa-de-tomate-extra-carrefour-300-g-carrefour",
-      "name": "Albóndigas con salsa de tomate Extra Carrefour 300 g.",
-      "family": "Carne",
-      "culinary_type": "SAUCE",
-      "nutrition": {
-        "calories": 171.0,
-        "protein_g": 8.5,
-        "carbohydrate_g": 7.6,
-        "fat_g": 12.0
       }
     }
   ]
