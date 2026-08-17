@@ -10,6 +10,7 @@ from classifier import ProductFeatures, classify_type, CLASSIFIER_VERSION
 from mercadona_weekly_catalog_adapter import deterministic_candidate_ids, fetch_product, fetch_product_ids, stratified_sample
 
 SEED = "rumbo-mercadona-pilot-2026-08"
+MIN_TYPE_RECOGNIZED = 299
 FOOD_CATEGORY_MARKERS = (
     "aceite", "especias", "salsas", "agua", "refrescos", "aperitivos",
     "arroz", "legumbres", "pasta", "azucar", "caramelos", "chocolate",
@@ -66,20 +67,24 @@ def main() -> int:
         else:
             types[assignment.value] += 1
 
+    recognized = len(sample) - len(unknown)
     report = {
         "classifier_version": CLASSIFIER_VERSION,
         "index_size": len(ids),
         "candidate_products_fetched": len(products),
         "sample": len(sample),
-        "type_recognized": len(sample) - len(unknown),
-        "type_rate": round((len(sample)-len(unknown))/len(sample), 4) if sample else 0,
+        "type_recognized": recognized,
+        "minimum_required": MIN_TYPE_RECOGNIZED,
+        "type_rate": round(recognized/len(sample), 4) if sample else 0,
         "unknown": unknown,
         "types": dict(types.most_common()),
         "acquisition_errors": errors,
     }
     Path("pilot-300-types-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0 if len(sample) == 300 else 2
+    if len(sample) != 300:
+        return 2
+    return 0 if recognized >= MIN_TYPE_RECOGNIZED else 3
 
 
 if __name__ == "__main__":
