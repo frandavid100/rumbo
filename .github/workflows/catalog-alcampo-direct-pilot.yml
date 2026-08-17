@@ -1,0 +1,31 @@
+name: Catalog Alcampo direct pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_direct_pilot.py'
+      - '.github/workflows/catalog-alcampo-direct-pilot.yml'
+  workflow_dispatch:
+
+jobs:
+  pilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Alcampo direct pilot
+        working-directory: tools/catalog
+        run: python alcampo_direct_pilot.py --out alcampo-direct-pilot-output --max-products 80 --workers 12
+      - name: Upload pilot report
+        uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-direct-pilot
+          path: tools/catalog/alcampo-direct-pilot-output/
+          retention-days: 7
+          if-no-files-found: error
