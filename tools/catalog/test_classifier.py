@@ -15,6 +15,7 @@ class Golden(unittest.TestCase):
             (ProductFeatures('Queso curado',calories=400,protein_g=25,carbohydrate_g=1,fat_g=33),'CHEESE',{'COMPLEMENTARY_PROTEIN','COMPLEMENTARY_FAT'},{'TOPPING','SANDWICH_FILLING','STANDALONE'}),
             (ProductFeatures('Nueces naturales',calories=654,protein_g=15.2,carbohydrate_g=13.7,fat_g=65.2),'FAT_COMPLEMENT',{'COMPLEMENTARY_FAT'},{'TOPPING','STANDALONE'}),
             (ProductFeatures('Lentejas cocidas',calories=116,protein_g=9,carbohydrate_g=20,fat_g=.4),'LEGUME',{'PRIMARY_CARBOHYDRATE','COMPLEMENTARY_PROTEIN'},{'PLATE_CENTER','PLATE_BASE','SIDE'}),
+            (ProductFeatures('Quinoa cocida',calories=120,protein_g=4.4,carbohydrate_g=21.3,fat_g=1.9),'COOKED_GRAIN',{'PRIMARY_CARBOHYDRATE'},{'PLATE_BASE','SIDE'}),
             (ProductFeatures('Yogur natural 0% pack 6',calories=36,protein_g=4.3,carbohydrate_g=4.5,fat_g=.1),'CREAMY_BASE',{'COMPLEMENTARY_PROTEIN'},{'CEREAL_BASE','POWDER_BASE','STANDALONE','DESSERT'}),
             (ProductFeatures('Pan de molde 100% integral familiar',calories=248,protein_g=8.7,carbohydrate_g=41,fat_g=3.8),'BREAD',{'PRIMARY_CARBOHYDRATE'},{'SANDWICH_BASE','PLATE_BASE','STANDALONE'}),
             (ProductFeatures('Corn flakes',calories=360,protein_g=7,carbohydrate_g=80,fat_g=1.5),'BREAKFAST_CEREAL',{'PRIMARY_CARBOHYDRATE'},{'CEREAL_MIX_IN'}),
@@ -60,6 +61,12 @@ class Golden(unittest.TestCase):
         self.assertEqual(lentil.value,'LEGUME')
         pasta=classify_type(ProductFeatures('Fideo cabello de ángel Hacendado',family='Arroz, legumbres y pasta'))
         self.assertEqual(pasta.value,'DRY_PASTA')
+
+    def test_cooked_grain_is_not_dry_rice_or_dry_pasta(self):
+        for name in ('Quinoa cocida Hacendado','Bulgur cocido','Trigo sarraceno cocido'):
+            with self.subTest(name):
+                got=classify_type(ProductFeatures(name,family='Arroz, legumbres y pasta'))
+                self.assertEqual(got.value if got else None,'COOKED_GRAIN')
 
     def test_pilot_300_expansion_patterns(self):
         cases={
