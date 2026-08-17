@@ -59,6 +59,9 @@ jobs:
       - name: Probar preprocesado visual de etiquetas
         working-directory: tools/catalog
         run: python -m unittest -v test_label_image_preprocess.py
+      - name: Probar detector de regiones nutricionales
+        working-directory: tools/catalog
+        run: python -m unittest -v test_nutrition_table_region_detector.py
       - name: Probar pipeline Mercadona etiqueta a DECLARED
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_label_pipeline.py
