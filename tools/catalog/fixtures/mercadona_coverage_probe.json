@@ -30,7 +30,7 @@
 {"name":"Zumo de piña Hacendado","expected_type":"BEVERAGE"},
 {"name":"Masa fresca pizza Hacendado","expected_type":"COOKING_INGREDIENT"},
 {"name":"Mini cereales rellenos de leche Hacendado","expected_type":"BREAKFAST_CEREAL"},
-{"name":"Pan tostado cereales y semillas Hacendado","expected_type":"BREAKFAST_CEREAL"},
+{"name":"Pan tostado cereales y semillas Hacendado","expected_type":"BREAD"},
 {"name":"Barritas de cereales y frutos secos Hacendado","expected_type":"SNACK_DESSERT"},
 {"name":"Pizza Calzone con jamón cocido y queso Hacendado","expected_type":"PREPARED_DISH"},
 {"name":"Hojaldre sabor pizza","expected_type":"PREPARED_DISH"},
