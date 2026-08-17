@@ -1,0 +1,222 @@
+[
+  {
+    "product_id": "15662",
+    "name": "Bebida Kéfir natural Hacendado 0% MG",
+    "nutrition": {"calories": 36.0, "fat_g": 1.3, "carbohydrate_g": 2.4, "protein_g": 3.9},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "23146",
+    "name": "Chorizo sarta extra picante De León",
+    "nutrition": {"calories": 435.0, "fat_g": 36.0, "carbohydrate_g": 1.2, "protein_g": 3.5},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "13577",
+    "name": "Fideo cabello de ángel Hacendado",
+    "nutrition": {"calories": 361.0, "fat_g": 1.5, "carbohydrate_g": 72.0, "protein_g": 13.0},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "52602",
+    "name": "Pan de hamburguesa Brioche Hacendado",
+    "nutrition": {"calories": 340.0, "fat_g": 12.0, "carbohydrate_g": 46.0, "protein_g": 2.0},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "62303",
+    "name": "Caracoles precocidos Hacendado ultracongelados",
+    "nutrition": {"calories": 55.0, "fat_g": 1.0, "carbohydrate_g": 2.4, "protein_g": 8.9},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "18114",
+    "name": "Filetes de melva canutera con pimientos del piquillo Hacendado en aceite de oliva",
+    "nutrition": {"calories": 267.0, "fat_g": 22.0, "carbohydrate_g": 1.1, "protein_g": 16.0},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "20559",
+    "name": "Yogur griego natural Hacendado",
+    "nutrition": {"calories": 129.0, "fat_g": 10.8, "carbohydrate_g": 3.9, "protein_g": 1.0},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "39987",
+    "name": "Zumo maracuyá y chía Hacendado",
+    "nutrition": {"calories": 54.0, "fat_g": 0.6, "carbohydrate_g": 11.1, "protein_g": 0.6},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "10820",
+    "name": "Bebida láctea con cereales crecimiento y desarrollo Puleva Max",
+    "nutrition": {"calories": 77.0, "fat_g": 2.8, "carbohydrate_g": 9.8, "protein_g": 3.0},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "12364",
+    "name": "Huevos sorpresa de chocolate Hacendado dibujo",
+    "nutrition": {"calories": 545.0, "fat_g": 20.0, "carbohydrate_g": 58.0, "protein_g": 5.7},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "12417",
+    "name": "Huevo sorpresa Pascua de chocolate con leche Hacendado",
+    "nutrition": {"calories": 546.0, "fat_g": 32.0, "carbohydrate_g": 56.0, "protein_g": 6.2},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "12431",
+    "name": "Chocolatinas de chocolate negro Royal Mints 49% rellenas de crema sabor a menta",
+    "nutrition": {"calories": 455.0, "fat_g": 17.0, "carbohydrate_g": 70.0, "protein_g": 3.5},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "13422",
+    "name": "Aceitunas verdes estilo casero Hacendado partidas aliñadas",
+    "nutrition": {"calories": 184.0, "fat_g": 19.0, "carbohydrate_g": 0.0, "protein_g": 1.2},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "14142",
+    "name": "Tortitas de arroz con chocolate con leche Hacendado",
+    "nutrition": {"calories": 466.0, "fat_g": 17.0, "carbohydrate_g": 70.0, "protein_g": 7.1},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "14200",
+    "name": "Galletas Digestive 0% azúcares añadidos Hacendado",
+    "nutrition": {"calories": 416.0, "fat_g": 16.0, "carbohydrate_g": 64.0, "protein_g": 7.0},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "14241",
+    "name": "Barquillos con crema de avellanas Hacendado",
+    "nutrition": {"calories": 517.0, "fat_g": 26.4, "carbohydrate_g": 62.5, "protein_g": 6.0},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "15589",
+    "name": "Patatas fritas corte ondulado Hacendado",
+    "nutrition": {"calories": 550.0, "fat_g": 34.0, "carbohydrate_g": 53.0, "protein_g": 5.7},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "16519",
+    "name": "Espárragos blancos medianos Hacendado",
+    "nutrition": {"calories": 15.0, "fat_g": 0.1, "carbohydrate_g": 1.6, "protein_g": 1.3},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "16737",
+    "name": "Macedonia de verduras Hacendado",
+    "nutrition": {"calories": 46.0, "fat_g": 0.3, "carbohydrate_g": 8.2, "protein_g": 2.0},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  },
+  {
+    "product_id": "17150",
+    "name": "Allioli Chovi",
+    "nutrition": {"calories": 749.0, "fat_g": 82.0, "carbohydrate_g": 1.5, "protein_g": 1.2},
+    "evidence_level": "DECLARED",
+    "source": "Mercadona label",
+    "reader": "PP-OCRv6",
+    "reader_stage": "NEURAL_VISUAL_REGION",
+    "redistribution_allowed": false,
+    "evidence_run": "32059558125"
+  }
+]
