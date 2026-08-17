@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/catalog-aesan-current-validation.yml'
       - 'tools/catalog/compare_aesan_2022_current_evidence.py'
+      - 'tools/catalog/compare_aesan_2022_current_evidence_retry.py'
       - 'tools/catalog/fixtures/pilot_300_structured_resolved.json'
       - 'tools/catalog/fixtures/pilot_300_declared_label_evidence*.json'
       - 'tools/catalog/fixtures/generic_fdc_accepted_mappings.json'
@@ -34,7 +35,7 @@ jobs:
         working-directory: tools/catalog
         env:
           AESAN_2022_EXCEL_URL: https://web.archive.org/web/20250814194053id_/https://www.aesan.gob.es/AECOSAN/docs/documentos/seguridad_alimentaria/bases_datos/BasedatosWeb.xlsx
-        run: python compare_aesan_2022_current_evidence.py
+        run: python compare_aesan_2022_current_evidence_retry.py
 
       - name: Upload report
         uses: actions/upload-artifact@v4
