@@ -9,7 +9,7 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("opencv-python-headless and numpy are required for visual table detection") from exc
 
-VISUAL_DETECTOR_VERSION = "1.0.0"
+VISUAL_DETECTOR_VERSION = "1.0.1"
 
 
 @dataclass(frozen=True)
@@ -67,7 +67,6 @@ def _prepare(gray: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 def _candidate_boxes(binary: np.ndarray, horizontal: np.ndarray, vertical: np.ndarray):
     h, w = binary.shape[:2]
     line_mask = cv2.bitwise_or(horizontal, vertical)
-    # Join nearby table lines into candidate blocks without relying on OCR words.
     join_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (max(15, w // 120), max(15, h // 120)))
     joined = cv2.morphologyEx(line_mask, cv2.MORPH_CLOSE, join_kernel, iterations=2)
     joined = cv2.dilate(joined, join_kernel, iterations=1)
@@ -91,8 +90,6 @@ def _candidate_boxes(binary: np.ndarray, horizontal: np.ndarray, vertical: np.nd
         line_pixels = int(cv2.countNonZero(cv2.bitwise_or(hroi, vroi)))
         line_density = line_pixels / max(1.0, float((r-l)*(b-t)))
         ink_density = cv2.countNonZero(broi) / max(1.0, float((r-l)*(b-t)))
-        # Nutrition tables often have many horizontal separators; vertical lines
-        # are helpful but not mandatory because some labels are visually open.
         structural = min(1.0, hlines / 5.0) * 0.48 + min(1.0, vlines / 3.0) * 0.22
         density = min(1.0, line_density / 0.045) * 0.18 + min(1.0, ink_density / 0.18) * 0.12
         score = structural + density
@@ -115,14 +112,12 @@ def _deskew_and_save(image: np.ndarray, box, output: Path) -> None:
     l,t,r,b = box
     crop = image[t:b, l:r]
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-    # Estimate text/table skew from long line segments. Small-angle correction is
-    # intentionally conservative: large perspective distortions remain review.
     edges = cv2.Canny(gray, 60, 160)
     lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=70,
                             minLineLength=max(40, crop.shape[1]//4), maxLineGap=16)
     angles=[]
     if lines is not None:
-        for line in lines[:,0]:
+        for line in lines.reshape(-1, 4):
             x1,y1,x2,y2 = map(int,line)
             if x2 == x1:
                 continue
