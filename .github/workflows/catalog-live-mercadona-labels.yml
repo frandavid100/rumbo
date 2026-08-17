@@ -1,0 +1,40 @@
+name: Catalog live Mercadona labels
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/live_mercadona_label_probe.py'
+      - 'tools/catalog/mercadona_product_adapter.py'
+      - '.github/workflows/catalog-live-mercadona-labels.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-label-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar Tesseract español
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-spa
+          tesseract --version
+          tesseract --list-langs
+      - name: Ejecutar prueba live
+        working-directory: tools/catalog
+        run: python live_mercadona_label_probe.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-mercadona-label-report
+          path: |
+            tools/catalog/live-mercadona-label-report.json
+            tools/catalog/live-mercadona-snapshots/*.json
+          if-no-files-found: warn
+          retention-days: 3
