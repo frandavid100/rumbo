@@ -1,0 +1,7 @@
+[
+  {"sku":"30167","generic_name":"Huevo de gallina entero crudo","source":"composición genérica contrastada","source_url":"https://www.bedca.net/","nutriments":{"energy-kcal_100g":143.0,"fat_100g":9.5,"carbohydrates_100g":0.7,"proteins_100g":12.6}},
+  {"sku":"87204","generic_name":"Salmón crudo","source":"BEDCA","source_url":"https://www.bedca.net/","nutriments":{"energy-kcal_100g":182.0,"fat_100g":12.0,"carbohydrates_100g":0.0,"proteins_100g":18.4}},
+  {"sku":"69971","generic_name":"Tomate crudo","source":"BEDCA","source_url":"https://www.bedca.net/","nutriments":{"energy-kcal_100g":21.0,"fat_100g":0.2,"carbohydrates_100g":3.5,"proteins_100g":0.9,"fiber_100g":1.4}},
+  {"sku":"2786","generic_name":"Pechuga de pollo cruda sin piel","source":"composición genérica contrastada","source_url":"https://www.bedca.net/","nutriments":{"energy-kcal_100g":120.0,"fat_100g":2.6,"carbohydrates_100g":0.0,"proteins_100g":22.5}},
+  {"sku":"52667","generic_name":"Nuez pelada natural","source":"composición genérica","source_url":"https://www.bedca.net/","nutriments":{"energy-kcal_100g":654.0,"fat_100g":65.2,"carbohydrates_100g":13.7,"proteins_100g":15.2,"fiber_100g":6.7}}
+]
