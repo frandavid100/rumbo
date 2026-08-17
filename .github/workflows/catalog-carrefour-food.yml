@@ -10,7 +10,7 @@ on:
   push:
     branches: [agent/catalog-phase1]
     paths:
-      - 'tools/catalog/carrefour_catalog_importer.py'
+      - 'tools/catalog/carrefour_radar_catalog_importer.py'
       - '.github/workflows/catalog-carrefour-food.yml'
 
 jobs:
@@ -27,11 +27,11 @@ jobs:
       - name: Smoke import
         if: ${{ github.event_name == 'push' || github.event.inputs.full != 'true' }}
         working-directory: tools/catalog
-        run: python carrefour_catalog_importer.py --max-pages 2 --max-products 72 --workers 12
+        run: python carrefour_radar_catalog_importer.py --max-pages 1 --max-products 90 --workers 12
       - name: Full import
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.full == 'true' }}
         working-directory: tools/catalog
-        run: python carrefour_catalog_importer.py --workers 20
+        run: python carrefour_radar_catalog_importer.py --workers 24
       - name: Upload catalog
         uses: actions/upload-artifact@v4
         with:
