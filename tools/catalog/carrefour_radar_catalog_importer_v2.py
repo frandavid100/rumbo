@@ -16,7 +16,7 @@ from classifier_quality import CLASSIFIER_VERSION, classify
 from nutrition_validation import VALIDATOR_VERSION, validate_nutrition
 
 
-IMPORTER_VERSION = "radarsuper-carrefour-1.1.0"
+IMPORTER_VERSION = "radarsuper-carrefour-1.1.1"
 
 
 def nutrition_section(plain: str) -> str:
@@ -99,7 +99,9 @@ def parse_product(url: str, family: str) -> base.ProductRecord:
         subcategory = crumbs[-1] if crumbs else None
         kcal, protein, carb, fat, fiber, salt = parse_nutrition(plain)
 
-        has_off_note = bool(re.search(r"Datos nutricionales\s*:\s*Open Food Facts|Open Food Facts", nutrition_section(plain), re.I))
+        # The attribution sits immediately after the nutrition block, so search
+        # the page text, not the deliberately truncated nutrition_section().
+        has_off_note = bool(re.search(r"Datos nutricionales\s*:\s*Open Food Facts", plain, re.I))
         core_complete = all(x is not None for x in (kcal, fat, carb, protein))
         evidence_level = "MATCHED" if core_complete else None
         nutrition_source = "OPEN_FOOD_FACTS_VIA_RADARSUPER" if core_complete and has_off_note else ("RADARSUPER" if core_complete else None)
