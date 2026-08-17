@@ -26,7 +26,7 @@ jobs:
         run: python -m unittest -v test_classifier.py
       - name: Probar cobertura de tipos
         working-directory: tools/catalog
-        run: python -m unittest -v test_classifier_coverage.py
+        run: python -m unittest -v test_coverage_probe.py
       - name: Evaluar corpus amplio
         working-directory: tools/catalog
         shell: bash
