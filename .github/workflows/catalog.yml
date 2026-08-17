@@ -21,6 +21,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Instalar dependencias de pruebas de imagen
+        run: python -m pip install --disable-pip-version-check Pillow
       - name: Probar clasificador dorado
         working-directory: tools/catalog
         run: python -m unittest -v test_classifier.py
@@ -54,6 +56,9 @@ jobs:
       - name: Probar fusión OCR nutricional
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_ocr_ensemble.py
+      - name: Probar preprocesado visual de etiquetas
+        working-directory: tools/catalog
+        run: python -m unittest -v test_label_image_preprocess.py
       - name: Probar pipeline Mercadona etiqueta a DECLARED
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_label_pipeline.py
