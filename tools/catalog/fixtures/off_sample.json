@@ -5,6 +5,13 @@
       "brands": "Hacendado",
       "generic_name_es": "Arroz basmati",
       "ingredients_text_es": "Arroz basmati",
+      "selected_images": {
+        "front": {
+          "display": {
+            "es": "https://images.openfoodfacts.org/images/products/848/000/005/0021/front_es.1.400.jpg"
+          }
+        }
+      },
       "nutriments": {
         "energy-kcal_100g": 353,
         "fat_100g": 0.6,
