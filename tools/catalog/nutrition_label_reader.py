@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.1.0"
+READER_VERSION = "1.2.0"
 
 
 @dataclass(frozen=True)
@@ -34,13 +34,40 @@ def _fold(text: str) -> str:
     return "".join(c for c in text if unicodedata.category(c) != "Mn")
 
 
-def _repair_ocr_number(raw: str) -> float | None:
-    """Repair only a narrow, observed OCR error: terminal `g` read as `9`.
+def _nutrition_block(text: str) -> str:
+    """Restrict parsing to the declared nutrition section when it is visible.
 
-    Real Mercadona label OCR produced 42g -> 429, 32g -> 329 and 76g ->
-    769. We only apply the repair to integer tokens >100 ending in 9; all
-    repaired values still have to pass physical and energy-macro validation.
+    Better OCR engines read the whole package, including ingredients. Searching
+    the entire package for words such as 'grasa' can therefore bind a macro to
+    an ingredient percentage before the nutrition table. Once a nutrition
+    heading is present, only that section is eligible for canonical parsing.
     """
+    folded = _fold(text)
+    starts = []
+    for pattern in (r"informacion nutricional", r"declaracion nutricional", r"valores nutricionales"):
+        m = re.search(pattern, folded, flags=re.I)
+        if m:
+            starts.append(m.start())
+    if not starts:
+        return text
+    start = min(starts)
+    tail = text[start:]
+    folded_tail = _fold(tail)
+    # Common packaging sections after the table. Stop conservatively only when
+    # the marker is well after the heading so rows are not clipped accidentally.
+    ends = []
+    for pattern in (
+        r"\npreparacion\b", r"\nconservacion\b", r"\ncondiciones de conservacion\b",
+        r"\nmodo de empleo\b", r"\nfabricado por\b", r"\nconsumir preferentemente\b",
+    ):
+        m = re.search(pattern, folded_tail, flags=re.I)
+        if m and m.start() > 80:
+            ends.append(m.start())
+    return tail[:min(ends)] if ends else tail
+
+
+def _repair_ocr_number(raw: str) -> float | None:
+    """Repair only a narrow, observed OCR error: terminal `g` read as `9`."""
     try:
         value = float(raw)
     except ValueError:
@@ -58,9 +85,6 @@ def _repair_ocr_number(raw: str) -> float | None:
 def _number_after(label_patterns: tuple[str, ...], text: str) -> float | None:
     folded = _fold(text)
     for label in label_patterns:
-        # Tesseract often places the numeric cell on the following line. Permit
-        # punctuation/words/newlines but stop at the first number after the row
-        # label. Plausibility checks remain the final gate.
         pattern = rf"(?:{label})[^\d]{{0,90}}(\d{{1,4}}(?:\.\d{{1,2}})?)\s*(?:g\b|gramos?\b)?"
         m = re.search(pattern, folded, flags=re.I | re.S)
         if m:
@@ -86,14 +110,22 @@ def _energy_kcal(text: str) -> float | None:
 
 def _basis(text: str) -> str | None:
     folded = _fold(text)
-    # Real OCR sometimes recognizes the unit glyph `g` as `9` or `y`.
-    # This is only a basis hint; acceptance still requires a coherent nutrition
-    # table with energy and all core macros.
     if re.search(r"(?:por|cada|valores? medios? por)?\s*100\s*(?:g|9|y)\b", folded):
         return "100_g"
     if re.search(r"(?:por|cada|valores? medios? por)?\s*100\s*m(?:l|i|1)\b", folded):
         return "100_ml"
     return None
+
+
+def _basis_heading_count(text: str) -> int:
+    """Count explicit per-100 column headings, not incidental '100 g' text.
+
+    Two explicit `por 100 g/ml` headings usually mean parallel nutrition
+    columns (e.g. net weight vs drained weight). The v1 parser is row-oriented,
+    so it must review rather than silently mix those columns.
+    """
+    folded = _fold(text)
+    return len(re.findall(r"\bpor\s+100\s*(?:g\b|m(?:l|i|1)\b)", folded, flags=re.I))
 
 
 def _plausible(n: dict[str, float]) -> tuple[bool, list[str]]:
@@ -115,23 +147,30 @@ def _plausible(n: dict[str, float]) -> tuple[bool, list[str]]:
 def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> LabelReadResult:
     normalized = normalize_text(text)
     reasons: list[str] = []
-    folded = _fold(normalized)
+    folded_all = _fold(normalized)
 
     nutrition_markers = sum(1 for marker in (
         "valor energetico", "energia", "grasas", "lipidos", "hidratos", "proteinas", "sal"
-    ) if marker in folded)
+    ) if marker in folded_all)
     if nutrition_markers < 3:
         return LabelReadResult("NOT_NUTRITION_LABEL", None, None, 0.0,
                                ("INSUFFICIENT_NUTRITION_MARKERS",), normalized)
 
-    basis = _basis(normalized)
+    block = _nutrition_block(normalized)
+    if _basis_heading_count(block) > 1:
+        return LabelReadResult(
+            "REVIEW", _basis(block), None, min(extraction_confidence, .65),
+            ("MULTIPLE_NUTRITION_COLUMNS",), normalized,
+        )
+
+    basis = _basis(block)
     if basis is None:
         reasons.append("MISSING_100G_100ML_BASIS")
 
-    calories = _energy_kcal(normalized)
-    fat = _number_after((r"grasas?", r"lipidos?", r"grasa total"), normalized)
-    carbs = _number_after((r"hidratos? de carbono", r"carbohidratos?"), normalized)
-    protein = _number_after((r"proteinas?",), normalized)
+    calories = _energy_kcal(block)
+    fat = _number_after((r"grasas?", r"lipidos?", r"grasa total"), block)
+    carbs = _number_after((r"hidratos? de carbono", r"carbohidratos?"), block)
+    protein = _number_after((r"proteinas?",), block)
 
     values = {"calories": calories, "fat_g": fat, "carbohydrate_g": carbs, "protein_g": protein}
     missing = [k for k, v in values.items() if v is None]
