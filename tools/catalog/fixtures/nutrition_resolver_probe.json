@@ -1,0 +1,51 @@
+[
+  {
+    "target": {"name":"Cereales avena Crunchy Hacendado de cacao","brand":"Hacendado","gtin":"8402001015205","format":"400 g"},
+    "candidates": [
+      {"name":"Avena Crunchy Cacao","brand":"Hacendado","gtin":"8402001015205","format":"400 g","source":"Open Food Facts (via ComerClaro cache)","source_family":"Open Food Facts","source_url":"https://comerclaro.app/producto/avena-crunchy-cacao-8402001015205","source_record_id":"8402001015205","upstream_license":"ODbL","redistribution_allowed":true,"nutrition":{"calories":393,"fat_g":6.4,"carbohydrate_g":65,"protein_g":13},"claim":"ComerClaro identifica expresamente la procedencia nutricional como OFF"}
+    ],
+    "expected_status":"RESOLVED"
+  },
+  {
+    "target": {"name":"Refresco cola Hacendado","brand":"Hacendado","gtin":"8402001042973"},
+    "candidates": [
+      {"name":"Refresco cola Hacendado","brand":"Hacendado","gtin":"8402001042973","source":"Nutriinfo","source_family":"Nutriinfo","source_url":"https://www.nutriinfo.es/producto/refresco-cola-hacendado-botella-21726","redistribution_allowed":false,"nutrition":{"calories":42,"fat_g":0,"carbohydrate_g":10.4,"protein_g":0},"claim":"Datos obtenidos del etiquetado"},
+      {"name":"Refresco cola","brand":"Hacendado","gtin":"8402001042973","source":"TABULA CEU","source_family":"TABULA","source_url":"https://ias.ceu.es/","redistribution_allowed":false,"nutrition":{"calories":42,"fat_g":0,"carbohydrate_g":10.4,"protein_g":0},"claim":"Uso electrónico no personal/no comercial sujeto a autorización"}
+    ],
+    "expected_status":"BUILD_ONLY"
+  },
+  {
+    "target": {"name":"Hummus de garbanzos Hacendado con pimiento del piquillo asado","brand":"Hacendado","gtin":"8480000808622"},
+    "candidates": [
+      {"name":"Hummus de garbanzos con pimiento del piquillo asado","brand":"Hacendado","gtin":"8480000808622","source":"TABULA CEU","source_family":"TABULA","source_url":"https://ias.ceu.es/alimento/a-8480000808622/","redistribution_allowed":false,"nutrition":{"calories":313,"fat_g":26,"carbohydrate_g":10.7,"protein_g":5.7}}
+    ],
+    "expected_status":"BUILD_ONLY"
+  },
+  {
+    "target": {"name":"Galletas tostadas Hacendado","brand":"Hacendado"},
+    "candidates": [
+      {"name":"Galletas Tostadas","brand":"Hacendado","source":"Badali UMH","source_family":"Badali","source_url":"https://badali.umh.es/alimento/galletas-tostadas/15980/listado-alfabetico","redistribution_allowed":false,"nutrition":{"calories":432,"fat_g":9.4,"carbohydrate_g":78,"protein_g":7.6}}
+    ],
+    "expected_status":"BUILD_ONLY"
+  },
+  {
+    "target": {"name":"Batido de chocolate Hacendado","brand":"Hacendado","format":"1 L"},
+    "candidates": [
+      {"name":"Batido de chocolate Hacendado","brand":"Hacendado","format":"1 L","source":"Nutribot","source_family":"Nutribot","source_url":"https://nutribot.es/mercadona/1674-batido-de-chocolate-hacendado/","redistribution_allowed":false,"nutrition":{"calories":60,"fat_g":1.5,"carbohydrate_g":10,"protein_g":2.5}}
+    ],
+    "expected_status":"BUILD_ONLY"
+  },
+  {
+    "target": {"name":"Atún claro al natural Hacendado","brand":"Hacendado"},
+    "candidates": [
+      {"name":"Atún claro al natural","brand":"Hacendado","source":"TABULA CEU","source_family":"TABULA","source_url":"https://ias.ceu.es/alimento/a-88411700907414/","redistribution_allowed":false,"nutrition":{"calories":79,"fat_g":0.6,"carbohydrate_g":0.5,"protein_g":18}},
+      {"name":"Atún claro al natural","brand":"Hacendado","source":"FatSecret","source_family":"FatSecret","source_url":"https://www.fatsecret.es/calorías-nutrición/hacendado/atún-claro-al-natural/100g","redistribution_allowed":false,"nutrition":{"calories":98,"fat_g":1.2,"carbohydrate_g":0.9,"protein_g":21}}
+    ],
+    "expected_status":"REVIEW"
+  },
+  {
+    "target": {"name":"Chocolate negro 72% de cacao Hacendado","brand":"Hacendado"},
+    "candidates": [],
+    "expected_status":"UNRESOLVED"
+  }
+]
