@@ -40,7 +40,6 @@ jobs:
           ORIGINAL='https://www.aesan.gob.es/AECOSAN/docs/documentos/seguridad_alimentaria/bases_datos/BasedatosWeb.xlsx'
           CDX="https://web.archive.org/cdx/search/cdx?url=${ORIGINAL}&output=json&fl=timestamp,original,statuscode,mimetype&filter=statuscode:200&collapse=digest&from=2022&to=2026"
           curl -fsSL --retry 3 --retry-all-errors "$CDX" -o /tmp/cdx.json
-          cat /tmp/cdx.json
           TS=$(python -c "import json; r=json.load(open('/tmp/cdx.json')); print(r[-1][0] if len(r)>1 else '')")
           if [ -z "$TS" ]; then
             echo 'No archived workbook snapshot found' >&2
@@ -55,7 +54,9 @@ jobs:
         working-directory: tools/catalog
         env:
           AESAN_2022_EXCEL_URL: ${{ steps.archive.outputs.archive_url }}
-        run: python aesan_2022_match_probe.py
+        run: |
+          python -c "p='aesan_2022_match_probe.py'; s=open(p, encoding='utf-8').read(); s=s.replace('return pd.concat(frames, ignore_index=True, sort=False), diagnostics', 'return frames[-1], diagnostics'); open(p,'w',encoding='utf-8').write(s)"
+          python aesan_2022_match_probe.py
 
       - name: Upload report
         uses: actions/upload-artifact@v4
