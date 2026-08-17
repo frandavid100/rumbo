@@ -1,0 +1,36 @@
+name: Catalog GENERIC FDC accepted
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/fooddata_central_adapter.py'
+      - 'tools/catalog/validate_generic_fdc_mappings.py'
+      - 'tools/catalog/fixtures/generic_fdc_accepted_mappings.json'
+      - '.github/workflows/catalog-generic-fdc-accepted.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FDC_API_KEY: DEMO_KEY
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validar seis mapeos GENERIC
+        working-directory: tools/catalog
+        run: python validate_generic_fdc_mappings.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-generic-fdc-accepted-report
+          path: tools/catalog/generic-fdc-accepted-output/report.json
+          if-no-files-found: warn
+          retention-days: 7
