@@ -1,0 +1,20 @@
+[
+  {
+    "code": "8480000050021",
+    "product": {
+      "brands": "Hacendado",
+      "generic_name_es": "Arroz basmati",
+      "ingredients_text_es": "Arroz basmati",
+      "nutriments": {
+        "energy-kcal_100g": 353,
+        "fat_100g": 0.6,
+        "carbohydrates_100g": 78,
+        "proteins_100g": 9.0,
+        "fiber_100g": 2.0,
+        "saturated-fat_100g": 0.2,
+        "sugars_100g": 0.5,
+        "salt_100g": 0.01
+      }
+    }
+  }
+]

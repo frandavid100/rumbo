@@ -1,0 +1,26 @@
+[
+  {
+    "sku": "5002",
+    "gtin": "8480000050021",
+    "name": "Arroz basmati aromático Hacendado",
+    "brand": "Hacendado",
+    "url": "https://tienda.mercadona.es/product/5002/arroz-basmati-aromatico-hacendado-paquete",
+    "availability": "ACTIVE"
+  },
+  {
+    "sku": "10370",
+    "gtin": null,
+    "name": "Leche semidesnatada Hacendado",
+    "brand": "Hacendado",
+    "url": "https://tienda.mercadona.es/",
+    "availability": "ACTIVE"
+  },
+  {
+    "sku": "4740",
+    "gtin": null,
+    "name": "Aceite de oliva virgen extra Hacendado",
+    "brand": "Hacendado",
+    "url": "https://tienda.mercadona.es/product/4740/aceite-oliva-virgen-extra-hacendado-botella",
+    "availability": "ACTIVE"
+  }
+]
