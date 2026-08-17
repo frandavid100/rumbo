@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
 from pathlib import Path
@@ -23,7 +24,7 @@ from mercadona_weekly_catalog_adapter import (
 from nutrition_resolver import ProductIdentity, resolve
 from openfoodfacts_adapter import fetch_product as off_fetch, to_candidate as off_candidate, ADAPTER_VERSION as OFF_ADAPTER_VERSION
 
-PILOT_VERSION = "1.0.0"
+PILOT_VERSION = "1.0.1"
 
 
 def _env_int(name: str, default: int) -> int:
@@ -76,9 +77,26 @@ def _build_features(product, nutrition: dict[str, float] | None) -> ProductFeatu
     )
 
 
+def _fetch_candidate_products(candidate_ids: list[str], workers: int):
+    products = []
+    errors = []
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        future_to_id = {pool.submit(fetch_product, product_id): product_id for product_id in candidate_ids}
+        for future in as_completed(future_to_id):
+            product_id = future_to_id[future]
+            try:
+                products.append(future.result())
+            except Exception as exc:
+                errors.append({"product_id": product_id, "error": f"{type(exc).__name__}:{exc}"})
+    products.sort(key=lambda x: x.product_id)
+    errors.sort(key=lambda x: x["product_id"])
+    return products, errors
+
+
 def main() -> int:
     sample_size = _env_int("PILOT_SIZE", 300)
     candidate_pool = _env_int("PILOT_CANDIDATE_POOL", max(sample_size * 2, 500))
+    acquisition_workers = _env_int("PILOT_ACQUISITION_WORKERS", 12)
     neural_budget = _env_int("PILOT_NEURAL_BUDGET", 60)
     per_category_cap = _env_int("PILOT_PER_CATEGORY_CAP", 18)
     neural_per_category_cap = _env_int("PILOT_NEURAL_PER_CATEGORY_CAP", 5)
@@ -92,13 +110,7 @@ def main() -> int:
 
     product_ids = fetch_product_ids()
     candidate_ids = deterministic_candidate_ids(product_ids, seed=seed, limit=candidate_pool)
-    candidate_products = []
-    acquisition_errors = []
-    for product_id in candidate_ids:
-        try:
-            candidate_products.append(fetch_product(product_id))
-        except Exception as exc:
-            acquisition_errors.append({"product_id": product_id, "error": f"{type(exc).__name__}:{exc}"})
+    candidate_products, acquisition_errors = _fetch_candidate_products(candidate_ids, acquisition_workers)
     sample = stratified_sample(candidate_products, size=sample_size, per_category_cap=per_category_cap)
 
     counts = Counter()
@@ -126,7 +138,6 @@ def main() -> int:
         counts["IDENTIFIED"] += 1
         category_stats[product.category_key]["IDENTIFIED"] += 1
 
-        # Type coverage is useful even before nutrition is available.
         type_assignment = classify_type(_build_features(product, None))
         if type_assignment is not None:
             row["culinary_type"] = type_assignment.value
@@ -137,9 +148,7 @@ def main() -> int:
             row["culinary_type"] = None
 
         nutrition = None
-        selected_candidate = None
 
-        # 1) Exact-GTIN OFF lookup: reusable and cheap compared with OCR.
         if product.ean:
             try:
                 fetched = off_fetch(product.ean, snapshot_dir=snapshot_dir, timeout=10.0)
@@ -153,7 +162,6 @@ def main() -> int:
                         possible = _core_nutrition(resolved.selected)
                         if possible is not None:
                             nutrition = possible
-                            selected_candidate = resolved.selected
                             row["nutrition_source"] = "Open Food Facts"
                             row["evidence_level"] = resolved.level
                             source_counts["Open Food Facts"] += 1
@@ -161,8 +169,6 @@ def main() -> int:
             except Exception as exc:
                 row.setdefault("source_errors", []).append(f"OFF:{type(exc).__name__}:{exc}")
 
-        # 2) Mercadona pack label. Tesseract runs for every unresolved item with a back image.
-        # Neural OCR is budgeted and stratified; unattempted neural fallbacks are reported explicitly.
         if nutrition is None and product.photos:
             evidence = collect_label_images(
                 retailer_sku=product.product_id,
@@ -197,7 +203,6 @@ def main() -> int:
                             possible = _core_nutrition(result.candidate)
                             if possible is not None:
                                 nutrition = possible
-                                selected_candidate = result.candidate
                                 row["nutrition_source"] = result.candidate.source
                                 row["evidence_level"] = "DECLARED"
                                 source_counts[result.candidate.source] += 1
@@ -269,6 +274,7 @@ def main() -> int:
             "sample_actual": len(sample),
             "categories_in_sample": len(category_stats),
             "per_category_cap": per_category_cap,
+            "acquisition_workers": acquisition_workers,
         },
         "neural_budget": {
             "global_cap": neural_budget,
