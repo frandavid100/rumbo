@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.error import HTTPError
 
 from mercadona_label_evidence import collect_label_images, nutrition_image_candidates
 from openfoodfacts_adapter import fetch_product, to_candidate, USER_AGENT
@@ -42,6 +43,13 @@ class SourceAdaptersTest(unittest.TestCase):
             result=resolve(ProductIdentity("Cereales avena Crunchy Hacendado de cacao",brand="Hacendado",gtin="8402001015205",format="400 g"),[candidate])
             self.assertEqual(result.status,"RESOLVED")
             self.assertEqual(result.level,"MATCHED")
+
+    def test_off_404_is_normal_not_found(self):
+        def transport(url, headers, timeout):
+            raise HTTPError(url, 404, "Not Found", hdrs=None, fp=None)
+        fetched = fetch_product("8480000302007", transport=transport)
+        self.assertFalse(fetched.found)
+        self.assertIsNone(to_candidate(fetched))
 
     def test_off_rejects_invalid_gtin_before_network(self):
         with self.assertRaises(ValueError):
