@@ -18,6 +18,7 @@ PRODUCTS = [
     ("14325", "Galletas tostadas Hacendado"),
     ("18018", "Atún claro al natural Hacendado"),
 ]
+MAX_REGIONS_PER_PRODUCT = 2
 
 
 def parse_extraction(evidence, extraction, product):
@@ -47,10 +48,11 @@ def reading_payload(reading):
 def main() -> int:
     report = {
         "reader": "PP-OCRv6",
+        "mode": "visual_regions_only",
         "products_requested": len(PRODUCTS),
         "api_fetched": 0,
         "visual_regions": 0,
-        "declared_full_image": 0,
+        "regions_ocr_attempted": 0,
         "declared_visual_region": 0,
         "items": [],
     }
@@ -82,22 +84,13 @@ def main() -> int:
             with tempfile.TemporaryDirectory(prefix="rumbo-neural-label-") as td:
                 image_path = Path(td) / f"{product_id}.jpg"
                 download_label_image(evidence.image_url, image_path, timeout=12.0)
-
-                full = extract_with_paddleocr(image_path)
-                full_reading, full_candidate = parse_extraction(evidence, full, product)
-                item["attempts"].append({"variant": "full_image", **reading_payload(full_reading)})
-                if full_candidate is not None:
-                    item["status"] = "DECLARED"
-                    item["via"] = "full_image"
-                    item["nutrition"] = full_candidate.nutrition
-                    report["declared_full_image"] += 1
-                    report["items"].append(item)
-                    continue
-
                 region_dir = Path(td) / "visual-regions"
                 regions = detect_visual_table_regions(image_path, region_dir)
                 report["visual_regions"] += len(regions)
-                for region in regions:
+                if not regions:
+                    item["reason"] = "NO_VISUAL_REGION"
+
+                for region in regions[:MAX_REGIONS_PER_PRODUCT]:
                     meta = {
                         "name": region.name,
                         "box": list(region.box),
@@ -107,6 +100,7 @@ def main() -> int:
                         "line_density": region.line_density,
                     }
                     item["visual_regions"].append(meta)
+                    report["regions_ocr_attempted"] += 1
                     extracted = extract_with_paddleocr(region.path)
                     reading, candidate = parse_extraction(evidence, extracted, product)
                     item["attempts"].append({"variant": region.name, "region": meta, **reading_payload(reading)})
@@ -116,11 +110,13 @@ def main() -> int:
                         item["nutrition"] = candidate.nutrition
                         report["declared_visual_region"] += 1
                         break
+                    if reading.parsed.nutrition:
+                        item["status"] = "REVIEW"
         except Exception as exc:
             item["error"] = f"{type(exc).__name__}:{exc}"
         report["items"].append(item)
 
-    report["declared_total"] = report["declared_full_image"] + report["declared_visual_region"]
+    report["declared_total"] = report["declared_visual_region"]
     report["declared_rate"] = round(report["declared_total"] / len(PRODUCTS), 3)
     Path("live-neural-ocr-report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
