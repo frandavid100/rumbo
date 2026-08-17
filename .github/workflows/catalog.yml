@@ -3,9 +3,6 @@ name: Catalog
 on:
   push:
     branches: [agent/catalog-phase1]
-    paths:
-      - 'tools/catalog/**'
-      - '.github/workflows/catalog.yml'
   pull_request:
     branches: [main]
     paths:
@@ -32,9 +29,12 @@ jobs:
         run: python -m unittest -v test_classifier_coverage.py
       - name: Evaluar corpus amplio
         working-directory: tools/catalog
-        run: python evaluate_classifier_probe.py | tee full-classification-report.json
+        shell: bash
+        run: |
+          set -o pipefail
+          python evaluate_classifier_probe.py | tee full-classification-report.json
       - name: Probar muestra vertical del catálogo
-        run: python -m unittest -v tools/catalog/test_catalog_v1.py
+        run: python -c "import sys; sys.path.insert(0,'tools/catalog'); import test_catalog_v1 as t; t.test_vertical_sample(); t.test_ids_are_stable()"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
