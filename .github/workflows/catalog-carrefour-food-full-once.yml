@@ -1,0 +1,29 @@
+name: Catalog Carrefour food full once
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-food-full-once.yml'
+
+jobs:
+  import-full:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Full food import and classification
+        working-directory: tools/catalog
+        run: python carrefour_radar_catalog_importer.py --workers 24
+      - name: Upload development catalog
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-food-catalog-full
+          path: tools/catalog/carrefour-catalog-output/
+          retention-days: 7
+          if-no-files-found: error
