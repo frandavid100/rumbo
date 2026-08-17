@@ -23,6 +23,8 @@ def test_vertical_sample():
         assert levels=={"CORROBORATED":6,"GENERIC":5,"MATCHED":1}
         assert con.execute("select count(*) from evidence").fetchone()[0]==24
         assert con.execute("select count(*) from eligibility where reason is not null").fetchone()[0]==0
+        image=con.execute("select kind,source,license,attribution,redistributable,is_primary from product_images").fetchone()
+        assert image==("front","Open Food Facts","CC BY-SA","Open Food Facts contributors",1,1)
         con.close()
 
 def test_ids_are_stable():
