@@ -5,7 +5,7 @@ from nutrition_label_reader import LabelReadResult, read_nutrition_label
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 from mercadona_label_evidence import LabelImageEvidence
 
-ADAPTER_VERSION = "1.0.0"
+ADAPTER_VERSION = "1.0.1"
 
 
 @dataclass(frozen=True)
@@ -69,4 +69,5 @@ def to_candidate(reading: MercadonaLabelReading, *, gtin: str | None = None,
         claim=(f"DECLARED from pack image; reader={ADAPTER_VERSION}; "
                f"vision={reading.extraction.engine}:{reading.extraction.engine_version or 'unknown'}; "
                f"basis={reading.parsed.basis}"),
+        evidence_level="DECLARED",
     )
