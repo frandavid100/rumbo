@@ -12,7 +12,7 @@ from mercadona_nutrition_reader import VisionExtraction, MercadonaLabelReading, 
 from nutrition_ocr_ensemble import ParsedOCRReading, OCREnsembleResult, fuse_ocr_readings
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 
-PIPELINE_VERSION = "1.2.0"
+PIPELINE_VERSION = "1.2.1"
 USER_AGENT = "RumboCatalog/0.1 (label reader; contact: frandavid100@users.noreply.github.com)"
 
 
@@ -122,7 +122,8 @@ def process_label_file_ensemble(
                 return LabelEnsemblePipelineResult("DECLARED", direct, None, tuple(readings), None)
 
         ensemble = fuse_ocr_readings(
-            ParsedOCRReading(name, reading.parsed) for name, reading in readings
+            ParsedOCRReading(name, reading.parsed, reading.extraction.confidence)
+            for name, reading in readings
         )
         candidate = _ensemble_candidate(evidence, ensemble, gtin=gtin, brand=brand, format=format)
         if candidate is not None:
