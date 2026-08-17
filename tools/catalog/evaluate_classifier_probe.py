@@ -7,20 +7,35 @@ from classifier import ProductFeatures, classify, classify_type, CLASSIFIER_VERS
 
 ROOT = Path(__file__).resolve().parent
 PROBE = ROOT / "fixtures" / "mercadona_full_classification_probe.json"
+OVERRIDES = ROOT / "fixtures" / "classification_nutrition_overrides.json"
 
 
 def main() -> int:
     items = json.loads(PROBE.read_text(encoding="utf-8"))
+    overrides = {
+        item["name"]: item
+        for item in json.loads(OVERRIDES.read_text(encoding="utf-8"))
+    } if OVERRIDES.exists() else {}
     type_errors = []
     role_errors = []
     full_reviews = []
     missing_nutrition = []
     types = Counter()
     roles = Counter()
+    evidence_levels = Counter()
     resolved = 0
     fully_classified = 0
 
-    for item in items:
+    for original in items:
+        item = dict(original)
+        override = overrides.get(item["name"])
+        if override:
+            item.update({
+                "nutrition_status": override["nutrition_status"],
+                "nutrition": override["nutrition"],
+                "expected_roles": override["expected_roles"],
+                "evidence": override["evidence"],
+            })
         nutrition = item.get("nutrition")
         features = ProductFeatures(
             name=item["name"],
@@ -41,6 +56,9 @@ def main() -> int:
             continue
 
         resolved += 1
+        evidence = item.get("evidence")
+        if isinstance(evidence, dict) and evidence.get("level"):
+            evidence_levels[evidence["level"]] += 1
         result = classify(features)
         actual_roles = {a.value for a in result.nutritional_roles}
         expected_roles = set(item.get("expected_roles", []))
@@ -63,6 +81,9 @@ def main() -> int:
         "products": len(items),
         "nutrition_resolved": resolved,
         "nutrition_missing": len(missing_nutrition),
+        "nutrition_coverage": round(resolved / len(items), 3),
+        "nutrition_overrides_applied": len(overrides),
+        "evidence_levels_from_overrides": dict(sorted(evidence_levels.items())),
         "type_correct": len(items) - len(type_errors),
         "fully_classified_resolved": fully_classified,
         "type_errors": type_errors,
