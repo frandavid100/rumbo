@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import re, unicodedata
 from typing import Iterable
 
-CLASSIFIER_VERSION = "4.4.0"
+CLASSIFIER_VERSION = "4.5.0"
 
 NUTRITIONAL_ROLES = {
     "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN",
@@ -22,7 +22,7 @@ TYPE_POLICIES = {
     "COCOA_POWDER": (10, 5, 25), "SWEET_POWDER": (15, 5, 30),
     "BREWED_DRINK_BASE": (7, 2, 20),
     "DRY_RICE": (80, 40, 120), "DRY_PASTA": (80, 40, 120),
-    "FRESH_FILLED_PASTA": (125, 80, 200),
+    "COOKED_GRAIN": (180, 80, 300), "FRESH_FILLED_PASTA": (125, 80, 200),
     "FRESH_STARCH": (250, 100, 400), "BREAD": (70, 30, 150),
     "MAIN_MEAT": (150, 75, 250), "CURED_MEAT": (50, 20, 100),
     "MAIN_FISH": (170, 80, 300), "MAIN_EGG": (120, 50, 240),
@@ -82,6 +82,7 @@ def classify_type(f):
     p=product_text(f)
     high=[
         (r"\b(ravioli|tortellini|pasta fresca rellena|pasta rellena)\b","FRESH_FILLED_PASTA","type.fresh_filled_pasta"),
+        (r"\b(quinoa cocida|bulgur cocido|trigo sarraceno cocido|mijo cocido)\b","COOKED_GRAIN","type.cooked_grain"),
         (r"\b(masa fresca pizza|masa de pizza)\b","COOKING_INGREDIENT","type.pizza_dough"),
         (r"\bhummus\b","SPREAD","type.spread_hummus"),
         (r"\b(cafe soluble|cafe molido|cafe en capsula|te verde|te negro|rooibos|infusion)\b","BREWED_DRINK_BASE","type.brewed_drink_base"),
@@ -108,7 +109,7 @@ def classify_type(f):
         (r"\b(cereales?|copos de avena|corn flakes|copos de maiz|muesli|granola)\b","BREAKFAST_CEREAL","type.breakfast_cereal"),
     ]
     for pattern,typ,rid in high:
-        if re.search(pattern,p): return _a(typ,.98,rid,f"name/legal/category:{p}")
+        if re.search(pattern,p): return _a(typ,.98,rid,f"name/legal:{p}")
     rules=[
         (r"\b(proteina en polvo|whey|protein powder|isolat[eo])\b","PROTEIN_POWDER","type.protein_powder"),
         (r"\b(cacao puro|cacao en polvo|cocoa powder)\b","COCOA_POWDER","type.cocoa_powder"),
@@ -130,7 +131,7 @@ def classify_type(f):
         (r"\b(platano|banana|manzanas?|peras?|naranjas?|mandarina|melocoton|kiwi|mango|melon|sandia|uva|fresa|freson|cereza|pomelo|mora|moras|arandano|arandanos)\b","FRUIT","type.fruit"),
     ]
     for pattern,typ,rid in rules:
-        if re.search(pattern,p): return _a(typ,.98,rid,f"name/legal/category:{p}")
+        if re.search(pattern,p): return _a(typ,.98,rid,f"name/legal:{p}")
     c=category_text(f)
     if re.search(r"\bmarisco y pescado\b", c): return _a("MAIN_FISH",.90,"type.category_fallback.main_fish",f"category:{c}")
     if re.search(r"^carne$", c): return _a("MAIN_MEAT",.90,"type.category_fallback.main_meat",f"category:{c}")
@@ -138,7 +139,7 @@ def classify_type(f):
 
 def nutritional_roles(f,typ,serving):
     roles=[]
-    semantic={"MAIN_MEAT":"PRIMARY_PROTEIN","MAIN_FISH":"PRIMARY_PROTEIN","MAIN_EGG":"PRIMARY_PROTEIN","DRY_RICE":"PRIMARY_CARBOHYDRATE","DRY_PASTA":"PRIMARY_CARBOHYDRATE","FRESH_STARCH":"PRIMARY_CARBOHYDRATE","BREAD":"PRIMARY_CARBOHYDRATE","LEGUME":"PRIMARY_CARBOHYDRATE","CULINARY_OIL":"CONCENTRATED_FAT","VEGETABLE":"VEGETABLE","PICKLED_VEGETABLE":"VEGETABLE","FRUIT":"FRUIT","DRIED_FRUIT":"FRUIT"}
+    semantic={"MAIN_MEAT":"PRIMARY_PROTEIN","MAIN_FISH":"PRIMARY_PROTEIN","MAIN_EGG":"PRIMARY_PROTEIN","DRY_RICE":"PRIMARY_CARBOHYDRATE","DRY_PASTA":"PRIMARY_CARBOHYDRATE","COOKED_GRAIN":"PRIMARY_CARBOHYDRATE","FRESH_STARCH":"PRIMARY_CARBOHYDRATE","BREAD":"PRIMARY_CARBOHYDRATE","LEGUME":"PRIMARY_CARBOHYDRATE","CULINARY_OIL":"CONCENTRATED_FAT","VEGETABLE":"VEGETABLE","PICKLED_VEGETABLE":"VEGETABLE","FRUIT":"FRUIT","DRIED_FRUIT":"FRUIT"}
     if typ in semantic: roles.append(_a(semantic[typ],.98,f"nutrition.semantic.{typ.lower()}",f"culinary_type:{typ}"))
     protein=serving_amount(f,"protein_g",serving); carbs=serving_amount(f,"carbohydrate_g",serving); fat=serving_amount(f,"fat_g",serving)
     if typ in {"FRESH_FILLED_PASTA","PREPARED_DISH"}:
@@ -164,7 +165,7 @@ def culinary_roles(typ):
     mapping={
         "MILK_BASE":["CEREAL_BASE","POWDER_BASE","BEVERAGE","STANDALONE"],"CREAMY_BASE":["CEREAL_BASE","POWDER_BASE","STANDALONE","DESSERT"],
         "BREAKFAST_CEREAL":["CEREAL_MIX_IN"],"PROTEIN_POWDER":["POWDER_MIX_IN"],"COCOA_POWDER":["POWDER_MIX_IN","TOPPING"],"SWEET_POWDER":["POWDER_MIX_IN"],"BREWED_DRINK_BASE":["BEVERAGE"],
-        "DRY_RICE":["PLATE_BASE","SIDE"],"DRY_PASTA":["PLATE_BASE","SIDE"],"FRESH_FILLED_PASTA":["PLATE_CENTER","PLATE_BASE"],"FRESH_STARCH":["PLATE_BASE","SIDE"],"BREAD":["SANDWICH_BASE","PLATE_BASE","STANDALONE"],
+        "DRY_RICE":["PLATE_BASE","SIDE"],"DRY_PASTA":["PLATE_BASE","SIDE"],"COOKED_GRAIN":["PLATE_BASE","SIDE"],"FRESH_FILLED_PASTA":["PLATE_CENTER","PLATE_BASE"],"FRESH_STARCH":["PLATE_BASE","SIDE"],"BREAD":["SANDWICH_BASE","PLATE_BASE","STANDALONE"],
         "MAIN_MEAT":["PLATE_CENTER","SANDWICH_FILLING"],"CURED_MEAT":["SANDWICH_FILLING","STANDALONE","TOPPING"],"MAIN_FISH":["PLATE_CENTER","SANDWICH_FILLING"],"MAIN_EGG":["PLATE_CENTER","SANDWICH_FILLING","BINDER"],
         "VEGETABLE":["SIDE","TOPPING"],"PICKLED_VEGETABLE":["SIDE","TOPPING","STANDALONE"],"FRUIT":["STANDALONE","DESSERT"],"DRIED_FRUIT":["STANDALONE","DESSERT","TOPPING"],"CULINARY_OIL":["COOKING_MEDIUM","SAUCE_DRESSING"],"FAT_COMPLEMENT":["TOPPING","STANDALONE"],
         "SAUCE":["SAUCE_DRESSING","TOPPING"],"LEGUME":["PLATE_CENTER","PLATE_BASE","SIDE"],"CHEESE":["TOPPING","SANDWICH_FILLING","STANDALONE"],"COOKING_INGREDIENT":["BINDER","COATING"],
