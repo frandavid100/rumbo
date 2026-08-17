@@ -1,5 +1,5 @@
 {
-  "importer_version": "radarsuper-carrefour-1.1.0",
+  "importer_version": "radarsuper-carrefour-1.1.1",
   "classifier_version": "4.6.1-quality",
   "nutrition_validator_version": "1.0.0",
   "allowed_food_categories": [
@@ -75,7 +75,7 @@
     "FETCH_ERROR": 0
   },
   "nutrition_sources": {
-    "RADARSUPER": 23
+    "OPEN_FOOD_FACTS_VIA_RADARSUPER": 23
   },
   "rejection_reasons": {
     "NUTRITION_MISSING": 154,
