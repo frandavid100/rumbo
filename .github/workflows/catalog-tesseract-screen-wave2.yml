@@ -1,0 +1,43 @@
+name: Catalog Tesseract screen wave2
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/tesseract_screen.py'
+      - 'tools/catalog/fixtures/tesseract_screen_wave2_batch.json'
+      - '.github/workflows/catalog-tesseract-screen-wave2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TESSERACT_SCREEN_BATCH: fixtures/tesseract_screen_wave2_batch.json
+      TESSERACT_SCREEN_OUTPUT: tesseract-screen-wave2-output
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar Tesseract y visión
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check opencv-python-headless Pillow
+      - name: Cribar segunda oleada
+        working-directory: tools/catalog
+        run: python tesseract_screen.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-tesseract-screen-wave2-report
+          path: |
+            tools/catalog/tesseract-screen-wave2-output/summary.json
+            tools/catalog/tesseract-screen-wave2-output/report.json
+          if-no-files-found: warn
+          retention-days: 7
