@@ -3,15 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import tempfile
-from typing import Callable
+from typing import Callable, Iterable
 from urllib.request import Request, urlopen
 
 from label_text_extractor import TextExtraction, extract_with_tesseract
 from mercadona_label_evidence import LabelImageEvidence
 from mercadona_nutrition_reader import VisionExtraction, MercadonaLabelReading, read_evidence, to_candidate
-from nutrition_resolver import NutritionCandidate
+from nutrition_ocr_ensemble import ParsedOCRReading, OCREnsembleResult, fuse_ocr_readings
+from nutrition_resolver import NutritionCandidate, ProductIdentity
 
-PIPELINE_VERSION = "1.1.0"
+PIPELINE_VERSION = "1.2.0"
 USER_AGENT = "RumboCatalog/0.1 (label reader; contact: frandavid100@users.noreply.github.com)"
 
 
@@ -20,6 +21,15 @@ class LabelPipelineResult:
     reading: MercadonaLabelReading | None
     candidate: NutritionCandidate | None
     status: str
+    reason: str | None
+
+
+@dataclass(frozen=True)
+class LabelEnsemblePipelineResult:
+    status: str
+    candidate: NutritionCandidate | None
+    ensemble: OCREnsembleResult | None
+    readings: tuple[tuple[str, MercadonaLabelReading], ...]
     reason: str | None
 
 
@@ -41,11 +51,6 @@ def process_label_file(
     format: str | None = None,
     extractor: Callable[[str | Path], TextExtraction] = extract_with_tesseract,
 ) -> LabelPipelineResult:
-    """OCR and validate an already downloaded pack image.
-
-    This lets the caller reuse one transient download across multiple OCR
-    strategies without hitting Mercadona's image host again.
-    """
     try:
         extracted = extractor(image_path)
         vision = VisionExtraction(
@@ -64,6 +69,72 @@ def process_label_file(
         return LabelPipelineResult(None, None, "ERROR", f"{type(exc).__name__}:{exc}")
 
 
+def _ensemble_candidate(
+    evidence: LabelImageEvidence,
+    ensemble: OCREnsembleResult,
+    *, gtin: str | None, brand: str | None, format: str | None,
+) -> NutritionCandidate | None:
+    if not ensemble.declared_usable or ensemble.nutrition is None:
+        return None
+    field_trace = ";".join(
+        f"{field.name}={field.value}@{','.join(field.strategies)}" for field in ensemble.fields
+    )
+    return NutritionCandidate(
+        identity=ProductIdentity(name=evidence.product_name, brand=brand, gtin=gtin, format=format),
+        nutrition=ensemble.nutrition,
+        source="Mercadona label OCR ensemble",
+        source_url=evidence.image_url,
+        source_record_id=f"{evidence.retailer_sku}:image:{evidence.image_index}",
+        observed_at=evidence.observed_at,
+        upstream_license=None,
+        redistribution_allowed=False,
+        source_family="Mercadona label",
+        evidence_level="DECLARED",
+        claim=(f"DECLARED from one pack image via OCR ensemble {ENSEMBLE_VERSION}; "
+               f"confidence={ensemble.confidence:.3f}; corroborated_fields={ensemble.corroborated_fields}; "
+               f"{field_trace}"),
+    )
+
+
+def process_label_file_ensemble(
+    evidence: LabelImageEvidence,
+    image_path: str | Path,
+    *,
+    strategies: Iterable[tuple[str, Callable[[str | Path], TextExtraction]]],
+    gtin: str | None = None,
+    brand: str | None = None,
+    format: str | None = None,
+) -> LabelEnsemblePipelineResult:
+    """Run multiple OCR segmentations over one local image and fuse by field."""
+    readings: list[tuple[str, MercadonaLabelReading]] = []
+    try:
+        for name, extractor in strategies:
+            extracted = extractor(image_path)
+            reading = read_evidence(evidence, VisionExtraction(
+                text=extracted.text,
+                confidence=extracted.confidence,
+                engine=extracted.engine,
+                engine_version=extracted.engine_version,
+            ))
+            readings.append((name, reading))
+            direct = to_candidate(reading, gtin=gtin, brand=brand, format=format)
+            if direct is not None:
+                return LabelEnsemblePipelineResult("DECLARED", direct, None, tuple(readings), None)
+
+        ensemble = fuse_ocr_readings(
+            ParsedOCRReading(name, reading.parsed) for name, reading in readings
+        )
+        candidate = _ensemble_candidate(evidence, ensemble, gtin=gtin, brand=brand, format=format)
+        if candidate is not None:
+            return LabelEnsemblePipelineResult("DECLARED", candidate, ensemble, tuple(readings), None)
+        return LabelEnsemblePipelineResult(
+            "REVIEW" if ensemble.nutrition else "UNREADABLE",
+            None, ensemble, tuple(readings), ",".join(ensemble.reasons) or None,
+        )
+    except Exception as exc:
+        return LabelEnsemblePipelineResult("ERROR", None, None, tuple(readings), f"{type(exc).__name__}:{exc}")
+
+
 def process_label_image(
     evidence: LabelImageEvidence,
     *,
@@ -74,7 +145,6 @@ def process_label_image(
     downloader: Callable[[str, Path, float], None] = download_label_image,
     extractor: Callable[[str | Path], TextExtraction] = extract_with_tesseract,
 ) -> LabelPipelineResult:
-    """Download one Mercadona pack image once, OCR it and validate nutrition."""
     try:
         with tempfile.TemporaryDirectory(prefix="rumbo-label-") as td:
             path = Path(td) / "label-image"
