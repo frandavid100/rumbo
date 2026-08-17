@@ -33,7 +33,7 @@ jobs:
         run: |
           set -o pipefail
           python evaluate_classifier_probe.py | tee full-classification-report.json
-      - name: Probar resolver nutricional
+      - name: Probar resolver nutricional 1.x
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_resolver.py
       - name: Evaluar cobertura del resolver
