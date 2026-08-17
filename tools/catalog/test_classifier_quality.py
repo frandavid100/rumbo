@@ -43,6 +43,30 @@ class ClassifierQualityTests(unittest.TestCase):
         f = self.t("Caldo casero de carne Gallina Blanca 1 l", "Conservas, caldos y cremas")
         self.assertEqual(classify_type(f).value, "PREPARED_DISH")
 
+    def test_meatballs_with_sauce_are_prepared_not_sauce(self):
+        f = self.t("Albóndigas con salsa de tomate Extra Carrefour 300 g", "Carne")
+        self.assertEqual(classify_type(f).value, "PREPARED_DISH")
+
+    def test_ribs_with_barbecue_sauce_are_prepared(self):
+        f = self.t("Costillas de cerdo asadas con salsa barbacoa 550 g", "Carne")
+        self.assertEqual(classify_type(f).value, "PREPARED_DISH")
+
+    def test_tomato_frito_with_oil_is_sauce(self):
+        f = self.t("Tomate frito con aceite de oliva Carrefour 350 g", "Conservas, caldos y cremas")
+        self.assertEqual(classify_type(f).value, "SAUCE")
+
+    def test_bread_with_potato_is_bread(self):
+        f = self.t("Pan Burger de patata estilo artesano Bimbo 290 g", "Panadería y pastelería")
+        self.assertEqual(classify_type(f).value, "BREAD")
+
+    def test_pizza_is_prepared_not_cheese(self):
+        f = self.t("Pizza de peperoni ahumado Carrefour 320 g", "Pizzas y platos preparados")
+        self.assertEqual(classify_type(f).value, "PREPARED_DISH")
+
+    def test_baby_jar_is_prepared(self):
+        f = self.t("Tarrito de suprema de merluza con arroz desde 6 meses 235 g", "Marisco y pescado")
+        self.assertEqual(classify_type(f).value, "PREPARED_DISH")
+
     def test_impossible_nutrition_blocks_classification(self):
         f = self.t("Pasta seca 500 g", "Arroz, legumbres y pasta", calories=350, protein=500, carb=70, fat=2)
         result = classify(f)
