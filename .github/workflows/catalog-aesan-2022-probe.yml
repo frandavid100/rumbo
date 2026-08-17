@@ -32,25 +32,21 @@ jobs:
         working-directory: tools/catalog
         run: pytest -q test_aesan_2022_match_probe.py
 
-      - name: Resolve AESAN public links
+      - name: Probe official workbook URL
         run: |
-          echo 'OPEN_DATA_SHORT:'
-          curl -sSIL --max-redirs 10 https://lnkd.in/dqUd8VdN | grep -iE '^(HTTP/|location:)' || true
-          echo 'POWER_BI_SHORT:'
-          curl -sSIL --max-redirs 10 https://lnkd.in/dAvvneQB | grep -iE '^(HTTP/|location:)' || true
+          curl -sSIL --retry 3 --retry-all-errors --max-redirs 5 \
+            https://www.aesan.gob.es/AECOSAN/docs/documentos/seguridad_alimentaria/bases_datos/BasedatosWeb.xlsx \
+            | grep -iE '^(HTTP/|content-type:|content-length:|last-modified:)' || true
 
       - name: Run AESAN 2022 probe
-        continue-on-error: true
         working-directory: tools/catalog
         env:
-          AESAN_2022_PAGE_URL: https://www.aesan.gob.es/AECOSAN/web/datos_abiertos/bases_datos_AESAN.htm
-        run: |
-          sed -i 's#https://www.aesan.gob.es/AECOSAN/web/seguridad_alimentaria/subseccion/alimentosBebidas.htm#${{ env.AESAN_2022_PAGE_URL }}#' aesan_2022_match_probe.py
-          python aesan_2022_match_probe.py
+          AESAN_2022_EXCEL_URL: https://www.aesan.gob.es/AECOSAN/docs/documentos/seguridad_alimentaria/bases_datos/BasedatosWeb.xlsx
+        run: python aesan_2022_match_probe.py
 
-      - name: Upload report if available
+      - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: catalog-aesan-2022-probe-report
           path: tools/catalog/aesan-2022-probe-output/
-          if-no-files-found: ignore
+          if-no-files-found: error
