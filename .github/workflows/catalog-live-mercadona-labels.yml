@@ -10,7 +10,7 @@ on:
       - 'tools/catalog/nutrition_label_reader.py'
       - 'tools/catalog/nutrition_ocr_ensemble.py'
       - 'tools/catalog/label_text_extractor.py'
-      - 'tools/catalog/label_image_preprocess.py'
+      - 'tools/catalog/nutrition_table_region_detector.py'
       - '.github/workflows/catalog-live-mercadona-labels.yml'
   workflow_dispatch:
 
@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Instalar OCR y preprocesado
+      - name: Instalar OCR y detector de regiones
         run: |
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr tesseract-ocr-spa
