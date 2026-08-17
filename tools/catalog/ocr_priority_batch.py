@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 import json
+import os
 from pathlib import Path
 import tempfile
 
@@ -13,8 +14,9 @@ from mercadona_label_pipeline import download_label_image
 from mercadona_nutrition_importer import import_from_label_file
 from mercadona_weekly_catalog_adapter import fetch_product
 
-BATCH = Path(__file__).resolve().parent / "fixtures" / "ocr_high_probability_batch.json"
-OUT = Path(__file__).resolve().parent / "ocr-priority-output"
+BASE = Path(__file__).resolve().parent
+DEFAULT_BATCH = BASE / "fixtures" / "ocr_high_probability_batch.json"
+DEFAULT_OUT = BASE / "ocr-priority-output"
 
 
 def tess(psm: int):
@@ -31,8 +33,10 @@ def core(nutrition):
 
 
 def main() -> int:
-    OUT.mkdir(parents=True, exist_ok=True)
-    batch = json.loads(BATCH.read_text(encoding="utf-8"))
+    batch_path = Path(os.environ.get("OCR_BATCH_FILE", str(DEFAULT_BATCH)))
+    out = Path(os.environ.get("OCR_OUTPUT_DIR", str(DEFAULT_OUT)))
+    out.mkdir(parents=True, exist_ok=True)
+    batch = json.loads(batch_path.read_text(encoding="utf-8"))
     stats = Counter()
     rows = []
     strategies = (("psm6", tess(6)), ("psm11", tess(11)))
@@ -93,13 +97,14 @@ def main() -> int:
         print(f"processed={i}/{len(batch)} recovered={stats['NUTRITION_RECOVERED']}", flush=True)
 
     summary = {
+        "batch_file": str(batch_path),
         "batch_size": len(batch),
         "stats": dict(stats),
         "recovery_rate": round(stats["NUTRITION_RECOVERED"] / len(batch), 4) if batch else 0,
         "menu_eligible_rate": round(stats["MENU_ELIGIBLE_FROM_BATCH"] / len(batch), 4) if batch else 0,
     }
-    (OUT / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    (OUT / "report.json").write_text(json.dumps({**summary, "items": rows}, ensure_ascii=False, indent=2), encoding="utf-8")
+    (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    (out / "report.json").write_text(json.dumps({**summary, "items": rows}, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
