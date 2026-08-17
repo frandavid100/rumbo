@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 
 from mercadona_label_evidence import collect_label_images, nutrition_image_candidates
+from mercadona_weekly_catalog_adapter import WeeklyCatalogProduct, is_non_food_product, stratified_sample
 from openfoodfacts_adapter import fetch_product, to_candidate, USER_AGENT
 from nutrition_resolver import ProductIdentity, resolve
 
@@ -69,6 +70,20 @@ class SourceAdaptersTest(unittest.TestCase):
             self.assertTrue(all(x.purpose=="PACK_LABEL_CANDIDATE" for x in evidence))
             self.assertEqual(len(nutrition_image_candidates(evidence)),3)
             self.assertTrue(all(Path(x.snapshot_path).exists() for x in evidence))
+
+    def test_non_food_merchandise_is_excluded_from_food_sampling(self):
+        def product(pid, name):
+            return WeeklyCatalogProduct(
+                product_id=pid, ean=None, name=name, brand="Hacendado", legal_name=None,
+                ingredients=None, family="Panadería y pastelería", subcategory="Panadería y pastelería",
+                category_key="Panadería y pastelería", payload={}, photos=(), observed_at="2026-08-17T00:00:00Z",
+            )
+        candle=product("1","Vela de cumpleaños 6 Hacendado")
+        cake=product("2","Bizcocho de chocolate Hacendado")
+        self.assertTrue(is_non_food_product(candle))
+        self.assertFalse(is_non_food_product(cake))
+        sampled=stratified_sample([candle,cake],size=2,per_category_cap=5)
+        self.assertEqual([p.product_id for p in sampled],["2"])
 
 
 if __name__=="__main__": unittest.main()
