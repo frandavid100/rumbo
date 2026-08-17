@@ -8,26 +8,38 @@ from urllib.request import Request, urlopen
 
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 
-ADAPTER_VERSION = "1.0.1"
+ADAPTER_VERSION = "1.1.0"
 API_ROOT = "https://api.nal.usda.gov/fdc/v1"
 SOURCE_NAME = "USDA FoodData Central"
 SOURCE_FAMILY = "USDA FoodData Central"
 UPSTREAM_LICENSE = "CC0-1.0"
 USER_AGENT = "RumboCatalog/0.1 (generic nutrition builder; contact: frandavid100@users.noreply.github.com)"
 
-NUTRIENT_NUMBERS = {
-    "208": "calories",
-    "204": "fat_g",
-    "205": "carbohydrate_g",
-    "203": "protein_g",
-    "291": "fiber_g",
+# FDC exposes both historic nutrient numbers and current nutrient ids depending
+# on data type/API representation. Energy must also be interpreted with its unit:
+# a kJ row must never be mistaken for kcal.
+NUTRIENT_IDENTIFIERS = {
+    # Protein
+    "203": ("protein_g", 10), "1003": ("protein_g", 20),
+    # Total lipid (fat)
+    "204": ("fat_g", 10), "1004": ("fat_g", 20),
+    # Carbohydrate by difference
+    "205": ("carbohydrate_g", 10), "1005": ("carbohydrate_g", 20),
+    # Fiber, total dietary
+    "291": ("fiber_g", 10), "1079": ("fiber_g", 20),
+    # Energy. 1008 is the classic Energy field; Foundation Foods may expose
+    # Atwater general/specific energy via 2047/2048.
+    "208": ("calories", 5), "1008": ("calories", 30),
+    "2047": ("calories", 25), "2048": ("calories", 20),
 }
 NAME_KEYS = {
-    "energy": "calories",
-    "total lipid (fat)": "fat_g",
-    "carbohydrate, by difference": "carbohydrate_g",
-    "protein": "protein_g",
-    "fiber, total dietary": "fiber_g",
+    "energy": ("calories", 5),
+    "metabolizable energy (atwater general factor)": ("calories", 25),
+    "metabolizable energy (atwater specific factor)": ("calories", 20),
+    "total lipid (fat)": ("fat_g", 5),
+    "carbohydrate, by difference": ("carbohydrate_g", 5),
+    "protein": ("protein_g", 5),
+    "fiber, total dietary": ("fiber_g", 5),
 }
 
 
@@ -70,13 +82,36 @@ def _number(value: Any) -> float | None:
         return None
 
 
-def _nutrient_key(row: dict) -> str | None:
+def _unit(row: dict) -> str:
     nutrient = row.get("nutrient") if isinstance(row.get("nutrient"), dict) else {}
-    number = str(nutrient.get("number") or row.get("nutrientNumber") or "").strip()
-    if number in NUTRIENT_NUMBERS:
-        return NUTRIENT_NUMBERS[number]
-    name = str(nutrient.get("name") or row.get("nutrientName") or "").strip().lower()
-    return NAME_KEYS.get(name)
+    value = nutrient.get("unitName") or row.get("unitName") or row.get("unit") or ""
+    return str(value).strip().lower()
+
+
+def _nutrient_key(row: dict) -> tuple[str, int] | None:
+    nutrient = row.get("nutrient") if isinstance(row.get("nutrient"), dict) else {}
+    identifiers = (
+        nutrient.get("id"), row.get("nutrientId"),
+        nutrient.get("number"), row.get("nutrientNumber"),
+    )
+    found = None
+    for raw in identifiers:
+        if raw is None:
+            continue
+        value = NUTRIENT_IDENTIFIERS.get(str(raw).strip())
+        if value and (found is None or value[1] > found[1]):
+            found = value
+    if found is None:
+        name = str(nutrient.get("name") or row.get("nutrientName") or "").strip().lower()
+        found = NAME_KEYS.get(name)
+    if found and found[0] == "calories":
+        unit = _unit(row)
+        # Accept kcal explicitly, or unit-less legacy/test fixtures. Never accept kJ.
+        if unit in {"kj", "kilojoule", "kilojoules"}:
+            return None
+        if unit and unit not in {"kcal", "kilocalorie", "kilocalories"}:
+            return None
+    return found
 
 
 def parse_food(payload: dict) -> FDCFood:
@@ -92,17 +127,20 @@ def parse_food(payload: dict) -> FDCFood:
         "calories": None, "fat_g": None, "carbohydrate_g": None,
         "protein_g": None, "fiber_g": None,
     }
+    priorities = {key: -1 for key in nutrition}
     rows = payload.get("foodNutrients") or []
     if isinstance(rows, list):
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            key = _nutrient_key(row)
-            if not key:
+            identified = _nutrient_key(row)
+            if not identified:
                 continue
+            key, priority = identified
             value = _number(row.get("amount") if "amount" in row else row.get("value"))
-            if value is not None:
+            if value is not None and priority > priorities[key]:
                 nutrition[key] = value
+                priorities[key] = priority
     return FDCFood(fdc_id, description, payload.get("dataType"), nutrition, payload)
 
 
