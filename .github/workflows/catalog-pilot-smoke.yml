@@ -6,6 +6,7 @@ on:
     paths:
       - 'tools/catalog/pilot_large_catalog.py'
       - 'tools/catalog/mercadona_weekly_catalog_adapter.py'
+      - 'tools/catalog/openfoodfacts_adapter.py'
       - '.github/workflows/catalog-pilot-smoke.yml'
   workflow_dispatch:
 
@@ -18,7 +19,8 @@ jobs:
     timeout-minutes: 20
     env:
       PILOT_SIZE: '30'
-      PILOT_CANDIDATE_POOL: '70'
+      PILOT_CANDIDATE_POOL: '140'
+      PILOT_ACQUISITION_WORKERS: '12'
       PILOT_NEURAL_BUDGET: '0'
       PILOT_PER_CATEGORY_CAP: '8'
       PILOT_OFF_DELAY: '0.08'
