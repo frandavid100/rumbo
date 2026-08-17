@@ -4,11 +4,11 @@ import json
 from pathlib import Path
 import tempfile
 
-from label_image_preprocess import build_fallback_variants
 from label_text_extractor import extract_with_tesseract
 from mercadona_label_evidence import nutrition_image_candidates
 from mercadona_label_pipeline import download_label_image, process_label_file_ensemble
 from mercadona_product_adapter import fetch_product
+from nutrition_table_region_detector import detect_nutrition_regions
 
 PRODUCTS = [
     ("14325", "Galletas tostadas Hacendado"),
@@ -31,12 +31,12 @@ def extractor_for(psm: int):
     return lambda path: extract_with_tesseract(path, language="spa", psm=psm)
 
 
-def attempt_payload(result, *, image_index, perspective, variant, screened=False):
+def attempt_payload(result, *, image_index, perspective, variant, region=None):
     return {
         "image_index": image_index,
         "perspective": perspective,
         "variant": variant,
-        "screened": screened,
+        "region": region,
         "status": result.status,
         "reason": result.reason,
         "readings": [{
@@ -66,18 +66,18 @@ def main() -> int:
     report = {
         "products_requested": len(PRODUCTS), "api_fetched": 0, "with_photos": 0,
         "declared": 0, "declared_direct": 0, "declared_ensemble": 0,
-        "declared_fallback": 0, "review_only": 0, "unreadable": 0, "items": [],
+        "declared_region": 0, "review_only": 0, "unreadable": 0,
+        "region_candidates": 0, "items": [],
     }
     snapshot_dir = Path("live-mercadona-snapshots")
     snapshot_dir.mkdir(exist_ok=True)
-    full_strategies = (("psm6", extractor_for(6)), ("psm11", extractor_for(11)))
-    screen_strategy = (("psm6", extractor_for(6)),)
+    strategies = (("psm6", extractor_for(6)), ("psm11", extractor_for(11)))
 
     for product_id, expected_name in PRODUCTS:
         item = {
             "product_id": product_id, "expected_name": expected_name, "api_status": "ERROR",
             "ean": None, "name": None, "photo_count": 0, "status": "UNREADABLE",
-            "declared": None, "attempts": [],
+            "declared": None, "attempts": [], "detected_regions": [],
         }
         try:
             product = fetch_product(product_id, snapshot_dir=snapshot_dir, timeout=8.0)
@@ -101,55 +101,77 @@ def main() -> int:
                         })
                         continue
 
-                    candidates = [("original", path)]
-                    if evidence.perspective == 9:
-                        fallback_dir = Path(td) / f"fallback-{product_id}-{evidence.image_index}"
-                        candidates.extend((v.name, v.path) for v in build_fallback_variants(path, fallback_dir))
+                    # First try the unmodified image. Existing easy cases stay cheap.
+                    direct_result = process_label_file_ensemble(
+                        evidence, path, gtin=product.ean, brand=product.brand, strategies=strategies,
+                    )
+                    attempt = attempt_payload(
+                        direct_result, image_index=evidence.image_index,
+                        perspective=evidence.perspective, variant="original",
+                    )
+                    item["attempts"].append(attempt)
+                    if direct_result.status == "DECLARED" and direct_result.candidate is not None:
+                        via = "ensemble" if direct_result.ensemble is not None else "direct"
+                        item["status"] = "DECLARED"
+                        item["declared"] = {
+                            "image_index": evidence.image_index,
+                            "perspective": evidence.perspective,
+                            "variant": "original", "via": via,
+                            "nutrition": direct_result.candidate.nutrition,
+                            "source_record_id": direct_result.candidate.source_record_id,
+                            "claim": direct_result.candidate.claim,
+                        }
+                        report["declared"] += 1
+                        report[f"declared_{via}"] += 1
+                        break
+                    if direct_result.ensemble is not None and direct_result.ensemble.nutrition:
+                        score = direct_result.ensemble.confidence
+                        best_review = (score, attempt, direct_result.ensemble.nutrition)
 
-                    for variant_name, candidate_path in candidates:
-                        screened = variant_name != "original"
-                        strategies = screen_strategy if screened else full_strategies
+                    # Region detection is a fallback for the observed back-of-pack image.
+                    # Perspective is only a processing priority; the parsed table remains
+                    # the sole authority for DECLARED status.
+                    if evidence.perspective != 9:
+                        continue
+                    region_dir = Path(td) / f"regions-{product_id}-{evidence.image_index}"
+                    try:
+                        regions = detect_nutrition_regions(path, region_dir)
+                    except Exception as exc:
+                        item["detected_regions"].append({"error": f"{type(exc).__name__}:{exc}"})
+                        continue
+                    report["region_candidates"] += len(regions)
+                    for region in regions:
+                        region_meta = {
+                            "name": region.name, "box": list(region.box),
+                            "marker_kinds": list(region.marker_kinds),
+                            "marker_count": region.marker_count,
+                            "detector_confidence": region.confidence,
+                        }
+                        item["detected_regions"].append(region_meta)
                         result = process_label_file_ensemble(
-                            evidence, candidate_path, gtin=product.ean,
+                            evidence, region.path, gtin=product.ean,
                             brand=product.brand, strategies=strategies,
                         )
-
-                        # Expensive second segmentation is only justified when
-                        # the cheap fallback pass has already found at least two
-                        # core nutrition fields on this crop/contrast variant.
-                        if screened and result.status != "DECLARED":
-                            nutrition = result.ensemble.nutrition if result.ensemble else None
-                            if nutrition and len(nutrition) >= 2:
-                                result = process_label_file_ensemble(
-                                    evidence, candidate_path, gtin=product.ean,
-                                    brand=product.brand, strategies=full_strategies,
-                                )
-
                         attempt = attempt_payload(
                             result, image_index=evidence.image_index,
-                            perspective=evidence.perspective, variant=variant_name,
-                            screened=screened,
+                            perspective=evidence.perspective, variant=region.name,
+                            region=region_meta,
                         )
                         item["attempts"].append(attempt)
-
                         if result.status == "DECLARED" and result.candidate is not None:
-                            via = "fallback" if variant_name != "original" else (
-                                "ensemble" if result.ensemble is not None else "direct"
-                            )
                             item["status"] = "DECLARED"
                             item["declared"] = {
                                 "image_index": evidence.image_index,
                                 "perspective": evidence.perspective,
-                                "variant": variant_name,
-                                "via": via,
+                                "variant": region.name, "via": "region",
+                                "region": region_meta,
                                 "nutrition": result.candidate.nutrition,
                                 "source_record_id": result.candidate.source_record_id,
                                 "claim": result.candidate.claim,
                             }
                             report["declared"] += 1
-                            report[f"declared_{via}"] += 1
+                            report["declared_region"] += 1
                             break
-
                         if result.ensemble is not None and result.ensemble.nutrition:
                             score = result.ensemble.confidence
                             if best_review is None or score > best_review[0]:
