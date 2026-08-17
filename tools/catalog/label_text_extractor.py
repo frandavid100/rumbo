@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from pathlib import Path
 import shutil
 import subprocess
-import tempfile
 from typing import Callable
 
 
-EXTRACTOR_VERSION = "1.0.0"
+EXTRACTOR_VERSION = "1.0.1"
 
 
 @dataclass(frozen=True)
@@ -55,9 +54,8 @@ def extract_with_tesseract(
 ) -> TextExtraction:
     """Extract text from a pack-label image using build-time Tesseract.
 
-    This is deliberately outside Android/runtime. The nutritional parser remains
-    authoritative: OCR output is only a proposal and never becomes DECLARED
-    unless the deterministic label reader validates basis, core macros and
+    OCR output is only a proposal. It never becomes DECLARED unless the
+    deterministic nutrition-label reader validates basis, core macros and
     energy coherence.
     """
     path = Path(image_path)
@@ -70,7 +68,6 @@ def extract_with_tesseract(
     except Exception as exc:
         raise ExtractionError(f"Tesseract failed: {exc}") from exc
 
-    words: list[str] = []
     confidences: list[float] = []
     lines: dict[tuple[str, str, str, str], list[tuple[int, str]]] = {}
     for index, raw in enumerate(tsv.splitlines()):
@@ -88,13 +85,15 @@ def extract_with_tesseract(
             conf = -1.0
         if conf >= 0:
             confidences.append(conf)
-        key = (cols[2], cols[3], cols[4], cols[5])
+        # TSV: level,page,block,par,line,word,left,top,width,height,conf,text.
+        # A line is identified by page+block+paragraph+line; word_num only
+        # orders words inside that line.
+        key = (cols[1], cols[2], cols[3], cols[4])
         try:
             word_num = int(cols[5])
         except ValueError:
             word_num = len(lines.get(key, []))
         lines.setdefault(key, []).append((word_num, text))
-        words.append(text)
 
     ordered_lines = [
         " ".join(text for _, text in sorted(parts))
