@@ -8,15 +8,13 @@ from urllib.request import Request, urlopen
 
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 
-ADAPTER_VERSION = "1.0.0"
+ADAPTER_VERSION = "1.0.1"
 API_ROOT = "https://api.nal.usda.gov/fdc/v1"
 SOURCE_NAME = "USDA FoodData Central"
 SOURCE_FAMILY = "USDA FoodData Central"
 UPSTREAM_LICENSE = "CC0-1.0"
 USER_AGENT = "RumboCatalog/0.1 (generic nutrition builder; contact: frandavid100@users.noreply.github.com)"
 
-# Nutrient numbers used by FoodData Central. Names remain a defensive fallback
-# because older/exported fixtures are not always shaped exactly like API rows.
 NUTRIENT_NUMBERS = {
     "208": "calories",
     "204": "fat_g",
@@ -44,20 +42,21 @@ class FDCFood:
 
 @dataclass(frozen=True)
 class GenericMapping:
-    """Explicitly accepted mapping from a simple Rumbo food to one FDC food.
-
-    The adapter deliberately does not auto-accept fuzzy search results. A caller
-    may search FDC to propose candidates, but a GENERIC candidate is only built
-    from an explicit mapping carrying the exact FDC id and a review rationale.
-    """
+    """Explicitly accepted mapping from a simple Rumbo food to one FDC record."""
     target_name: str
     fdc_id: int
     fdc_description: str
     rationale: str
 
 
-def _default_transport(url: str, headers: dict[str, str], timeout: float) -> bytes:
+def _default_get(url: str, headers: dict[str, str], timeout: float) -> bytes:
     req = Request(url, headers=headers)
+    with urlopen(req, timeout=timeout) as response:
+        return response.read()
+
+
+def _default_post(url: str, headers: dict[str, str], body: bytes, timeout: float) -> bytes:
+    req = Request(url, headers=headers, data=body, method="POST")
     with urlopen(req, timeout=timeout) as response:
         return response.read()
 
@@ -89,7 +88,6 @@ def parse_food(payload: dict) -> FDCFood:
     description = str(payload.get("description") or "").strip()
     if not description:
         raise ValueError("FoodData Central record has no description")
-
     nutrition: dict[str, float | None] = {
         "calories": None, "fat_g": None, "carbohydrate_g": None,
         "protein_g": None, "fiber_g": None,
@@ -113,7 +111,7 @@ def fetch_food(
     *,
     api_key: str,
     timeout: float = 15.0,
-    transport: Callable[[str, dict[str, str], float], bytes] = _default_transport,
+    transport: Callable[[str, dict[str, str], float], bytes] = _default_get,
 ) -> FDCFood:
     if not api_key:
         raise ValueError("FoodData Central api_key is required")
@@ -128,9 +126,9 @@ def search_foods(
     api_key: str,
     page_size: int = 10,
     timeout: float = 15.0,
-    transport: Callable[[str, dict[str, str], float], bytes] = _default_transport,
+    transport: Callable[[str, dict[str, str], bytes, float], bytes] = _default_post,
 ) -> list[dict]:
-    """Return proposals only; callers must not publish them as GENERIC automatically."""
+    """Return Foundation/SR proposals only; never auto-publish a search result."""
     if not api_key:
         raise ValueError("FoodData Central api_key is required")
     body = json.dumps({
@@ -139,13 +137,8 @@ def search_foods(
         "dataType": ["Foundation", "SR Legacy"],
     }).encode("utf-8")
     url = f"{API_ROOT}/foods/search?{urlencode({'api_key': api_key})}"
-    request_headers = {"User-Agent": USER_AGENT, "Accept": "application/json", "Content-Type": "application/json"}
-
-    # transport contract is GET-shaped elsewhere in the catalog code. For tests
-    # and offline fixtures, expose a deterministic pseudo-POST envelope instead
-    # of silently accepting search results as evidence.
-    envelope = {"url": url, "headers": request_headers, "body": body.decode("utf-8")}
-    raw = transport("data:application/json," + json.dumps(envelope), request_headers, timeout)
+    headers = {"User-Agent": USER_AGENT, "Accept": "application/json", "Content-Type": "application/json"}
+    raw = transport(url, headers, body, timeout)
     payload = json.loads(raw.decode("utf-8"))
     foods = payload.get("foods") if isinstance(payload, dict) else None
     return [x for x in (foods or []) if isinstance(x, dict)]
