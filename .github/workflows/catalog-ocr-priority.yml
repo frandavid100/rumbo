@@ -5,7 +5,7 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - 'tools/catalog/ocr_priority_batch.py'
-      - 'tools/catalog/fixtures/ocr_high_probability_batch.json'
+      - 'tools/catalog/fixtures/neural_high_priority_batch_30.json'
       - '.github/workflows/catalog-ocr-priority.yml'
   workflow_dispatch:
 
@@ -15,9 +15,11 @@ permissions:
 jobs:
   ocr-priority:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
+      OCR_BATCH_FILE: fixtures/neural_high_priority_batch_30.json
+      OCR_OUTPUT_DIR: ocr-neural-high-30-output
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,15 +31,15 @@ jobs:
           sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-spa
           python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
           python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' opencv-python-headless Pillow
-      - name: Ejecutar lote OCR priorizado
+      - name: Ejecutar los 30 candidatos cribados
         working-directory: tools/catalog
         run: python ocr_priority_batch.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: catalog-ocr-priority-report
+          name: catalog-ocr-neural-high-30-report
           path: |
-            tools/catalog/ocr-priority-output/summary.json
-            tools/catalog/ocr-priority-output/report.json
+            tools/catalog/ocr-neural-high-30-output/summary.json
+            tools/catalog/ocr-neural-high-30-output/report.json
           if-no-files-found: warn
           retention-days: 7
