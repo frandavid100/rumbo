@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Instalar dependencias de pruebas de imagen
-        run: python -m pip install --disable-pip-version-check Pillow
+        run: python -m pip install --disable-pip-version-check Pillow opencv-python-headless
       - name: Probar clasificador dorado
         working-directory: tools/catalog
         run: python -m unittest -v test_classifier.py
@@ -59,9 +59,12 @@ jobs:
       - name: Probar preprocesado visual de etiquetas
         working-directory: tools/catalog
         run: python -m unittest -v test_label_image_preprocess.py
-      - name: Probar detector de regiones nutricionales
+      - name: Probar detector OCR de regiones nutricionales
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_table_region_detector.py
+      - name: Probar detector visual de tablas nutricionales
+        working-directory: tools/catalog
+        run: python -m unittest -v test_nutrition_visual_table_detector.py
       - name: Probar pipeline Mercadona etiqueta a DECLARED
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_label_pipeline.py
