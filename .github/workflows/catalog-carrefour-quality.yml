@@ -1,0 +1,53 @@
+name: Catalog Carrefour quality rebuild
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/nutrition_validation.py'
+      - 'tools/catalog/classifier_quality.py'
+      - 'tools/catalog/carrefour_radar_catalog_importer_v2.py'
+      - 'tools/catalog/audit_carrefour_quality.py'
+      - 'tools/catalog/test_classifier_quality.py'
+      - '.github/workflows/catalog-carrefour-quality.yml'
+  workflow_dispatch:
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Regression tests
+        working-directory: tools/catalog
+        run: python -m unittest -v test_classifier_quality.py
+
+      - name: Smoke import
+        working-directory: tools/catalog
+        run: python carrefour_radar_catalog_importer_v2.py --out carrefour-quality-smoke --max-pages 1 --max-products 180 --workers 16
+
+      - name: Audit smoke catalog
+        working-directory: tools/catalog
+        run: python audit_carrefour_quality.py carrefour-quality-smoke/carrefour_food_catalog.sqlite --out carrefour-quality-smoke/audit.json
+
+      - name: Full food import
+        working-directory: tools/catalog
+        run: python carrefour_radar_catalog_importer_v2.py --out carrefour-quality-full --workers 24
+
+      - name: Audit full catalog
+        working-directory: tools/catalog
+        run: python audit_carrefour_quality.py carrefour-quality-full/carrefour_food_catalog.sqlite --out carrefour-quality-full/audit.json
+
+      - name: Upload quality catalog
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-food-catalog-quality
+          path: tools/catalog/carrefour-quality-full/
+          retention-days: 7
+          if-no-files-found: error
