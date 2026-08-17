@@ -1,50 +1,8 @@
 [
-  {
-    "code": "8480000105424",
-    "sources": [
-      {
-        "name": "Nutriinfo",
-        "url": "https://www.nutriinfo.es/producto/leche-semidesnatada-hacendado-botella-10542",
-        "claim": "Datos obtenidos del etiquetado del producto"
-      },
-      {
-        "name": "Precios Mercado",
-        "url": "https://preciosmercado.com/leche-semidesnatada-hacendado-de-mercadona-info-precio-y-alternativas-3/"
-      }
-    ],
-    "nutriments": {
-      "energy-kcal_100g": 46.0,
-      "fat_100g": 1.6,
-      "carbohydrates_100g": 4.8,
-      "proteins_100g": 3.1,
-      "saturated-fat_100g": 1.1,
-      "sugars_100g": 4.8,
-      "salt_100g": 0.1
-    },
-    "ingredients": "Leche semidesnatada de vaca"
-  },
-  {
-    "code": "8480000047403",
-    "sources": [
-      {
-        "name": "Bayen",
-        "url": "https://bayen.ma/produit/8480000047403"
-      },
-      {
-        "name": "FoodFactor",
-        "url": "https://www.foodfactor.net/produits/8480000047403/aceite%2Bde%2Boliva%2Bvirgen%2Bextra.php"
-      }
-    ],
-    "nutriments": {
-      "energy-kcal_100g": 822.0,
-      "fat_100g": 91.0,
-      "carbohydrates_100g": 0.0,
-      "proteins_100g": 0.0,
-      "fiber_100g": 0.0,
-      "saturated-fat_100g": 13.0,
-      "sugars_100g": 0.0,
-      "salt_100g": 0.0
-    },
-    "ingredients": "Aceite de oliva virgen extra"
-  }
+  {"code":"8480000105424","sources":[{"name":"Nutriinfo","url":"https://www.nutriinfo.es/producto/leche-semidesnatada-hacendado-botella-10542"},{"name":"Precios Mercado","url":"https://preciosmercado.com/leche-semidesnatada-hacendado-de-mercadona-info-precio-y-alternativas-3/"}],"nutriments":{"energy-kcal_100g":46.0,"fat_100g":1.6,"carbohydrates_100g":4.8,"proteins_100g":3.1,"saturated-fat_100g":1.1,"sugars_100g":4.8,"salt_100g":0.1},"ingredients":"Leche semidesnatada de vaca"},
+  {"code":"8480000047403","sources":[{"name":"Bayen","url":"https://bayen.ma/produit/8480000047403"},{"name":"FoodFactor","url":"https://www.foodfactor.net/produits/8480000047403/aceite%2Bde%2Boliva%2Bvirgen%2Bextra.php"}],"nutriments":{"energy-kcal_100g":822.0,"fat_100g":91.0,"carbohydrates_100g":0.0,"proteins_100g":0.0,"fiber_100g":0.0,"saturated-fat_100g":13.0,"sugars_100g":0.0,"salt_100g":0.0},"ingredients":"Aceite de oliva virgen extra"},
+  {"code":"8480000357779","sources":[{"name":"Nutribot","url":"https://nutribot.es/mercadona/2200-macarron-rayado-integral-hacendado/"},{"name":"RadarSuper","url":"https://radarsuper.com/mercadona/p/pasta-penne-integral-hacendado-paquete"}],"nutriments":{"energy-kcal_100g":345.0,"fat_100g":2.4,"carbohydrates_100g":62.0,"proteins_100g":13.5,"fiber_100g":10.0},"ingredients":"Sémola integral de trigo duro"},
+  {"code":"8480000838865","sources":[{"name":"Nutriinfo","url":"https://www.nutriinfo.es/producto/pan-molde-100-integral-familiar-hacendado-paquete-83886"},{"name":"TrainerStudio","url":"https://www.trainerstudio.com/es/l/buscador-alimentos/8480000838865"}],"nutriments":{"energy-kcal_100g":248.0,"fat_100g":3.8,"carbohydrates_100g":41.0,"proteins_100g":8.7,"fiber_100g":7.5,"saturated-fat_100g":0.7,"sugars_100g":2.5,"salt_100g":1.2}},
+  {"code":"8480000202109","sources":[{"name":"Nutriinfo","url":"https://www.nutriinfo.es/producto/yogur-natural-hacendado-0-mg-0-sin-azucares-pack-6-20210"},{"name":"FoodFactor","url":"https://www.foodfactor.net/produits/8480000202109/yogur%2Bnatural%2B0.php"}],"nutriments":{"energy-kcal_100g":36.0,"fat_100g":0.1,"carbohydrates_100g":4.5,"proteins_100g":4.3,"saturated-fat_100g":0.0,"sugars_100g":4.5,"salt_100g":0.1},"ingredients":"Leche fresca pasteurizada desnatada, proteínas de leche, leche en polvo desnatada, fermentos lácteos"},
+  {"code":"8480000171085","sources":[{"name":"FoodFactor / Open Food Facts","url":"https://es.foodfactor.net/produits/8480000171085/tomate%2Bfrito.php"},{"name":"OCU","url":"https://www.ocu.org/alimentacion/comer-bien/test/comparador-nutricional/hacendado-mercadona-tomate-frito/50399_65356"}],"nutriments":{"energy-kcal_100g":79.0,"fat_100g":3.5,"carbohydrates_100g":10.0,"proteins_100g":1.5,"saturated-fat_100g":0.0,"sugars_100g":7.4,"salt_100g":1.2},"ingredients":"Tomate, aceite de girasol, azúcar, almidón de maíz, sal, cebolla y ajo"}
 ]
