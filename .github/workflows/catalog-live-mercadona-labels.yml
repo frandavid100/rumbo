@@ -8,7 +8,9 @@ on:
       - 'tools/catalog/mercadona_product_adapter.py'
       - 'tools/catalog/mercadona_label_pipeline.py'
       - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
       - 'tools/catalog/label_text_extractor.py'
+      - 'tools/catalog/label_image_preprocess.py'
       - '.github/workflows/catalog-live-mercadona-labels.yml'
   workflow_dispatch:
 
@@ -23,10 +25,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Instalar Tesseract español
+      - name: Instalar OCR y preprocesado
         run: |
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check Pillow
           tesseract --version
           tesseract --list-langs
       - name: Ejecutar prueba live
