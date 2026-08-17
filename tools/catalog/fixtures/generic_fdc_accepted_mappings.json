@@ -1,0 +1,8 @@
+[
+  {"product_id":"14470","target_name":"Peras Conferencia","fdc_id":169118,"fdc_description":"Pears, raw","rationale":"simple fresh whole pear; intentionally uses generic pear composition because Conference cultivar is absent"},
+  {"product_id":"3202","target_name":"Pomelo","fdc_id":2758977,"fdc_description":"Grapefruit, raw","rationale":"simple fresh whole grapefruit; exact generic food"},
+  {"product_id":"3269","target_name":"Manzanas Golden","fdc_id":168202,"fdc_description":"Apples, raw, golden delicious, with skin","rationale":"simple fresh fruit; cultivar and preparation match"},
+  {"product_id":"3716","target_name":"Fresón","fdc_id":2346409,"fdc_description":"Strawberries, raw","rationale":"simple fresh whole strawberry; exact generic food"},
+  {"product_id":"68462","target_name":"Repollo liso partido","fdc_id":2346407,"fdc_description":"Cabbage, green, raw","rationale":"simple fresh raw green cabbage; cut presentation does not alter composition materially"},
+  {"product_id":"69121","target_name":"Lechugas corazón romana","fdc_id":2346389,"fdc_description":"Lettuce, romaine, green, raw","rationale":"simple fresh raw romaine lettuce; exact vegetable family and preparation"}
+]
