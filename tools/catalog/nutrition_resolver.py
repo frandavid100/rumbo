@@ -6,7 +6,7 @@ import re
 import unicodedata
 from typing import Iterable
 
-RESOLVER_VERSION = "1.0.1"
+RESOLVER_VERSION = "1.1.0"
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -41,6 +41,7 @@ class NutritionCandidate:
     redistribution_allowed: bool = False
     source_family: str | None = None
     claim: str | None = None
+    evidence_level: str = "MATCHED"
 
     @property
     def complete(self) -> bool:
@@ -116,10 +117,14 @@ def _nutrition_close(a: dict[str, float | None], b: dict[str, float | None]) -> 
     return True
 
 
+def _level_of(candidate: NutritionCandidate) -> str:
+    return candidate.evidence_level if candidate.evidence_level in {"DECLARED", "MATCHED", "CORROBORATED", "GENERIC"} else "MATCHED"
+
+
 def resolve(target: ProductIdentity, candidates: Iterable[NutritionCandidate], *, require_publishable: bool = True) -> Resolution:
     matches = [Match(c, *score(target, c.identity)) for c in candidates if c.complete]
     matches = [m for m in matches if m.score >= 80.0]
-    matches.sort(key=lambda m: m.score, reverse=True)
+    matches.sort(key=lambda m: (m.candidate.evidence_level == "DECLARED", m.score), reverse=True)
     if not matches:
         return Resolution("UNRESOLVED", "UNKNOWN", None, tuple(), False, "NO_HIGH_CONFIDENCE_MATCH")
 
@@ -130,16 +135,27 @@ def resolve(target: ProductIdentity, candidates: Iterable[NutritionCandidate], *
         family = match.candidate.source_family or match.candidate.source
         families.setdefault(family, match)
 
+    # Any strong independent disagreement remains review-worthy, including a
+    # label vs secondary conflict: it may indicate a reformulation or stale image.
     if len(families) >= 2:
         independent = list(families.values())
-        if any(not _nutrition_close(independent[0].candidate.nutrition, m.candidate.nutrition) for m in independent[1:]):
+        reference = top
+        if any(not _nutrition_close(reference.candidate.nutrition, m.candidate.nutrition)
+               for m in independent if m.candidate is not reference.candidate):
             return Resolution("REVIEW", "UNKNOWN", None, tuple(strong), False, "NUTRITION_CONFLICT")
-        selected = independent[0]
+
+    declared = [m for m in strong if _level_of(m.candidate) == "DECLARED"]
+    if declared:
+        selected = declared[0]
+        level = "DECLARED"
+        publishable = selected.candidate.redistribution_allowed
+    elif len(families) >= 2:
+        selected = top
         level = "CORROBORATED"
-        publishable = any(m.candidate.redistribution_allowed for m in independent)
+        publishable = any(m.candidate.redistribution_allowed for m in families.values())
     else:
         selected = top
-        level = "MATCHED"
+        level = _level_of(selected.candidate)
         publishable = selected.candidate.redistribution_allowed
 
     if require_publishable and not publishable:
