@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import re, unicodedata
 from typing import Iterable
 
-CLASSIFIER_VERSION = "4.3.1"
+CLASSIFIER_VERSION = "4.4.0"
 
 NUTRITIONAL_ROLES = {
     "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN",
@@ -20,18 +20,20 @@ TYPE_POLICIES = {
     "MILK_BASE": (250, 150, 350), "CREAMY_BASE": (150, 100, 300),
     "BREAKFAST_CEREAL": (50, 25, 80), "PROTEIN_POWDER": (30, 20, 50),
     "COCOA_POWDER": (10, 5, 25), "SWEET_POWDER": (15, 5, 30),
+    "BREWED_DRINK_BASE": (7, 2, 20),
     "DRY_RICE": (80, 40, 120), "DRY_PASTA": (80, 40, 120),
     "FRESH_FILLED_PASTA": (125, 80, 200),
     "FRESH_STARCH": (250, 100, 400), "BREAD": (70, 30, 150),
-    "MAIN_MEAT": (150, 75, 250), "MAIN_FISH": (170, 80, 300),
-    "MAIN_EGG": (120, 50, 240), "VEGETABLE": (200, 75, 400),
-    "FRUIT": (150, 75, 300), "CULINARY_OIL": (10, 5, 15),
-    "FAT_COMPLEMENT": (30, 10, 80), "SAUCE": (40, 10, 100),
-    "SNACK_DESSERT": (100, 30, 180), "COOKING_INGREDIENT": (60, 15, 250),
-    "LEGUME": (180, 80, 300), "CHEESE": (40, 15, 100),
-    "BEVERAGE": (250, 100, 500), "SPREAD": (35, 10, 80),
-    "SEASONING": (3, 1, 10), "PREPARED_DISH": (300, 150, 500),
-    "UNKNOWN": (100, 20, 300),
+    "MAIN_MEAT": (150, 75, 250), "CURED_MEAT": (50, 20, 100),
+    "MAIN_FISH": (170, 80, 300), "MAIN_EGG": (120, 50, 240),
+    "VEGETABLE": (200, 75, 400), "PICKLED_VEGETABLE": (80, 20, 180),
+    "FRUIT": (150, 75, 300), "DRIED_FRUIT": (30, 15, 60),
+    "CULINARY_OIL": (10, 5, 15), "FAT_COMPLEMENT": (30, 10, 80),
+    "SAUCE": (40, 10, 100), "SNACK_DESSERT": (100, 30, 180),
+    "COOKING_INGREDIENT": (60, 15, 250), "LEGUME": (180, 80, 300),
+    "CHEESE": (40, 15, 100), "BEVERAGE": (250, 100, 500),
+    "SPREAD": (35, 10, 80), "SEASONING": (3, 1, 10),
+    "PREPARED_DISH": (300, 150, 500), "UNKNOWN": (100, 20, 300),
 }
 COMPLEMENTARY_THRESHOLDS_PER_SERVING = {"protein_g": 5.0, "carbohydrate_g": 10.0, "fat_g": 5.0}
 
@@ -70,7 +72,8 @@ class ClassificationResult:
 
 def norm(v):
     s=unicodedata.normalize("NFD",(v or "").lower()); return "".join(c for c in s if unicodedata.category(c)!="Mn")
-def product_text(f): return " ".join(norm(v) for v in [f.name,f.legal_name,f.family,f.subcategory]).strip()
+def product_text(f): return " ".join(norm(v) for v in [f.name,f.legal_name]).strip()
+def category_text(f): return " ".join(norm(v) for v in [f.family,f.subcategory]).strip()
 def _a(value,confidence,rule,*evidence): return Assignment(value,confidence,rule,tuple(evidence))
 def serving_amount(f,key,grams):
     v=getattr(f,key); return None if v is None else v*grams/100.0
@@ -81,13 +84,26 @@ def classify_type(f):
         (r"\b(ravioli|tortellini|pasta fresca rellena|pasta rellena)\b","FRESH_FILLED_PASTA","type.fresh_filled_pasta"),
         (r"\b(masa fresca pizza|masa de pizza)\b","COOKING_INGREDIENT","type.pizza_dough"),
         (r"\bhummus\b","SPREAD","type.spread_hummus"),
-        (r"\b(refresco|zumo|batido|chocolate liquido a la taza|bebida energetica)\b","BEVERAGE","type.beverage"),
-        (r"\b(patatas? fritas|chips)\b","SNACK_DESSERT","type.savoury_snack"),
-        (r"\b(natillas?|flan(?:es)?|panna cotta|crema catalana|arroz con leche|tocino de cielo|tarta de queso|galletas?|chocolate negro|chocolate con leche|tortitas?.*chocolate|barritas?|helado)\b","SNACK_DESSERT","type.snack_dessert"),
+        (r"\b(cafe soluble|cafe molido|cafe en capsula|te verde|te negro|rooibos|infusion)\b","BREWED_DRINK_BASE","type.brewed_drink_base"),
+        (r"\b(refresco|zumo|batido|chocolate liquido a la taza|bebida energetica|bebida isotonica|limonada|bitter|agua mineral|agua de soda|agua con gas|soda con sifon|bebida de pina|bebida 5 frutas|bebida multivitaminas)\b","BEVERAGE","type.beverage"),
+        (r"\b(lomo asado|salchichon|jamon serrano|longaniza|cana de lomo|chorizo sarta|sobrasada)\b","CURED_MEAT","type.cured_meat"),
+        (r"\b(pepinillos?|piparra|ajos? alinados?|remolacha en tiras|palmito al natural)\b","PICKLED_VEGETABLE","type.pickled_vegetable"),
+        (r"\b(datiles?|pasas sultanas|fruta desecada)\b","DRIED_FRUIT","type.dried_fruit"),
+        (r"\b(patatas? fritas|chips|maiz frito|tortitas? de maiz|cocktail .*aperitivos|cocktail rodeo|torreznos?)\b","SNACK_DESSERT","type.savoury_snack"),
+        (r"\bbarquillos?\b","SNACK_DESSERT","type.snack_dessert"),
+        (r"\b(natillas?|flan(?:es)?|panna cotta|crema catalana|arroz con leche|tocino de cielo|tarta de queso|galletas?|chocolate negro|chocolate con leche|99% cacao|bombones?|golosinas?|caramelos?|bizcocho|napolitana|napolitanas|hojaldre relleno|barritas?|helado)\b","SNACK_DESSERT","type.snack_dessert"),
+        (r"\b(nocilla|crema al cacao con avellanas)\b","SPREAD","type.sweet_spread"),
+        (r"\b(sirope de agave|caramelo liquido|allioli)\b","SAUCE","type.sauce"),
+        (r"\b(edulcorante stevia|azucar vainillado)\b","SWEET_POWDER","type.sweet_powder"),
+        (r"\b(preparado en polvo .*crepes|preparado crujiente)\b","COOKING_INGREDIENT","type.cooking_mix"),
+        (r"\b(risotto|pizza pepperoni|gazpacho tradicional|crema de calabaza)\b|^migas hacendado\b","PREPARED_DISH","type.prepared_dish"),
         (r"\b(listo para comer|pizza calzone|pizza masa|tortilla de patata|hojaldre sabor pizza|fabada|albondigas en salsa|a la jardinera|lasana|lasaña)\b","PREPARED_DISH","type.prepared_dish"),
         (r"\bcacao soluble\b","SWEET_POWDER","type.sweet_powder"),
-        (r"\b(comino|perejil)\b","SEASONING","type.seasoning"),
-        (r"\b(salteado de verduras|verdura para paella|parrillada de verduras|menestra de verduras)\b","VEGETABLE","type.vegetable_mix"),
+        (r"\b(comino|perejil|curcuma|cayena|pimenton|sazonador|mezcla de especias|sal fina|sal gruesa|escamas de sal|colorante alimentario)\b","SEASONING","type.seasoning"),
+        (r"\b(salteado de verduras|salteado rustico|salteado de setas|verdura para paella|parrillada de verduras|menestra de verduras|coles de bruselas)\b","VEGETABLE","type.vegetable_mix"),
+        (r"\b(arandanos enteros|arandanos ultracongelados)\b","FRUIT","type.fruit"),
+        (r"\b(bebida lactea)\b","MILK_BASE","type.milk_base"),
+        (r"\b(postre lacteo|bifidus)\b","CREAMY_BASE","type.creamy_base"),
         (r"\bpan tostado\b","BREAD","type.toasted_bread"),
         (r"\b(cereales?|copos de avena|corn flakes|copos de maiz|muesli|granola)\b","BREAKFAST_CEREAL","type.breakfast_cereal"),
     ]
@@ -96,41 +112,44 @@ def classify_type(f):
     rules=[
         (r"\b(proteina en polvo|whey|protein powder|isolat[eo])\b","PROTEIN_POWDER","type.protein_powder"),
         (r"\b(cacao puro|cacao en polvo|cocoa powder)\b","COCOA_POWDER","type.cocoa_powder"),
-        (r"\b(leche|bebida de soja|bebida de avena|bebida de almendra|bebida de arroz)\b","MILK_BASE","type.milk_base"),
+        (r"\b(leche|bebida de soja|bebida de avena|bebida de almendras?|bebida de arroz)\b","MILK_BASE","type.milk_base"),
         (r"\b(yogur|yoghurt|kefir|queso fresco batido|cuajada)\b","CREAMY_BASE","type.creamy_base"),
         (r"\barroz\b","DRY_RICE","type.dry_rice"),
-        (r"\b(macarron|macarrones|pasta seca|espagueti|spaghetti|helices|penne|tallarin|fideo)\b","DRY_PASTA","type.dry_pasta"),
-        (r"\b(patata|boniato|batata|yuca)\b","FRESH_STARCH","type.fresh_starch"),
+        (r"\b(macarron|macarrones|pasta seca|pasta maravilla|espagueti|spaghetti|helices|penne|tallarin|fideo|fideos|placas? para canelones)\b","DRY_PASTA","type.dry_pasta"),
+        (r"\b(patata|patatas|boniato|batata|yuca|gnocchi)\b","FRESH_STARCH","type.fresh_starch"),
         (r"\b(pan|pita|tortilla de trigo)\b","BREAD","type.bread"),
-        (r"\b(lentejas?|garbanzos?|alubias?|judias? blancas?|judias? pintas?)\b","LEGUME","type.legume"),
+        (r"\b(lentejas?|garbanzos?|alubias?|judias? blancas?|judias? pintas?|habas?|habitas?)\b","LEGUME","type.legume"),
         (r"\b(queso|parmesano|mozzarella|cheddar)\b","CHEESE","type.cheese"),
         (r"\b(aceite de oliva|aceite de girasol|aceite vegetal|aove)\b","CULINARY_OIL","type.culinary_oil"),
-        (r"\b(salsa|mayonesa|ketchup|tomate frito|mostaza)\b","SAUCE","type.sauce"),
+        (r"\b(salsa|mayonesa|ketchup|tomate frito|mostaza|vinagre)\b","SAUCE","type.sauce"),
         (r"\b(huevo|huevos)\b","MAIN_EGG","type.main_egg"),
-        (r"\b(salmon|lubina|dorada|merluza|bacalao|atun|sardina|caballa|pescado)\b","MAIN_FISH","type.main_fish"),
+        (r"\b(salmon|lubina|dorada|merluza|bacalao|atun|sardina|caballa|pescado|sepia|calamar|calamares|chipiron|chipirones|puntilla|tintorera|gamba|gambas|langostino|langostinos|caracol|caracoles)\b","MAIN_FISH","type.main_fish"),
         (r"\b(pollo|pavo|cerdo|vacuno|ternera|cordero|carne)\b","MAIN_MEAT","type.main_meat"),
-        (r"\b(nuez|nueces|almendra|avellana|cacahuete|pistacho|aceituna|guacamole)\b","FAT_COMPLEMENT","type.fat_complement"),
-        (r"\b(verduras?|tomates?|calabacines?|berenjenas?|pimientos?|cebollas?|zanahorias?|brocolis?|coliflor(?:es)?|esparragos?|guisantes?|pepinos?|lechugas?|espinacas?|alcachofas?)\b","VEGETABLE","type.vegetable"),
-        (r"\b(platano|banana|manzana|pera|naranja|mandarina|melocoton|kiwi|mango|melon|sandia|uva|fresa|cereza)\b","FRUIT","type.fruit"),
+        (r"\b(nuez|nueces|almendra|avellana|cacahuete|pistacho|aceitunas?|guacamole|aguacates?|pipas? girasol)\b","FAT_COMPLEMENT","type.fat_complement"),
+        (r"\b(verduras?|tomates?|calabacines?|berenjenas?|pimientos?|cebollas?|zanahorias?|brocolis?|coliflor(?:es)?|esparragos?|guisantes?|pepinos?|lechugas?|espinacas?|alcachofas?|maiz dulce|champinones?|setas?|puerros?|repollo)\b","VEGETABLE","type.vegetable"),
+        (r"\b(platano|banana|manzanas?|peras?|naranjas?|mandarina|melocoton|kiwi|mango|melon|sandia|uva|fresa|freson|cereza|pomelo|mora|moras|arandano|arandanos)\b","FRUIT","type.fruit"),
     ]
     for pattern,typ,rid in rules:
         if re.search(pattern,p): return _a(typ,.98,rid,f"name/legal/category:{p}")
+    c=category_text(f)
+    if re.search(r"\bmarisco y pescado\b", c): return _a("MAIN_FISH",.90,"type.category_fallback.main_fish",f"category:{c}")
+    if re.search(r"^carne$", c): return _a("MAIN_MEAT",.90,"type.category_fallback.main_meat",f"category:{c}")
     return None
 
 def nutritional_roles(f,typ,serving):
     roles=[]
-    semantic={"MAIN_MEAT":"PRIMARY_PROTEIN","MAIN_FISH":"PRIMARY_PROTEIN","MAIN_EGG":"PRIMARY_PROTEIN","DRY_RICE":"PRIMARY_CARBOHYDRATE","DRY_PASTA":"PRIMARY_CARBOHYDRATE","FRESH_STARCH":"PRIMARY_CARBOHYDRATE","BREAD":"PRIMARY_CARBOHYDRATE","LEGUME":"PRIMARY_CARBOHYDRATE","CULINARY_OIL":"CONCENTRATED_FAT","VEGETABLE":"VEGETABLE","FRUIT":"FRUIT"}
+    semantic={"MAIN_MEAT":"PRIMARY_PROTEIN","MAIN_FISH":"PRIMARY_PROTEIN","MAIN_EGG":"PRIMARY_PROTEIN","DRY_RICE":"PRIMARY_CARBOHYDRATE","DRY_PASTA":"PRIMARY_CARBOHYDRATE","FRESH_STARCH":"PRIMARY_CARBOHYDRATE","BREAD":"PRIMARY_CARBOHYDRATE","LEGUME":"PRIMARY_CARBOHYDRATE","CULINARY_OIL":"CONCENTRATED_FAT","VEGETABLE":"VEGETABLE","PICKLED_VEGETABLE":"VEGETABLE","FRUIT":"FRUIT","DRIED_FRUIT":"FRUIT"}
     if typ in semantic: roles.append(_a(semantic[typ],.98,f"nutrition.semantic.{typ.lower()}",f"culinary_type:{typ}"))
     protein=serving_amount(f,"protein_g",serving); carbs=serving_amount(f,"carbohydrate_g",serving); fat=serving_amount(f,"fat_g",serving)
     if typ in {"FRESH_FILLED_PASTA","PREPARED_DISH"}:
         if protein is not None and protein>=20: roles.append(_a("PRIMARY_PROTEIN",.90,"nutrition.threshold.primary_protein",f"protein/serving:{protein:.2f}g",f"serving:{serving}g"))
         if carbs is not None and carbs>=25: roles.append(_a("PRIMARY_CARBOHYDRATE",.90,"nutrition.threshold.primary_carbohydrate",f"carbohydrate/serving:{carbs:.2f}g",f"serving:{serving}g"))
         if fat is not None and fat>=5: roles.append(_a("COMPLEMENTARY_FAT",.88,"nutrition.threshold.complementary_fat",f"fat/serving:{fat:.2f}g",f"serving:{serving}g"))
-    if typ in {"MILK_BASE","CREAMY_BASE","CHEESE","LEGUME","FAT_COMPLEMENT","SPREAD","SNACK_DESSERT"} and protein is not None and protein>=5:
+    if typ in {"MILK_BASE","CREAMY_BASE","CHEESE","LEGUME","FAT_COMPLEMENT","SPREAD","SNACK_DESSERT","CURED_MEAT"} and protein is not None and protein>=5:
         roles.append(_a("COMPLEMENTARY_PROTEIN",.90,"nutrition.threshold.complementary_protein",f"protein/serving:{protein:.2f}g",f"serving:{serving}g"))
-    if typ in {"FRUIT","MILK_BASE","CREAMY_BASE","BEVERAGE","SNACK_DESSERT"} and carbs is not None and carbs>=10:
+    if typ in {"FRUIT","DRIED_FRUIT","MILK_BASE","CREAMY_BASE","BEVERAGE","SNACK_DESSERT"} and carbs is not None and carbs>=10:
         roles.append(_a("COMPLEMENTARY_CARBOHYDRATE",.88,"nutrition.threshold.complementary_carbohydrate",f"carbohydrate/serving:{carbs:.2f}g",f"serving:{serving}g"))
-    if typ in {"MILK_BASE","CHEESE","FAT_COMPLEMENT","SAUCE","CREAMY_BASE","SPREAD","SNACK_DESSERT"} and fat is not None and fat>=5:
+    if typ in {"MILK_BASE","CHEESE","FAT_COMPLEMENT","SAUCE","CREAMY_BASE","SPREAD","SNACK_DESSERT","CURED_MEAT"} and fat is not None and fat>=5:
         roles.append(_a("COMPLEMENTARY_FAT",.88,"nutrition.threshold.complementary_fat",f"fat/serving:{fat:.2f}g",f"serving:{serving}g"))
     if typ=="BREAKFAST_CEREAL": roles.append(_a("PRIMARY_CARBOHYDRATE",.95,"nutrition.semantic.breakfast_cereal","type:BREAKFAST_CEREAL"))
     if typ=="PROTEIN_POWDER" and protein is not None and protein>=15: roles.append(_a("COMPLEMENTARY_PROTEIN",.96,"nutrition.semantic.protein_powder",f"protein/serving:{protein:.2f}g"))
@@ -144,10 +163,10 @@ def nutritional_roles(f,typ,serving):
 def culinary_roles(typ):
     mapping={
         "MILK_BASE":["CEREAL_BASE","POWDER_BASE","BEVERAGE","STANDALONE"],"CREAMY_BASE":["CEREAL_BASE","POWDER_BASE","STANDALONE","DESSERT"],
-        "BREAKFAST_CEREAL":["CEREAL_MIX_IN"],"PROTEIN_POWDER":["POWDER_MIX_IN"],"COCOA_POWDER":["POWDER_MIX_IN","TOPPING"],"SWEET_POWDER":["POWDER_MIX_IN"],
+        "BREAKFAST_CEREAL":["CEREAL_MIX_IN"],"PROTEIN_POWDER":["POWDER_MIX_IN"],"COCOA_POWDER":["POWDER_MIX_IN","TOPPING"],"SWEET_POWDER":["POWDER_MIX_IN"],"BREWED_DRINK_BASE":["BEVERAGE"],
         "DRY_RICE":["PLATE_BASE","SIDE"],"DRY_PASTA":["PLATE_BASE","SIDE"],"FRESH_FILLED_PASTA":["PLATE_CENTER","PLATE_BASE"],"FRESH_STARCH":["PLATE_BASE","SIDE"],"BREAD":["SANDWICH_BASE","PLATE_BASE","STANDALONE"],
-        "MAIN_MEAT":["PLATE_CENTER","SANDWICH_FILLING"],"MAIN_FISH":["PLATE_CENTER","SANDWICH_FILLING"],"MAIN_EGG":["PLATE_CENTER","SANDWICH_FILLING","BINDER"],
-        "VEGETABLE":["SIDE","TOPPING"],"FRUIT":["STANDALONE","DESSERT"],"CULINARY_OIL":["COOKING_MEDIUM","SAUCE_DRESSING"],"FAT_COMPLEMENT":["TOPPING","STANDALONE"],
+        "MAIN_MEAT":["PLATE_CENTER","SANDWICH_FILLING"],"CURED_MEAT":["SANDWICH_FILLING","STANDALONE","TOPPING"],"MAIN_FISH":["PLATE_CENTER","SANDWICH_FILLING"],"MAIN_EGG":["PLATE_CENTER","SANDWICH_FILLING","BINDER"],
+        "VEGETABLE":["SIDE","TOPPING"],"PICKLED_VEGETABLE":["SIDE","TOPPING","STANDALONE"],"FRUIT":["STANDALONE","DESSERT"],"DRIED_FRUIT":["STANDALONE","DESSERT","TOPPING"],"CULINARY_OIL":["COOKING_MEDIUM","SAUCE_DRESSING"],"FAT_COMPLEMENT":["TOPPING","STANDALONE"],
         "SAUCE":["SAUCE_DRESSING","TOPPING"],"LEGUME":["PLATE_CENTER","PLATE_BASE","SIDE"],"CHEESE":["TOPPING","SANDWICH_FILLING","STANDALONE"],"COOKING_INGREDIENT":["BINDER","COATING"],
         "BEVERAGE":["BEVERAGE","STANDALONE"],"SPREAD":["SPREAD","TOPPING"],"SEASONING":["SEASONING"],"SNACK_DESSERT":["STANDALONE","DESSERT"],"PREPARED_DISH":["PLATE_CENTER","STANDALONE"],
     }
@@ -166,9 +185,7 @@ def classify(f):
     if typ is None: r.review_reasons.append("UNKNOWN_CULINARY_TYPE"); return r
     r.culinary_type=typ; pref,mi,ma=TYPE_POLICIES[typ.value]; r.preferred_grams,r.minimum_grams,r.maximum_grams=pref,mi,ma
     r.nutritional_roles=nutritional_roles(f,typ.value,pref); r.culinary_roles=culinary_roles(typ.value); r.relations=relations_for(r.culinary_roles)
-    rv={x.value for x in r.culinary_roles}; r.properties={"standalone_allowed":bool(rv&{"STANDALONE","BEVERAGE","DESSERT","PLATE_CENTER","PLATE_BASE","SIDE"}),"requires_cooking":typ.value in {"DRY_RICE","DRY_PASTA","FRESH_FILLED_PASTA","MAIN_MEAT","MAIN_FISH","MAIN_EGG","LEGUME"},"divisible":True}
-    zero_ok={"SAUCE","COOKING_INGREDIENT","COCOA_POWDER","SWEET_POWDER","SEASONING","BEVERAGE","SNACK_DESSERT"}
-    if not r.nutritional_roles and typ.value not in zero_ok: r.review_reasons.append("NO_NUTRITIONAL_ROLE")
+    rv={x.value for x in r.culinary_roles}; r.properties={"standalone_allowed":bool(rv&{"STANDALONE","BEVERAGE","DESSERT","PLATE_CENTER","PLATE_BASE","SIDE"}),"requires_cooking":typ.value in {"DRY_RICE","DRY_PASTA","FRESH_FILLED_PASTA","MAIN_MEAT","MAIN_FISH","MAIN_EGG","LEGUME"},"requires_preparation":typ.value in {"BREWED_DRINK_BASE","COOKING_INGREDIENT"},"divisible":True}
     if not r.culinary_roles: r.review_reasons.append("NO_CULINARY_ROLE")
     if any(v is None for v in (f.calories,f.protein_g,f.carbohydrate_g,f.fat_g)): r.review_reasons.append("INCOMPLETE_CORE_NUTRITION")
     if typ.value=="PREPARED_DISH": r.review_reasons.append("PREPARED_DISH_NEEDS_PORTION_REVIEW")
