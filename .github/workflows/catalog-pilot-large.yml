@@ -1,0 +1,53 @@
+name: Catalog pilot 300 Mercadona
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-pilot-large.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-300:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PILOT_SIZE: '300'
+      PILOT_CANDIDATE_POOL: '900'
+      PILOT_ACQUISITION_WORKERS: '16'
+      PILOT_NEURAL_BUDGET: '60'
+      PILOT_NEURAL_PER_CATEGORY_CAP: '5'
+      PILOT_PER_CATEGORY_CAP: '24'
+      PILOT_OFF_DELAY: '0.12'
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar Tesseract, PP-OCRv6 y visión
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' opencv-python-headless Pillow
+          python - <<'PY'
+          import paddle, paddleocr
+          print('paddle', paddle.__version__)
+          print('paddleocr', paddleocr.__version__)
+          PY
+      - name: Ejecutar piloto estratificado de 300 productos
+        working-directory: tools/catalog
+        run: python pilot_large_catalog.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-pilot-300-report
+          path: |
+            tools/catalog/pilot-large-output/pilot-large-summary.json
+            tools/catalog/pilot-large-output/pilot-large-report.json
+          if-no-files-found: warn
+          retention-days: 7
