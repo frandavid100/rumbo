@@ -1,0 +1,28 @@
+name: Catalog pilot 300 observed nutrition
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/evaluate_pilot_300_observed_nutrition.py'
+      - 'tools/catalog/fixtures/pilot_300_structured_resolved.json'
+      - 'tools/catalog/fixtures/pilot_300_declared_label_evidence*.json'
+      - 'tools/catalog/fixtures/generic_fdc_accepted_mappings.json'
+      - '.github/workflows/catalog-pilot-300-observed-nutrition.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Evaluar suelo nutricional observado
+        working-directory: tools/catalog
+        run: python evaluate_pilot_300_observed_nutrition.py
