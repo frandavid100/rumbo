@@ -1,0 +1,58 @@
+name: Catalog AESAN 2022 vs current evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/catalog-phase1
+    paths:
+      - '.github/workflows/catalog-aesan-current-validation.yml'
+      - 'tools/catalog/compare_aesan_2022_current_evidence.py'
+      - 'tools/catalog/fixtures/pilot_300_structured_resolved.json'
+      - 'tools/catalog/fixtures/pilot_300_declared_label_evidence*.json'
+      - 'tools/catalog/fixtures/generic_fdc_accepted_mappings.json'
+
+jobs:
+  validate-aesan-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl requests opencv-python-headless
+
+      - name: Resolve archived official workbook
+        id: archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORIGINAL='https://www.aesan.gob.es/AECOSAN/docs/documentos/seguridad_alimentaria/bases_datos/BasedatosWeb.xlsx'
+          CDX="https://web.archive.org/cdx/search/cdx?url=${ORIGINAL}&output=json&fl=timestamp,original,statuscode,mimetype&filter=statuscode:200&collapse=digest&from=2022&to=2026"
+          curl -fsSL --retry 3 --retry-all-errors "$CDX" -o /tmp/cdx.json
+          TS=$(python -c "import json; r=json.load(open('/tmp/cdx.json')); print(r[-1][0] if len(r)>1 else '')")
+          test -n "$TS"
+          ARCHIVE="https://web.archive.org/web/${TS}id_/${ORIGINAL}"
+          echo "archive_url=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "Using archived official AESAN workbook snapshot: $TS"
+
+      - name: Compare historical and current evidence
+        working-directory: tools/catalog
+        env:
+          AESAN_2022_EXCEL_URL: ${{ steps.archive.outputs.archive_url }}
+        run: python compare_aesan_2022_current_evidence.py
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-aesan-current-validation-report
+          path: tools/catalog/aesan-2022-current-evidence-output/
+          if-no-files-found: error
