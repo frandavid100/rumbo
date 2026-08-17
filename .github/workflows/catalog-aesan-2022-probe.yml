@@ -34,7 +34,11 @@ jobs:
 
       - name: Run AESAN 2022 probe
         working-directory: tools/catalog
-        run: python aesan_2022_match_probe.py
+        env:
+          AESAN_2022_PAGE_URL: https://www.aesan.gob.es/AECOSAN/web/datos_abiertos/bases_datos_AESAN.htm
+        run: |
+          sed -i 's#https://www.aesan.gob.es/AECOSAN/web/seguridad_alimentaria/subseccion/alimentosBebidas.htm#${{ env.AESAN_2022_PAGE_URL }}#' aesan_2022_match_probe.py
+          python aesan_2022_match_probe.py
 
       - name: Upload report
         uses: actions/upload-artifact@v4
