@@ -9,6 +9,7 @@ on:
       - 'tools/catalog/carrefour_radar_catalog_importer_v2.py'
       - 'tools/catalog/audit_carrefour_quality.py'
       - 'tools/catalog/test_classifier_quality.py'
+      - 'tools/catalog/test_carrefour_parser_v2.py'
       - '.github/workflows/catalog-carrefour-quality.yml'
   workflow_dispatch:
 
@@ -26,7 +27,7 @@ jobs:
 
       - name: Regression tests
         working-directory: tools/catalog
-        run: python -m unittest -v test_classifier_quality.py
+        run: python -m unittest -v test_classifier_quality.py test_carrefour_parser_v2.py
 
       - name: Smoke import
         working-directory: tools/catalog
