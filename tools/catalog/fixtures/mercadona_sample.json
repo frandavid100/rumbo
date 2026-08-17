@@ -1,26 +1,14 @@
 [
-  {
-    "sku": "5002",
-    "gtin": "8480000050021",
-    "name": "Arroz basmati aromático Hacendado",
-    "brand": "Hacendado",
-    "url": "https://tienda.mercadona.es/product/5002/arroz-basmati-aromatico-hacendado-paquete",
-    "availability": "ACTIVE"
-  },
-  {
-    "sku": "10370",
-    "gtin": "8480000105424",
-    "name": "Leche semidesnatada Hacendado",
-    "brand": "Hacendado",
-    "url": "https://tienda.mercadona.es/",
-    "availability": "ACTIVE"
-  },
-  {
-    "sku": "4740",
-    "gtin": "8480000047403",
-    "name": "Aceite de oliva virgen extra Hacendado",
-    "brand": "Hacendado",
-    "url": "https://tienda.mercadona.es/product/4740/aceite-oliva-virgen-extra-hacendado-botella",
-    "availability": "ACTIVE"
-  }
+  {"sku":"5002","gtin":"8480000050021","name":"Arroz basmati aromático Hacendado","brand":"Hacendado","url":"https://tienda.mercadona.es/product/5002/arroz-basmati-aromatico-hacendado-paquete","availability":"ACTIVE"},
+  {"sku":"10370","gtin":"8480000105424","name":"Leche semidesnatada Hacendado","brand":"Hacendado","url":"https://tienda.mercadona.es/","availability":"ACTIVE"},
+  {"sku":"4740","gtin":"8480000047403","name":"Aceite de oliva virgen extra Hacendado","brand":"Hacendado","url":"https://tienda.mercadona.es/product/4740/aceite-oliva-virgen-extra-hacendado-botella","availability":"ACTIVE"},
+  {"sku":"35777","gtin":"8480000357779","name":"Macarrón rayado integral Hacendado","brand":"Hacendado","url":"https://tienda.mercadona.es/product/35777/pasta-penne-integral-hacendado-paquete","availability":"ACTIVE"},
+  {"sku":"83886","gtin":"8480000838865","name":"Pan de molde 100% integral familiar Hacendado","brand":"Hacendado","url":"https://tienda.mercadona.es/product/83886/pan-molde-100-integral-familiar-hacendado-paquete","availability":"ACTIVE"},
+  {"sku":"20210","gtin":"8480000202109","name":"Yogur natural Hacendado 0% MG 0% azúcares añadidos","brand":"Hacendado","url":"https://tienda.mercadona.es/product/20210/yogur-natural-hacendado-0-mg-0-sin-azucares-pack-6","availability":"ACTIVE"},
+  {"sku":"17108","gtin":"8480000171085","name":"Tomate frito Hacendado","brand":"Hacendado","url":"https://tienda.mercadona.es/product/17108/tomate-frito-hacendado-tarro","availability":"ACTIVE"},
+  {"sku":"30167","gtin":null,"name":"Huevos","brand":null,"url":"https://tienda.mercadona.es/product/30167/huevos-tamanos-diferentes-paquete","availability":"ACTIVE"},
+  {"sku":"87204","gtin":null,"name":"Filete de salmón","brand":null,"url":"https://tienda.mercadona.es/product/87204/filete-salmon-bandeja","availability":"ACTIVE"},
+  {"sku":"69971","gtin":null,"name":"Tomates","brand":null,"url":"https://tienda.mercadona.es/product/69971/tomates-malla","availability":"ACTIVE"},
+  {"sku":"2786","gtin":null,"name":"Solomillos de pollo","brand":null,"url":"https://tienda.mercadona.es/product/2786/solomillos-pollo-bandeja","availability":"ACTIVE"},
+  {"sku":"52667","gtin":null,"name":"Nuez troceada pelada Hacendado","brand":"Hacendado","url":"https://tienda.mercadona.es/product/52667/nuez-natural-troceada-hacendado-paquete","availability":"ACTIVE"}
 ]
