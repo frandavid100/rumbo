@@ -6,7 +6,7 @@ import re
 import unicodedata
 from typing import Iterable
 
-RESOLVER_VERSION = "1.0.0"
+RESOLVER_VERSION = "1.0.1"
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -117,7 +117,7 @@ def _nutrition_close(a: dict[str, float | None], b: dict[str, float | None]) -> 
 
 
 def resolve(target: ProductIdentity, candidates: Iterable[NutritionCandidate], *, require_publishable: bool = True) -> Resolution:
-    matches = [Match(c, *score(target, c)) for c in candidates if c.complete]
+    matches = [Match(c, *score(target, c.identity)) for c in candidates if c.complete]
     matches = [m for m in matches if m.score >= 80.0]
     matches.sort(key=lambda m: m.score, reverse=True)
     if not matches:
