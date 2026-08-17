@@ -1,0 +1,46 @@
+name: Catalog pilot 300 staged
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/pilot_300_staged.py'
+      - '.github/workflows/catalog-pilot-300-staged.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PILOT_SIZE: '300'
+      PILOT_CANDIDATE_POOL: '900'
+      PILOT_ACQUISITION_WORKERS: '16'
+      PILOT_LABEL_SAMPLE: '30'
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar OCR y visión
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' opencv-python-headless Pillow
+      - name: Ejecutar piloto 300 por etapas
+        working-directory: tools/catalog
+        run: python pilot_300_staged.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-pilot-300-staged-report
+          path: |
+            tools/catalog/pilot-300-staged-output/summary.json
+            tools/catalog/pilot-300-staged-output/report.json
+          if-no-files-found: warn
+          retention-days: 7
