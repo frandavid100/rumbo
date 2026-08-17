@@ -1,1 +1,304 @@
-PLACEHOLDER
+[
+  {
+    "name": "Arroz basmati aromático Hacendado",
+    "expected_type": "DRY_RICE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 353, "protein_g": 9, "carbohydrate_g": 78, "fat_g": 0.6},
+    "evidence": "Open Food Facts / current Mercadona identity",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Leche semidesnatada Hacendado",
+    "expected_type": "MILK_BASE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 46, "protein_g": 3.1, "carbohydrate_g": 4.8, "fat_g": 1.6},
+    "evidence": "Nutriinfo + secondary corroboration",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN", "COMPLEMENTARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Aceite de oliva virgen extra Hacendado",
+    "expected_type": "CULINARY_OIL",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 822, "protein_g": 0, "carbohydrate_g": 0, "fat_g": 91},
+    "evidence": "Bayen + FoodFactor corroboration",
+    "expected_roles": ["CONCENTRATED_FAT"]
+  },
+  {
+    "name": "Macarrón rayado integral Hacendado",
+    "expected_type": "DRY_PASTA",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 345, "protein_g": 13.5, "carbohydrate_g": 62, "fat_g": 2.4},
+    "evidence": "Nutribot + RadarSuper corroboration",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Pan de molde 100% integral familiar Hacendado",
+    "expected_type": "BREAD",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 248, "protein_g": 8.7, "carbohydrate_g": 41, "fat_g": 3.8},
+    "evidence": "Nutriinfo + TrainerStudio corroboration",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Yogur natural Hacendado 0% MG 0% azúcares añadidos",
+    "expected_type": "CREAMY_BASE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 36, "protein_g": 4.3, "carbohydrate_g": 4.5, "fat_g": 0.1},
+    "evidence": "Nutriinfo + FoodFactor corroboration",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN"]
+  },
+  {
+    "name": "Tomate frito Hacendado",
+    "expected_type": "SAUCE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 79, "protein_g": 1.5, "carbohydrate_g": 10, "fat_g": 3.5},
+    "evidence": "FoodFactor/OFF + OCU corroboration",
+    "expected_roles": []
+  },
+  {
+    "name": "Huevos",
+    "expected_type": "MAIN_EGG",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 143, "protein_g": 12.6, "carbohydrate_g": 0.7, "fat_g": 9.5},
+    "evidence": "Generic composition accepted",
+    "expected_roles": ["PRIMARY_PROTEIN"]
+  },
+  {
+    "name": "Filete de salmón",
+    "expected_type": "MAIN_FISH",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 182, "protein_g": 18.4, "carbohydrate_g": 0, "fat_g": 12},
+    "evidence": "Generic composition accepted",
+    "expected_roles": ["PRIMARY_PROTEIN"]
+  },
+  {
+    "name": "Tomates",
+    "expected_type": "VEGETABLE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 21, "protein_g": 0.9, "carbohydrate_g": 3.5, "fat_g": 0.2},
+    "evidence": "Generic composition accepted",
+    "expected_roles": ["VEGETABLE"]
+  },
+  {
+    "name": "Solomillos de pollo",
+    "expected_type": "MAIN_MEAT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 120, "protein_g": 22.5, "carbohydrate_g": 0, "fat_g": 2.6},
+    "evidence": "Generic composition accepted",
+    "expected_roles": ["PRIMARY_PROTEIN"]
+  },
+  {
+    "name": "Nuez troceada pelada Hacendado",
+    "expected_type": "FAT_COMPLEMENT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 654, "protein_g": 15.2, "carbohydrate_g": 13.7, "fat_g": 65.2},
+    "evidence": "Generic composition accepted",
+    "expected_roles": ["COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Cuajada Hacendado",
+    "expected_type": "CREAMY_BASE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 90, "protein_g": 4.9, "carbohydrate_g": 6.3, "fat_g": 5},
+    "evidence": "OCU current 2026",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Patatas fritas clásicas Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 558, "protein_g": 6.7, "carbohydrate_g": 52, "fat_g": 35},
+    "evidence": "OCU February 2026",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN", "COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Tocino de cielo Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 287, "protein_g": 4.3, "carbohydrate_g": 50.3, "fat_g": 7.6},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Natillas chocolate Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 125, "protein_g": 3.7, "carbohydrate_g": 19, "fat_g": 3.7},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Natillas galleta Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 152, "protein_g": 3.8, "carbohydrate_g": 24.9, "fat_g": 4},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Natillas sabor vainilla Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 127, "protein_g": 3.8, "carbohydrate_g": 18.1, "fat_g": 4.4},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Flan de queso Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 148, "protein_g": 4.6, "carbohydrate_g": 18.7, "fat_g": 6},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Tarta de queso Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 280, "protein_g": 4.2, "carbohydrate_g": 36.2, "fat_g": 12.8},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Flan de café Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 151, "protein_g": 5, "carbohydrate_g": 21.2, "fat_g": 5},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN", "COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Flan de huevo Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 143, "protein_g": 4.6, "carbohydrate_g": 22.3, "fat_g": 3.9},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Flan de huevo sin azúcares añadidos Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 68, "protein_g": 6.3, "carbohydrate_g": 8.2, "fat_g": 1.5},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN"]
+  },
+  {
+    "name": "Crema catalana Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 218, "protein_g": 4.1, "carbohydrate_g": 21.7, "fat_g": 12.8},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Panna cotta con caramelo Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 201, "protein_g": 3.3, "carbohydrate_g": 21, "fat_g": 11},
+    "evidence": "OCU + current Nutriinfo identity",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Arroz con leche Hacendado",
+    "expected_type": "SNACK_DESSERT",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 138, "protein_g": 3.1, "carbohydrate_g": 22.7, "fat_g": 3.7},
+    "evidence": "OCU current",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Bebida de arroz Hacendado sin azúcares añadidos",
+    "expected_type": "MILK_BASE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 38, "protein_g": 0.4, "carbohydrate_g": 6.4, "fat_g": 1.2},
+    "evidence": "OCU February 2026",
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE"]
+  },
+  {
+    "name": "Bebida de soja Hacendado 0% azúcar",
+    "expected_type": "MILK_BASE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 32, "protein_g": 3.1, "carbohydrate_g": 0.9, "fat_g": 1.7},
+    "evidence": "OCU February 2026",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN"]
+  },
+  {
+    "name": "Bebida de soja Hacendado enriquecida calcio y vitaminas",
+    "expected_type": "MILK_BASE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 35, "protein_g": 3.4, "carbohydrate_g": 0.8, "fat_g": 1.9},
+    "evidence": "OCU February 2026",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN"]
+  },
+  {
+    "name": "Leche entera Hacendado",
+    "expected_type": "MILK_BASE",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 62, "protein_g": 3.1, "carbohydrate_g": 4.5, "fat_g": 3.5},
+    "evidence": "Nutriinfo current, EAN 8480000109330",
+    "expected_roles": ["COMPLEMENTARY_PROTEIN", "COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Pasta fresca rellena de carne Hacendado",
+    "expected_type": "FRESH_FILLED_PASTA",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 267, "protein_g": 11, "carbohydrate_g": 38, "fat_g": 7},
+    "evidence": "OCU June 2025, 125 g serving",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Pasta fresca rellena de calabaza y queso Hacendado",
+    "expected_type": "FRESH_FILLED_PASTA",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 286, "protein_g": 7.9, "carbohydrate_g": 32, "fat_g": 13},
+    "evidence": "OCU current/recent, 125 g serving",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Pasta fresca rellena de quesos Hacendado",
+    "expected_type": "FRESH_FILLED_PASTA",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 274, "protein_g": 10, "carbohydrate_g": 35, "fat_g": 10},
+    "evidence": "OCU current/recent, 125 g serving",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Pasta fresca rellena de ricotta y espinacas Hacendado",
+    "expected_type": "FRESH_FILLED_PASTA",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 214, "protein_g": 7.8, "carbohydrate_g": 29, "fat_g": 7.3},
+    "evidence": "OCU current/recent, 125 g serving",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Pasta fresca rellena de Parmigiano y trufa Hacendado",
+    "expected_type": "FRESH_FILLED_PASTA",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 268, "protein_g": 11, "carbohydrate_g": 30, "fat_g": 12},
+    "evidence": "OCU current/recent, 125 g serving",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {
+    "name": "Pasta fresca rellena de queso de cabra y cebolla Hacendado",
+    "expected_type": "FRESH_FILLED_PASTA",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 273, "protein_g": 9.2, "carbohydrate_g": 35, "fat_g": 11},
+    "evidence": "OCU current/recent, 125 g serving",
+    "expected_roles": ["PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"]
+  },
+  {"name": "Galletas tostadas Hacendado", "expected_type": "SNACK_DESSERT", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Chocolate negro 72% de cacao Hacendado", "expected_type": "SNACK_DESSERT", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Batido de chocolate Hacendado", "expected_type": "BEVERAGE", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Cereales avena Crunchy Hacendado de cacao", "expected_type": "BREAKFAST_CEREAL", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Refresco cola Hacendado", "expected_type": "BEVERAGE", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Zumo de naranja recién exprimido Hacendado", "expected_type": "BEVERAGE", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Hummus de garbanzos Hacendado con pimiento del piquillo asado", "expected_type": "SPREAD", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Masa fresca pizza Hacendado", "expected_type": "COOKING_INGREDIENT", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Pizza Calzone con jamón cocido y queso Hacendado", "expected_type": "PREPARED_DISH", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Media tortilla de patata con cebolla Listo para Comer", "expected_type": "PREPARED_DISH", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Atún claro al natural Hacendado", "expected_type": "MAIN_FISH", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Lentejas Listo para Comer", "expected_type": "PREPARED_DISH", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Fabada Hacendado", "expected_type": "PREPARED_DISH", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []},
+  {"name": "Albóndigas en salsa Hacendado", "expected_type": "PREPARED_DISH", "nutrition_status": "MISSING", "nutrition": null, "evidence": null, "expected_roles": []}
+]
