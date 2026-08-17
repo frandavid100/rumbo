@@ -1,0 +1,38 @@
+name: Catalog cross-retailer nutrition probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample:
+        description: Pending Mercadona products to probe
+        required: false
+        default: '60'
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/cross_retailer_nutrition_probe.py'
+      - '.github/workflows/catalog-cross-retailer-probe.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CROSS_RETAILER_PENDING_SAMPLE: ${{ github.event.inputs.sample || '60' }}
+      CROSS_RETAILER_DELAY: '0.35'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run probe
+        working-directory: tools/catalog
+        run: python cross_retailer_nutrition_probe.py
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-cross-retailer-probe-report
+          path: tools/catalog/cross-retailer-probe-output/
+          if-no-files-found: error
