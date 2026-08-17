@@ -7,6 +7,7 @@ on:
       - 'tools/catalog/live_neural_ocr_probe.py'
       - 'tools/catalog/label_neural_extractor.py'
       - 'tools/catalog/nutrition_visual_table_detector.py'
+      - 'tools/catalog/nutrition_label_reader.py'
       - 'tools/catalog/mercadona_product_adapter.py'
       - 'tools/catalog/mercadona_label_pipeline.py'
       - 'tools/catalog/mercadona_nutrition_reader.py'
