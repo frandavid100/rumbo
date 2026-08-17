@@ -40,6 +40,55 @@ class NutritionLabelReaderTest(unittest.TestCase):
         self.assertEqual(r.basis, "100_ml")
         self.assertEqual(r.nutrition["carbohydrate_g"], 10.4)
 
+    def test_multiline_cells_and_terminal_g_read_as_9(self):
+        noisy = """1009
+Valor Energético/Energía 427 kcal
+Grasas/Lípidos
+9.29
+de las cuales
+Hidratos de Carbono
+769
+de los cuales
+Proteínas
+7.4
+Sal 0.92
+"""
+        r = read_nutrition_label(noisy, extraction_confidence=.90)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.basis, "100_g")
+        self.assertAlmostEqual(r.nutrition["fat_g"], 9.29)
+        self.assertEqual(r.nutrition["carbohydrate_g"], 76.0)
+        self.assertEqual(r.nutrition["protein_g"], 7.4)
+
+    def test_ocr_g_as_y_and_large_terminal_9_values(self):
+        noisy = """100 y
+Energético/Energía 568 kcal
+Grasas/Lípidos
+429
+de las cuales
+Hidratos de Carbono
+329
+de los cuales
+Proteínas 10g
+Sal 0.03
+"""
+        r = read_nutrition_label(noisy, extraction_confidence=.90)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition["fat_g"], 42.0)
+        self.assertEqual(r.nutrition["carbohydrate_g"], 32.0)
+
+    def test_bad_terminal_9_repair_is_still_blocked_by_energy(self):
+        noisy = """100 g
+Energético 132 kcal
+Grasas 0 g
+Hidratos de Carbono 6.39 g
+Proteínas 909
+Sal 1 g
+"""
+        r = read_nutrition_label(noisy, extraction_confidence=.95)
+        self.assertEqual(r.status, "REVIEW")
+        self.assertTrue(any(x.startswith("ENERGY_MACRO_MISMATCH") for x in r.reasons))
+
     def test_front_pack_is_not_nutrition(self):
         r = read_nutrition_label("Hacendado Galletas tostadas. Peso neto 800 g. Conservar en lugar fresco.")
         self.assertEqual(r.status, "NOT_NUTRITION_LABEL")
