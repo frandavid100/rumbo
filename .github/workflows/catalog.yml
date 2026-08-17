@@ -47,6 +47,9 @@ jobs:
       - name: Probar adaptadores de fuentes
         working-directory: tools/catalog
         run: python -m unittest -v test_source_adapters.py
+      - name: Probar adaptador GENERIC FoodData Central
+        working-directory: tools/catalog
+        run: python -m unittest -v test_fooddata_central_adapter.py
       - name: Probar lector de etiquetas nutricionales
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_label_reader.py
