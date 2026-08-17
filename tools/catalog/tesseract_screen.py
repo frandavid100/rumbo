@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 import json
+import os
 from pathlib import Path
 import re
 import tempfile
@@ -12,8 +13,9 @@ from mercadona_label_pipeline import download_label_image, process_label_file_en
 from mercadona_weekly_catalog_adapter import fetch_product
 from nutrition_visual_table_detector import detect_visual_table_regions
 
-BATCH = Path(__file__).resolve().parent / "fixtures" / "tesseract_screen_batch.json"
-OUT = Path(__file__).resolve().parent / "tesseract-screen-output"
+ROOT = Path(__file__).resolve().parent
+BATCH = ROOT / os.environ.get("TESSERACT_SCREEN_BATCH", "fixtures/tesseract_screen_batch.json")
+OUT = ROOT / os.environ.get("TESSERACT_SCREEN_OUTPUT", "tesseract-screen-output")
 
 
 def tess(psm: int):
@@ -117,6 +119,7 @@ def main() -> int:
         key=lambda r: ({"TESSERACT_DECLARED":0,"NEURAL_HIGH_PRIORITY":1,"NEURAL_MEDIUM_PRIORITY":2,"NEURAL_LOW_PRIORITY":3,"UNREADABLE_LOW_PRIORITY":4,"NO_IMAGE":5,"ERROR":6}.get(r.get("screen_bucket"), 9), r.get("product_id",""))
     )
     summary = {
+        "batch_file": str(BATCH.relative_to(ROOT)),
         "batch_size": len(batch),
         "stats": dict(stats),
         "neural_high_priority_rate": round(stats["NEURAL_HIGH_PRIORITY"] / len(batch), 4) if batch else 0,
