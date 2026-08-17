@@ -40,6 +40,52 @@ class NutritionLabelReaderTest(unittest.TestCase):
         self.assertEqual(r.basis, "100_ml")
         self.assertEqual(r.nutrition["carbohydrate_g"], 10.4)
 
+    def test_nutrition_heading_prevents_ingredient_percentages_from_becoming_macros(self):
+        observed = """BATIDO SABOR CHOCOLATE UHT.
+INGREDIENTES
+Leche parcialmente desnatada (0,7% de grasa), cacao desgrasado (1%), azúcar.
+INFORMACIÓN NUTRICIONAL
+VALORES MEDIOS
+por 100ml
+VALOR ENERGÉTICO
+252 kJ/60 kcal
+GRASAS
+0,6g
+de las cuales saturadas 0,4g
+HIDRATOS DE CARBONO
+11g
+de los cuales azúcares 10g
+PROTEÍNAS
+2,1g
+SAL
+0,21g
+PREPARACIÓN
+Agitar antes de servir.
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition, {
+            "calories": 60.0, "fat_g": 0.6,
+            "carbohydrate_g": 11.0, "protein_g": 2.1,
+        })
+
+    def test_parallel_per_100g_columns_are_review_not_mixed(self):
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g de peso neto
+Por 100 g de peso escurrido
+Valor Energético 333 kJ / 79 kcal 417 kJ / 98 kcal
+Grasas 0,6 g 1,2 g
+De las cuales saturadas 0,2 g 0,4 g
+Hidratos de Carbono <0,5 g 0,9 g
+De los cuales azúcares <0,5 g <0,5 g
+Proteínas 18 g 21 g
+Sal 1,1 g 1,1 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.97)
+        self.assertEqual(r.status, "REVIEW")
+        self.assertIn("MULTIPLE_NUTRITION_COLUMNS", r.reasons)
+        self.assertIsNone(r.nutrition)
+
     def test_multiline_cells_and_terminal_g_read_as_9(self):
         noisy = """1009
 Valor Energético/Energía 427 kcal
