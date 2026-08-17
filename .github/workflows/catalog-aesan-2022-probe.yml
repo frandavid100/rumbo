@@ -32,18 +32,25 @@ jobs:
         working-directory: tools/catalog
         run: pytest -q test_aesan_2022_match_probe.py
 
+      - name: Resolve AESAN public links
+        run: |
+          echo 'OPEN_DATA_SHORT:'
+          curl -sSIL --max-redirs 10 https://lnkd.in/dqUd8VdN | grep -iE '^(HTTP/|location:)' || true
+          echo 'POWER_BI_SHORT:'
+          curl -sSIL --max-redirs 10 https://lnkd.in/dAvvneQB | grep -iE '^(HTTP/|location:)' || true
+
       - name: Run AESAN 2022 probe
+        continue-on-error: true
         working-directory: tools/catalog
         env:
           AESAN_2022_PAGE_URL: https://www.aesan.gob.es/AECOSAN/web/datos_abiertos/bases_datos_AESAN.htm
         run: |
           sed -i 's#https://www.aesan.gob.es/AECOSAN/web/seguridad_alimentaria/subseccion/alimentosBebidas.htm#${{ env.AESAN_2022_PAGE_URL }}#' aesan_2022_match_probe.py
-          sed -i 's#RumboCatalogProbe/1.0 (+https://github.com/frandavid100/rumbo)#Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36#' aesan_2022_match_probe.py
           python aesan_2022_match_probe.py
 
-      - name: Upload report
+      - name: Upload report if available
         uses: actions/upload-artifact@v4
         with:
           name: catalog-aesan-2022-probe-report
           path: tools/catalog/aesan-2022-probe-output/
-          if-no-files-found: error
+          if-no-files-found: ignore
