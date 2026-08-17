@@ -1,0 +1,36 @@
+name: Catalog live visual detector
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/live_visual_detector_probe.py'
+      - 'tools/catalog/nutrition_visual_table_detector.py'
+      - '.github/workflows/catalog-live-visual-detector.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check opencv-python-headless
+      - name: Ejecutar prueba focal
+        working-directory: tools/catalog
+        run: python live_visual_detector_probe.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-visual-detector-report
+          path: tools/catalog/live-visual-detector-report.json
+          retention-days: 3
