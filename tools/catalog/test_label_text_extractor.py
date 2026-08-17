@@ -37,7 +37,7 @@ class LabelTextExtractorTest(unittest.TestCase):
         self.assertGreaterEqual(extraction.confidence,.94)
         parsed=read_nutrition_label(extraction.text, extraction_confidence=extraction.confidence)
         self.assertTrue(parsed.declared_usable, parsed)
-        self.assertEqual(parsed.basis,'100ml')
+        self.assertEqual(parsed.basis,'100_ml')
         self.assertEqual(parsed.nutrition['calories'],61)
         self.assertEqual(parsed.nutrition['fat_g'],.9)
         self.assertEqual(parsed.nutrition['carbohydrate_g'],10)
