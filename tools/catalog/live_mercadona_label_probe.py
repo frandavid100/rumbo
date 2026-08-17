@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 
+from label_image_preprocess import build_fallback_variants
 from label_text_extractor import extract_with_tesseract
 from mercadona_label_evidence import nutrition_image_candidates
 from mercadona_label_pipeline import download_label_image, process_label_file_ensemble
@@ -30,18 +31,52 @@ def extractor_for(psm: int):
     return lambda path: extract_with_tesseract(path, language="spa", psm=psm)
 
 
+def attempt_payload(result, *, image_index, perspective, variant):
+    return {
+        "image_index": image_index,
+        "perspective": perspective,
+        "variant": variant,
+        "status": result.status,
+        "reason": result.reason,
+        "readings": [{
+            "strategy": strategy,
+            "status": reading.parsed.status,
+            "confidence": reading.extraction.confidence,
+            "basis": reading.parsed.basis,
+            "nutrition": reading.parsed.nutrition,
+            "reasons": list(reading.parsed.reasons),
+        } for strategy, reading in result.readings],
+        "ensemble": None if result.ensemble is None else {
+            "status": result.ensemble.status,
+            "confidence": result.ensemble.confidence,
+            "basis": result.ensemble.basis,
+            "nutrition": result.ensemble.nutrition,
+            "corroborated_fields": result.ensemble.corroborated_fields,
+            "reasons": list(result.ensemble.reasons),
+            "fields": [{
+                "name": f.name, "value": f.value,
+                "strategies": list(f.strategies), "corroborated": f.corroborated,
+            } for f in result.ensemble.fields],
+        },
+    }
+
+
 def main() -> int:
-    report = {"products_requested": len(PRODUCTS), "api_fetched": 0, "with_photos": 0,
-              "declared": 0, "declared_direct": 0, "declared_ensemble": 0,
-              "review_only": 0, "unreadable": 0, "items": []}
+    report = {
+        "products_requested": len(PRODUCTS), "api_fetched": 0, "with_photos": 0,
+        "declared": 0, "declared_direct": 0, "declared_ensemble": 0,
+        "declared_fallback": 0, "review_only": 0, "unreadable": 0, "items": [],
+    }
     snapshot_dir = Path("live-mercadona-snapshots")
     snapshot_dir.mkdir(exist_ok=True)
     strategies = (("psm6", extractor_for(6)), ("psm11", extractor_for(11)))
 
     for product_id, expected_name in PRODUCTS:
-        item = {"product_id": product_id, "expected_name": expected_name, "api_status": "ERROR",
-                "ean": None, "name": None, "photo_count": 0, "status": "UNREADABLE",
-                "declared": None, "attempts": []}
+        item = {
+            "product_id": product_id, "expected_name": expected_name, "api_status": "ERROR",
+            "ean": None, "name": None, "photo_count": 0, "status": "UNREADABLE",
+            "declared": None, "attempts": [],
+        }
         try:
             product = fetch_product(product_id, snapshot_dir=snapshot_dir, timeout=8.0)
             report["api_fetched"] += 1
@@ -57,60 +92,64 @@ def main() -> int:
                     try:
                         download_label_image(evidence.image_url, path, timeout=8.0)
                     except Exception as exc:
-                        item["attempts"].append({"image_index": evidence.image_index,
-                            "perspective": evidence.perspective, "status": "DOWNLOAD_ERROR",
-                            "reason": f"{type(exc).__name__}:{exc}"})
+                        item["attempts"].append({
+                            "image_index": evidence.image_index, "perspective": evidence.perspective,
+                            "variant": "original", "status": "DOWNLOAD_ERROR",
+                            "reason": f"{type(exc).__name__}:{exc}",
+                        })
                         continue
 
-                    result = process_label_file_ensemble(
-                        evidence, path, gtin=product.ean, brand=product.brand, strategies=strategies
-                    )
-                    reading_attempts = []
-                    for strategy, reading in result.readings:
-                        reading_attempts.append({
-                            "strategy": strategy, "status": reading.parsed.status,
-                            "confidence": reading.extraction.confidence, "basis": reading.parsed.basis,
-                            "nutrition": reading.parsed.nutrition, "reasons": list(reading.parsed.reasons),
-                        })
-                    attempt = {
-                        "image_index": evidence.image_index, "perspective": evidence.perspective,
-                        "status": result.status, "reason": result.reason, "readings": reading_attempts,
-                        "ensemble": None if result.ensemble is None else {
-                            "status": result.ensemble.status, "confidence": result.ensemble.confidence,
-                            "basis": result.ensemble.basis, "nutrition": result.ensemble.nutrition,
-                            "corroborated_fields": result.ensemble.corroborated_fields,
-                            "reasons": list(result.ensemble.reasons),
-                            "fields": [{"name": f.name, "value": f.value,
-                                        "strategies": list(f.strategies),
-                                        "corroborated": f.corroborated}
-                                       for f in result.ensemble.fields],
-                        },
-                    }
-                    item["attempts"].append(attempt)
+                    candidates = [("original", path)]
+                    # Mercadona perspective 9 is currently the back-of-pack image
+                    # in the observed sample. We only use that as an OCR priority;
+                    # acceptance still depends entirely on parsed nutrition.
+                    if evidence.perspective == 9:
+                        fallback_dir = Path(td) / f"fallback-{product_id}-{evidence.image_index}"
+                        candidates.extend((v.name, v.path) for v in build_fallback_variants(path, fallback_dir))
 
-                    if result.status == "DECLARED" and result.candidate is not None:
-                        via = "ensemble" if result.ensemble is not None else "direct"
-                        item["status"] = "DECLARED"
-                        item["declared"] = {
-                            "image_index": evidence.image_index, "perspective": evidence.perspective,
-                            "via": via, "nutrition": result.candidate.nutrition,
-                            "source_record_id": result.candidate.source_record_id,
-                            "claim": result.candidate.claim,
-                        }
-                        report["declared"] += 1
-                        report[f"declared_{via}"] += 1
+                    for variant_name, candidate_path in candidates:
+                        result = process_label_file_ensemble(
+                            evidence, candidate_path, gtin=product.ean,
+                            brand=product.brand, strategies=strategies,
+                        )
+                        attempt = attempt_payload(
+                            result, image_index=evidence.image_index,
+                            perspective=evidence.perspective, variant=variant_name,
+                        )
+                        item["attempts"].append(attempt)
+
+                        if result.status == "DECLARED" and result.candidate is not None:
+                            via = "fallback" if variant_name != "original" else (
+                                "ensemble" if result.ensemble is not None else "direct"
+                            )
+                            item["status"] = "DECLARED"
+                            item["declared"] = {
+                                "image_index": evidence.image_index,
+                                "perspective": evidence.perspective,
+                                "variant": variant_name,
+                                "via": via,
+                                "nutrition": result.candidate.nutrition,
+                                "source_record_id": result.candidate.source_record_id,
+                                "claim": result.candidate.claim,
+                            }
+                            report["declared"] += 1
+                            report[f"declared_{via}"] += 1
+                            break
+
+                        if result.ensemble is not None and result.ensemble.nutrition:
+                            score = result.ensemble.confidence
+                            if best_review is None or score > best_review[0]:
+                                best_review = (score, attempt, result.ensemble.nutrition)
+                    if item["status"] == "DECLARED":
                         break
-
-                    if result.ensemble is not None and result.ensemble.nutrition:
-                        score = result.ensemble.confidence
-                        if best_review is None or score > best_review[0]:
-                            best_review = (score, attempt, result.ensemble.nutrition)
 
             if item["status"] != "DECLARED":
                 if best_review is not None:
                     item["status"] = "REVIEW"
-                    item["best_review"] = {"confidence": best_review[0], "attempt": best_review[1],
-                                           "nutrition": best_review[2]}
+                    item["best_review"] = {
+                        "confidence": best_review[0], "attempt": best_review[1],
+                        "nutrition": best_review[2],
+                    }
                     report["review_only"] += 1
                 else:
                     report["unreadable"] += 1
