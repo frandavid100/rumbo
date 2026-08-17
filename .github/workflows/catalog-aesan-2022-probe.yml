@@ -2,6 +2,13 @@ name: Catalog AESAN 2022 historical match probe
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - agent/catalog-phase1
+    paths:
+      - '.github/workflows/catalog-aesan-2022-probe.yml'
+      - 'tools/catalog/aesan_2022_match_probe.py'
+      - 'tools/catalog/test_aesan_2022_match_probe.py'
 
 jobs:
   probe-aesan-2022:
