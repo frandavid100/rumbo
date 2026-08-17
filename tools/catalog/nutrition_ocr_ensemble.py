@@ -5,7 +5,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.0.0"
+ENSEMBLE_VERSION = "1.1.0"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -13,6 +13,11 @@ FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 class ParsedOCRReading:
     strategy: str
     result: LabelReadResult
+    extraction_confidence: float | None = None
+
+    @property
+    def confidence(self) -> float:
+        return self.result.confidence if self.extraction_confidence is None else self.extraction_confidence
 
 
 @dataclass(frozen=True)
@@ -51,27 +56,24 @@ def _field_candidates(readings: Iterable[ParsedOCRReading], field: str):
     out = []
     for reading in readings:
         result = reading.result
-        if result.status == "NOT_NUTRITION_LABEL" or result.confidence < .70 or not result.nutrition:
+        confidence = reading.confidence
+        if result.status == "NOT_NUTRITION_LABEL" or confidence < .70 or not result.nutrition:
             continue
         value = result.nutrition.get(field)
         if isinstance(value, (int, float)):
-            out.append((float(value), result.confidence, reading.strategy))
+            out.append((float(value), confidence, reading.strategy))
     return out
 
 
 def _choose_field(field: str, candidates):
     if not candidates:
         return None, None
-    # Build agreement groups around each observed value. We never average
-    # materially conflicting OCR values.
     groups = []
     for anchor in candidates:
         group = [x for x in candidates if _close(field, anchor[0], x[0])]
         groups.append(group)
     groups.sort(key=lambda g: (len(g), sum(x[1] for x in g)), reverse=True)
     best = groups[0]
-    # If two equally supported groups disagree materially, review rather than
-    # choosing whichever happened to appear first.
     if len(groups) > 1:
         second = groups[1]
         if len(second) == len(best) and not _close(field, best[0][0], second[0][0]):
@@ -86,8 +88,8 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
     readings = tuple(readings)
     reasons: list[str] = []
 
-    bases = [(x.result.basis, x.result.confidence, x.strategy) for x in readings
-             if x.result.basis and x.result.confidence >= .70]
+    bases = [(x.result.basis, x.confidence, x.strategy) for x in readings
+             if x.result.basis and x.confidence >= .70]
     unique_bases = {x[0] for x in bases}
     if len(unique_bases) > 1:
         return OCREnsembleResult("REVIEW", None, None, 0.0, tuple(), 0,
@@ -112,14 +114,13 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
         reasons.append("MISSING_100G_100ML_BASIS")
 
     corroborated = sum(x.corroborated for x in fields)
-    complete_sources = [x.result for x in readings
+    complete_sources = [x for x in readings
                         if x.result.nutrition and all(k in x.result.nutrition for k in FIELDS)]
     best_complete = max((x.confidence for x in complete_sources), default=0.0)
 
-    # Two independently segmented OCR passes confirming >=2 core fields can
-    # promote an almost-high-confidence complete reading. This is deliberately
-    # narrow: field-only synthesis without a nearly complete source remains
-    # review, even if the final arithmetic happens to be plausible.
+    # Parser completeness and OCR confidence are different signals. A partial
+    # parse may still come from a very clean OCR pass and can corroborate fields
+    # from an almost-complete pass.
     if best_complete >= .80 and corroborated >= 2:
         ensemble_confidence = min(.99, best_complete + .02)
     else:
