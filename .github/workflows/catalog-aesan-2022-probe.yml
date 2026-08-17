@@ -1,0 +1,37 @@
+name: Catalog AESAN 2022 historical match probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe-aesan-2022:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl xlrd pytest requests
+
+      - name: Test matcher helpers
+        working-directory: tools/catalog
+        run: pytest -q test_aesan_2022_match_probe.py
+
+      - name: Run AESAN 2022 probe
+        working-directory: tools/catalog
+        run: python aesan_2022_match_probe.py
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-aesan-2022-probe-report
+          path: tools/catalog/aesan-2022-probe-output/
+          if-no-files-found: error
