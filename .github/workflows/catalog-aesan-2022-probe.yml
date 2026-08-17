@@ -41,12 +41,7 @@ jobs:
           CDX="https://web.archive.org/cdx/search/cdx?url=${ORIGINAL}&output=json&fl=timestamp,original,statuscode,mimetype&filter=statuscode:200&filter=collapse:digest&from=2022&to=2026"
           curl -fsSL --retry 3 --retry-all-errors "$CDX" -o /tmp/cdx.json
           cat /tmp/cdx.json
-          TS=$(python - <<'PY'
-import json
-rows=json.load(open('/tmp/cdx.json'))
-print(rows[-1][0] if len(rows)>1 else '')
-PY
-          )
+          TS=$(python -c "import json; r=json.load(open('/tmp/cdx.json')); print(r[-1][0] if len(r)>1 else '')")
           if [ -z "$TS" ]; then
             echo 'No archived workbook snapshot found' >&2
             exit 2
