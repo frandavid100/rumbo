@@ -45,6 +45,9 @@ jobs:
       - name: Probar adaptadores de fuentes
         working-directory: tools/catalog
         run: python -m unittest -v test_source_adapters.py
+      - name: Probar lector de etiquetas nutricionales
+        working-directory: tools/catalog
+        run: python -m unittest -v test_nutrition_label_reader.py
       - name: Probar muestra vertical del catálogo
         run: python -c "import sys; sys.path.insert(0,'tools/catalog'); import test_catalog_v1 as t; t.test_vertical_sample(); t.test_ids_are_stable()"
       - uses: actions/upload-artifact@v4
