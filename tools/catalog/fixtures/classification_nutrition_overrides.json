@@ -1,0 +1,69 @@
+[
+  {
+    "name": "Cereales avena Crunchy Hacendado de cacao",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 393, "protein_g": 13, "carbohydrate_g": 65, "fat_g": 6.4},
+    "expected_roles": ["PRIMARY_CARBOHYDRATE"],
+    "evidence": {
+      "level": "MATCHED",
+      "source": "Open Food Facts",
+      "gtin": "8402001015205",
+      "source_record_id": "8402001015205",
+      "license": "ODbL",
+      "redistribution_allowed": true
+    }
+  },
+  {
+    "name": "Hummus de garbanzos Hacendado con pimiento del piquillo asado",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 313, "protein_g": 5.1, "carbohydrate_g": 10.7, "fat_g": 26},
+    "expected_roles": ["COMPLEMENTARY_FAT"],
+    "evidence": {
+      "level": "DECLARED",
+      "source": "Mercadona label",
+      "retailer_sku": "80862",
+      "gtin": "8480000808622",
+      "reader": "label parser from observed pack image",
+      "image_redistribution_allowed": false
+    }
+  },
+  {
+    "name": "Chocolate negro 72% de cacao Hacendado",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 568, "protein_g": 10, "carbohydrate_g": 32, "fat_g": 42},
+    "expected_roles": ["COMPLEMENTARY_PROTEIN", "COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"],
+    "evidence": {
+      "level": "DECLARED",
+      "source": "Mercadona label",
+      "retailer_sku": "23773",
+      "reader": "Tesseract ensemble from observed pack image",
+      "image_redistribution_allowed": false
+    }
+  },
+  {
+    "name": "Batido de chocolate Hacendado",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 60, "protein_g": 2.1, "carbohydrate_g": 11, "fat_g": 0.6},
+    "expected_roles": ["COMPLEMENTARY_CARBOHYDRATE"],
+    "evidence": {
+      "level": "DECLARED",
+      "source": "Mercadona label",
+      "retailer_sku": "23049",
+      "reader": "PP-OCRv6 on visual table region",
+      "image_redistribution_allowed": false
+    }
+  },
+  {
+    "name": "Galletas tostadas Hacendado",
+    "nutrition_status": "RESOLVED",
+    "nutrition": {"calories": 427, "protein_g": 7.4, "carbohydrate_g": 76, "fat_g": 9.2},
+    "expected_roles": ["COMPLEMENTARY_PROTEIN", "COMPLEMENTARY_CARBOHYDRATE", "COMPLEMENTARY_FAT"],
+    "evidence": {
+      "level": "DECLARED",
+      "source": "Mercadona label",
+      "retailer_sku": "14325",
+      "reader": "PP-OCRv6 on visual table region",
+      "image_redistribution_allowed": false
+    }
+  }
+]
