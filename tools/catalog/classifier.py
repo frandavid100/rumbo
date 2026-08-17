@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import re, unicodedata
 from typing import Iterable
 
-CLASSIFIER_VERSION = "4.2.0"
+CLASSIFIER_VERSION = "4.2.1"
 
 NUTRITIONAL_ROLES = {
     "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN",
@@ -76,8 +76,6 @@ def serving_amount(f,key,grams):
 
 def classify_type(f):
     p=product_text(f)
-    # Primero se reconocen formas de producto completas. Evita falsos positivos
-    # por ingredientes secundarios (pizza con queso, cereales con arroz, etc.).
     high=[
         (r"\b(masa fresca pizza|masa de pizza)\b","COOKING_INGREDIENT","type.pizza_dough"),
         (r"\bhummus\b","SPREAD","type.spread_hummus"),
@@ -87,6 +85,7 @@ def classify_type(f):
         (r"\bcacao soluble\b","SWEET_POWDER","type.sweet_powder"),
         (r"\b(comino|perejil)\b","SEASONING","type.seasoning"),
         (r"\b(salteado de verduras|verdura para paella|parrillada de verduras|menestra de verduras)\b","VEGETABLE","type.vegetable_mix"),
+        (r"\bpan tostado\b","BREAD","type.toasted_bread"),
         (r"\b(cereales?|copos de avena|corn flakes|copos de maiz|muesli|granola)\b","BREAKFAST_CEREAL","type.breakfast_cereal"),
     ]
     for pattern,typ,rid in high:
@@ -122,19 +121,16 @@ def nutritional_roles(f,typ,serving):
     protein=serving_amount(f,"protein_g",serving); carbs=serving_amount(f,"carbohydrate_g",serving); fat=serving_amount(f,"fat_g",serving)
     if typ in {"MILK_BASE","CREAMY_BASE","CHEESE","LEGUME","FAT_COMPLEMENT","SPREAD","SNACK_DESSERT","PREPARED_DISH"} and protein is not None:
         threshold=20.0 if typ=="PREPARED_DISH" else 5.0
-        role="PRIMARY_PROTEIN" if typ=="PREPARED_DISH" and protein>=threshold else "COMPLEMENTARY_PROTEIN"
-        if protein>=threshold: roles.append(_a(role,.90,"nutrition.threshold.protein",f"protein/serving:{protein:.2f}g",f"serving:{serving}g"))
+        if protein>=threshold: roles.append(_a("PRIMARY_PROTEIN" if typ=="PREPARED_DISH" else "COMPLEMENTARY_PROTEIN",.90,"nutrition.threshold.protein",f"protein/serving:{protein:.2f}g",f"serving:{serving}g"))
     if typ in {"FRUIT","MILK_BASE","CREAMY_BASE","BEVERAGE","SNACK_DESSERT","PREPARED_DISH"} and carbs is not None:
         threshold=25.0 if typ=="PREPARED_DISH" else 10.0
-        role="PRIMARY_CARBOHYDRATE" if typ=="PREPARED_DISH" and carbs>=threshold else "COMPLEMENTARY_CARBOHYDRATE"
-        if carbs>=threshold: roles.append(_a(role,.88,"nutrition.threshold.carbohydrate",f"carbohydrate/serving:{carbs:.2f}g",f"serving:{serving}g"))
+        if carbs>=threshold: roles.append(_a("PRIMARY_CARBOHYDRATE" if typ=="PREPARED_DISH" else "COMPLEMENTARY_CARBOHYDRATE",.88,"nutrition.threshold.carbohydrate",f"carbohydrate/serving:{carbs:.2f}g",f"serving:{serving}g"))
     if typ in {"CHEESE","FAT_COMPLEMENT","SAUCE","CREAMY_BASE","SPREAD","SNACK_DESSERT","PREPARED_DISH"} and fat is not None and fat>=5:
         roles.append(_a("COMPLEMENTARY_FAT",.88,"nutrition.threshold.complementary_fat",f"fat/serving:{fat:.2f}g",f"serving:{serving}g"))
     if typ=="BREAKFAST_CEREAL": roles.append(_a("PRIMARY_CARBOHYDRATE",.95,"nutrition.semantic.breakfast_cereal","type:BREAKFAST_CEREAL"))
     if typ=="PROTEIN_POWDER" and protein is not None and protein>=15: roles.append(_a("COMPLEMENTARY_PROTEIN",.96,"nutrition.semantic.protein_powder",f"protein/serving:{protein:.2f}g"))
     best={}
     for x in roles:
-        # Nunca duplicar rol principal y complementario para el mismo macro.
         family={"PRIMARY_PROTEIN":"protein","COMPLEMENTARY_PROTEIN":"protein","PRIMARY_CARBOHYDRATE":"carb","COMPLEMENTARY_CARBOHYDRATE":"carb"}.get(x.value,x.value)
         previous=best.get(family)
         if previous is None or x.value.startswith("PRIMARY_") or x.confidence>previous.confidence: best[family]=x
