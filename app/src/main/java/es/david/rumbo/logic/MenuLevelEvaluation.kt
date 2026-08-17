@@ -25,8 +25,21 @@ enum class MenuLevelStatus {
 
 data class MenuLevelResult(
     val level: MenuQualityLevel,
-    val status: MenuLevelStatus
+    val status: MenuLevelStatus,
+    val witness: MenuWitness? = null
 ) {
+    init {
+        if (status == MenuLevelStatus.CERTIFIED) {
+            require(witness != null) {
+                "Todo nivel certificado debe conservar el menú testigo que lo demuestra."
+            }
+        } else {
+            require(witness == null) {
+                "Un nivel no certificado no puede exponer un menú como testigo de certificación."
+            }
+        }
+    }
+
     val isCertified: Boolean get() = status == MenuLevelStatus.CERTIFIED
 }
 
@@ -58,25 +71,51 @@ data class CumulativeMenuEvaluation(
 
     fun result(level: MenuQualityLevel): MenuLevelResult =
         results.single { it.level == level }
+
+    fun witnessFor(level: MenuQualityLevel): MenuWitness? = result(level).witness
 }
 
 object MenuLevelEvaluator {
     /**
      * Builds the strict cumulative ladder from the authoritative feasibility
-     * state. Later levels intentionally remain unavailable until their actual
-     * policies can be evaluated; legacy variety or category heuristics are not
-     * promoted into certification criteria.
+     * result. FEASIBLE is only valid together with the witness that proves it.
+     * Later levels intentionally remain unavailable until their actual policies
+     * can be evaluated; legacy variety or category heuristics are not promoted
+     * into certification criteria.
      */
-    fun fromSearchStatus(searchStatus: ConstraintSearchStatus): CumulativeMenuEvaluation {
-        val viableStatus = when (searchStatus) {
-            ConstraintSearchStatus.FEASIBLE -> MenuLevelStatus.CERTIFIED
-            ConstraintSearchStatus.SEARCH_INCONCLUSIVE -> MenuLevelStatus.SEARCH_INCONCLUSIVE
-            ConstraintSearchStatus.INSUFFICIENT -> MenuLevelStatus.NOT_CERTIFIED
+    fun fromSearchResult(
+        searchStatus: ConstraintSearchStatus,
+        witness: MenuWitness? = null
+    ): CumulativeMenuEvaluation {
+        if (searchStatus == ConstraintSearchStatus.FEASIBLE) {
+            require(witness != null) {
+                "Un resultado FEASIBLE debe incluir el menú testigo reproducible."
+            }
+        } else {
+            require(witness == null) {
+                "Solo un resultado FEASIBLE puede aportar un menú testigo."
+            }
         }
-        if (viableStatus != MenuLevelStatus.CERTIFIED) {
+
+        val viableResult = when (searchStatus) {
+            ConstraintSearchStatus.FEASIBLE -> MenuLevelResult(
+                MenuQualityLevel.VIABLE,
+                MenuLevelStatus.CERTIFIED,
+                witness
+            )
+            ConstraintSearchStatus.SEARCH_INCONCLUSIVE -> MenuLevelResult(
+                MenuQualityLevel.VIABLE,
+                MenuLevelStatus.SEARCH_INCONCLUSIVE
+            )
+            ConstraintSearchStatus.INSUFFICIENT -> MenuLevelResult(
+                MenuQualityLevel.VIABLE,
+                MenuLevelStatus.NOT_CERTIFIED
+            )
+        }
+        if (!viableResult.isCertified) {
             return CumulativeMenuEvaluation(
                 listOf(
-                    MenuLevelResult(MenuQualityLevel.VIABLE, viableStatus),
+                    viableResult,
                     MenuLevelResult(
                         MenuQualityLevel.COMPLETE,
                         MenuLevelStatus.BLOCKED_BY_PREVIOUS_LEVEL
@@ -95,7 +134,7 @@ object MenuLevelEvaluator {
 
         return CumulativeMenuEvaluation(
             listOf(
-                MenuLevelResult(MenuQualityLevel.VIABLE, MenuLevelStatus.CERTIFIED),
+                viableResult,
                 MenuLevelResult(MenuQualityLevel.COMPLETE, MenuLevelStatus.POLICY_UNAVAILABLE),
                 MenuLevelResult(
                     MenuQualityLevel.CULINARILY_SATISFACTORY,
@@ -110,7 +149,7 @@ object MenuLevelEvaluator {
     }
 
     fun evaluate(assessment: RepertoireAssessment): CumulativeMenuEvaluation =
-        fromSearchStatus(assessment.searchStatus)
+        fromSearchResult(assessment.searchStatus, assessment.witness)
 }
 
 /** Compatibility access point for callers while the legacy assessment remains. */
