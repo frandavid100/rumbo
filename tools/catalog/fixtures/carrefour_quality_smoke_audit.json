@@ -1,0 +1,193 @@
+{
+  "menu_eligible": 18,
+  "blocking_issue_count": 0,
+  "blocking_product_count": 0,
+  "blocking_by_reason": {},
+  "menu_eligible_by_type": {
+    "CULINARY_OIL": 3,
+    "FAT_COMPLEMENT": 5,
+    "LEGUME": 5,
+    "SNACK_DESSERT": 3,
+    "BEVERAGE": 1,
+    "SAUCE": 1
+  },
+  "menu_eligible_by_family": {
+    "Aceite, especias y salsas": 3,
+    "Aperitivos": 5,
+    "Arroz, legumbres y pasta": 5,
+    "Azúcar, caramelos y chocolate": 3,
+    "Cacao, café e infusiones": 1,
+    "Carne": 1
+  },
+  "blocking_examples": [],
+  "stratified_sample": [
+    {
+      "product_id": "carrefour:aceite-de-girasol-carrefour-classic-1-l-carrefour",
+      "name": "Aceite de girasol Carrefour Classic' 1 l.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "CULINARY_OIL",
+      "nutrition": {
+        "calories": 900.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 100.0
+      }
+    },
+    {
+      "product_id": "carrefour:aceite-de-girasol-koipe-fritos-1-l-koipesol-carrefour",
+      "name": "Aceite de girasol Koipe Fritos 1 l.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "CULINARY_OIL",
+      "nutrition": {
+        "calories": 828.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 92.0
+      }
+    },
+    {
+      "product_id": "carrefour:aceite-de-oliva-intenso-1o-carrefour-garrafa-5-l-carrefour",
+      "name": "Aceite de oliva intenso 1º Carrefour garrafa 5 l.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "CULINARY_OIL",
+      "nutrition": {
+        "calories": 900.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 100.0
+      }
+    },
+    {
+      "product_id": "carrefour:aceituna-gazpacha-aperitivo-450-g-carrefour",
+      "name": "Aceituna Gazpacha Aperitivo 450 g",
+      "family": "Aperitivos",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 121.0,
+        "protein_g": 1.0,
+        "carbohydrate_g": 0.9,
+        "fat_g": 12.1
+      }
+    },
+    {
+      "product_id": "carrefour:aceituna-gordal-natural-tarro-500-g-carrefour",
+      "name": "Aceituna gordal natural tarro 500 g",
+      "family": "Aperitivos",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 154.0,
+        "protein_g": 1.1,
+        "carbohydrate_g": 0.0,
+        "fat_g": 16.3
+      }
+    },
+    {
+      "product_id": "carrefour:aceitunas-negras-cacerenas-con-hueso-classic-carrefour-200-g-carrefour",
+      "name": "Aceitunas negras cacereñas con hueso Classic Carrefour 200 g.",
+      "family": "Aperitivos",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 171.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 0.0,
+        "fat_g": 18.0
+      }
+    },
+    {
+      "product_id": "carrefour:alubia-blanca-cocida-pedro-luis-500-g-carrefour",
+      "name": "Alubia blanca cocida Pedro Luis 500 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 77.0,
+        "protein_g": 5.0,
+        "carbohydrate_g": 11.3,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:alubia-pinta-categoria-extra-classic-carrefour-1-kg-carrefour",
+      "name": "Alubia pinta categoría extra Classic Carrefour 1 kg.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 293.0,
+        "protein_g": 20.2,
+        "carbohydrate_g": 38.9,
+        "fat_g": 2.0
+      }
+    },
+    {
+      "product_id": "carrefour:alubia-pinta-cocida-classic-carrefour-400-g-carrefour",
+      "name": "Alubia pinta cocida Classic Carrefour 400 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 95.0,
+        "protein_g": 6.2,
+        "carbohydrate_g": 13.0,
+        "fat_g": 0.7
+      }
+    },
+    {
+      "product_id": "carrefour:almendras-banadas-en-chocolate-negro-extra-carrefour-sin-gluten-doy-pack-200-g-carrefour",
+      "name": "Almendras bañadas en chocolate negro Extra Carrefour sin gluten doy pack 200 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 552.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 35.0,
+        "fat_g": 40.0
+      }
+    },
+    {
+      "product_id": "carrefour:aros-de-chocolate-negro-carrefour-128-g-carrefour",
+      "name": "Aros de chocolate negro Carrefour 128 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 510.0,
+        "protein_g": 6.0,
+        "carbohydrate_g": 61.0,
+        "fat_g": 26.0
+      }
+    },
+    {
+      "product_id": "carrefour:barrita-de-cacahuete-banada-en-chocolate-carrefour-sensation-pack-5-unidade-de-50-g-carrefour",
+      "name": "Barrita de cacahuete bañada en chocolate Carrefour Sensation pack 5 unidade de 50 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 508.0,
+        "protein_g": 9.8,
+        "carbohydrate_g": 53.0,
+        "fat_g": 28.0
+      }
+    },
+    {
+      "product_id": "carrefour:batido-de-cacao-shake-cola-cao-sin-azucar-anadido-200-ml-cola-cao-shake-carrefour",
+      "name": "Batido de cacao Shake Cola Cao sin azúcar añadido 200 ml.",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 42.0,
+        "protein_g": 4.0,
+        "carbohydrate_g": 4.9,
+        "fat_g": 0.4
+      }
+    },
+    {
+      "product_id": "carrefour:albondigas-con-salsa-de-tomate-extra-carrefour-300-g-carrefour",
+      "name": "Albóndigas con salsa de tomate Extra Carrefour 300 g.",
+      "family": "Carne",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 171.0,
+        "protein_g": 8.5,
+        "carbohydrate_g": 7.6,
+        "fat_g": 12.0
+      }
+    }
+  ]
+}
