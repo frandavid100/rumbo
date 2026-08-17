@@ -7,7 +7,7 @@ import json
 import time
 from typing import Iterable
 
-ADAPTER_VERSION = "1.0.0"
+ADAPTER_VERSION = "1.1.0"
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,7 @@ class LabelImageEvidence:
     redistribution_allowed: bool
     purpose: str
     snapshot_path: str | None = None
+    perspective: int | str | None = None
 
 
 def _url_from_image(value) -> str | None:
@@ -44,14 +45,6 @@ def collect_label_images(
     snapshot_dir: str | Path | None = None,
     observed_at: str | None = None,
 ) -> list[LabelImageEvidence]:
-    """Register Mercadona pack images as build-time label evidence.
-
-    Mercadona's own help says product images are provided so shoppers can read
-    packaging information, including nutritional information. We therefore keep
-    every high-resolution pack image as candidate label evidence, but we do not
-    redistribute it and we do not guess which image contains nutrition without
-    actually reading the label.
-    """
     observed_at = observed_at or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     result: list[LabelImageEvidence] = []
     serializable = []
@@ -59,7 +52,8 @@ def collect_label_images(
         url = _url_from_image(raw)
         if not url:
             continue
-        serializable.append({"index": index, "url": url})
+        perspective = raw.get("perspective") if isinstance(raw, dict) else None
+        serializable.append({"index": index, "url": url, "perspective": perspective})
         result.append(LabelImageEvidence(
             retailer="Mercadona",
             retailer_sku=str(retailer_sku),
@@ -70,6 +64,7 @@ def collect_label_images(
             source_page=source_page,
             redistribution_allowed=False,
             purpose="PACK_LABEL_CANDIDATE",
+            perspective=perspective,
         ))
     if snapshot_dir is not None and result:
         base = Path(snapshot_dir)
@@ -89,9 +84,11 @@ def collect_label_images(
 
 
 def nutrition_image_candidates(evidence: Iterable[LabelImageEvidence]) -> list[LabelImageEvidence]:
-    """Return images eligible for a later vision/OCR label-reading stage.
+    """Prioritize likely back-of-pack photos, but never infer nutrition from it.
 
-    Deliberately does not infer nutritional content from filenames or position.
-    All pack images remain candidates until a reader verifies the table.
+    In the current Mercadona pilot, perspective=9 consistently represented the
+    back/label view. It is only a processing priority: every candidate still has
+    to pass OCR plus the deterministic nutrition-table validator.
     """
-    return [x for x in evidence if x.purpose == "PACK_LABEL_CANDIDATE"]
+    candidates = [x for x in evidence if x.purpose == "PACK_LABEL_CANDIDATE"]
+    return sorted(candidates, key=lambda x: (0 if str(x.perspective) == "9" else 1, x.image_index))
