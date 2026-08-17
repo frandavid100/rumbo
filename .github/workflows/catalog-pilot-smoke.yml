@@ -1,0 +1,44 @@
+name: Catalog pilot smoke
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/pilot_large_catalog.py'
+      - 'tools/catalog/mercadona_weekly_catalog_adapter.py'
+      - '.github/workflows/catalog-pilot-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PILOT_SIZE: '30'
+      PILOT_CANDIDATE_POOL: '70'
+      PILOT_NEURAL_BUDGET: '0'
+      PILOT_PER_CATEGORY_CAP: '8'
+      PILOT_OFF_DELAY: '0.08'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar OCR y visión
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check Pillow opencv-python-headless
+      - name: Ejecutar piloto reducido
+        working-directory: tools/catalog
+        run: python pilot_large_catalog.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-pilot-smoke-report
+          path: tools/catalog/pilot-large-output/*.json
+          if-no-files-found: warn
+          retention-days: 3
