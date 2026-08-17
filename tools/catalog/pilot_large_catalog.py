@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import tempfile
 import time
+import unicodedata
 
 from classifier import ProductFeatures, classify, classify_type, CLASSIFIER_VERSION
 from label_neural_extractor import extract_with_paddleocr
@@ -24,7 +25,17 @@ from mercadona_weekly_catalog_adapter import (
 from nutrition_resolver import ProductIdentity, resolve
 from openfoodfacts_adapter import fetch_product as off_fetch, to_candidate as off_candidate, ADAPTER_VERSION as OFF_ADAPTER_VERSION
 
-PILOT_VERSION = "1.0.1"
+PILOT_VERSION = "1.1.0"
+
+FOOD_CATEGORY_MARKERS = (
+    "aceite", "especias", "salsas", "agua", "refrescos", "aperitivos",
+    "arroz", "legumbres", "pasta", "azucar", "caramelos", "chocolate",
+    "cacao", "cafe", "infusiones", "carne", "cereales", "galletas",
+    "charcuteria", "quesos", "congelados", "conservas", "caldos", "cremas",
+    "fruta", "verdura", "huevos", "leche", "mantequilla", "panaderia",
+    "pasteleria", "pescado", "marisco", "pizzas", "platos preparados",
+    "postres", "yogures", "zumos", "bebidas vegetales",
+)
 
 
 def _env_int(name: str, default: int) -> int:
@@ -34,19 +45,31 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _fold(value: str) -> str:
+    text = unicodedata.normalize("NFD", (value or "").lower())
+    return "".join(c for c in text if unicodedata.category(c) != "Mn")
+
+
+def _is_food_category(value: str) -> bool:
+    folded = _fold(value)
+    return any(marker in folded for marker in FOOD_CATEGORY_MARKERS)
+
+
 def _tesseract(psm: int):
     return lambda path: extract_with_tesseract(path, language="spa", psm=psm)
 
 
-def _core_nutrition(candidate) -> dict[str, float] | None:
-    if candidate is None:
+def _core_nutrition_values(nutrition) -> dict[str, float] | None:
+    if not isinstance(nutrition, dict):
         return None
-    n = candidate.nutrition or {}
     keys = ("calories", "protein_g", "carbohydrate_g", "fat_g")
-    if any(n.get(k) is None for k in keys):
+    if any(nutrition.get(k) is None for k in keys):
         return None
     try:
-        return {k: float(n[k]) for k in keys} | ({"fiber_g": float(n["fiber_g"])} if n.get("fiber_g") is not None else {})
+        result = {k: float(nutrition[k]) for k in keys}
+        if nutrition.get("fiber_g") is not None:
+            result["fiber_g"] = float(nutrition["fiber_g"])
+        return result
     except (TypeError, ValueError):
         return None
 
@@ -69,10 +92,8 @@ def _build_features(product, nutrition: dict[str, float] | None) -> ProductFeatu
         ingredients=product.ingredients,
         family=product.family,
         subcategory=product.subcategory,
-        calories=n.get("calories"),
-        protein_g=n.get("protein_g"),
-        carbohydrate_g=n.get("carbohydrate_g"),
-        fat_g=n.get("fat_g"),
+        calories=n.get("calories"), protein_g=n.get("protein_g"),
+        carbohydrate_g=n.get("carbohydrate_g"), fat_g=n.get("fat_g"),
         fiber_g=n.get("fiber_g"),
     )
 
@@ -95,10 +116,10 @@ def _fetch_candidate_products(candidate_ids: list[str], workers: int):
 
 def main() -> int:
     sample_size = _env_int("PILOT_SIZE", 300)
-    candidate_pool = _env_int("PILOT_CANDIDATE_POOL", max(sample_size * 2, 500))
+    candidate_pool = _env_int("PILOT_CANDIDATE_POOL", max(sample_size * 3, 900))
     acquisition_workers = _env_int("PILOT_ACQUISITION_WORKERS", 12)
     neural_budget = _env_int("PILOT_NEURAL_BUDGET", 60)
-    per_category_cap = _env_int("PILOT_PER_CATEGORY_CAP", 18)
+    per_category_cap = _env_int("PILOT_PER_CATEGORY_CAP", 24)
     neural_per_category_cap = _env_int("PILOT_NEURAL_PER_CATEGORY_CAP", 5)
     seed = os.environ.get("PILOT_SEED", "rumbo-mercadona-pilot-2026-08")
     off_delay = float(os.environ.get("PILOT_OFF_DELAY", "0.12"))
@@ -111,7 +132,8 @@ def main() -> int:
     product_ids = fetch_product_ids()
     candidate_ids = deterministic_candidate_ids(product_ids, seed=seed, limit=candidate_pool)
     candidate_products, acquisition_errors = _fetch_candidate_products(candidate_ids, acquisition_workers)
-    sample = stratified_sample(candidate_products, size=sample_size, per_category_cap=per_category_cap)
+    food_candidates = [p for p in candidate_products if _is_food_category(p.category_key)]
+    sample = stratified_sample(food_candidates, size=sample_size, per_category_cap=per_category_cap)
 
     counts = Counter()
     source_counts = Counter()
@@ -121,19 +143,13 @@ def main() -> int:
     items = []
     neural_used = 0
     neural_by_category = Counter()
-
     strategies = (("psm6", _tesseract(6)), ("psm11", _tesseract(11)))
 
     for index, product in enumerate(sample, 1):
         row = {
-            "product_id": product.product_id,
-            "ean": product.ean,
-            "name": product.name,
-            "category": product.category_key,
-            "status": "IDENTIFIED",
-            "nutrition_source": None,
-            "evidence_level": None,
-            "review_reasons": [],
+            "product_id": product.product_id, "ean": product.ean, "name": product.name,
+            "category": product.category_key, "status": "IDENTIFIED",
+            "nutrition_source": None, "evidence_level": None, "review_reasons": [],
         }
         counts["IDENTIFIED"] += 1
         category_stats[product.category_key]["IDENTIFIED"] += 1
@@ -158,8 +174,8 @@ def main() -> int:
                         name=product.name, brand=product.brand, gtin=product.ean,
                         ingredients=product.ingredients,
                     ), [candidate])
-                    if resolved.status == "RESOLVED" and resolved.selected is not None:
-                        possible = _core_nutrition(resolved.selected)
+                    if resolved.status == "RESOLVED":
+                        possible = _core_nutrition_values(resolved.nutrition)
                         if possible is not None:
                             nutrition = possible
                             row["nutrition_source"] = "Open Food Facts"
@@ -171,11 +187,8 @@ def main() -> int:
 
         if nutrition is None and product.photos:
             evidence = collect_label_images(
-                retailer_sku=product.product_id,
-                product_name=product.name,
-                images=product.photos,
-                source_page=_source_page(product.product_id, product.payload),
-                observed_at=product.observed_at,
+                retailer_sku=product.product_id, product_name=product.name, images=product.photos,
+                source_page=_source_page(product.product_id, product.payload), observed_at=product.observed_at,
             )
             candidates = nutrition_image_candidates(evidence)
             back = next((x for x in candidates if str(x.perspective) == "9"), candidates[0] if candidates else None)
@@ -188,8 +201,7 @@ def main() -> int:
                     try:
                         download_label_image(back.image_url, image_path, timeout=10.0)
                         result = import_from_label_file(
-                            back, image_path,
-                            gtin=product.ean, brand=product.brand,
+                            back, image_path, gtin=product.ean, brand=product.brand,
                             tesseract_strategies=strategies,
                             neural_extractor=extract_with_paddleocr if allow_neural else None,
                             work_dir=Path(td) / "work",
@@ -200,7 +212,7 @@ def main() -> int:
                             counts["NEURAL_ATTEMPTED"] += 1
                             category_stats[product.category_key]["NEURAL_ATTEMPTED"] += 1
                         if result.candidate is not None:
-                            possible = _core_nutrition(result.candidate)
+                            possible = _core_nutrition_values(result.candidate.nutrition)
                             if possible is not None:
                                 nutrition = possible
                                 row["nutrition_source"] = result.candidate.source
@@ -266,29 +278,24 @@ def main() -> int:
         "label_importer_version": IMPORTER_VERSION,
         "source_snapshot": "manurruis/mercadona-catalog weekly Hugging Face export",
         "sampling": {
-            "seed": seed,
-            "product_index_count": len(product_ids),
+            "seed": seed, "product_index_count": len(product_ids),
             "candidate_pool_requested": candidate_pool,
             "candidate_products_fetched": len(candidate_products),
-            "sample_requested": sample_size,
-            "sample_actual": len(sample),
-            "categories_in_sample": len(category_stats),
-            "per_category_cap": per_category_cap,
+            "food_candidates": len(food_candidates),
+            "sample_requested": sample_size, "sample_actual": len(sample),
+            "categories_in_sample": len(category_stats), "per_category_cap": per_category_cap,
             "acquisition_workers": acquisition_workers,
         },
         "neural_budget": {
-            "global_cap": neural_budget,
-            "per_category_cap": neural_per_category_cap,
+            "global_cap": neural_budget, "per_category_cap": neural_per_category_cap,
             "actually_attempted": counts["NEURAL_ATTEMPTED"],
             "not_attempted_due_to_budget_or_category_cap": counts["NEURAL_NOT_ATTEMPTED_BUDGET"],
         },
         "counts": dict(counts),
         "rates": {
-            "identified": rate("IDENTIFIED"),
-            "type_recognized": rate("TYPE_RECOGNIZED"),
+            "identified": rate("IDENTIFIED"), "type_recognized": rate("TYPE_RECOGNIZED"),
             "nutritionally_usable": rate("NUTRITIONALLY_USABLE"),
-            "classified": rate("CLASSIFIED"),
-            "menu_eligible": rate("MENU_ELIGIBLE"),
+            "classified": rate("CLASSIFIED"), "menu_eligible": rate("MENU_ELIGIBLE"),
         },
         "nutrition_sources": dict(source_counts.most_common()),
         "culinary_types": dict(type_counts.most_common()),
