@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import re, unicodedata
 from typing import Iterable
 
-CLASSIFIER_VERSION = "4.5.0"
+CLASSIFIER_VERSION = "4.5.1"
 
 NUTRITIONAL_ROLES = {
     "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN",
@@ -87,7 +87,7 @@ def classify_type(f):
         (r"\bhummus\b","SPREAD","type.spread_hummus"),
         (r"\b(cafe soluble|cafe molido|cafe en capsula|te verde|te negro|rooibos|infusion)\b","BREWED_DRINK_BASE","type.brewed_drink_base"),
         (r"\b(refresco|zumo|batido|chocolate liquido a la taza|bebida energetica|bebida isotonica|limonada|bitter|agua mineral|agua de soda|agua con gas|soda con sifon|bebida de pina|bebida 5 frutas|bebida multivitaminas)\b","BEVERAGE","type.beverage"),
-        (r"\b(lomo asado|salchichon|jamon serrano|longaniza|cana de lomo|chorizo sarta|sobrasada)\b","CURED_MEAT","type.cured_meat"),
+        (r"\b(lomo asado|salchichon|jamon serrano|longaniza|cana de lomo|chorizo sarta|sobrasada|embutido blanco|embutido surtido oreado)\b","CURED_MEAT","type.cured_meat"),
         (r"\b(pepinillos?|piparra|ajos? alinados?|remolacha en tiras|palmito al natural)\b","PICKLED_VEGETABLE","type.pickled_vegetable"),
         (r"\b(datiles?|pasas sultanas|fruta desecada)\b","DRIED_FRUIT","type.dried_fruit"),
         (r"\b(patatas? fritas|chips|maiz frito|tortitas? de maiz|cocktail .*aperitivos|cocktail rodeo|torreznos?)\b","SNACK_DESSERT","type.savoury_snack"),
@@ -118,7 +118,7 @@ def classify_type(f):
         (r"\barroz\b","DRY_RICE","type.dry_rice"),
         (r"\b(macarron|macarrones|pasta seca|pasta maravilla|espagueti|spaghetti|helices|penne|tallarin|fideo|fideos|placas? para canelones)\b","DRY_PASTA","type.dry_pasta"),
         (r"\b(patata|patatas|boniato|batata|yuca|gnocchi)\b","FRESH_STARCH","type.fresh_starch"),
-        (r"\b(pan|pita|tortilla de trigo)\b","BREAD","type.bread"),
+        (r"\b(pan|panes|pita|tortilla de trigo)\b","BREAD","type.bread"),
         (r"\b(lentejas?|garbanzos?|alubias?|judias? blancas?|judias? pintas?|habas?|habitas?)\b","LEGUME","type.legume"),
         (r"\b(queso|parmesano|mozzarella|cheddar)\b","CHEESE","type.cheese"),
         (r"\b(aceite de oliva|aceite de girasol|aceite vegetal|aove)\b","CULINARY_OIL","type.culinary_oil"),
