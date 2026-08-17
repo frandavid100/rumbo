@@ -9,10 +9,10 @@ from urllib.request import Request, urlopen
 from label_text_extractor import TextExtraction, extract_with_tesseract
 from mercadona_label_evidence import LabelImageEvidence
 from mercadona_nutrition_reader import VisionExtraction, MercadonaLabelReading, read_evidence, to_candidate
-from nutrition_ocr_ensemble import ParsedOCRReading, OCREnsembleResult, fuse_ocr_readings
+from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, OCREnsembleResult, fuse_ocr_readings
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 
-PIPELINE_VERSION = "1.2.1"
+PIPELINE_VERSION = "1.2.2"
 USER_AGENT = "RumboCatalog/0.1 (label reader; contact: frandavid100@users.noreply.github.com)"
 
 
