@@ -1,0 +1,41 @@
+name: Catalog Carrefour quality smoke
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-quality-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Regression tests
+        working-directory: tools/catalog
+        run: python -m unittest -v test_classifier_quality.py test_carrefour_parser_v2.py
+      - name: Smoke import
+        working-directory: tools/catalog
+        run: python carrefour_radar_catalog_importer_v2.py --out carrefour-quality-smoke --max-pages 1 --max-products 180 --workers 16
+      - name: Audit smoke catalog
+        working-directory: tools/catalog
+        run: python audit_carrefour_quality.py carrefour-quality-smoke/carrefour_food_catalog.sqlite --out carrefour-quality-smoke/audit.json
+      - name: Persist smoke report
+        run: |
+          cp tools/catalog/carrefour-quality-smoke/summary.json tools/catalog/fixtures/carrefour_quality_smoke_summary.json
+          cp tools/catalog/carrefour-quality-smoke/audit.json tools/catalog/fixtures/carrefour_quality_smoke_audit.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/carrefour_quality_smoke_summary.json tools/catalog/fixtures/carrefour_quality_smoke_audit.json
+          git diff --cached --quiet || git commit -m "catalog: persist Carrefour quality smoke"
+          git push origin HEAD:agent/catalog-phase1
