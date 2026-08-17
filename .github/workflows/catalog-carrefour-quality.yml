@@ -13,6 +13,9 @@ on:
       - '.github/workflows/catalog-carrefour-quality.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   rebuild:
     runs-on: ubuntu-24.04
@@ -44,6 +47,17 @@ jobs:
       - name: Audit full catalog
         working-directory: tools/catalog
         run: python audit_carrefour_quality.py carrefour-quality-full/carrefour_food_catalog.sqlite --out carrefour-quality-full/audit.json
+
+      - name: Persist compact quality report
+        run: |
+          mkdir -p tools/catalog/fixtures
+          cp tools/catalog/carrefour-quality-full/summary.json tools/catalog/fixtures/carrefour_quality_latest_summary.json
+          cp tools/catalog/carrefour-quality-full/audit.json tools/catalog/fixtures/carrefour_quality_latest_audit.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/carrefour_quality_latest_summary.json tools/catalog/fixtures/carrefour_quality_latest_audit.json
+          git diff --cached --quiet || git commit -m "catalog: persist Carrefour quality audit"
+          git push origin HEAD:agent/catalog-phase1
 
       - name: Upload quality catalog
         uses: actions/upload-artifact@v4
