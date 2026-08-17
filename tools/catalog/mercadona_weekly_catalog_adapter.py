@@ -4,13 +4,24 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
+import re
 import time
 from typing import Any, Callable
 from urllib.request import Request, urlopen
 
 DATASET_ROOT = "https://huggingface.co/datasets/manurruis/mercadona-catalog/resolve/main"
 USER_AGENT = "RumboCatalog/0.1 (evaluation pilot; contact: frandavid100@users.noreply.github.com)"
-ADAPTER_VERSION = "1.0.0"
+ADAPTER_VERSION = "1.1.0"
+
+# Merchandise can appear inside otherwise-food categories (the pilot found
+# birthday candles under bakery/pastry). Keep this an explicit conservative
+# exclusion list: unknown products remain discoverable elsewhere; they simply
+# must not enter a food-classification sample as if they were edible.
+NON_FOOD_NAME_PATTERNS = (
+    r"\bvela(?:s)? de cumpleanos?\b",
+    r"\bvela(?:s)? numero\b",
+    r"\bbengala(?:s)? de cumpleanos?\b",
+)
 
 
 @dataclass(frozen=True)
@@ -64,7 +75,6 @@ def fetch_product_ids(*, timeout: float = 20.0,
     payload = _get_json("product_ids.json", timeout=timeout, transport=transport)
     ids: list[str] = []
     _collect_ids(payload, ids)
-    # Stable de-duplication. Product IDs are retailer identifiers, not GTINs.
     result = sorted(set(ids), key=lambda x: (len(x), x))
     if len(result) < 100:
         raise ValueError(f"Unexpectedly small Mercadona product index: {len(result)}")
@@ -82,6 +92,17 @@ def _string(value: Any) -> str | None:
         value = value.strip()
         return value or None
     return None
+
+
+def _fold(value: str | None) -> str:
+    import unicodedata
+    text = unicodedata.normalize("NFD", (value or "").lower())
+    return "".join(c for c in text if unicodedata.category(c) != "Mn")
+
+
+def is_non_food_product(product: WeeklyCatalogProduct) -> bool:
+    text = _fold(" ".join(x for x in (product.name, product.legal_name) if x))
+    return any(re.search(pattern, text) for pattern in NON_FOOD_NAME_PATTERNS)
 
 
 def _ingredients(payload: dict) -> str | None:
@@ -157,6 +178,7 @@ def fetch_product(product_id: str, *, timeout: float = 20.0,
 
 def stratified_sample(products: list[WeeklyCatalogProduct], *, size: int,
                       per_category_cap: int = 15) -> list[WeeklyCatalogProduct]:
+    products = [product for product in products if not is_non_food_product(product)]
     by_category: dict[str, list[WeeklyCatalogProduct]] = {}
     for product in products:
         by_category.setdefault(product.category_key, []).append(product)
