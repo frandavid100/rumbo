@@ -1,0 +1,44 @@
+name: Catalog
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/**'
+      - '.github/workflows/catalog.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/catalog/**'
+      - '.github/workflows/catalog.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probar clasificador dorado
+        working-directory: tools/catalog
+        run: python -m unittest -v test_classifier.py
+      - name: Probar cobertura de tipos
+        working-directory: tools/catalog
+        run: python -m unittest -v test_classifier_coverage.py
+      - name: Evaluar corpus amplio
+        working-directory: tools/catalog
+        run: python evaluate_classifier_probe.py | tee full-classification-report.json
+      - name: Probar muestra vertical del catálogo
+        run: python -m unittest -v tools/catalog/test_catalog_v1.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-validation-report
+          path: tools/catalog/full-classification-report.json
+          if-no-files-found: warn
+          retention-days: 7
