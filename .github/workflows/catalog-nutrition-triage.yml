@@ -1,0 +1,41 @@
+name: Catalog nutrition triage
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/triage_missing_nutrition.py'
+      - '.github/workflows/catalog-nutrition-triage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TRIAGE_SIZE: '300'
+      TRIAGE_CANDIDATE_POOL: '900'
+      TRIAGE_VISUAL_BUDGET: '120'
+      TRIAGE_ACQUISITION_WORKERS: '16'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar visión barata
+        run: python -m pip install --disable-pip-version-check opencv-python-headless Pillow
+      - name: Ejecutar triaje de nutrición
+        working-directory: tools/catalog
+        run: python triage_missing_nutrition.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-nutrition-triage-report
+          path: |
+            tools/catalog/nutrition-triage-output/summary.json
+            tools/catalog/nutrition-triage-output/report.json
+          if-no-files-found: warn
+          retention-days: 7
