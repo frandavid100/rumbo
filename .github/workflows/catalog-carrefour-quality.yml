@@ -16,6 +16,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: carrefour-quality-full
+  cancel-in-progress: true
+
 jobs:
   rebuild:
     runs-on: ubuntu-24.04
