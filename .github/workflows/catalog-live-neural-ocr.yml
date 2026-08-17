@@ -1,0 +1,50 @@
+name: Catalog live neural OCR
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/live_neural_ocr_probe.py'
+      - 'tools/catalog/label_neural_extractor.py'
+      - 'tools/catalog/nutrition_visual_table_detector.py'
+      - 'tools/catalog/mercadona_product_adapter.py'
+      - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - '.github/workflows/catalog-live-neural-ocr.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-neural-ocr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar PP-OCRv6 y visión
+        run: |
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' opencv-python-headless Pillow
+          python - <<'PY'
+          import paddle, paddleocr
+          print('paddle', paddle.__version__)
+          print('paddleocr', paddleocr.__version__)
+          PY
+      - name: Ejecutar prueba neuronal focal
+        working-directory: tools/catalog
+        run: python live_neural_ocr_probe.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-neural-ocr-report
+          path: |
+            tools/catalog/live-neural-ocr-report.json
+            tools/catalog/live-neural-snapshots/*.json
+          if-no-files-found: warn
+          retention-days: 3
