@@ -1,0 +1,36 @@
+name: Catalog GENERIC FDC proposals
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/fooddata_central_adapter.py'
+      - 'tools/catalog/resolve_generic_fdc_proposals.py'
+      - 'tools/catalog/fixtures/generic_fdc_mapping_proposals.json'
+      - '.github/workflows/catalog-generic-fdc-proposals.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proposals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FDC_API_KEY: DEMO_KEY
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Consultar FoodData Central
+        working-directory: tools/catalog
+        run: python resolve_generic_fdc_proposals.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-generic-fdc-proposals-report
+          path: tools/catalog/generic-fdc-proposals-output/report.json
+          if-no-files-found: warn
+          retention-days: 7
