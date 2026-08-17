@@ -54,13 +54,14 @@ class Golden(unittest.TestCase):
         self.assertEqual({x.value for x in a.nutritional_roles},{x.value for x in b.nutritional_roles})
 
     def test_prepared_and_unknown_review(self):
-        for f in [
-            ProductFeatures('Lasaña boloñesa preparada',calories=180,protein_g=8,carbohydrate_g=18,fat_g=8),
-            ProductFeatures('Preparado alimenticio sabor mediterráneo',calories=200,protein_g=6,carbohydrate_g=20,fat_g=10),
-        ]:
-            r=classify(f)
-            self.assertFalse(r.classified)
-            self.assertIn('UNKNOWN_CULINARY_TYPE',r.review_reasons)
+        prepared=classify(ProductFeatures('Lasaña boloñesa preparada',calories=180,protein_g=8,carbohydrate_g=18,fat_g=8))
+        self.assertFalse(prepared.classified)
+        self.assertEqual(prepared.culinary_type.value,'PREPARED_DISH')
+        self.assertIn('PREPARED_DISH_NEEDS_PORTION_REVIEW',prepared.review_reasons)
+
+        unknown=classify(ProductFeatures('Preparado alimenticio sabor mediterráneo',calories=200,protein_g=6,carbohydrate_g=20,fat_g=10))
+        self.assertFalse(unknown.classified)
+        self.assertIn('UNKNOWN_CULINARY_TYPE',unknown.review_reasons)
 
     def test_incomplete_review(self):
         r=classify(ProductFeatures('Arroz basmati'))
