@@ -27,13 +27,15 @@ enum class ConstraintSearchStatus {
 
 enum class ConstraintViolationKind {
     NO_ACTIVE_RULES,
-    MISSING_MEAL_COVERAGE
+    MISSING_MEAL_COVERAGE,
+    MISSING_REQUIRED_COMPANION
 }
 
 data class ConstraintViolation(
     val kind: ConstraintViolationKind,
     val message: String,
-    val mealType: MealType? = null
+    val mealType: MealType? = null,
+    val itemIds: Set<Long> = emptySet()
 )
 
 /** Exact generated menu plus the deterministic seed that produced it. */
@@ -82,16 +84,44 @@ data class MenuConstraintModel(
                     ))
                 }
                 activeMealTypes.forEach { mealType ->
-                    val alternatives = activeRules.count { rule ->
+                    val mealRules = activeRules.filter { rule ->
                         mealType in rule.allowedMealTypes ||
                             rule.requiredSlots().any { it.mealType == mealType }
                     }
-                    if (alternatives == 0) {
+                    if (mealRules.isEmpty()) {
                         add(ConstraintViolation(
                             ConstraintViolationKind.MISSING_MEAL_COVERAGE,
                             "No hay opciones para ${mealType.label.lowercase()}.",
                             mealType
                         ))
+                    }
+
+                    // This is a proof, not a heuristic: an ALWAYS dependent item must
+                    // appear in this meal every day. If there is no compatible base
+                    // anywhere in the usable rule set for this meal, neither the
+                    // generator nor any alternative search can satisfy the hard
+                    // dependency using the current catalogue model.
+                    val requiredDependentRules = mealRules.filter { rule ->
+                        rule.frequency == PlanningFrequency.ALWAYS &&
+                            foodsById[rule.itemId]?.let(CulinaryPolicy::roles).orEmpty().let { roles ->
+                                CulinaryRole.DEPENDENT_PREPARATION in roles ||
+                                    CulinaryRole.BREAKFAST_CEREAL in roles
+                            }
+                    }
+                    if (requiredDependentRules.isNotEmpty()) {
+                        val hasCompatibleBase = mealRules.any { rule ->
+                            CulinaryRole.LIQUID_OR_CREAMY_BASE in
+                                foodsById[rule.itemId]?.let(CulinaryPolicy::roles).orEmpty()
+                        }
+                        if (!hasCompatibleBase) {
+                            add(ConstraintViolation(
+                                ConstraintViolationKind.MISSING_REQUIRED_COMPANION,
+                                "Hay un alimento obligatorio que necesita una base compatible en " +
+                                    mealType.label.lowercase() + ", pero no existe ninguna opción programada.",
+                                mealType,
+                                requiredDependentRules.mapTo(mutableSetOf()) { it.itemId }
+                            ))
+                        }
                     }
                 }
             }
@@ -99,7 +129,7 @@ data class MenuConstraintModel(
                 activeRules = activeRules,
                 activeMealTypes = activeMealTypes,
                 mealShares = mealShares,
-                structuralViolations = violations
+                structuralViolations = violations.distinct()
             )
         }
     }
