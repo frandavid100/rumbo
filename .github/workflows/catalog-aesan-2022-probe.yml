@@ -32,16 +32,34 @@ jobs:
         working-directory: tools/catalog
         run: pytest -q test_aesan_2022_match_probe.py
 
-      - name: Probe official workbook URL
+      - name: Resolve archived official workbook
+        id: archive
+        shell: bash
         run: |
-          curl -sSIL --retry 3 --retry-all-errors --max-redirs 5 \
-            https://www.aesan.gob.es/AECOSAN/docs/documentos/seguridad_alimentaria/bases_datos/BasedatosWeb.xlsx \
-            | grep -iE '^(HTTP/|content-type:|content-length:|last-modified:)' || true
+          set -euo pipefail
+          ORIGINAL='https://www.aesan.gob.es/AECOSAN/docs/documentos/seguridad_alimentaria/bases_datos/BasedatosWeb.xlsx'
+          CDX="https://web.archive.org/cdx/search/cdx?url=${ORIGINAL}&output=json&fl=timestamp,original,statuscode,mimetype&filter=statuscode:200&filter=collapse:digest&from=2022&to=2026"
+          curl -fsSL --retry 3 --retry-all-errors "$CDX" -o /tmp/cdx.json
+          cat /tmp/cdx.json
+          TS=$(python - <<'PY'
+import json
+rows=json.load(open('/tmp/cdx.json'))
+print(rows[-1][0] if len(rows)>1 else '')
+PY
+          )
+          if [ -z "$TS" ]; then
+            echo 'No archived workbook snapshot found' >&2
+            exit 2
+          fi
+          ARCHIVE="https://web.archive.org/web/${TS}id_/${ORIGINAL}"
+          echo "archive_url=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "archive_timestamp=$TS" >> "$GITHUB_OUTPUT"
+          echo "Using archived official AESAN workbook snapshot: $TS"
 
       - name: Run AESAN 2022 probe
         working-directory: tools/catalog
         env:
-          AESAN_2022_EXCEL_URL: https://www.aesan.gob.es/AECOSAN/docs/documentos/seguridad_alimentaria/bases_datos/BasedatosWeb.xlsx
+          AESAN_2022_EXCEL_URL: ${{ steps.archive.outputs.archive_url }}
         run: python aesan_2022_match_probe.py
 
       - name: Upload report
