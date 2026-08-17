@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 
 from label_text_extractor import extract_with_tesseract
+from mercadona_label_evidence import nutrition_image_candidates
 from mercadona_label_pipeline import download_label_image, process_label_file_ensemble
 from mercadona_product_adapter import fetch_product
 
@@ -51,13 +52,14 @@ def main() -> int:
 
             best_review = None
             with tempfile.TemporaryDirectory(prefix="rumbo-live-label-") as td:
-                for evidence in product.label_images:
+                for evidence in nutrition_image_candidates(product.label_images):
                     path = Path(td) / f"{product_id}-{evidence.image_index}.jpg"
                     try:
                         download_label_image(evidence.image_url, path, timeout=8.0)
                     except Exception as exc:
                         item["attempts"].append({"image_index": evidence.image_index,
-                            "status": "DOWNLOAD_ERROR", "reason": f"{type(exc).__name__}:{exc}"})
+                            "perspective": evidence.perspective, "status": "DOWNLOAD_ERROR",
+                            "reason": f"{type(exc).__name__}:{exc}"})
                         continue
 
                     result = process_label_file_ensemble(
@@ -66,31 +68,22 @@ def main() -> int:
                     reading_attempts = []
                     for strategy, reading in result.readings:
                         reading_attempts.append({
-                            "strategy": strategy,
-                            "status": reading.parsed.status,
-                            "confidence": reading.extraction.confidence,
-                            "basis": reading.parsed.basis,
-                            "nutrition": reading.parsed.nutrition,
-                            "reasons": list(reading.parsed.reasons),
+                            "strategy": strategy, "status": reading.parsed.status,
+                            "confidence": reading.extraction.confidence, "basis": reading.parsed.basis,
+                            "nutrition": reading.parsed.nutrition, "reasons": list(reading.parsed.reasons),
                         })
                     attempt = {
-                        "image_index": evidence.image_index,
-                        "status": result.status,
-                        "reason": result.reason,
-                        "readings": reading_attempts,
+                        "image_index": evidence.image_index, "perspective": evidence.perspective,
+                        "status": result.status, "reason": result.reason, "readings": reading_attempts,
                         "ensemble": None if result.ensemble is None else {
-                            "status": result.ensemble.status,
-                            "confidence": result.ensemble.confidence,
-                            "basis": result.ensemble.basis,
-                            "nutrition": result.ensemble.nutrition,
+                            "status": result.ensemble.status, "confidence": result.ensemble.confidence,
+                            "basis": result.ensemble.basis, "nutrition": result.ensemble.nutrition,
                             "corroborated_fields": result.ensemble.corroborated_fields,
                             "reasons": list(result.ensemble.reasons),
-                            "fields": [
-                                {"name": f.name, "value": f.value,
-                                 "strategies": list(f.strategies),
-                                 "corroborated": f.corroborated}
-                                for f in result.ensemble.fields
-                            ],
+                            "fields": [{"name": f.name, "value": f.value,
+                                        "strategies": list(f.strategies),
+                                        "corroborated": f.corroborated}
+                                       for f in result.ensemble.fields],
                         },
                     }
                     item["attempts"].append(attempt)
@@ -99,9 +92,8 @@ def main() -> int:
                         via = "ensemble" if result.ensemble is not None else "direct"
                         item["status"] = "DECLARED"
                         item["declared"] = {
-                            "image_index": evidence.image_index,
-                            "via": via,
-                            "nutrition": result.candidate.nutrition,
+                            "image_index": evidence.image_index, "perspective": evidence.perspective,
+                            "via": via, "nutrition": result.candidate.nutrition,
                             "source_record_id": result.candidate.source_record_id,
                             "claim": result.candidate.claim,
                         }
