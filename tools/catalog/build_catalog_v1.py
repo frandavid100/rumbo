@@ -2,7 +2,7 @@
 import argparse, hashlib, json, sqlite3, time
 from pathlib import Path
 
-SCHEMA_VERSION=3
+SCHEMA_VERSION=4
 CLASSIFIER_VERSION="3"
 SCHEMA="""
 CREATE TABLE catalog_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -12,8 +12,10 @@ CREATE TABLE nutrition(product_id INTEGER PRIMARY KEY,basis TEXT NOT NULL,calori
 CREATE TABLE classifications(product_id INTEGER PRIMARY KEY,nutritional_role TEXT NOT NULL,culinary_type TEXT NOT NULL,confidence REAL NOT NULL,classifier_version TEXT NOT NULL);
 CREATE TABLE eligibility(product_id INTEGER PRIMARY KEY,discoverable INTEGER NOT NULL,identified INTEGER NOT NULL,nutritionally_usable INTEGER NOT NULL,classified INTEGER NOT NULL,menu_eligible INTEGER NOT NULL,reason TEXT);
 CREATE TABLE evidence(id INTEGER PRIMARY KEY,source TEXT NOT NULL,source_record_id TEXT NOT NULL,observed_at TEXT NOT NULL,raw_path TEXT NOT NULL,raw_sha256 TEXT NOT NULL,adapter_version TEXT NOT NULL);
+CREATE TABLE product_images(id INTEGER PRIMARY KEY,product_id INTEGER NOT NULL,kind TEXT NOT NULL,url TEXT NOT NULL,source TEXT NOT NULL,source_record_id TEXT,license TEXT,attribution TEXT,redistributable INTEGER NOT NULL DEFAULT 0,width INTEGER,height INTEGER,is_primary INTEGER NOT NULL DEFAULT 0,observed_at TEXT NOT NULL,UNIQUE(product_id,kind,url));
 CREATE INDEX idx_listing_retailer ON retailer_listings(retailer);
 CREATE INDEX idx_product_gtin ON products(gtin);
+CREATE INDEX idx_product_images_product ON product_images(product_id);
 """
 ACCEPTED={"DECLARED","MATCHED","CORROBORATED","GENERIC"}
 
@@ -56,6 +58,32 @@ def choose(gtin,sku,offs,secondary,generic):
         if complete(n): return n,x.get("source","composición genérica"),"GENERIC",.70,[("generic",sku,x,"fixture-v1")],{"generic_name_es":x.get("generic_name")}
     return None
 
+def _selected_url(selected,kind):
+    node=(selected or {}).get(kind,{})
+    for size in ("display","small","thumb"):
+        values=node.get(size,{})
+        if isinstance(values,dict):
+            if isinstance(values.get("es"),str): return values["es"]
+            for value in values.values():
+                if isinstance(value,str): return value
+    return None
+
+def off_images(product,gtin):
+    selected=product.get("selected_images") or {}
+    rows=[]
+    for kind in ("front","ingredients","nutrition","packaging"):
+        url=_selected_url(selected,kind)
+        if not url:
+            legacy=product.get("image_url" if kind=="front" else f"image_{kind}_url")
+            url=legacy if isinstance(legacy,str) else None
+        if url:
+            rows.append({"kind":kind,"url":url,"source":"Open Food Facts","source_record_id":gtin,"license":"CC BY-SA","attribution":"Open Food Facts contributors","redistributable":1,"is_primary":1 if kind=="front" else 0})
+    return rows
+
+def insert_images(con,pid,images,ts):
+    for image in images:
+        con.execute("INSERT OR IGNORE INTO product_images(product_id,kind,url,source,source_record_id,license,attribution,redistributable,width,height,is_primary,observed_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(pid,image["kind"],image["url"],image["source"],image.get("source_record_id"),image.get("license"),image.get("attribution"),int(bool(image.get("redistributable"))),image.get("width"),image.get("height"),int(bool(image.get("is_primary"))),ts))
+
 def build(a):
     merc=json.loads(Path(a.mercadona_fixture).read_text()); offs={str(x["code"]):x for x in json.loads(Path(a.off_fixture).read_text())}
     secondary={str(x["code"]):x for x in json.loads(Path(a.secondary_fixture).read_text())} if a.secondary_fixture else {}
@@ -69,6 +97,7 @@ def build(a):
         chosen=choose(gtin,sku,offs,secondary,generic); product=(chosen[5] if chosen else {})
         con.execute("INSERT INTO products VALUES(?,?,?,?,?,?)",(pid,gtin,item["name"],item.get("brand") or product.get("brands"),product.get("generic_name_es"),product.get("ingredients_text_es")))
         con.execute("INSERT INTO retailer_listings(product_id,retailer,retailer_sku,context,display_name,url,availability,observed_at) VALUES(?,?,?,?,?,?,?,?)",(pid,"Mercadona",sku,a.context,item["name"],item.get("url"),item.get("availability","ACTIVE"),ts))
+        if gtin and gtin in offs: insert_images(con,pid,off_images(offs[gtin].get("product",{}),gtin),ts)
         usable=False
         if chosen:
             n,source,level,conf,payloads,_=chosen
@@ -79,7 +108,7 @@ def build(a):
         role,ctype,cconf=classify(item["name"]); classified=ctype!="UNKNOWN"
         con.execute("INSERT INTO classifications VALUES(?,?,?,?,?)",(pid,role,ctype,cconf,CLASSIFIER_VERSION)); reason=None if usable and classified else ("Falta nutrición comparable" if not usable else "Clasificación insuficiente")
         con.execute("INSERT INTO eligibility VALUES(?,?,?,?,?,?,?)",(pid,1,1,int(usable),int(classified),int(usable and classified),reason))
-    con.commit(); report={"products":con.execute("select count(*) from products").fetchone()[0],"menu_eligible":con.execute("select count(*) from eligibility where menu_eligible=1").fetchone()[0],"classified":con.execute("select count(*) from eligibility where classified=1").fetchone()[0],"nutrition_by_evidence":dict(con.execute("select evidence_level,count(*) from nutrition group by evidence_level").fetchall()),"unusable":[r[0] for r in con.execute("select p.canonical_name from products p join eligibility e on e.product_id=p.id where e.menu_eligible=0 order by p.canonical_name")]}; Path(a.report).parent.mkdir(parents=True,exist_ok=True); Path(a.report).write_text(json.dumps(report,indent=2,ensure_ascii=False)); con.close()
+    con.commit(); report={"products":con.execute("select count(*) from products").fetchone()[0],"menu_eligible":con.execute("select count(*) from eligibility where menu_eligible=1").fetchone()[0],"classified":con.execute("select count(*) from eligibility where classified=1").fetchone()[0],"nutrition_by_evidence":dict(con.execute("select evidence_level,count(*) from nutrition group by evidence_level").fetchall()),"images":con.execute("select count(*) from product_images").fetchone()[0],"redistributable_images":con.execute("select count(*) from product_images where redistributable=1").fetchone()[0],"unusable":[r[0] for r in con.execute("select p.canonical_name from products p join eligibility e on e.product_id=p.id where e.menu_eligible=0 order by p.canonical_name")]}; Path(a.report).parent.mkdir(parents=True,exist_ok=True); Path(a.report).write_text(json.dumps(report,indent=2,ensure_ascii=False)); con.close()
 
 if __name__=="__main__":
     p=argparse.ArgumentParser(); p.add_argument("--mercadona-fixture",required=True); p.add_argument("--off-fixture",required=True); p.add_argument("--secondary-fixture"); p.add_argument("--generic-fixture"); p.add_argument("--output",required=True); p.add_argument("--report",required=True); p.add_argument("--evidence-dir",required=True); p.add_argument("--context",default="Valencia"); build(p.parse_args())
