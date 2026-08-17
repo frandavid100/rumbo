@@ -6,6 +6,9 @@ on:
     paths:
       - 'tools/catalog/live_mercadona_label_probe.py'
       - 'tools/catalog/mercadona_product_adapter.py'
+      - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/label_text_extractor.py'
       - '.github/workflows/catalog-live-mercadona-labels.yml'
   workflow_dispatch:
 
