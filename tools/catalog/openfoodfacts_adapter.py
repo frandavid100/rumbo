@@ -5,11 +5,12 @@ import json
 from pathlib import Path
 import time
 from typing import Callable
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 
-ADAPTER_VERSION = "1.0.0"
+ADAPTER_VERSION = "1.0.1"
 API_ROOT = "https://world.openfoodfacts.org/api/v2/product"
 FIELDS = "code,product_name,product_name_es,brands,quantity,ingredients_text,ingredients_text_es,nutriments,selected_images,last_modified_t"
 USER_AGENT = "RumboCatalog/0.1 (catalog builder; contact: frandavid100@users.noreply.github.com)"
@@ -42,7 +43,14 @@ def fetch_product(
         raise ValueError(f"GTIN inválido: {gtin!r}")
     observed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     url = f"{API_ROOT}/{gtin}.json?fields={FIELDS}"
-    raw = transport(url, {"User-Agent": USER_AGENT, "Accept": "application/json"}, timeout)
+    try:
+        raw = transport(url, {"User-Agent": USER_AGENT, "Accept": "application/json"}, timeout)
+    except HTTPError as exc:
+        # OFF API v2 commonly answers 404 for an unknown GTIN. Absence is normal
+        # enrichment debt, not an acquisition failure.
+        if exc.code != 404:
+            raise
+        raw = b'{"status":0}'
     payload = json.loads(raw.decode("utf-8"))
     path = None
     if snapshot_dir is not None:
