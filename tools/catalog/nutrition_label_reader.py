@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.0.0"
+READER_VERSION = "1.1.0"
 
 
 @dataclass(frozen=True)
@@ -34,27 +34,47 @@ def _fold(text: str) -> str:
     return "".join(c for c in text if unicodedata.category(c) != "Mn")
 
 
+def _repair_ocr_number(raw: str) -> float | None:
+    """Repair only a narrow, observed OCR error: terminal `g` read as `9`.
+
+    Real Mercadona label OCR produced 42g -> 429, 32g -> 329 and 76g ->
+    769. We only apply the repair to integer tokens >100 ending in 9; all
+    repaired values still have to pass physical and energy-macro validation.
+    """
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    if "." not in raw and value > 100 and raw.endswith("9") and len(raw) >= 3:
+        try:
+            repaired = float(raw[:-1])
+        except ValueError:
+            repaired = value
+        if 0 <= repaired <= 100:
+            return repaired
+    return value
+
+
 def _number_after(label_patterns: tuple[str, ...], text: str) -> float | None:
     folded = _fold(text)
     for label in label_patterns:
-        # Allows OCR punctuation/noise between label and number while avoiding
-        # values from a later row.
-        pattern = rf"(?:{label})[^\n\r\d]{{0,35}}(\d{{1,4}}(?:\.\d{{1,2}})?)\s*(?:g\b|gramos?\b)?"
-        m = re.search(pattern, folded, flags=re.I)
+        # Tesseract often places the numeric cell on the following line. Permit
+        # punctuation/words/newlines but stop at the first number after the row
+        # label. Plausibility checks remain the final gate.
+        pattern = rf"(?:{label})[^\d]{{0,90}}(\d{{1,4}}(?:\.\d{{1,2}})?)\s*(?:g\b|gramos?\b)?"
+        m = re.search(pattern, folded, flags=re.I | re.S)
         if m:
-            try:
-                return float(m.group(1))
-            except ValueError:
-                pass
+            value = _repair_ocr_number(m.group(1))
+            if value is not None:
+                return value
     return None
 
 
 def _energy_kcal(text: str) -> float | None:
     folded = _fold(text)
-    # Prefer kcal explicitly. EU labels frequently show kJ / kcal together.
     patterns = [
-        r"valor energetico[^\n\r]{0,60}?(\d{2,4}(?:\.\d{1,2})?)\s*kcal",
-        r"energia[^\n\r]{0,60}?(\d{2,4}(?:\.\d{1,2})?)\s*kcal",
+        r"valor energetico[\s\S]{0,90}?(\d{2,4}(?:\.\d{1,2})?)\s*kcal",
+        r"energia[\s\S]{0,90}?(\d{2,4}(?:\.\d{1,2})?)\s*kcal",
         r"(\d{2,4}(?:\.\d{1,2})?)\s*kcal",
     ]
     for pattern in patterns:
@@ -66,9 +86,12 @@ def _energy_kcal(text: str) -> float | None:
 
 def _basis(text: str) -> str | None:
     folded = _fold(text)
-    if re.search(r"(?:por|cada|valores? medios? por)?\s*100\s*g\b", folded):
+    # Real OCR sometimes recognizes the unit glyph `g` as `9` or `y`.
+    # This is only a basis hint; acceptance still requires a coherent nutrition
+    # table with energy and all core macros.
+    if re.search(r"(?:por|cada|valores? medios? por)?\s*100\s*(?:g|9|y)\b", folded):
         return "100_g"
-    if re.search(r"(?:por|cada|valores? medios? por)?\s*100\s*ml\b", folded):
+    if re.search(r"(?:por|cada|valores? medios? por)?\s*100\s*m(?:l|i|1)\b", folded):
         return "100_ml"
     return None
 
@@ -83,8 +106,6 @@ def _plausible(n: dict[str, float]) -> tuple[bool, list[str]]:
         reasons.append("IMPOSSIBLE_CALORIES")
 
     estimated = 9 * n["fat_g"] + 4 * n["carbohydrate_g"] + 4 * n["protein_g"]
-    # Labels may include fibre, polyols, organic acids or alcohol; use a broad
-    # but blocking tolerance only for material inconsistencies/OCR errors.
     tolerance = max(35.0, n["calories"] * 0.25)
     if abs(estimated - n["calories"]) > tolerance:
         reasons.append(f"ENERGY_MACRO_MISMATCH:{estimated:.1f}")
@@ -97,7 +118,7 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     folded = _fold(normalized)
 
     nutrition_markers = sum(1 for marker in (
-        "valor energetico", "energia", "grasas", "hidratos", "proteinas", "sal"
+        "valor energetico", "energia", "grasas", "lipidos", "hidratos", "proteinas", "sal"
     ) if marker in folded)
     if nutrition_markers < 3:
         return LabelReadResult("NOT_NUTRITION_LABEL", None, None, 0.0,
@@ -108,20 +129,16 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
         reasons.append("MISSING_100G_100ML_BASIS")
 
     calories = _energy_kcal(normalized)
-    fat = _number_after((r"grasas?", r"grasa total"), normalized)
+    fat = _number_after((r"grasas?", r"lipidos?", r"grasa total"), normalized)
     carbs = _number_after((r"hidratos? de carbono", r"carbohidratos?"), normalized)
     protein = _number_after((r"proteinas?",), normalized)
 
-    values = {
-        "calories": calories,
-        "fat_g": fat,
-        "carbohydrate_g": carbs,
-        "protein_g": protein,
-    }
+    values = {"calories": calories, "fat_g": fat, "carbohydrate_g": carbs, "protein_g": protein}
     missing = [k for k, v in values.items() if v is None]
     if missing:
         reasons.append("MISSING_CORE:" + ",".join(missing))
-        return LabelReadResult("REVIEW", basis, None, min(extraction_confidence, .60), tuple(reasons), normalized)
+        partial = {k: float(v) for k, v in values.items() if v is not None}
+        return LabelReadResult("REVIEW", basis, partial or None, min(extraction_confidence, .60), tuple(reasons), normalized)
 
     nutrition = {k: float(v) for k, v in values.items()}
     plausible, plausibility_reasons = _plausible(nutrition)
@@ -129,7 +146,6 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     if not plausible:
         return LabelReadResult("REVIEW", basis, nutrition, min(extraction_confidence, .65), tuple(reasons), normalized)
 
-    # A vision engine confidence below 0.85 never becomes DECLARED automatically.
     if extraction_confidence < .85:
         reasons.append("LOW_EXTRACTION_CONFIDENCE")
         return LabelReadResult("REVIEW", basis, nutrition, extraction_confidence, tuple(reasons), normalized)
