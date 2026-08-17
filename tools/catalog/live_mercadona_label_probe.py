@@ -31,11 +31,12 @@ def extractor_for(psm: int):
     return lambda path: extract_with_tesseract(path, language="spa", psm=psm)
 
 
-def attempt_payload(result, *, image_index, perspective, variant):
+def attempt_payload(result, *, image_index, perspective, variant, screened=False):
     return {
         "image_index": image_index,
         "perspective": perspective,
         "variant": variant,
+        "screened": screened,
         "status": result.status,
         "reason": result.reason,
         "readings": [{
@@ -69,7 +70,8 @@ def main() -> int:
     }
     snapshot_dir = Path("live-mercadona-snapshots")
     snapshot_dir.mkdir(exist_ok=True)
-    strategies = (("psm6", extractor_for(6)), ("psm11", extractor_for(11)))
+    full_strategies = (("psm6", extractor_for(6)), ("psm11", extractor_for(11)))
+    screen_strategy = (("psm6", extractor_for(6)),)
 
     for product_id, expected_name in PRODUCTS:
         item = {
@@ -100,21 +102,33 @@ def main() -> int:
                         continue
 
                     candidates = [("original", path)]
-                    # Mercadona perspective 9 is currently the back-of-pack image
-                    # in the observed sample. We only use that as an OCR priority;
-                    # acceptance still depends entirely on parsed nutrition.
                     if evidence.perspective == 9:
                         fallback_dir = Path(td) / f"fallback-{product_id}-{evidence.image_index}"
                         candidates.extend((v.name, v.path) for v in build_fallback_variants(path, fallback_dir))
 
                     for variant_name, candidate_path in candidates:
+                        screened = variant_name != "original"
+                        strategies = screen_strategy if screened else full_strategies
                         result = process_label_file_ensemble(
                             evidence, candidate_path, gtin=product.ean,
                             brand=product.brand, strategies=strategies,
                         )
+
+                        # Expensive second segmentation is only justified when
+                        # the cheap fallback pass has already found at least two
+                        # core nutrition fields on this crop/contrast variant.
+                        if screened and result.status != "DECLARED":
+                            nutrition = result.ensemble.nutrition if result.ensemble else None
+                            if nutrition and len(nutrition) >= 2:
+                                result = process_label_file_ensemble(
+                                    evidence, candidate_path, gtin=product.ean,
+                                    brand=product.brand, strategies=full_strategies,
+                                )
+
                         attempt = attempt_payload(
                             result, image_index=evidence.image_index,
                             perspective=evidence.perspective, variant=variant_name,
+                            screened=screened,
                         )
                         item["attempts"].append(attempt)
 
