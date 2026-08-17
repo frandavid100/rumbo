@@ -32,6 +32,27 @@ class FoodDataCentralAdapterTest(unittest.TestCase):
         self.assertTrue(candidate.redistribution_allowed)
         self.assertEqual(candidate.source_record_id, "123")
 
+    def test_foundation_energy_uses_kcal_and_ignores_kj(self):
+        payload = {
+            "fdcId": 456,
+            "description": "Example raw food",
+            "dataType": "Foundation",
+            "foodNutrients": [
+                {"nutrient": {"id": 1008, "name": "Energy", "unitName": "kJ"}, "amount": 239},
+                {"nutrient": {"id": 2047, "name": "Metabolizable Energy (Atwater General Factor)", "unitName": "kcal"}, "amount": 57},
+                {"nutrient": {"id": 1004, "name": "Total lipid (fat)", "unitName": "g"}, "amount": 0.14},
+                {"nutrient": {"id": 1005, "name": "Carbohydrate, by difference", "unitName": "g"}, "amount": 15.23},
+                {"nutrient": {"id": 1003, "name": "Protein", "unitName": "g"}, "amount": 0.36},
+                {"nutrient": {"id": 1079, "name": "Fiber, total dietary", "unitName": "g"}, "amount": 3.1},
+            ],
+        }
+        food = parse_food(payload)
+        self.assertEqual(food.nutrition["calories"], 57.0)
+        self.assertEqual(food.nutrition["protein_g"], 0.36)
+        self.assertEqual(food.nutrition["fat_g"], 0.14)
+        self.assertEqual(food.nutrition["carbohydrate_g"], 15.23)
+        self.assertEqual(food.nutrition["fiber_g"], 3.1)
+
     def test_mapping_must_match_exact_fdc_record(self):
         food = parse_food(self.fixture())
         bad = GenericMapping("Pera", 124, "Pears, raw", "wrong id")
