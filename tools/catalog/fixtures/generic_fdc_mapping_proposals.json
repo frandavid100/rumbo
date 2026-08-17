@@ -1,0 +1,10 @@
+[
+  {"product_id":"14470","name":"Peras Conferencia","culinary_type":"FRUIT","fdc_query":"pear raw with skin","status":"PROPOSED","rationale":"fresh unbranded whole fruit; exact cultivar match preferred"},
+  {"product_id":"3132","name":"Plátano macho","culinary_type":"FRUIT","fdc_query":"plantain raw","status":"PROPOSED","rationale":"fresh unbranded whole fruit; ripeness must be matched"},
+  {"product_id":"3202","name":"Pomelo","culinary_type":"FRUIT","fdc_query":"grapefruit raw","status":"PROPOSED","rationale":"fresh unbranded whole fruit"},
+  {"product_id":"3269","name":"Manzanas Golden","culinary_type":"FRUIT","fdc_query":"apple golden delicious raw with skin","status":"PROPOSED","rationale":"fresh unbranded whole fruit; cultivar-specific match preferred"},
+  {"product_id":"3485","name":"Naranjas","culinary_type":"FRUIT","fdc_query":"orange raw","status":"PROPOSED","rationale":"fresh unbranded whole fruit"},
+  {"product_id":"3716","name":"Fresón","culinary_type":"FRUIT","fdc_query":"strawberries raw","status":"PROPOSED","rationale":"fresh unbranded whole fruit"},
+  {"product_id":"68462","name":"Repollo liso partido","culinary_type":"VEGETABLE","fdc_query":"cabbage green raw","status":"PROPOSED","rationale":"fresh unbranded raw vegetable"},
+  {"product_id":"69121","name":"Lechugas corazón romana","culinary_type":"VEGETABLE","fdc_query":"lettuce romaine raw","status":"PROPOSED","rationale":"fresh unbranded raw vegetable"}
+]
