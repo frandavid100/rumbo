@@ -53,6 +53,9 @@ jobs:
       - name: Probar extractor OCR de etiquetas
         working-directory: tools/catalog
         run: python -m unittest -v test_label_text_extractor.py
+      - name: Probar extractor neuronal de etiquetas
+        working-directory: tools/catalog
+        run: python -m unittest -v test_label_neural_extractor.py
       - name: Probar fusión OCR nutricional
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_ocr_ensemble.py
