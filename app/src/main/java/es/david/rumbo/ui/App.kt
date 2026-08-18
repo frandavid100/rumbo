@@ -327,6 +327,12 @@ fun RumboApp(repository: AppRepository) {
     var catalogSearchRequest by remember { mutableStateOf(0) }
     var catalogSearchOverlayOpen by remember { mutableStateOf(false) }
     var catalogSearchMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
+    var catalogSearchReturnPending by rememberSaveable { mutableStateOf(false) }
+    var catalogSearchOriginScreenName by rememberSaveable { mutableStateOf<String?>(null) }
+    var catalogSearchOriginFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var catalogSearchSavedQuery by rememberSaveable { mutableStateOf("") }
+    var catalogSearchSavedScrollIndex by rememberSaveable { mutableIntStateOf(0) }
+    var catalogSearchSavedScrollOffset by rememberSaveable { mutableIntStateOf(0) }
     val catalogSearchMealType = catalogSearchMealTypeName?.let {
         runCatching { MealType.valueOf(it) }.getOrNull()
     }
@@ -448,6 +454,14 @@ fun RumboApp(repository: AppRepository) {
                 destination
             }
             screen in setOf(Screen.ADD_DISH, Screen.DISH_DETAIL) -> Screen.HOME.name
+            screen == Screen.FOOD_DETAIL && catalogSearchReturnPending -> {
+                catalogSearchReturnPending = false
+                if (catalogSearchOriginScreenName == Screen.FOOD_DETAIL.name) {
+                    selectedFoodId = catalogSearchOriginFoodId
+                }
+                catalogSearchOverlayOpen = true
+                catalogSearchOriginScreenName ?: Screen.HOME.name
+            }
             screen == Screen.FOOD_DETAIL && foodNavigationStack.isNotEmpty() -> {
                 selectedFoodId = foodNavigationStack.last()
                 foodNavigationStack = foodNavigationStack.dropLast(1)
@@ -806,6 +820,12 @@ fun RumboApp(repository: AppRepository) {
                         catalogNutritionalRoleFilter = nutritionalRole
                         catalogCulinaryRoleFilter = culinaryRole
                         catalogSearchMealTypeName = mealType?.name
+                        catalogSearchOriginScreenName = Screen.HOME.name
+                        catalogSearchOriginFoodId = null
+                        catalogSearchReturnPending = false
+                        catalogSearchSavedQuery = ""
+                        catalogSearchSavedScrollIndex = 0
+                        catalogSearchSavedScrollOffset = 0
                         catalogSearchOverlayOpen = true
                     },
                     onOpenFood = { foodId, reason ->
@@ -1154,6 +1174,12 @@ fun RumboApp(repository: AppRepository) {
                                 catalogNutritionalRoleFilter = nutritionalRole
                                 catalogCulinaryRoleFilter = culinaryRole
                                 catalogSearchMealTypeName = null
+                                catalogSearchOriginScreenName = Screen.FOOD_DETAIL.name
+                                catalogSearchOriginFoodId = selectedFoodId
+                                catalogSearchReturnPending = false
+                                catalogSearchSavedQuery = ""
+                                catalogSearchSavedScrollIndex = 0
+                                catalogSearchSavedScrollOffset = 0
                                 catalogSearchOverlayOpen = true
                             },
                             onOpenFood = {
@@ -1336,6 +1362,17 @@ fun RumboApp(repository: AppRepository) {
         val catalogOverlayScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
         var catalogOverlayMessage by remember { mutableStateOf<String?>(null) }
         var catalogOverlaySuppressKeyboard by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            if (catalogSearchSavedQuery.isNotEmpty()) {
+                catalogOverlayTextState.setTextAndPlaceCursorAtEnd(catalogSearchSavedQuery)
+            }
+            if (catalogSearchSavedScrollIndex > 0 || catalogSearchSavedScrollOffset > 0) {
+                catalogOverlayListState.scrollToItem(
+                    catalogSearchSavedScrollIndex,
+                    catalogSearchSavedScrollOffset
+                )
+            }
+        }
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -1367,16 +1404,17 @@ fun RumboApp(repository: AppRepository) {
                 onCloseSearch = {
                     catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
                     catalogOverlayMessage = null
+                    catalogSearchReturnPending = false
+                    catalogSearchSavedQuery = ""
+                    catalogSearchSavedScrollIndex = 0
+                    catalogSearchSavedScrollOffset = 0
                     catalogSearchOverlayOpen = false
                 },
                 onOpenFood = { foodId ->
-                    selectedFoodId?.let { current ->
-                        if (screenName == Screen.FOOD_DETAIL.name && current != foodId) {
-                            foodNavigationStack = foodNavigationStack + current
-                            foodRecommendationReasonStack = foodRecommendationReasonStack +
-                                selectedFoodRecommendationReason.orEmpty()
-                        }
-                    }
+                    catalogSearchSavedQuery = catalogOverlayTextState.text.toString()
+                    catalogSearchSavedScrollIndex = catalogOverlayListState.firstVisibleItemIndex
+                    catalogSearchSavedScrollOffset = catalogOverlayListState.firstVisibleItemScrollOffset
+                    catalogSearchReturnPending = true
                     selectedFoodId = foodId
                     selectedFoodRecommendationReason = null
                     catalogSearchOverlayOpen = false
