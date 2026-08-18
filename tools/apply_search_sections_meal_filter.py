@@ -19,7 +19,8 @@ def sub1(s, pattern, repl, name, flags=re.S):
 # -------- central culinary policy: suggested meals belong to role policy --------
 p = POLICY
 s = p.read_text()
-s = exact(s,
+if 'import es.david.rumbo.model.MealType\n' not in s:
+    s = exact(s,
 '''import es.david.rumbo.model.Food
 import es.david.rumbo.model.PlanningRule
 ''',
@@ -38,7 +39,6 @@ s = exact(s,
     val suggestedMealTypes: Set<MealType> = MealType.entries.toSet()
 )''', 'policy model suggested meals')
 
-# Add explicit role->meal defaults after policy map is built, without disturbing positional constructors.
 anchor = '''    @Volatile private var profileOverrides: Map<CulinaryRole, CulinaryRolePolicy> = emptyMap()
 '''
 replacement = '''    private val suggestedMealsByRole: Map<CulinaryRole, Set<MealType>> = mapOf(
@@ -94,15 +94,11 @@ p.write_text(s)
 # -------- App UI/search --------
 p = APP
 s = p.read_text()
-
-# Request token must not survive process restoration and must never be reset to a reused value.
 s = exact(s,
 '''    var catalogSearchRequest by rememberSaveable { mutableStateOf(0) }
 ''',
 '''    var catalogSearchRequest by remember { mutableIntStateOf(0) }
 ''', 'search request token')
-
-# HomeScreen signature/call: remove consumed callback and pass planning rules.
 s = exact(s,
 '''    requestedSearchCulinaryRole: String?,
     searchOpenRequest: Int,
@@ -117,8 +113,6 @@ s = exact(s,
 ''',
 '''                    searchOpenRequest = catalogSearchRequest,
 ''', 'HomeScreen request call')
-
-# Search state: add meal filter and snap directly to expanded state.
 s = exact(s,
 '''    var searchCulinaryRole by rememberSaveable { mutableStateOf<String?>(null) }
     var searchMessage by remember { mutableStateOf<String?>(null) }
@@ -141,7 +135,6 @@ s = exact(s,
             searchListState.scrollToItem(0)
             searchBarState.snapTo(1f)
 ''', 'direct expansion')
-
 s = exact(s,
 '''                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                 foodSuggestions = pinnedSuggestions,
@@ -161,8 +154,6 @@ s = exact(s,
                 onMealTypeFilterChange = { searchMealTypeName = it?.name },
                 scanMessage = searchMessage,
 ''', 'pass meal filter')
-
-# HomeCatalogSearch signature.
 s = exact(s,
 '''private fun HomeCatalogSearch(
     foods: List<Food>, dishes: List<Dish>, repertoireFoodIds: Set<Long>,
@@ -183,8 +174,6 @@ s = exact(s,
     mealTypeFilter: MealType?, onMealTypeFilterChange: (MealType?) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
 ''', 'search signature meal filter')
-
-# Replace result construction completely: foods only, strict intersection, own first.
 result_pattern = r'''    val suggestionsByFoodId = remember\(foodSuggestions\) \{.*?\n    val leaveForDetail = \{'''
 result_repl = '''    val suggestionsByFoodId = remember(foodSuggestions) {
         foodSuggestions.associateBy { it.food.id }
@@ -244,8 +233,6 @@ result_repl = '''    val suggestionsByFoodId = remember(foodSuggestions) {
 
     val leaveForDetail = {'''
 s = sub1(s, result_pattern, result_repl, 'search result algorithm')
-
-# Header adds fourth filter and copy only for totally blank state.
 s = exact(s,
 '''                        CatalogCanonicalFilterRow(
                             retailerFilter, onRetailerFilterChange, retailerOptions,
@@ -262,15 +249,11 @@ s = exact(s,
                         )
                         if (query.isBlank() && !hasActiveFilters) {
 ''', 'header filters')
-
-# Mode is now presentational only; blank search still has actual entries.
 s = exact(s,
 '''                mode = if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
 ''',
 '''                mode = CatalogMode.SEARCH,
 ''', 'search mode')
-
-# Four-filter row plus reliable trailing edge spacer.
 s = exact(s,
 '''private fun CatalogCanonicalFilterRow(
     retailer: String?, onRetailerChange: (String?) -> Unit, retailerOptions: List<String>,
@@ -332,8 +315,6 @@ private fun CatalogMealTypeFilterMenu(
     }
 }
 ''', 'meal filter menu')
-
-# Compact sectioning: only Mis alimentos / Otros alimentos, never Recomendados.
 section_pattern = r'''            if \(compactPresentation && normalizedQuery\.isBlank\(\)\) \{.*?            \}\n            if \(compactPresentation\) \{'''
 section_repl = '''            if (compactPresentation) {
                 val entryIndex = entries.indexOf(entry)
@@ -356,8 +337,6 @@ section_repl = '''            if (compactPresentation) {
             }
             if (compactPresentation) {'''
 s = sub1(s, section_pattern, section_repl, 'compact section headers')
-
-# Blank query should not show the old "type something" footer when own foods are already visible.
 s = exact(s,
 '''        if (mode == CatalogMode.SEARCH && normalizedQuery.isBlank()) {
             item {
@@ -371,8 +350,6 @@ s = exact(s,
 ''',
 '''        if (entries.isEmpty()) {
 ''', 'remove obsolete blank footer')
-
-# Detail chips: an explicit trailing spacer guarantees scrollable right padding.
 s = exact(s,
 '''            values.forEach { value ->
                 FilterChip(
@@ -393,6 +370,5 @@ s = exact(s,
             Spacer(Modifier.width(16.dp))
         }
 ''', 'detail chip trailing edge')
-
 p.write_text(s)
 print('search UI transformation prepared successfully')
