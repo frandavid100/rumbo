@@ -1,0 +1,35 @@
+name: Apply daily witness core
+
+on:
+  push:
+    branches: [agent/certified-day-witness-level1]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/certified-day-witness-level1
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Aplicar núcleo diario
+        run: |
+          python tools/apply_daily_witness_core.py
+          git diff --check
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/es/david/rumbo/logic/WeeklyMenuGenerator.kt \
+                  app/src/main/java/es/david/rumbo/logic/MealPlanEvaluator.kt \
+                  app/src/main/java/es/david/rumbo/logic/RepertoireEvaluator.kt \
+                  app/src/test/java/es/david/rumbo/logic/CertifiedDayWitnessLevel1Test.kt
+          git commit -m "Buscar testigo viable en un solo día"
+          git push origin HEAD:agent/certified-day-witness-level1
