@@ -331,8 +331,8 @@ fun RumboApp(repository: AppRepository) {
     var catalogSearchOriginScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogSearchOriginFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
     var catalogSearchSavedQuery by rememberSaveable { mutableStateOf("") }
-    var catalogSearchSavedScrollIndex by rememberSaveable { mutableIntStateOf(0) }
-    var catalogSearchSavedScrollOffset by rememberSaveable { mutableIntStateOf(0) }
+    var catalogSearchSavedScrollIndex by rememberSaveable { mutableStateOf(0) }
+    var catalogSearchSavedScrollOffset by rememberSaveable { mutableStateOf(0) }
     val catalogSearchMealType = catalogSearchMealTypeName?.let {
         runCatching { MealType.valueOf(it) }.getOrNull()
     }
