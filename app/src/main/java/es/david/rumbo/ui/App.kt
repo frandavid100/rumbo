@@ -6979,6 +6979,7 @@ private fun nutritionalRoleEfficiency(food: Food, role: String): Double? {
         "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN" -> food.proteinGrams
         "PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_CARBOHYDRATE" -> food.carbohydrateGrams
         "CONCENTRATED_FAT", "COMPLEMENTARY_FAT" -> food.fatGrams
+        "VEGETABLE", "FRUIT" -> food.fiberGrams
         else -> null
     } ?: return null
     return grams * 100.0 / calories
