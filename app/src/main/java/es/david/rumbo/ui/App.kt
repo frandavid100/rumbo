@@ -321,6 +321,7 @@ fun RumboApp(repository: AppRepository) {
     var catalogRetailerFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogNutritionalRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogCulinaryRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var catalogSearchRequest by rememberSaveable { mutableStateOf(0) }
     var foodNavigationStack by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var selectedFoodRecommendationReason by rememberSaveable { mutableStateOf<String?>(null) }
     var foodRecommendationReasonStack by rememberSaveable {
@@ -747,6 +748,11 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.HOME -> HomeScreen(
                     data = data,
                     mealShares = mealShares,
+                    requestedSearchRetailer = catalogRetailerFilter,
+                    requestedSearchNutritionalRole = catalogNutritionalRoleFilter,
+                    requestedSearchCulinaryRole = catalogCulinaryRoleFilter,
+                    searchOpenRequest = catalogSearchRequest,
+                    onSearchRequestConsumed = { catalogSearchRequest = 0 },
                     onOpenAccount = { screenName = Screen.ACCOUNT.name },
                     onOpenShoppingList = {
                         shoppingCurrentOnly = false
@@ -1152,8 +1158,9 @@ fun RumboApp(repository: AppRepository) {
                                 catalogRetailerFilter = retailer
                                 catalogNutritionalRoleFilter = nutritionalRole
                                 catalogCulinaryRoleFilter = culinaryRole
+                                catalogSearchRequest += 1
                                 foodReturnScreenName = null
-                                screenName = Screen.FOODS.name
+                                screenName = Screen.HOME.name
                             },
                             onOpenFood = {
                                 selectedFoodId?.let { current ->
@@ -1554,6 +1561,11 @@ private object RepertoireAssessmentMemory {
 private fun HomeScreen(
     data: AppData,
     mealShares: Map<MealType, Double>,
+    requestedSearchRetailer: String?,
+    requestedSearchNutritionalRole: String?,
+    requestedSearchCulinaryRole: String?,
+    searchOpenRequest: Int,
+    onSearchRequestConsumed: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenShoppingList: () -> Unit,
     onOpenCurrentShoppingList: () -> Unit,
@@ -1767,6 +1779,17 @@ private fun HomeScreen(
     val searchBarState = rememberSearchBarState()
     val searchListState = rememberLazyListState()
     var suppressRestoredSearchKeyboard by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(searchOpenRequest) {
+        if (searchOpenRequest > 0) {
+            searchRetailer = requestedSearchRetailer
+            searchNutritionalRole = requestedSearchNutritionalRole
+            searchCulinaryRole = requestedSearchCulinaryRole
+            searchTextState.setTextAndPlaceCursorAtEnd("")
+            searchListState.scrollToItem(0)
+            searchBarState.animateToExpanded()
+            onSearchRequestConsumed()
+        }
+    }
     val searchScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
     val searchScope = rememberCoroutineScope()
     val closeSearch = {
@@ -6796,16 +6819,11 @@ private fun HomeCatalogSearch(
                 header = {
                     Column(Modifier.fillMaxWidth()) {
                         Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CatalogCanonicalFilterRow(
-                                retailerFilter, onRetailerFilterChange, retailerOptions,
-                                nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
-                                culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions
-                            )
-                        }
+                        CatalogCanonicalFilterRow(
+                            retailerFilter, onRetailerFilterChange, retailerOptions,
+                            nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
+                            culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions
+                        )
                         if (query.isBlank()) {
                             Text(
                                 "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
@@ -8387,22 +8405,23 @@ private fun NutrientIconValue(
 
 @Composable
 private fun FoodPrimaryNutritionStrip(food: Food) {
+    val nutritionColor = MaterialTheme.colorScheme.onSurfaceVariant
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         NutrientIconValue(
             Icons.Default.LocalFireDepartment, "Calorías", food.calories, "kcal",
-            MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1.25f)
+            nutritionColor, Modifier.weight(1.25f)
         )
         NutrientIconValue(
             Icons.Default.FitnessCenter, "Proteínas", food.proteinGrams, "g",
-            MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
+            nutritionColor, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.Grain, "Carbohidratos", food.carbohydrateGrams, "g",
-            MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
+            nutritionColor, Modifier.weight(1f)
         )
         NutrientIconValue(
             Icons.Default.Opacity, "Grasas", food.fatGrams, "g",
-            MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)
+            nutritionColor, Modifier.weight(1f)
         )
     }
 }
