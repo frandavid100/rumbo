@@ -1396,7 +1396,7 @@ fun RumboApp(repository: AppRepository) {
         }
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+            color = MaterialTheme.colorScheme.surfaceContainerHighest
         ) {
             HomeCatalogSearch(
                 foods = data.foods,

@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 
 private val AppBackground = Color(0xFFFFF5F3)
@@ -69,22 +70,23 @@ private val DarkColors = darkColorScheme(
 
 
 private fun ColorScheme.deeperLightSurfaces(): ColorScheme {
+    val sourceLow = surfaceContainerLow
     val sourceContainer = surfaceContainer
     val sourceHigh = surfaceContainerHigh
     val sourceHighest = surfaceContainerHighest
+    val pageTone = lerp(sourceContainer, sourceLow, 0.28f)
+    val cardTone = lerp(sourceHigh, sourceHighest, 0.24f)
     return copy(
-        // Keep Android's dynamic hue/chroma. The page background stays on the
-        // same tone that already matches the system wallpaper picker.
-        background = sourceContainer,
-        surface = surfaceContainerLow,
-        surfaceVariant = sourceContainer,
+        // Preserve Android's dynamic hue/chroma. Move the page only slightly
+        // lighter than before and filled cards only slightly darker.
+        background = pageTone,
+        surface = cardTone,
+        surfaceVariant = pageTone,
         surfaceContainerLowest = surfaceContainerLowest,
-        surfaceContainerLow = surfaceContainerLow,
+        surfaceContainerLow = sourceLow,
         surfaceContainer = sourceContainer,
         surfaceContainerHigh = sourceHigh,
-        // Filled Card uses the highest container token. Move it one dynamic
-        // step toward the page instead of leaving it near white.
-        surfaceContainerHighest = sourceHigh
+        surfaceContainerHighest = cardTone
     )
 }
 
