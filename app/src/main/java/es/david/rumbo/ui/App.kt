@@ -2220,16 +2220,32 @@ private fun repertoireProgressTarget(
                 )
             }
             if (!diagnostic.viable) {
-                val role = when (diagnostic.limitingNutrient) {
+                val role = when (diagnostic.deficientNutrient) {
                     NutrientKind.PROTEIN -> "PRIMARY_PROTEIN"
                     NutrientKind.CARBOHYDRATES -> "PRIMARY_CARBOHYDRATE"
                     NutrientKind.FAT -> "COMPLEMENTARY_FAT"
                     else -> null
                 }
                 val label = role?.let(::nutritionalRoleLabel)?.lowercase()
+                val limitingLabel = when (diagnostic.limitingNutrient) {
+                    NutrientKind.PROTEIN -> "proteína"
+                    NutrientKind.CARBOHYDRATES -> "hidratos"
+                    NutrientKind.FAT -> "grasa"
+                    NutrientKind.CALORIES -> "calorías"
+                    null -> "nutrientes"
+                }
+                val direction = when {
+                    (diagnostic.limitingDifference ?: 0.0) > 0.0 -> "por encima"
+                    (diagnostic.limitingDifference ?: 0.0) < 0.0 -> "por debajo"
+                    else -> "fuera"
+                }
                 return 1 to RepertoireProgressTarget(
-                    message = "Rumbo consigue colocar fruta, verdura y fibra suficientes, pero ese día todavía queda fuera de los objetivos nutricionales. Añade otra opción eficiente para que pueda cuadrar ambas cosas a la vez.",
-                    buttonLabel = label?.let { "Añadir $it" } ?: "Añadir otro alimento",
+                    message = if (role != null) {
+                        "Rumbo consigue colocar fruta, verdura y fibra suficientes, pero el mejor día encontrado deja $limitingLabel $direction del objetivo. El mayor margen de mejora está en añadir una opción eficiente de ${label ?: "otro nutriente"} para que el generador pueda redistribuir las cantidades."
+                    } else {
+                        "Rumbo consigue colocar fruta, verdura y fibra suficientes, pero el mejor día encontrado deja $limitingLabel $direction del objetivo. No necesitas añadir más de ese mismo tipo: Rumbo necesita encontrar una combinación que reduzca ese exceso."
+                    },
+                    buttonLabel = label?.let { "Añadir $it" },
                     nutritionalRole = role
                 )
             }

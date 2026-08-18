@@ -105,6 +105,9 @@ object CertifiedDayWitnessEvaluator {
         val fiberGrams: Double,
         val viable: Boolean,
         val limitingNutrient: NutrientKind? = null,
+        val limitingDifference: Double? = null,
+        val deficientNutrient: NutrientKind? = null,
+        val deficientDifference: Double? = null,
         val availableFruitMeals: Int = 0,
         val availableVegetableMeals: Int = 0
     )
@@ -157,16 +160,21 @@ object CertifiedDayWitnessEvaluator {
             )
             val fruitMeals = mealsContaining(candidate.meals, FoodCategory.FRUIT, foodsById, dishesById)
             val vegetableMeals = mealsContaining(candidate.meals, FoodCategory.VEGETABLE, foodsById, dishesById)
-            val limiting = assessment.evaluations
+            val limitingEvaluation = assessment.evaluations
                 .filter { it.fit == TargetFit.OUTSIDE }
                 .maxByOrNull { kotlin.math.abs(it.difference / it.target.coerceAtLeast(1.0)) }
-                ?.kind
+            val deficientEvaluation = assessment.evaluations
+                .filter { it.kind != NutrientKind.CALORIES && it.difference < 0.0 }
+                .minByOrNull { it.difference / it.target.coerceAtLeast(1.0) }
             val diagnostic = CompleteDayDiagnostic(
                 fruitMeals = fruitMeals,
                 vegetableMeals = vegetableMeals,
                 fiberGrams = assessment.actual.fiberGrams,
                 viable = true,
-                limitingNutrient = limiting,
+                limitingNutrient = limitingEvaluation?.kind,
+                limitingDifference = limitingEvaluation?.difference,
+                deficientNutrient = deficientEvaluation?.kind,
+                deficientDifference = deficientEvaluation?.difference,
                 availableFruitMeals = availableFruitMeals,
                 availableVegetableMeals = availableVegetableMeals
             )
@@ -210,16 +218,21 @@ object CertifiedDayWitnessEvaluator {
             val viable = WeeklyMenuAcceptancePolicy.isDayAcceptable(
                 assessment, constraints.activeMealTypes
             )
-            val limiting = assessment.evaluations
+            val limitingEvaluation = assessment.evaluations
                 .filter { it.fit == TargetFit.OUTSIDE }
                 .maxByOrNull { kotlin.math.abs(it.difference / it.target.coerceAtLeast(1.0)) }
-                ?.kind
+            val deficientEvaluation = assessment.evaluations
+                .filter { it.kind != NutrientKind.CALORIES && it.difference < 0.0 }
+                .minByOrNull { it.difference / it.target.coerceAtLeast(1.0) }
             val diagnostic = CompleteDayDiagnostic(
                 fruitMeals = fruitMeals,
                 vegetableMeals = vegetableMeals,
                 fiberGrams = assessment.actual.fiberGrams,
                 viable = viable,
-                limitingNutrient = limiting,
+                limitingNutrient = limitingEvaluation?.kind,
+                limitingDifference = limitingEvaluation?.difference,
+                deficientNutrient = deficientEvaluation?.kind,
+                deficientDifference = deficientEvaluation?.difference,
                 availableFruitMeals = availableFruitMeals,
                 availableVegetableMeals = availableVegetableMeals
             )
