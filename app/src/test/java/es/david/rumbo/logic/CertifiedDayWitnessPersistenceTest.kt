@@ -13,6 +13,7 @@ import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,38 +25,39 @@ class CertifiedDayWitnessPersistenceTest {
         culinaryRoles = setOf("STANDALONE")
     )
 
+    private val baseFoods = listOf(
+        food(1, 500.0, 25.0, 62.5, 16.75),
+        food(2, 500.0, 25.0, 62.5, 16.75),
+        food(3, 500.0, 25.0, 62.5, 16.75),
+        food(4, 500.0, 25.0, 62.5, 16.75),
+        food(5, 500.0, 25.0, 62.5, 16.75)
+    )
+    private val mealTypes = MealType.entries
+    private val meals = mealTypes.mapIndexed { index, type ->
+        PlannedMeal(
+            id = (index + 1).toLong(),
+            type = type,
+            days = setOf(WeekDay.MONDAY),
+            items = listOf(PlannedFood(baseFoods[index].id, 80.0, false))
+        )
+    }
+    private val baseRules = baseFoods.mapIndexed { index, f ->
+        PlanningRule(
+            itemKind = PlannedItemKind.FOOD,
+            itemId = f.id,
+            allowedMealTypes = setOf(mealTypes[index]),
+            frequency = PlanningFrequency.NORMAL,
+            preferredGrams = 80.0,
+            minimumFactor = 0.5,
+            maximumFactor = 1.5
+        )
+    }
+    private val witness = CertifiedDayWitness(
+        CertifiedDayLevel.VIABLE, 11L, WeekDay.MONDAY, meals
+    )
+
     @Test
     fun addingOptionalFoodsCannotInvalidateAnAlreadyValidViableWitness() {
-        val baseFoods = listOf(
-            food(1, 500.0, 25.0, 62.5, 16.75),
-            food(2, 500.0, 25.0, 62.5, 16.75),
-            food(3, 500.0, 25.0, 62.5, 16.75),
-            food(4, 500.0, 25.0, 62.5, 16.75),
-            food(5, 500.0, 25.0, 62.5, 16.75)
-        )
-        val mealTypes = MealType.entries
-        val meals = mealTypes.mapIndexed { index, type ->
-            PlannedMeal(
-                id = (index + 1).toLong(),
-                type = type,
-                days = setOf(WeekDay.MONDAY),
-                items = listOf(PlannedFood(baseFoods[index].id, 80.0, false))
-            )
-        }
-        val baseRules = baseFoods.mapIndexed { index, f ->
-            PlanningRule(
-                itemKind = PlannedItemKind.FOOD,
-                itemId = f.id,
-                allowedMealTypes = setOf(mealTypes[index]),
-                frequency = PlanningFrequency.NORMAL,
-                preferredGrams = 80.0,
-                minimumFactor = 0.5,
-                maximumFactor = 1.5
-            )
-        }
-        val witness = CertifiedDayWitness(
-            CertifiedDayLevel.VIABLE, 11L, WeekDay.MONDAY, meals
-        )
         val foodsBefore = baseFoods.associateBy { it.id }
         assertTrue(CertifiedDayWitnessEvaluator.isViable(
             witness, baseRules, foodsBefore, emptyMap(), target, MealDistributionPolicy.defaults
@@ -78,6 +80,19 @@ class CertifiedDayWitnessPersistenceTest {
             witness,
             baseRules + addedRules,
             (baseFoods + added).associateBy { it.id },
+            emptyMap(),
+            target,
+            MealDistributionPolicy.defaults
+        ))
+    }
+
+    @Test
+    fun removingARequiredWitnessRuleInvalidatesThatWitness() {
+        val rulesWithoutBreakfastFood = baseRules.filterNot { it.itemId == baseFoods.first().id }
+        assertFalse(CertifiedDayWitnessEvaluator.isViable(
+            witness,
+            rulesWithoutBreakfastFood,
+            baseFoods.associateBy { it.id },
             emptyMap(),
             target,
             MealDistributionPolicy.defaults
