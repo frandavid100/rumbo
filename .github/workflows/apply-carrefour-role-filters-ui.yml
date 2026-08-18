@@ -20,10 +20,12 @@ jobs:
         with:
           python-version: '3.12'
       - name: Aplicar transformación
-        run: python tools/apply_carrefour_role_filters_ui.py
+        run: |
+          python tools/fix_carrefour_transform.py
+          python tools/apply_carrefour_role_filters_ui.py
       - name: Guardar resultado
         run: |
-          rm tools/apply_carrefour_role_filters_ui.py
+          rm tools/apply_carrefour_role_filters_ui.py tools/fix_carrefour_transform.py
           rm .github/workflows/apply-carrefour-role-filters-ui.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
