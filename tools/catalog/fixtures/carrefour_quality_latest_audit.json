@@ -1,0 +1,3071 @@
+{
+  "menu_eligible": 1143,
+  "blocking_issue_count": 0,
+  "blocking_product_count": 0,
+  "blocking_by_reason": {},
+  "menu_eligible_by_type": {
+    "CULINARY_OIL": 22,
+    "SEASONING": 13,
+    "MILK_BASE": 86,
+    "SNACK_DESSERT": 233,
+    "BREAD": 46,
+    "SAUCE": 80,
+    "MAIN_FISH": 79,
+    "VEGETABLE": 52,
+    "MAIN_MEAT": 50,
+    "BEVERAGE": 76,
+    "FRUIT": 15,
+    "BREWED_DRINK_BASE": 33,
+    "FAT_COMPLEMENT": 26,
+    "FRESH_STARCH": 24,
+    "LEGUME": 26,
+    "DRIED_FRUIT": 2,
+    "PICKLED_VEGETABLE": 3,
+    "DRY_RICE": 27,
+    "BREAKFAST_CEREAL": 15,
+    "DRY_PASTA": 11,
+    "FRESH_FILLED_PASTA": 1,
+    "SPREAD": 27,
+    "CREAMY_BASE": 74,
+    "SWEET_POWDER": 2,
+    "COOKING_INGREDIENT": 3,
+    "CHEESE": 91,
+    "CURED_MEAT": 25,
+    "MAIN_EGG": 1
+  },
+  "menu_eligible_by_family": {
+    "Aceite, especias y salsas": 113,
+    "Agua y refrescos": 36,
+    "Aperitivos": 56,
+    "Arroz, legumbres y pasta": 64,
+    "Azúcar, caramelos y chocolate": 109,
+    "Cacao, café e infusiones": 40,
+    "Carne": 24,
+    "Cereales y galletas": 80,
+    "Charcutería y quesos": 139,
+    "Congelados": 49,
+    "Conservas, caldos y cremas": 77,
+    "Fruta y verdura": 54,
+    "Huevos, leche y mantequilla": 101,
+    "Marisco y pescado": 35,
+    "Panadería y pastelería": 40,
+    "Pizzas y platos preparados": 16,
+    "Postres y yogures": 99,
+    "Zumos": 11
+  },
+  "blocking_examples": [],
+  "stratified_sample": [
+    {
+      "product_id": "carrefour:bocaditos-de-pan-tostado-sabor-tomate-y-oregano-snatt-s-grefusa-80-g-carrefour",
+      "name": "Bocaditos de pan tostado sabor tomate y orégano Snatt's Grefusa 80 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 484.0,
+        "protein_g": 8.5,
+        "carbohydrate_g": 61.0,
+        "fat_g": 22.0
+      }
+    },
+    {
+      "product_id": "carrefour:pan-rustico-con-aceite-de-oliva-andres-140-g-andres-carrefour",
+      "name": "Pan rustico con aceite de oliva Andrés 140 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 380.0,
+        "protein_g": 8.8,
+        "carbohydrate_g": 74.7,
+        "fat_g": 3.9
+      }
+    },
+    {
+      "product_id": "carrefour:panecillos-con-tomate-y-oregano-carrefour-sensation-160-g-carrefour",
+      "name": "Panecillos con tomate y orégano Carrefour Sensation 160 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 485.0,
+        "protein_g": 8.1,
+        "carbohydrate_g": 60.0,
+        "fat_g": 23.0
+      }
+    },
+    {
+      "product_id": "carrefour:aceite-de-girasol-carrefour-classic-1-l-carrefour",
+      "name": "Aceite de girasol Carrefour Classic' 1 l.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "CULINARY_OIL",
+      "nutrition": {
+        "calories": 900.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 100.0
+      }
+    },
+    {
+      "product_id": "carrefour:aceite-de-girasol-koipe-fritos-1-l-koipesol-carrefour",
+      "name": "Aceite de girasol Koipe Fritos 1 l.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "CULINARY_OIL",
+      "nutrition": {
+        "calories": 828.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 92.0
+      }
+    },
+    {
+      "product_id": "carrefour:aceite-de-oliva-intenso-1o-carrefour-garrafa-5-l-carrefour",
+      "name": "Aceite de oliva intenso 1º Carrefour garrafa 5 l.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "CULINARY_OIL",
+      "nutrition": {
+        "calories": 900.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 100.0
+      }
+    },
+    {
+      "product_id": "carrefour:chipirones-rellenos-en-aceite-de-girasol-javimar-72-g-carrefour",
+      "name": "Chipirones rellenos en aceite de girasol Javimar 72 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 175.0,
+        "protein_g": 12.0,
+        "carbohydrate_g": 10.0,
+        "fat_g": 9.8
+      }
+    },
+    {
+      "product_id": "carrefour:filetes-de-caballa-del-sur-en-aceite-de-girasol-ubago-65-g-carrefour",
+      "name": "Filetes de caballa del sur en aceite de girasol Ubago 65 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 301.0,
+        "protein_g": 19.0,
+        "carbohydrate_g": 0.6,
+        "fat_g": 24.8
+      }
+    },
+    {
+      "product_id": "carrefour:filetes-de-melva-en-aceite-de-oliva-ubago-85-g-carrefour",
+      "name": "Filetes de melva en aceite de oliva Ubago 85 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 319.0,
+        "protein_g": 22.6,
+        "carbohydrate_g": 0.8,
+        "fat_g": 25.0
+      }
+    },
+    {
+      "product_id": "carrefour:wok-de-tallarines-con-pollo-al-curry-carrefour-300-g-carrefour",
+      "name": "Wok de tallarines con pollo al curry Carrefour 300 g",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 138.0,
+        "protein_g": 5.9,
+        "carbohydrate_g": 16.0,
+        "fat_g": 5.0
+      }
+    },
+    {
+      "product_id": "carrefour:arroz-con-pollo-thai-curry-findus-400-g-carrefour",
+      "name": "Arroz con pollo Thai Curry Findus 400 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 105.0,
+        "protein_g": 5.5,
+        "carbohydrate_g": 11.0,
+        "fat_g": 4.1
+      }
+    },
+    {
+      "product_id": "carrefour:boquerones-en-vinagre-alinados-de-nuestra-tierra-100-g-carrefour",
+      "name": "Boquerones en vinagre aliñados De Nuestra Tierra 100 g",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 158.0,
+        "protein_g": 21.0,
+        "carbohydrate_g": 0.5,
+        "fat_g": 7.9
+      }
+    },
+    {
+      "product_id": "carrefour:cebollitas-rojas-en-vinagre-agridulces-rioverde-sin-gluten-180-g-carrefour",
+      "name": "Cebollitas rojas en vinagre agridulces Rioverde sin gluten 180 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 38.0,
+        "protein_g": 0.8,
+        "carbohydrate_g": 6.9,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:gusanitos-sabor-ketchup-risi-sin-gluten-85-g-carrefour",
+      "name": "Gusanitos sabor kétchup Risi sin gluten 85 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 492.0,
+        "protein_g": 5.9,
+        "carbohydrate_g": 67.7,
+        "fat_g": 22.0
+      }
+    },
+    {
+      "product_id": "carrefour:ajo-y-perejil-picado-carrefour-50-g-carrefour",
+      "name": "Ajo y perejil picado Carrefour 50 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SEASONING",
+      "nutrition": {
+        "calories": 75.0,
+        "protein_g": 4.5,
+        "carbohydrate_g": 11.0,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:alino-de-aceite-con-ajo-y-perejil-140-g-carrefour-carrefour",
+      "name": "Aliño de aceite con ajo y perejil 140 g",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SEASONING",
+      "nutrition": {
+        "calories": 682.0,
+        "protein_g": 0.4,
+        "carbohydrate_g": 11.0,
+        "fat_g": 70.0
+      }
+    },
+    {
+      "product_id": "carrefour:comino-molido-carrefour-classic-45-g-carrefour",
+      "name": "Comino molido Carrefour Classic 45 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SEASONING",
+      "nutrition": {
+        "calories": 470.0,
+        "protein_g": 18.0,
+        "carbohydrate_g": 44.0,
+        "fat_g": 22.0
+      }
+    },
+    {
+      "product_id": "carrefour:aperitivo-de-maiz-y-cebolla-con-balsamico-de-modena-risi-mios-sin-gluten-150-g-carrefour",
+      "name": "Aperitivo de maíz y cebolla con balsámico de Módena Risi Mios! sin gluten 150 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 524.0,
+        "protein_g": 6.5,
+        "carbohydrate_g": 61.9,
+        "fat_g": 26.5
+      }
+    },
+    {
+      "product_id": "carrefour:aperitivo-de-maiz-y-chia-con-sal-marina-risi-mios-sin-gluten-150-g-carrefour",
+      "name": "Aperitivo de maíz y chía con sal marina Risi Mios! sin gluten 150 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 513.3,
+        "protein_g": 7.3,
+        "carbohydrate_g": 64.3,
+        "fat_g": 24.0
+      }
+    },
+    {
+      "product_id": "carrefour:chocolate-negro-con-aceite-esencial-de-limon-y-pepitas-de-jengibre-confitadas-ecologico-carrefour-bio-100-g-carrefour",
+      "name": "Chocolate negro con aceite esencial de limón y pepitas de jengibre confitadas ecológico Carrefour Bio 100 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 529.0,
+        "protein_g": 6.7,
+        "carbohydrate_g": 47.0,
+        "fat_g": 33.0
+      }
+    },
+    {
+      "product_id": "carrefour:preparacion-vegana-a-base-de-proteina-de-guisante-en-aceite-de-oliva-dear-nature-frinsa-pack-de-3-unidades-de-70-g-carrefour",
+      "name": "Preparación vegana a base de proteína de guisante en aceite de oliva Dear Nature Frinsa pack de 3 unidades de 70 g.",
+      "family": "Aceite, especias y salsas",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 341.0,
+        "protein_g": 15.0,
+        "carbohydrate_g": 2.8,
+        "fat_g": 30.0
+      }
+    },
+    {
+      "product_id": "carrefour:agua-mineral-con-gas-vichy-catalan-natural-sabor-limon-50-cl-vichy-catalan-carrefour",
+      "name": "Agua mineral con gas Vichy Catalán natural sabor limón 50 cl.",
+      "family": "Agua y refrescos",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 5.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:aquarius-bebida-isotonica-sabor-limon-zero-botella-1-5-l-aquarius-zero-carrefour",
+      "name": "Aquarius bebida isotónica sabor limón zero botella 1,5 l.",
+      "family": "Agua y refrescos",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 1.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:aquarius-bebida-isotonica-sabor-melocoton-rojo-botella-1-5-l-carrefour",
+      "name": "Aquarius bebida isotónica sabor melocotón rojo botella 1,5 l.",
+      "family": "Agua y refrescos",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 20.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 4.8,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:fuze-tea-te-verde-sabor-maracuya-lata-33-cl-carrefour",
+      "name": "Fuze Tea té verde sabor maracuyá lata 33 cl.",
+      "family": "Agua y refrescos",
+      "culinary_type": "BREWED_DRINK_BASE",
+      "nutrition": {
+        "calories": 20.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 4.6,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:nestea-te-verde-con-mango-pina-bajo-en-calorias-botella-1-5-l-carrefour",
+      "name": "Nestea té verde con mango-piña bajo en calorías botella 1,5 l.",
+      "family": "Agua y refrescos",
+      "culinary_type": "BREWED_DRINK_BASE",
+      "nutrition": {
+        "calories": 19.2,
+        "protein_g": 0.0,
+        "carbohydrate_g": 4.8,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:agua-vitaminada-antiox-hohes-c-sabor-fresa-y-frambuesa-sin-azucar-anadido-botella-50-cl-carrefour",
+      "name": "Agua vitaminada antiox Hohes C sabor fresa y frambuesa sin azúcar añadido botella 50 cl.",
+      "family": "Agua y refrescos",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 13.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 2.8,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:aquarius-sabor-naranja-zero-azucar-lata-33-cl-aquarius-zero-carrefour",
+      "name": "Aquarius sabor naranja zero azúcar lata 33 cl.",
+      "family": "Agua y refrescos",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 1.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:chocolatinas-surtidas-mars-minis-400-g-boom-carrefour",
+      "name": "Chocolatinas surtidas Mars Minis 400 g.",
+      "family": "Agua y refrescos",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 441.0,
+        "protein_g": 3.3,
+        "carbohydrate_g": 74.0,
+        "fat_g": 14.0
+      }
+    },
+    {
+      "product_id": "carrefour:palitos-con-4-quesos-carrefour-160-g-carrefour",
+      "name": "Palitos con 4 quesos Carrefour 160 g.",
+      "family": "Aperitivos",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 479.0,
+        "protein_g": 10.0,
+        "carbohydrate_g": 54.0,
+        "fat_g": 24.0
+      }
+    },
+    {
+      "product_id": "carrefour:datiles-sin-hueso-carrefour-350-g-carrefour",
+      "name": "Dátiles sin hueso Carrefour 350 g.",
+      "family": "Aperitivos",
+      "culinary_type": "DRIED_FRUIT",
+      "nutrition": {
+        "calories": 216.0,
+        "protein_g": 2.3,
+        "carbohydrate_g": 51.0,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:aceituna-gazpacha-aperitivo-450-g-carrefour",
+      "name": "Aceituna Gazpacha Aperitivo 450 g",
+      "family": "Aperitivos",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 121.0,
+        "protein_g": 1.0,
+        "carbohydrate_g": 0.9,
+        "fat_g": 12.1
+      }
+    },
+    {
+      "product_id": "carrefour:aceituna-gordal-natural-tarro-500-g-carrefour",
+      "name": "Aceituna gordal natural tarro 500 g",
+      "family": "Aperitivos",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 154.0,
+        "protein_g": 1.1,
+        "carbohydrate_g": 0.0,
+        "fat_g": 16.3
+      }
+    },
+    {
+      "product_id": "carrefour:aceitunas-negras-cacerenas-con-hueso-classic-carrefour-200-g-carrefour",
+      "name": "Aceitunas negras cacereñas con hueso Classic Carrefour 200 g.",
+      "family": "Aperitivos",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 171.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 0.0,
+        "fat_g": 18.0
+      }
+    },
+    {
+      "product_id": "carrefour:aperitivo-de-patata-pajitas-sensation-carrefour-75-g-carrefour",
+      "name": "Aperitivo de patata Pajitas Sensation Carrefour 75 g.",
+      "family": "Aperitivos",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 507.0,
+        "protein_g": 1.2,
+        "carbohydrate_g": 69.0,
+        "fat_g": 25.0
+      }
+    },
+    {
+      "product_id": "carrefour:aperitivo-de-patata-picante-dipster-carrefour-175-g-carrefour",
+      "name": "Aperitivo de patata picante Dipster Carrefour 175 g.",
+      "family": "Aperitivos",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 500.0,
+        "protein_g": 4.3,
+        "carbohydrate_g": 62.0,
+        "fat_g": 25.0
+      }
+    },
+    {
+      "product_id": "carrefour:aperitivo-de-patata-sabor-original-curvies-schar-sin-gluten-170-g-schar-carrefour",
+      "name": "Aperitivo de patata sabor original Curvies Schär sin gluten 170 g.",
+      "family": "Aperitivos",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 495.0,
+        "protein_g": 4.7,
+        "carbohydrate_g": 61.0,
+        "fat_g": 25.0
+      }
+    },
+    {
+      "product_id": "carrefour:arandanos-rojos-carrefour-200-g-carrefour",
+      "name": "Arándanos rojos Carrefour 200 g.",
+      "family": "Aperitivos",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 323.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 75.0,
+        "fat_g": 1.2
+      }
+    },
+    {
+      "product_id": "carrefour:arandanos-rojos-deshidratados-ecologicos-carrefour-bio-doy-pack-125-g-carrefour",
+      "name": "Arándanos rojos deshidratados ecológicos Carrefour Bio doy pack 125 g.",
+      "family": "Aperitivos",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 307.0,
+        "protein_g": 1.6,
+        "carbohydrate_g": 71.0,
+        "fat_g": 1.2
+      }
+    },
+    {
+      "product_id": "carrefour:mix-de-frutos-secos-crudos-y-arandanos-ecologico-carrefour-bio-doy-pack-125-g-carrefour",
+      "name": "Mix de frutos secos crudos y arándanos ecológico Carrefour Bio doy pack 125 g.",
+      "family": "Aperitivos",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 499.0,
+        "protein_g": 8.9,
+        "carbohydrate_g": 34.0,
+        "fat_g": 35.0
+      }
+    },
+    {
+      "product_id": "carrefour:cocktail-de-frutos-secos-sin-cascara-frit-ravich-sin-gluten-160-g-carrefour",
+      "name": "Cocktail de frutos secos sin cáscara Frit Ravich sin gluten 160 g.",
+      "family": "Aperitivos",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 521.0,
+        "protein_g": 18.0,
+        "carbohydrate_g": 41.0,
+        "fat_g": 30.0
+      }
+    },
+    {
+      "product_id": "carrefour:cocktail-de-frutos-secos-sin-cascara-frit-ravich-sin-gluten-300-g-carrefour",
+      "name": "Cocktail de frutos secos sin cáscara Frit Ravich sin gluten 300 g.",
+      "family": "Aperitivos",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 521.0,
+        "protein_g": 18.0,
+        "carbohydrate_g": 41.0,
+        "fat_g": 30.0
+      }
+    },
+    {
+      "product_id": "carrefour:mortadela-con-aceitunas-en-pieza-carrefour-sin-gluten-800-g-carrefour",
+      "name": "Mortadela con aceitunas en pieza Carrefour sin gluten 800 g",
+      "family": "Aperitivos",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 253.0,
+        "protein_g": 9.8,
+        "carbohydrate_g": 6.3,
+        "fat_g": 21.0
+      }
+    },
+    {
+      "product_id": "carrefour:pepinillos-acidos-grandes-classic-carrefour-370-g-carrefour",
+      "name": "Pepinillos ácidos grandes Classic Carrefour 370 g.",
+      "family": "Aperitivos",
+      "culinary_type": "PICKLED_VEGETABLE",
+      "nutrition": {
+        "calories": 15.0,
+        "protein_g": 1.3,
+        "carbohydrate_g": 0.9,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:pepinillos-laminados-agridulces-classic-carrefour-290-g-carrefour",
+      "name": "Pepinillos laminados agridulces Classic Carrefour 290 g.",
+      "family": "Aperitivos",
+      "culinary_type": "PICKLED_VEGETABLE",
+      "nutrition": {
+        "calories": 41.0,
+        "protein_g": 0.7,
+        "carbohydrate_g": 8.5,
+        "fat_g": 0.3
+      }
+    },
+    {
+      "product_id": "carrefour:aperitivo-de-patata-sabor-paprika-pringles-185-g-carrefour",
+      "name": "Aperitivo de patata sabor paprika Pringles 185 g.",
+      "family": "Aperitivos",
+      "culinary_type": "SEASONING",
+      "nutrition": {
+        "calories": 522.0,
+        "protein_g": 6.7,
+        "carbohydrate_g": 54.0,
+        "fat_g": 30.0
+      }
+    },
+    {
+      "product_id": "carrefour:aperitivo-de-patata-sabor-paprika-pringles-70-g-carrefour",
+      "name": "Aperitivo de patata sabor paprika Pringles 70 g.",
+      "family": "Aperitivos",
+      "culinary_type": "SEASONING",
+      "nutrition": {
+        "calories": 520.0,
+        "protein_g": 6.4,
+        "carbohydrate_g": 56.0,
+        "fat_g": 29.0
+      }
+    },
+    {
+      "product_id": "carrefour:barritas-de-cereales-con-avellana-carrefour-125-g-carrefour",
+      "name": "Barritas de cereales con avellana Carrefour 125 g.",
+      "family": "Aperitivos",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 410.0,
+        "protein_g": 7.4,
+        "carbohydrate_g": 65.0,
+        "fat_g": 13.0
+      }
+    },
+    {
+      "product_id": "carrefour:barritas-de-cereales-con-avellanas-corny-pack-6-unidades-de-25-g-carrefour",
+      "name": "Barritas de cereales con avellanas Corny pack 6 unidades de 25 g.",
+      "family": "Aperitivos",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 429.0,
+        "protein_g": 6.4,
+        "carbohydrate_g": 63.2,
+        "fat_g": 15.6
+      }
+    },
+    {
+      "product_id": "carrefour:maiz-frito-original-mistercorn-grefusa-285-g-carrefour",
+      "name": "Maíz frito Original MisterCorn Grefusa 285 g.",
+      "family": "Aperitivos",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 497.0,
+        "protein_g": 7.6,
+        "carbohydrate_g": 60.0,
+        "fat_g": 24.0
+      }
+    },
+    {
+      "product_id": "carrefour:snack-infantil-desde-10-meses-guisantes-y-maiz-ecologico-hero-solo-sin-gluten-40-g-carrefour",
+      "name": "Snack infantil desde 10 meses guisantes y maíz ecológico Hero Solo sin gluten 40 g.",
+      "family": "Aperitivos",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 382.0,
+        "protein_g": 9.3,
+        "carbohydrate_g": 77.0,
+        "fat_g": 2.7
+      }
+    },
+    {
+      "product_id": "carrefour:cereales-de-arroz-inflado-choco-rice-carrefour-classic-500-g-carrefour",
+      "name": "Cereales de arroz inflado Choco Rice Carrefour Classic 500 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "BREAKFAST_CEREAL",
+      "nutrition": {
+        "calories": 381.0,
+        "protein_g": 7.1,
+        "carbohydrate_g": 81.0,
+        "fat_g": 2.0
+      }
+    },
+    {
+      "product_id": "carrefour:fideos-instantaneos-chinos-soubry-250-g-carrefour",
+      "name": "Fideos instantaneos chinos Soubry 250 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "DRY_PASTA",
+      "nutrition": {
+        "calories": 348.0,
+        "protein_g": 10.5,
+        "carbohydrate_g": 72.0,
+        "fat_g": 1.5
+      }
+    },
+    {
+      "product_id": "carrefour:fideos-yakisoba-con-pollo-carrefour-sensations-300-g-carrefour",
+      "name": "Fideos Yakisoba con pollo Carrefour Sensations 300 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "DRY_PASTA",
+      "nutrition": {
+        "calories": 147.0,
+        "protein_g": 6.6,
+        "carbohydrate_g": 13.0,
+        "fat_g": 6.8
+      }
+    },
+    {
+      "product_id": "carrefour:pasta-espagueti-integral-carrefour-classic-500-g-carrefour",
+      "name": "Pasta espagueti integral Carrefour Classic 500 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "DRY_PASTA",
+      "nutrition": {
+        "calories": 335.0,
+        "protein_g": 13.0,
+        "carbohydrate_g": 60.0,
+        "fat_g": 2.6
+      }
+    },
+    {
+      "product_id": "carrefour:arroz-bomba-para-paella-categoria-extra-carrefour-1-kg-carrefour",
+      "name": "Arroz bomba para paella categoría extra Carrefour 1 kg.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "DRY_RICE",
+      "nutrition": {
+        "calories": 347.0,
+        "protein_g": 7.5,
+        "carbohydrate_g": 76.0,
+        "fat_g": 1.2
+      }
+    },
+    {
+      "product_id": "carrefour:arroz-bomba-sos-1-kg-carrefour",
+      "name": "Arroz bomba Sos 1 kg.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "DRY_RICE",
+      "nutrition": {
+        "calories": 344.0,
+        "protein_g": 7.7,
+        "carbohydrate_g": 75.0,
+        "fat_g": 1.1
+      }
+    },
+    {
+      "product_id": "carrefour:arroz-con-pollo-tikka-masala-findus-400-g-carrefour",
+      "name": "Arroz con pollo Tikka Masala Findus 400 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "DRY_RICE",
+      "nutrition": {
+        "calories": 102.0,
+        "protein_g": 6.2,
+        "carbohydrate_g": 13.0,
+        "fat_g": 2.5
+      }
+    },
+    {
+      "product_id": "carrefour:pasta-tortellini-de-carne-al-huevo-gallo-500-g-carrefour",
+      "name": "Pasta tortellini de carne al huevo Gallo 500 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "FRESH_FILLED_PASTA",
+      "nutrition": {
+        "calories": 374.0,
+        "protein_g": 13.0,
+        "carbohydrate_g": 61.0,
+        "fat_g": 8.0
+      }
+    },
+    {
+      "product_id": "carrefour:gnocchetti-de-patata-rummo-500-g-carrefour",
+      "name": "Gnocchetti de patata Rummo 500 g",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 159.0,
+        "protein_g": 5.0,
+        "carbohydrate_g": 33.0,
+        "fat_g": 0.4
+      }
+    },
+    {
+      "product_id": "carrefour:gnocchi-de-patata-carrefour-extra-500-g-carrefour",
+      "name": "Gnocchi de patata Carrefour Extra 500 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 155.2,
+        "protein_g": 3.7,
+        "carbohydrate_g": 34.0,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:gnocchi-schar-sin-gluten-y-sin-lactosa-300-g-schar-carrefour",
+      "name": "Gnocchi Schär sin gluten y sin lactosa 300 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 162.0,
+        "protein_g": 3.1,
+        "carbohydrate_g": 36.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:alubia-blanca-cocida-pedro-luis-500-g-carrefour",
+      "name": "Alubia blanca cocida Pedro Luis 500 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 77.0,
+        "protein_g": 5.0,
+        "carbohydrate_g": 11.3,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:alubia-pinta-categoria-extra-classic-carrefour-1-kg-carrefour",
+      "name": "Alubia pinta categoría extra Classic Carrefour 1 kg.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 293.0,
+        "protein_g": 20.2,
+        "carbohydrate_g": 38.9,
+        "fat_g": 2.0
+      }
+    },
+    {
+      "product_id": "carrefour:alubia-pinta-cocida-classic-carrefour-400-g-carrefour",
+      "name": "Alubia pinta cocida Classic Carrefour 400 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 95.0,
+        "protein_g": 6.2,
+        "carbohydrate_g": 13.0,
+        "fat_g": 0.7
+      }
+    },
+    {
+      "product_id": "carrefour:thai-noodles-fripozo-320-g-carrefour",
+      "name": "Thai noodles Fripozo 320 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 122.5,
+        "protein_g": 9.4,
+        "carbohydrate_g": 15.9,
+        "fat_g": 2.0
+      }
+    },
+    {
+      "product_id": "carrefour:noodles-sabor-pollo-carrefour-85-g-carrefour",
+      "name": "Noodles sabor pollo Sensation Carrefour 85 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "SEASONING",
+      "nutrition": {
+        "calories": 84.0,
+        "protein_g": 1.9,
+        "carbohydrate_g": 11.0,
+        "fat_g": 3.5
+      }
+    },
+    {
+      "product_id": "carrefour:cereales-de-trigo-integral-y-arroz-con-chocolate-negro-fitness-nestle-540-g-nestle-carrefour",
+      "name": "Cereales de trigo integral y arroz con chocolate negro Fitness Nestlé 540 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 401.0,
+        "protein_g": 8.9,
+        "carbohydrate_g": 68.5,
+        "fat_g": 8.3
+      }
+    },
+    {
+      "product_id": "carrefour:harina-para-reposteria-schar-sin-gluten-1-kg-schar-carrefour",
+      "name": "Harina para repostería Schär sin gluten 1 kg.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 354.0,
+        "protein_g": 3.6,
+        "carbohydrate_g": 82.0,
+        "fat_g": 0.2
+      }
+    },
+    {
+      "product_id": "carrefour:pasta-espiral-tricolor-carrefour-classic-500-g-carrefour",
+      "name": "Pasta espiral tricolor Carrefour Classic 500 g.",
+      "family": "Arroz, legumbres y pasta",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 344.0,
+        "protein_g": 12.0,
+        "carbohydrate_g": 67.0,
+        "fat_g": 2.0
+      }
+    },
+    {
+      "product_id": "carrefour:batido-de-chocolate-alto-en-proteinas-barebells-sin-lactosa-330-ml-carrefour",
+      "name": "Batido de chocolate alto en proteínas Barebells sin lactosa 330 ml.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 57.0,
+        "protein_g": 7.3,
+        "carbohydrate_g": 3.6,
+        "fat_g": 1.3
+      }
+    },
+    {
+      "product_id": "carrefour:batido-de-proteinas-sabor-chocolate-sin-azucar-anadido-valio-profeel-250-ml-valio-protein-carrefour",
+      "name": "Batido de proteínas sabor chocolate sin azúcar añadido Valio Profeel 250 ml.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 75.0,
+        "protein_g": 10.0,
+        "carbohydrate_g": 4.7,
+        "fat_g": 1.7
+      }
+    },
+    {
+      "product_id": "carrefour:bebida-de-fruta-pina-sabor-coco-carrefour-classic-sin-azucar-anadido-brik-1-l-carrefour",
+      "name": "Bebida de fruta piña sabor coco Carrefour Classic sin azúcar añadido brik 1 l.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 28.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 6.5,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:mix-cereales-sin-azucar-anadido-esgir-300-g-carrefour",
+      "name": "Mix cereales sin azúcar añadido Esgir 300 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "BREAKFAST_CEREAL",
+      "nutrition": {
+        "calories": 374.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 70.9,
+        "fat_g": 3.6
+      }
+    },
+    {
+      "product_id": "carrefour:papilla-infantil-desde-6-meses-8-cereales-con-miel-nestle-950-g-nestle-carrefour",
+      "name": "Papilla infantil desde 6 meses 8 cereales con miel Nestlé 950 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "BREAKFAST_CEREAL",
+      "nutrition": {
+        "calories": 407.0,
+        "protein_g": 9.0,
+        "carbohydrate_g": 80.0,
+        "fat_g": 4.6
+      }
+    },
+    {
+      "product_id": "carrefour:copa-con-nata-y-chocolate-carrefour-classic-200-g-carrefour",
+      "name": "Copa con nata y chocolate Carrefour Classic' 200 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "CREAMY_BASE",
+      "nutrition": {
+        "calories": 96.0,
+        "protein_g": 2.0,
+        "carbohydrate_g": 18.0,
+        "fat_g": 1.7
+      }
+    },
+    {
+      "product_id": "carrefour:copa-de-chocolate-con-nata-carrefour-extra-pack-de-4-unidades-de-115-g-carrefour",
+      "name": "Copa de chocolate con nata Carrefour Extra pack de 4 unidades de 115 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "CREAMY_BASE",
+      "nutrition": {
+        "calories": 140.0,
+        "protein_g": 3.0,
+        "carbohydrate_g": 17.0,
+        "fat_g": 6.5
+      }
+    },
+    {
+      "product_id": "carrefour:crema-bombon-clesa-sin-gluten-sin-lactosa-y-50-menos-de-azucar-anadido-pack-de-4-unidades-de-125-g-carrefour",
+      "name": "Crema bombón Clesa sin gluten, sin lactosa y 50% menos de azúcar añadido pack de 4 unidades de 125 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "CREAMY_BASE",
+      "nutrition": {
+        "calories": 78.0,
+        "protein_g": 3.5,
+        "carbohydrate_g": 10.5,
+        "fat_g": 2.3
+      }
+    },
+    {
+      "product_id": "carrefour:barritas-de-datiles-frutos-secos-y-caramelo-protein-nakd-sin-azucar-anadido-pack-de-3-unidades-de-45-g-carrefour",
+      "name": "Barritas de dátiles, frutos secos y caramelo Protein Nakd sin azúcar añadido pack de 3 unidades de 45 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "DRIED_FRUIT",
+      "nutrition": {
+        "calories": 423.0,
+        "protein_g": 17.0,
+        "carbohydrate_g": 33.0,
+        "fat_g": 21.0
+      }
+    },
+    {
+      "product_id": "carrefour:chocolate-con-almendra-y-naranja-troceada-valor-sin-gluten-200-g-carrefour",
+      "name": "Chocolate con almendra y naranja troceada Valor sin gluten 200 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 571.0,
+        "protein_g": 14.0,
+        "carbohydrate_g": 19.0,
+        "fat_g": 46.0
+      }
+    },
+    {
+      "product_id": "carrefour:dulce-de-batata-mardel-sin-gluten-370-g-mardel-carrefour",
+      "name": "Dulce de batata Márdel sin gluten 370 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 244.0,
+        "protein_g": 0.6,
+        "carbohydrate_g": 59.0,
+        "fat_g": 0.6
+      }
+    },
+    {
+      "product_id": "carrefour:bolsita-de-platano-y-manzana-desde-4-meses-nestle-sin-gluten-y-sin-azucar-anadido-pack-de-4-unidades-de-90-g-nestle-carrefour",
+      "name": "Bolsita de plátano y manzana desde 4 meses Nestlé sin gluten y sin azúcar añadido pack de 4 unidades de 90 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 76.0,
+        "protein_g": 0.7,
+        "carbohydrate_g": 16.8,
+        "fat_g": 0.2
+      }
+    },
+    {
+      "product_id": "carrefour:robinsons-de-naranja-sin-gas-sin-azucar-anadido-1-l-carrefour",
+      "name": "Robinsons de naranja sin gas sin azúcar añadido 1 l.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 7.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.6,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:l-casei-liquido-desnatado-sabor-fresa-carrefour-classic-sin-azucar-anadido-pack-de-6-unidades-de-100-g-carrefo-28433",
+      "name": "L.Casei líquido desnatado sabor fresa Carrefour Classic' sin azúcar añadido pack de 6 unidades de 100 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 29.0,
+        "protein_g": 2.9,
+        "carbohydrate_g": 4.1,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:almendras-banadas-en-chocolate-negro-extra-carrefour-sin-gluten-doy-pack-200-g-carrefour",
+      "name": "Almendras bañadas en chocolate negro Extra Carrefour sin gluten doy pack 200 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 552.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 35.0,
+        "fat_g": 40.0
+      }
+    },
+    {
+      "product_id": "carrefour:aros-de-chocolate-negro-carrefour-128-g-carrefour",
+      "name": "Aros de chocolate negro Carrefour 128 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 510.0,
+        "protein_g": 6.0,
+        "carbohydrate_g": 61.0,
+        "fat_g": 26.0
+      }
+    },
+    {
+      "product_id": "carrefour:barrita-de-cacahuete-banada-en-chocolate-carrefour-sensation-pack-5-unidade-de-50-g-carrefour",
+      "name": "Barrita de cacahuete bañada en chocolate Carrefour Sensation pack 5 unidade de 50 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 508.0,
+        "protein_g": 9.8,
+        "carbohydrate_g": 53.0,
+        "fat_g": 28.0
+      }
+    },
+    {
+      "product_id": "carrefour:confitura-de-cerezas-diet-hero-sin-azucar-anadido-280-g-carrefour",
+      "name": "Confitura de cerezas Diet Hero sin azúcar añadido 280 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SPREAD",
+      "nutrition": {
+        "calories": 49.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 12.5,
+        "fat_g": 0.3
+      }
+    },
+    {
+      "product_id": "carrefour:confitura-de-frambuesa-temporada-hero-sin-gluten-360-g-carrefour",
+      "name": "Confitura de frambuesa Temporada Hero sin gluten 350 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SPREAD",
+      "nutrition": {
+        "calories": 246.0,
+        "protein_g": 0.4,
+        "carbohydrate_g": 60.0,
+        "fat_g": 0.1
+      }
+    },
+    {
+      "product_id": "carrefour:confitura-de-fresa-hero-sin-gluten-330-g-carrefour",
+      "name": "Confitura de fresa Hero sin gluten 330 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SPREAD",
+      "nutrition": {
+        "calories": 201.0,
+        "protein_g": 0.4,
+        "carbohydrate_g": 49.0,
+        "fat_g": 0.2
+      }
+    },
+    {
+      "product_id": "carrefour:edulcorante-stevia-granulado-en-sobres-natreen-50-ud-carrefour",
+      "name": "Edulcorante Stevia granulado en sobres Natreen 50 ud.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "SWEET_POWDER",
+      "nutrition": {
+        "calories": 1.0,
+        "protein_g": 1.0,
+        "carbohydrate_g": 1.0,
+        "fat_g": 1.0
+      }
+    },
+    {
+      "product_id": "carrefour:guisantes-tiernos-y-muy-finos-sin-azucar-anadido-bonduelle-pack-de-3-unidades-de-140-g-carrefour",
+      "name": "Guisantes tiernos y muy finos sin azúcar añadido Bonduelle pack de 3 unidades de 140 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 67.0,
+        "protein_g": 5.3,
+        "carbohydrate_g": 6.6,
+        "fat_g": 0.8
+      }
+    },
+    {
+      "product_id": "carrefour:maiz-dulce-classic-carrefour-sin-azucar-anadido-285-g-carrefour",
+      "name": "Maíz dulce Classic Carrefour sin azúcar añadido 285 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 77.0,
+        "protein_g": 2.4,
+        "carbohydrate_g": 13.0,
+        "fat_g": 1.2
+      }
+    },
+    {
+      "product_id": "carrefour:batido-de-cacao-shake-cola-cao-sin-azucar-anadido-200-ml-cola-cao-shake-carrefour",
+      "name": "Batido de cacao Shake Cola Cao sin azúcar añadido 200 ml.",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 42.0,
+        "protein_g": 4.0,
+        "carbohydrate_g": 4.9,
+        "fat_g": 0.4
+      }
+    },
+    {
+      "product_id": "carrefour:cafe-capsulas-con-leche-nescafe-dolce-gusto-64-ud-nescafe-dolce-gusto-carrefour",
+      "name": "Café cápsulas con leche Nescafé Dolce Gusto 64 ud.",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "BREWED_DRINK_BASE",
+      "nutrition": {
+        "calories": 459.0,
+        "protein_g": 22.2,
+        "carbohydrate_g": 38.3,
+        "fat_g": 22.0
+      }
+    },
+    {
+      "product_id": "carrefour:cafe-con-leche-en-capsulas-carrefour-compatible-con-dolce-gusto-16-unidades-de-10-g-carrefour",
+      "name": "Café con leche en cápsulas Carrefour compatible con Dolce Gusto 16 unidades de 10 g.",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "BREWED_DRINK_BASE",
+      "nutrition": {
+        "calories": 430.0,
+        "protein_g": 24.0,
+        "carbohydrate_g": 37.0,
+        "fat_g": 19.0
+      }
+    },
+    {
+      "product_id": "carrefour:cafe-con-leche-en-capsulas-central-lechera-asturiana-sin-lactosa-compatible-con-dolce-gusto-16-unidades-de-10-28626",
+      "name": "Café con leche en cápsulas Central Lechera Asturiana sin lactosa compatible con Dolce Gusto 16 unidades de 10 g.",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "BREWED_DRINK_BASE",
+      "nutrition": {
+        "calories": 344.0,
+        "protein_g": 30.0,
+        "carbohydrate_g": 52.0,
+        "fat_g": 0.7
+      }
+    },
+    {
+      "product_id": "carrefour:cafe-frappuccino-cookies-cream-starbucks-250-ml-carrefour",
+      "name": "Café frappuccino cookies & cream Starbucks 250 ml",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 65.0,
+        "protein_g": 2.8,
+        "carbohydrate_g": 9.8,
+        "fat_g": 1.6
+      }
+    },
+    {
+      "product_id": "carrefour:cafe-frappuccino-starbucks-250-ml-carrefour",
+      "name": "Café frappuccino Starbucks 250 ml",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 64.0,
+        "protein_g": 2.9,
+        "carbohydrate_g": 10.0,
+        "fat_g": 1.2
+      }
+    },
+    {
+      "product_id": "carrefour:cafe-frappuccino-vainilla-starbucks-250-ml-carrefour",
+      "name": "Café frappuccino vainilla Starbucks 250 ml.",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 64.0,
+        "protein_g": 2.8,
+        "carbohydrate_g": 9.7,
+        "fat_g": 1.6
+      }
+    },
+    {
+      "product_id": "carrefour:cacao-soluble-nesquik-sin-gluten-2-5-kg-nestle-carrefour",
+      "name": "Cacao soluble Nesquik sin gluten 2,5 kg.",
+      "family": "Cacao, café e infusiones",
+      "culinary_type": "SWEET_POWDER",
+      "nutrition": {
+        "calories": 386.0,
+        "protein_g": 5.1,
+        "carbohydrate_g": 79.9,
+        "fat_g": 3.6
+      }
+    },
+    {
+      "product_id": "carrefour:burveg-barbacoa-ecologico-soria-natural-pack-de-2-unidades-de-100-g-carrefour",
+      "name": "Burveg barbacoa ecológico Soria Natural pack de 2 unidades de 100 g.",
+      "family": "Carne",
+      "culinary_type": "BREAKFAST_CEREAL",
+      "nutrition": {
+        "calories": 190.0,
+        "protein_g": 19.0,
+        "carbohydrate_g": 16.0,
+        "fat_g": 5.0
+      }
+    },
+    {
+      "product_id": "carrefour:empanadas-de-ternera-al-horno-con-hortalizas-y-especias-aloloco-160-g-carrefour",
+      "name": "Empanadas de ternera al horno con hortalizas y especias Aloloco 160 g.",
+      "family": "Carne",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 213.0,
+        "protein_g": 9.6,
+        "carbohydrate_g": 29.9,
+        "fat_g": 5.6
+      }
+    },
+    {
+      "product_id": "carrefour:fiambre-de-pechuga-de-pavo-en-lonchas-elpozo-sin-gluten-y-sin-lactosa-80-g-carrefour",
+      "name": "Fiambre de Pechuga de Pavo en lonchas ElPozo sin gluten y sin lactosa 80 g",
+      "family": "Carne",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 81.0,
+        "protein_g": 12.0,
+        "carbohydrate_g": 6.0,
+        "fat_g": 1.0
+      }
+    },
+    {
+      "product_id": "carrefour:fiambre-de-pechuga-de-pollo-en-lonchas-campofrio-sin-gluten-y-sin-lactosa-75-g-campofrio-carrefour",
+      "name": "Fiambre de pechuga de pollo en lonchas Campofrío sin gluten y sin lactosa 75 g",
+      "family": "Carne",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 90.0,
+        "protein_g": 14.0,
+        "carbohydrate_g": 5.0,
+        "fat_g": 1.5
+      }
+    },
+    {
+      "product_id": "carrefour:torrezno-de-soria-de-nuestra-tierra-230-g-carrefour",
+      "name": "Torrezno de Soria De Nuestra Tierra 230 g",
+      "family": "Carne",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 397.0,
+        "protein_g": 25.0,
+        "carbohydrate_g": 0.3,
+        "fat_g": 33.0
+      }
+    },
+    {
+      "product_id": "carrefour:torreznos-de-cerdo-carrefour-250-g-carrefour",
+      "name": "Torreznos de cerdo Carrefour 250 g",
+      "family": "Carne",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 475.0,
+        "protein_g": 12.2,
+        "carbohydrate_g": 0.9,
+        "fat_g": 47.2
+      }
+    },
+    {
+      "product_id": "carrefour:pan-de-hogaza-de-semillas-de-chia-sesamo-y-lino-carrefour-400-g-carrefour",
+      "name": "Pan de hogaza de semillas de chía, sésamo y lino Carrefour 400 g.",
+      "family": "Cereales y galletas",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 298.0,
+        "protein_g": 9.5,
+        "carbohydrate_g": 48.0,
+        "fat_g": 6.1
+      }
+    },
+    {
+      "product_id": "carrefour:pan-de-molde-de-maiz-y-semillas-de-girasol-400-g-carrefour-carrefour",
+      "name": "Pan de molde de maíz y semillas de girasol 400 g",
+      "family": "Cereales y galletas",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 282.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 45.0,
+        "fat_g": 5.9
+      }
+    },
+    {
+      "product_id": "carrefour:pan-de-sarraceno-y-espelta-450-g-carrefour",
+      "name": "Pan de sarraceno y espelta 450 g",
+      "family": "Cereales y galletas",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 283.0,
+        "protein_g": 13.1,
+        "carbohydrate_g": 43.0,
+        "fat_g": 5.4
+      }
+    },
+    {
+      "product_id": "carrefour:cereales-choco-krispies-kellogg-s-420-g-chocokrispies-carrefour",
+      "name": "Cereales choco krispies Kellogg's 420 g.",
+      "family": "Cereales y galletas",
+      "culinary_type": "BREAKFAST_CEREAL",
+      "nutrition": {
+        "calories": 391.0,
+        "protein_g": 6.3,
+        "carbohydrate_g": 84.0,
+        "fat_g": 1.9
+      }
+    },
+    {
+      "product_id": "carrefour:cereales-con-fruta-cruesli-quaker-375-g-carrefour",
+      "name": "Cereales con fruta Cruesli Quaker 375 g.",
+      "family": "Cereales y galletas",
+      "culinary_type": "BREAKFAST_CEREAL",
+      "nutrition": {
+        "calories": 462.2,
+        "protein_g": 6.9,
+        "carbohydrate_g": 63.0,
+        "fat_g": 18.0
+      }
+    },
+    {
+      "product_id": "carrefour:cereales-corn-flakes-carrefour-classic-sin-gluten-y-sin-azucar-anadido-375-g-carrefour",
+      "name": "Cereales corn flakes Carrefour Classic sin gluten y sin azúcar añadido 375 g.",
+      "family": "Cereales y galletas",
+      "culinary_type": "BREAKFAST_CEREAL",
+      "nutrition": {
+        "calories": 378.0,
+        "protein_g": 7.8,
+        "carbohydrate_g": 82.5,
+        "fat_g": 1.0
+      }
+    },
+    {
+      "product_id": "carrefour:te-en-bolsitas-lipton-20-ud-carrefour",
+      "name": "Té en bolsitas Lipton 20 ud.",
+      "family": "Cereales y galletas",
+      "culinary_type": "BREWED_DRINK_BASE",
+      "nutrition": {
+        "calories": 4.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 0.5,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:barrita-de-galleta-crujiente-cubierta-de-chocolate-mini-nestle-kit-kat-200-g-nestle-carrefour",
+      "name": "Barrita de galleta crujiente cubierta de chocolate mini Nestlé Kit Kat 200 g.",
+      "family": "Cereales y galletas",
+      "culinary_type": "COOKING_INGREDIENT",
+      "nutrition": {
+        "calories": 512.0,
+        "protein_g": 6.7,
+        "carbohydrate_g": 60.4,
+        "fat_g": 26.5
+      }
+    },
+    {
+      "product_id": "carrefour:bolsita-de-cereza-acai-y-amaranto-desde-8-meses-ecologico-smileat-sin-gluten-100-g-carrefour",
+      "name": "Bolsita de cereza, açai y amaranto desde 8 meses ecológico Smileat sin gluten 100 g",
+      "family": "Cereales y galletas",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 75.0,
+        "protein_g": 1.0,
+        "carbohydrate_g": 16.0,
+        "fat_g": 0.6
+      }
+    },
+    {
+      "product_id": "carrefour:smoothie-super-energia-de-fresa-cereza-manzana-guarana-semillas-de-lino-y-vitaminas-innocent-botella-30-cl-car-28829",
+      "name": "Smoothie super energía de fresa, cereza, manzana, guaraná, semillas de lino y vitaminas Innocent botella 30 cl.",
+      "family": "Cereales y galletas",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 60.0,
+        "protein_g": 0.6,
+        "carbohydrate_g": 12.0,
+        "fat_g": 0.9
+      }
+    },
+    {
+      "product_id": "carrefour:barrita-de-barquillo-cubierta-de-chocolate-xl-huesitos-valor-230-g-carrefour",
+      "name": "Barrita de barquillo cubierta de chocolate XL Huesitos Valor 230 g.",
+      "family": "Cereales y galletas",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 506.0,
+        "protein_g": 6.2,
+        "carbohydrate_g": 62.0,
+        "fat_g": 26.0
+      }
+    },
+    {
+      "product_id": "carrefour:barritas-de-cereales-integrales-con-chocolate-negro-special-kellogg-s-6-unidades-de-21-5-g-carrefour",
+      "name": "Barritas de cereales integrales con chocolate negro Special Kellogg's 6 unidades de 21,5 g.",
+      "family": "Cereales y galletas",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 394.0,
+        "protein_g": 6.8,
+        "carbohydrate_g": 67.0,
+        "fat_g": 9.2
+      }
+    },
+    {
+      "product_id": "carrefour:barritas-de-muesli-con-albaricoque-carrefour-classic-6-unidades-de-21-g-carrefour",
+      "name": "Barritas de muesli con albaricoque Carrefour Classic 6 unidades de 21 g.",
+      "family": "Cereales y galletas",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 356.0,
+        "protein_g": 5.1,
+        "carbohydrate_g": 65.0,
+        "fat_g": 5.7
+      }
+    },
+    {
+      "product_id": "carrefour:queso-fresco-desnatado-con-fresa-sin-azucar-anadido-proteinas-plus-carrefour-sensation-sin-gluten-pack-de-4-unidades-e-100-g-carrefour",
+      "name": "Queso fresco desnatado con fresa sin azúcar añadido proteínas plus Carrefour Sensation sin gluten pack de 4 unidades e 100 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 50.0,
+        "protein_g": 8.2,
+        "carbohydrate_g": 4.4,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:cruapan-new-york-bakery-bimbo-380-g-carrefour",
+      "name": "Cruapán Bimbo 380 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 389.5,
+        "protein_g": 7.4,
+        "carbohydrate_g": 39.5,
+        "fat_g": 21.6
+      }
+    },
+    {
+      "product_id": "carrefour:apetina-queso-blanco-dados-en-salmuera-arla-200-g-carrefour",
+      "name": "Apetina queso blanco dados en salmuera Arla 200 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 252.0,
+        "protein_g": 15.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 22.0
+      }
+    },
+    {
+      "product_id": "carrefour:canelones-de-espinacas-y-queso-carrefour-500-g-carrefour",
+      "name": "Canelones de espinacas y queso Carrefour 500 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 143.0,
+        "protein_g": 4.6,
+        "carbohydrate_g": 16.0,
+        "fat_g": 6.5
+      }
+    },
+    {
+      "product_id": "carrefour:nachos-rellenos-de-queso-fripozo-250-g-carrefour",
+      "name": "Nachos rellenos de queso Fripozo 250 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 308.0,
+        "protein_g": 6.5,
+        "carbohydrate_g": 32.0,
+        "fat_g": 17.0
+      }
+    },
+    {
+      "product_id": "carrefour:embutidos-espana-3-ud-carrefour-carrefour",
+      "name": "Embutidos España 3 ud.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "CURED_MEAT",
+      "nutrition": {
+        "calories": 330.0,
+        "protein_g": 26.4,
+        "carbohydrate_g": 1.5,
+        "fat_g": 24.2
+      }
+    },
+    {
+      "product_id": "carrefour:jamon-cocido-en-lonchas-el-pozo-sin-gluten-y-sin-lactosa-75-g-marca-nacional-sin-marca-carrefour",
+      "name": "Jamón Cocido en lonchas El Pozo sin gluten y sin lactosa 75 g",
+      "family": "Charcutería y quesos",
+      "culinary_type": "CURED_MEAT",
+      "nutrition": {
+        "calories": 92.0,
+        "protein_g": 18.0,
+        "carbohydrate_g": 1.5,
+        "fat_g": 1.5
+      }
+    },
+    {
+      "product_id": "carrefour:jamon-cocido-extra-braseado-en-lonchas-campofrio-finissimas-sin-gluten-y-sin-lactosa-115-g-campofrio-carrefour",
+      "name": "Jamón cocido extra braseado en lonchas Campofrío Finíssimas sin gluten y sin lactosa 115 g",
+      "family": "Charcutería y quesos",
+      "culinary_type": "CURED_MEAT",
+      "nutrition": {
+        "calories": 91.0,
+        "protein_g": 18.0,
+        "carbohydrate_g": 1.3,
+        "fat_g": 1.5
+      }
+    },
+    {
+      "product_id": "carrefour:aperitivo-de-patata-sabor-bacon-dipster-carrefour-175-g-carrefour",
+      "name": "Aperitivo de patata sabor bacon Dipster Carrefour 175 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 501.0,
+        "protein_g": 4.5,
+        "carbohydrate_g": 63.0,
+        "fat_g": 25.0
+      }
+    },
+    {
+      "product_id": "carrefour:tortilla-de-patatas-con-chorizo-carrefour-classic-sin-gluten-y-sin-lactosa-600-g-carrefour",
+      "name": "Tortilla de patatas con chorizo Carrefour Classic sin gluten y sin lactosa 600 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 157.0,
+        "protein_g": 6.5,
+        "carbohydrate_g": 10.0,
+        "fat_g": 10.0
+      }
+    },
+    {
+      "product_id": "carrefour:chopped-de-pavo-en-finas-lonchas-carrefour-el-mercado-sin-gluten-200-g-carrefour",
+      "name": "Chopped de Pavo en finas lonchas Carrefour El Mercado sin gluten 200 g",
+      "family": "Charcutería y quesos",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 126.0,
+        "protein_g": 13.0,
+        "carbohydrate_g": 5.5,
+        "fat_g": 6.0
+      }
+    },
+    {
+      "product_id": "carrefour:fiambre-de-pavo-pieza-carnicas-serrano-sin-gluten-sin-lactosa-1-5-kg-carrefour",
+      "name": "Fiambre de pavo pieza Cárnicas Serrano sin gluten sin lactosa 1,5 kg.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 198.0,
+        "protein_g": 7.0,
+        "carbohydrate_g": 11.0,
+        "fat_g": 14.0
+      }
+    },
+    {
+      "product_id": "carrefour:jamon-de-pavo-en-pieza-carnicas-serrano-sin-gluten-y-sin-lactosa-400-g-carrefour",
+      "name": "Jamón de pavo en pieza Cárnicas Serrano sin gluten y sin lactosa 400 g",
+      "family": "Charcutería y quesos",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 103.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 10.0,
+        "fat_g": 2.0
+      }
+    },
+    {
+      "product_id": "carrefour:mortadela-carrefour-el-mercado-sin-gluten-pieza-de-800-g-carrefour",
+      "name": "Mortadela Carrefour El Mercado sin gluten pieza de 800 g",
+      "family": "Charcutería y quesos",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 282.0,
+        "protein_g": 12.0,
+        "carbohydrate_g": 4.5,
+        "fat_g": 24.0
+      }
+    },
+    {
+      "product_id": "carrefour:queso-azul-roquefort-societe-cuna-de-130-g-societe-carrefour",
+      "name": "Queso azul roquefort Societé cuña de 130 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 365.0,
+        "protein_g": 19.0,
+        "carbohydrate_g": 0.8,
+        "fat_g": 31.7
+      }
+    },
+    {
+      "product_id": "carrefour:queso-camembert-cremoso-carrefour-250-g-carrefour",
+      "name": "Queso camembert cremoso Carrefour 250 g",
+      "family": "Charcutería y quesos",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 265.0,
+        "protein_g": 19.0,
+        "carbohydrate_g": 1.0,
+        "fat_g": 21.0
+      }
+    },
+    {
+      "product_id": "carrefour:salsa-cheddar-con-bacon-orlando-envase-245-g-carrefour",
+      "name": "Salsa cheddar con bacon Orlando envase 245 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 298.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 11.1,
+        "fat_g": 27.9
+      }
+    },
+    {
+      "product_id": "carrefour:patatas-chips-sabor-queso-curado-y-trufa-negra-frit-ravich-sin-gluten-150-g-carrefour",
+      "name": "Patatas chips sabor queso curado y trufa negra Frit Ravich sin gluten 150 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 507.0,
+        "protein_g": 6.5,
+        "carbohydrate_g": 49.0,
+        "fat_g": 31.0
+      }
+    },
+    {
+      "product_id": "carrefour:pate-vegetal-de-berenjena-ecologico-alvime-sin-gluten-y-sin-lactosa-170-g-carrefour",
+      "name": "Paté vegetal de berenjena ecológico Alvime sin gluten y sin lactosa 170 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 315.0,
+        "protein_g": 4.8,
+        "carbohydrate_g": 11.6,
+        "fat_g": 27.5
+      }
+    },
+    {
+      "product_id": "carrefour:baguettes-de-atun-carrefour-classic-262-g-carrefour",
+      "name": "Baguettes de atún Carrefour Classic 262 g.",
+      "family": "Congelados",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 216.0,
+        "protein_g": 1.9,
+        "carbohydrate_g": 26.3,
+        "fat_g": 8.0
+      }
+    },
+    {
+      "product_id": "carrefour:mini-calzone-bites-sin-gluten-schar-250-g-schar-carrefour",
+      "name": "Mini Calzone Bites sin gluten Schär 250 g.",
+      "family": "Congelados",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 217.0,
+        "protein_g": 4.6,
+        "carbohydrate_g": 26.0,
+        "fat_g": 9.2
+      }
+    },
+    {
+      "product_id": "carrefour:bo-bun-pollo-carrefour-sensation-350-g-carrefour",
+      "name": "Bo Bun pollo Carrefour Sensation 350 g.",
+      "family": "Congelados",
+      "culinary_type": "DRY_RICE",
+      "nutrition": {
+        "calories": 147.0,
+        "protein_g": 6.2,
+        "carbohydrate_g": 17.0,
+        "fat_g": 5.7
+      }
+    },
+    {
+      "product_id": "carrefour:patatas-corte-para-bravas-carrefour-750-g-carrefour",
+      "name": "Patatas corte para bravas Carrefour 750 g.",
+      "family": "Congelados",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 120.0,
+        "protein_g": 2.2,
+        "carbohydrate_g": 23.0,
+        "fat_g": 2.0
+      }
+    },
+    {
+      "product_id": "carrefour:patatas-en-dados-carrefour-450-g-carrefour",
+      "name": "Patatas en dados Carrefour 450 g.",
+      "family": "Congelados",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 120.0,
+        "protein_g": 2.2,
+        "carbohydrate_g": 19.0,
+        "fat_g": 3.3
+      }
+    },
+    {
+      "product_id": "carrefour:patatas-golden-long-mccain-1-kg-carrefour",
+      "name": "Patatas Golden Long McCain 1 kg.",
+      "family": "Congelados",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 148.0,
+        "protein_g": 2.5,
+        "carbohydrate_g": 22.0,
+        "fat_g": 5.0
+      }
+    },
+    {
+      "product_id": "carrefour:habas-babys-findus-400-g-carrefour",
+      "name": "Habas babys Findus 400 g.",
+      "family": "Congelados",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 61.0,
+        "protein_g": 5.1,
+        "carbohydrate_g": 6.1,
+        "fat_g": 0.8
+      }
+    },
+    {
+      "product_id": "carrefour:filete-de-bacalao-procedente-de-pesca-sostenible-al-punto-de-sal-ultracongelado-carrefour-400-g-carrefour",
+      "name": "Filete de bacalao procedente de pesca sostenible al punto de sal ultracongelado Carrefour 400 g.",
+      "family": "Congelados",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 62.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 0.8,
+        "fat_g": 1.5
+      }
+    },
+    {
+      "product_id": "carrefour:langostino-cocido-extra-pescanova-800-g-carrefour",
+      "name": "Langostino cocido extra Pescanova 800 g.",
+      "family": "Congelados",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 103.0,
+        "protein_g": 22.2,
+        "carbohydrate_g": 0.0,
+        "fat_g": 1.6
+      }
+    },
+    {
+      "product_id": "carrefour:langostino-vannamei-congelado-pescanova-180-g-carrefour",
+      "name": "Langostino vannamei congelado Pescanova 180 g.",
+      "family": "Congelados",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 68.0,
+        "protein_g": 14.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 1.3
+      }
+    },
+    {
+      "product_id": "carrefour:gyozas-de-cerdo-vici-400-g-carrefour",
+      "name": "Gyozas de cerdo Vici 400 g.",
+      "family": "Congelados",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 202.0,
+        "protein_g": 7.6,
+        "carbohydrate_g": 22.1,
+        "fat_g": 8.8
+      }
+    },
+    {
+      "product_id": "carrefour:kebab-de-pollo-simon-s-food-sin-gluten-350-g-primer-precio-sin-marca-carrefour",
+      "name": "Kebab de pollo Simon's Food sin gluten 350 g.",
+      "family": "Congelados",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 159.0,
+        "protein_g": 15.7,
+        "carbohydrate_g": 7.4,
+        "fat_g": 7.4
+      }
+    },
+    {
+      "product_id": "carrefour:nuggets-rebozado-fino-recetas-crujientes-la-cocinera-400-g-carrefour",
+      "name": "Nuggets rebozado fino Recetas Crujientes La Cocinera 400 g.",
+      "family": "Congelados",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 269.0,
+        "protein_g": 10.0,
+        "carbohydrate_g": 23.0,
+        "fat_g": 15.0
+      }
+    },
+    {
+      "product_id": "carrefour:bloque-de-helado-de-nata-chocolate-y-vainilla-carrefour-420-g-carrefour",
+      "name": "Bloque de helado de nata, chocolate y vainilla Carrefour 420 g.",
+      "family": "Congelados",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 187.0,
+        "protein_g": 2.8,
+        "carbohydrate_g": 23.0,
+        "fat_g": 8.9
+      }
+    },
+    {
+      "product_id": "carrefour:bombon-helado-chocolate-blanco-con-almendras-carrefour-4-ud-carrefour",
+      "name": "Bombón helado chocolate blanco con almendras Carrefour 4 ud.",
+      "family": "Congelados",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 342.0,
+        "protein_g": 4.6,
+        "carbohydrate_g": 31.0,
+        "fat_g": 22.0
+      }
+    },
+    {
+      "product_id": "carrefour:bombon-helado-de-vainilla-con-almendras-magnum-sin-gluten-6-ud-carrefour",
+      "name": "Bombón helado de vainilla con almendras Magnum sin gluten 6 ud.",
+      "family": "Congelados",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 339.0,
+        "protein_g": 4.7,
+        "carbohydrate_g": 31.0,
+        "fat_g": 21.0
+      }
+    },
+    {
+      "product_id": "carrefour:cebolla-cubos-carrefour-400-g-carrefour",
+      "name": "Cebolla Cubos Carrefour 400 g.",
+      "family": "Congelados",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 39.0,
+        "protein_g": 1.0,
+        "carbohydrate_g": 8.0,
+        "fat_g": 0.1
+      }
+    },
+    {
+      "product_id": "carrefour:cebolla-troceada-findus-250-g-carrefour",
+      "name": "Cebolla troceada Findus 250 g.",
+      "family": "Congelados",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 43.0,
+        "protein_g": 1.3,
+        "carbohydrate_g": 7.4,
+        "fat_g": 0.6
+      }
+    },
+    {
+      "product_id": "carrefour:esparrago-verde-entero-findus-200-g-carrefour",
+      "name": "Espárrago verde entero Findus 200 g.",
+      "family": "Congelados",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 21.0,
+        "protein_g": 2.9,
+        "carbohydrate_g": 1.6,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:patata-entera-ybarra-360-g-carrefour",
+      "name": "Patata entera Ybarra 360 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 57.0,
+        "protein_g": 0.7,
+        "carbohydrate_g": 8.1,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:patatas-enteras-classic-carrefour-sin-sal-anadida-400-g-carrefour",
+      "name": "Patatas enteras Classic Carrefour sin sal añadida 400 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 52.0,
+        "protein_g": 1.1,
+        "carbohydrate_g": 11.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:melocoton-en-almibar-en-mitades-mensajero-sin-azucar-anadido-240-g-carrefour",
+      "name": "Melocotón en almíbar en mitades Mensajero sin azúcar añadido 240 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 30.0,
+        "protein_g": 0.4,
+        "carbohydrate_g": 6.0,
+        "fat_g": 0.1
+      }
+    },
+    {
+      "product_id": "carrefour:alubia-cocida-al-natural-classic-carrefour-210-g-carrefour",
+      "name": "Alubia cocida al natural Classic Carrefour 210 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 85.0,
+        "protein_g": 5.3,
+        "carbohydrate_g": 12.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:alubia-cocida-categoria-extra-classic-carrefour-sin-sal-anadida-400-g-carrefour",
+      "name": "Alubia cocida categoría extra Classic Carrefour sin sal añadida 400 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 82.0,
+        "protein_g": 6.4,
+        "carbohydrate_g": 11.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:callos-con-garbanzos-classic-carrefour-sin-gluten-380-g-carrefour",
+      "name": "Callos con garbanzos Classic Carrefour sin gluten 380 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 144.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 7.0,
+        "fat_g": 8.0
+      }
+    },
+    {
+      "product_id": "carrefour:anchoas-en-aceite-de-girasol-caprimar-55-g-carrefour",
+      "name": "Anchoas en aceite de girasol Caprimar 55 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 180.0,
+        "protein_g": 26.0,
+        "carbohydrate_g": 0.7,
+        "fat_g": 8.1
+      }
+    },
+    {
+      "product_id": "carrefour:atun-al-natural-carrefour-pack-de-3-latas-de-52-g-carrefour",
+      "name": "Atún al natural Carrefour pack de 3 latas de 52 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 98.0,
+        "protein_g": 23.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.7
+      }
+    },
+    {
+      "product_id": "carrefour:atun-claro-al-natural-bajo-en-sal-calvo-pack-de-3-latas-de-56-g-carrefour",
+      "name": "Atún claro al natural bajo en sal Calvo pack de 3 latas de 56 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 68.0,
+        "protein_g": 16.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.3
+      }
+    },
+    {
+      "product_id": "carrefour:tomate-frito-carrefour-brik-390-g-carrefour",
+      "name": "Tomate frito Carrefour brik 390 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 73.0,
+        "protein_g": 1.2,
+        "carbohydrate_g": 8.9,
+        "fat_g": 3.5
+      }
+    },
+    {
+      "product_id": "carrefour:tomate-frito-carrefour-tarro-550-g-carrefour",
+      "name": "Tomate frito Carrefour Classic frasco 550 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 78.0,
+        "protein_g": 1.0,
+        "carbohydrate_g": 9.6,
+        "fat_g": 3.7
+      }
+    },
+    {
+      "product_id": "carrefour:tomate-frito-casero-hida-sin-gluten-pack-2-unidades-de-460-g-carrefour",
+      "name": "Tomate frito casero Hida sin gluten pack 2 unidades de 460 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 94.0,
+        "protein_g": 2.0,
+        "carbohydrate_g": 9.3,
+        "fat_g": 5.1
+      }
+    },
+    {
+      "product_id": "carrefour:champinones-laminados-carrefour-pack-de-3-unidades-de-115-g-carrefour",
+      "name": "Champiñones laminados Carrefour pack de 3 unidades de 115 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 19.0,
+        "protein_g": 2.6,
+        "carbohydrate_g": 0.7,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:champinones-laminados-primera-ecologico-carrefour-bio-124-g-carrefour",
+      "name": "Champiñones laminados primera ecológico Carrefour Bio 124 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 30.0,
+        "protein_g": 3.0,
+        "carbohydrate_g": 0.7,
+        "fat_g": 1.0
+      }
+    },
+    {
+      "product_id": "carrefour:esparrago-blanco-carrefour-205-g-carrefour",
+      "name": "Espárrago blanco Carrefour 205 g.",
+      "family": "Conservas, caldos y cremas",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 18.0,
+        "protein_g": 1.1,
+        "carbohydrate_g": 1.8,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:aderezo-de-limon-exprimido-carrefour-250-ml-carrefour",
+      "name": "Aderezo de limón exprimido Carrefour 250 ml.",
+      "family": "Fruta y verdura",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 13.0,
+        "protein_g": 0.4,
+        "carbohydrate_g": 2.5,
+        "fat_g": 0.1
+      }
+    },
+    {
+      "product_id": "carrefour:appletiser-100-zumo-de-manzana-con-burbujas-finas-lata-25-cl-carrefour",
+      "name": "Appletiser 100% zumo de manzana con burbujas finas lata 25 cl.",
+      "family": "Fruta y verdura",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 46.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 10.8,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:batido-de-fresa-alto-en-proteinas-barebells-sin-lactosa-330-ml-carrefour",
+      "name": "Batido de fresa alto en proteínas Barebells sin lactosa 330 ml.",
+      "family": "Fruta y verdura",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 57.9,
+        "protein_g": 7.3,
+        "carbohydrate_g": 3.9,
+        "fat_g": 1.4
+      }
+    },
+    {
+      "product_id": "carrefour:maxi-petit-de-fresa-carrefour-classic-sin-gluten-pack-de-4-unidades-de-100-g-carrefour",
+      "name": "Maxi Petit de fresa Carrefour Classic sin gluten pack de 4 unidades de 100 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 100.0,
+        "protein_g": 6.6,
+        "carbohydrate_g": 12.0,
+        "fat_g": 2.8
+      }
+    },
+    {
+      "product_id": "carrefour:petit-sabor-fresa-carrefour-kids-en-bolsitas-pack-de-4-unidades-de-90-g-carrefour",
+      "name": "Petit sabor fresa Carrefour Kids en bolsitas pack de 4 unidades de 90 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 90.0,
+        "protein_g": 5.1,
+        "carbohydrate_g": 12.0,
+        "fat_g": 2.5
+      }
+    },
+    {
+      "product_id": "carrefour:gaseosa-postobon-sabor-uva-botella-2-l-carrefour",
+      "name": "Gaseosa Postobon sabor uva botella 2 l.",
+      "family": "Fruta y verdura",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 32.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 7.8,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:melocoton-en-tiras-en-almibar-ligero-classic-carrefour-pack-de-3-unidades-de-140-g-carrefour",
+      "name": "Melocotón en tiras en almíbar ligero Classic Carrefour pack de 3 unidades de 140 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 59.0,
+        "protein_g": 0.6,
+        "carbohydrate_g": 13.0,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:nectar-de-naranja-granini-botella-1-l-carrefour",
+      "name": "Néctar de naranja Granini botella 1 l.",
+      "family": "Fruta y verdura",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 45.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 10.1,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:sardinas-en-tomate-cuca-sin-gluten-y-sin-lastosa-80-g-carrefour",
+      "name": "Sardinas en tomate Cuca sin gluten y sin lastosa 80 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 155.0,
+        "protein_g": 16.7,
+        "carbohydrate_g": 2.4,
+        "fat_g": 8.7
+      }
+    },
+    {
+      "product_id": "carrefour:ensalada-de-pasta-y-pollo-carrefour-el-mercado-340-g-carrefour",
+      "name": "Ensalada de pasta y pollo Carrefour El Mercado 340 g",
+      "family": "Fruta y verdura",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 189.0,
+        "protein_g": 7.4,
+        "carbohydrate_g": 22.0,
+        "fat_g": 7.8
+      }
+    },
+    {
+      "product_id": "carrefour:moussaka-berenjena-pollo-y-cerdo-sensation-carrefour-500-g-carrefour",
+      "name": "Moussaka berenjena, pollo y cerdo Sensation Carrefour 500 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 84.0,
+        "protein_g": 3.7,
+        "carbohydrate_g": 6.9,
+        "fat_g": 4.5
+      }
+    },
+    {
+      "product_id": "carrefour:ajos-alinados-classic-carrefour-235-g-carrefour",
+      "name": "Ajos aliñados Classic Carrefour 235 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "PICKLED_VEGETABLE",
+      "nutrition": {
+        "calories": 37.0,
+        "protein_g": 3.2,
+        "carbohydrate_g": 2.7,
+        "fat_g": 1.0
+      }
+    },
+    {
+      "product_id": "carrefour:picada-de-ajo-y-perejil-fruits-s-p-100-g-carrefour-carrefour",
+      "name": "Picada de ajo y perejil Fruits S&P 100 g",
+      "family": "Fruta y verdura",
+      "culinary_type": "SEASONING",
+      "nutrition": {
+        "calories": 65.0,
+        "protein_g": 3.8,
+        "carbohydrate_g": 9.8,
+        "fat_g": 1.2
+      }
+    },
+    {
+      "product_id": "carrefour:barritas-de-cereales-con-fresa-ecologicas-carrefour-bio-138-g-carrefour",
+      "name": "Barritas de cereales con fresa ecológicas Carrefour Bio 138 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 356.0,
+        "protein_g": 6.6,
+        "carbohydrate_g": 64.0,
+        "fat_g": 6.0
+      }
+    },
+    {
+      "product_id": "carrefour:barritas-sustitutivas-sabor-naranja-carrefour-210-g-carrefour",
+      "name": "Barritas sustitutivas sabor naranja Carrefour 210 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 377.0,
+        "protein_g": 25.0,
+        "carbohydrate_g": 45.0,
+        "fat_g": 12.0
+      }
+    },
+    {
+      "product_id": "carrefour:fresas-de-goma-rellenas-classic-carrefour-sin-gluten-200-g-carrefour",
+      "name": "Fresas de goma rellenas Classic Carrefour sin gluten 200 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 324.0,
+        "protein_g": 4.0,
+        "carbohydrate_g": 77.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:fruta-para-untar-de-fresa-pura-fruta-helios-sin-gluten-250-g-carrefour",
+      "name": "Fruta para untar de fresa Pura Fruta Helios sin gluten 250 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "SPREAD",
+      "nutrition": {
+        "calories": 139.0,
+        "protein_g": 0.8,
+        "carbohydrate_g": 32.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:fruta-para-untar-de-melocoton-pura-fruta-helios-sin-gluten-250-g-carrefour",
+      "name": "Fruta para untar de melocotón Pura Fruta Helios sin gluten 250 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "SPREAD",
+      "nutrition": {
+        "calories": 136.0,
+        "protein_g": 0.8,
+        "carbohydrate_g": 32.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:berenjena-al-estilo-provenzar-exta-carrefour-530-g-carrefour",
+      "name": "Berenjena al estilo provenzar Exta Carrefour 530 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 78.0,
+        "protein_g": 1.1,
+        "carbohydrate_g": 6.5,
+        "fat_g": 4.7
+      }
+    },
+    {
+      "product_id": "carrefour:biacochos-sabor-naranja-y-zanahoria-pausa-si-schar-sin-gluten-300-g-schar-carrefour",
+      "name": "Biacochos sabor naranja y zanahoria Pausa Si Schär sin gluten 300 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 374.0,
+        "protein_g": 3.6,
+        "carbohydrate_g": 60.0,
+        "fat_g": 13.0
+      }
+    },
+    {
+      "product_id": "carrefour:brocoli-classic-carrefour-sin-sal-anadida-370-g-carrefour",
+      "name": "Brócoli Classic Carrefour sin sal añadida 370 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 15.0,
+        "protein_g": 1.4,
+        "carbohydrate_g": 1.6,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:batido-de-cacao-carrefour-sin-gluten-botella-1-l-carrefour",
+      "name": "Batido de cacao Carrefour sin gluten botella 1 l.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 66.0,
+        "protein_g": 2.0,
+        "carbohydrate_g": 12.0,
+        "fat_g": 1.0
+      }
+    },
+    {
+      "product_id": "carrefour:batido-de-vainilla-puleva-sin-gluten-botella-200-ml-carrefour",
+      "name": "Batido de vainilla Puleva sin gluten botella 200 ml.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 61.1,
+        "protein_g": 2.8,
+        "carbohydrate_g": 10.0,
+        "fat_g": 1.1
+      }
+    },
+    {
+      "product_id": "carrefour:zumo-de-fruta-y-leche-carrefour-tropical-pack-de-6-briks-de-20-cl-carrefour",
+      "name": "Zumo de fruta y leche Carrefour Tropical pack de 6 briks de 20 cl.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 43.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 10.0,
+        "fat_g": 0.1
+      }
+    },
+    {
+      "product_id": "carrefour:pan-de-leche-carrefour-classic-350-g-carrefour",
+      "name": "Pan de leche Carrefour Classic 350 g.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 348.0,
+        "protein_g": 9.5,
+        "carbohydrate_g": 47.0,
+        "fat_g": 13.0
+      }
+    },
+    {
+      "product_id": "carrefour:pan-de-leche-pasquier-350-g-carrefour",
+      "name": "Pan de leche Pasquier 350 g.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 335.0,
+        "protein_g": 9.4,
+        "carbohydrate_g": 51.0,
+        "fat_g": 10.0
+      }
+    },
+    {
+      "product_id": "carrefour:proteina-vegana-de-vainilla-weider-sin-gluten-300-g-carrefour",
+      "name": "Proteína vegana de vainilla Weider sin gluten 300 g.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "DRY_RICE",
+      "nutrition": {
+        "calories": 427.0,
+        "protein_g": 77.0,
+        "carbohydrate_g": 5.6,
+        "fat_g": 8.5
+      }
+    },
+    {
+      "product_id": "carrefour:pasta-cintas-nido-al-huevo-extra-carrefour-500-g-carrefour",
+      "name": "Pasta cintas nido al huevo Extra Carrefour 500 g.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "MAIN_EGG",
+      "nutrition": {
+        "calories": 365.0,
+        "protein_g": 14.0,
+        "carbohydrate_g": 67.0,
+        "fat_g": 3.5
+      }
+    },
+    {
+      "product_id": "carrefour:alfajores-de-dulce-de-leche-blanco-mardel-150-g-mardel-carrefour",
+      "name": "Alfajores de dulce de leche blanco Márdel 150 g.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 415.0,
+        "protein_g": 7.6,
+        "carbohydrate_g": 59.9,
+        "fat_g": 16.1
+      }
+    },
+    {
+      "product_id": "carrefour:bebida-de-almendra-calcio-sin-azucar-anadido-carrefour-sin-gluten-brik-1-l-carrefour",
+      "name": "Bebida de almendra calcio sin azúcar añadido Carrefour sin gluten brik 1 l.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 24.0,
+        "protein_g": 0.9,
+        "carbohydrate_g": 0.4,
+        "fat_g": 2.1
+      }
+    },
+    {
+      "product_id": "carrefour:bebida-de-arroz-calcio-sin-azucar-anadido-carrefour-sin-gluten-brik-1-l-carrefour",
+      "name": "Bebida de arroz calcio sin azúcar añadido Carrefour sin gluten brik 1 l.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 54.0,
+        "protein_g": 0.1,
+        "carbohydrate_g": 11.0,
+        "fat_g": 0.9
+      }
+    },
+    {
+      "product_id": "carrefour:arroz-con-leche-carrefour-pack-de-4-unidades-de-115-g-carrefour",
+      "name": "Arroz con leche Carrefour pack de 4 unidades de 115 g.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 122.0,
+        "protein_g": 3.3,
+        "carbohydrate_g": 21.0,
+        "fat_g": 2.9
+      }
+    },
+    {
+      "product_id": "carrefour:arroz-con-leche-dhul-sin-gluten-sin-lactosa-pack-de-2-unidades-de-130-g-carrefour",
+      "name": "Arroz con leche Dhul sin gluten sin lactosa pack de 2 unidades de 130 g.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 129.0,
+        "protein_g": 3.4,
+        "carbohydrate_g": 21.0,
+        "fat_g": 2.8
+      }
+    },
+    {
+      "product_id": "carrefour:barrita-de-chocolate-con-leche-miel-y-almendras-toblerone-50-g-carrefour",
+      "name": "Barrita de chocolate con leche, miel y almendras Toblerone 50 g.",
+      "family": "Huevos, leche y mantequilla",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 508.0,
+        "protein_g": 5.6,
+        "carbohydrate_g": 60.0,
+        "fat_g": 28.0
+      }
+    },
+    {
+      "product_id": "carrefour:berberechos-al-natrual-65-75-cabo-de-penas-63-g-carrefour",
+      "name": "Berberechos al natrual 65/75 Cabo de Peñas 63 g.",
+      "family": "Marisco y pescado",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 47.0,
+        "protein_g": 10.7,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:berberechos-al-natural-classic-carrefour-90-g-carrefour",
+      "name": "Berberechos al natural Classic Carrefour 90 g.",
+      "family": "Marisco y pescado",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 56.0,
+        "protein_g": 8.4,
+        "carbohydrate_g": 4.8,
+        "fat_g": 0.4
+      }
+    },
+    {
+      "product_id": "carrefour:berberechos-al-natural-dani-90-g-carrefour",
+      "name": "Berberechos al natural Dani 90 g.",
+      "family": "Marisco y pescado",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 53.0,
+        "protein_g": 8.4,
+        "carbohydrate_g": 4.8,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:maxi-fiambre-cocido-sabor-ahumado-carrefour-sin-gluten-pieza-de-2-kg-carrefour",
+      "name": "Maxi Fiambre Cocido sabor ahumado Carrefour sin gluten pieza de 2 kg",
+      "family": "Marisco y pescado",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 112.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 8.0,
+        "fat_g": 4.0
+      }
+    },
+    {
+      "product_id": "carrefour:baguette-carrefour-classic-sin-gluten-y-sin-lactosa-175-g-carrefour",
+      "name": "Baguette Carrefour Classic sin gluten y sin lactosa 175 g.",
+      "family": "Panadería y pastelería",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 261.0,
+        "protein_g": 9.1,
+        "carbohydrate_g": 37.1,
+        "fat_g": 9.7
+      }
+    },
+    {
+      "product_id": "carrefour:bocadito-de-pan-de-hamburguesa-255-g-carrefour-carrefour",
+      "name": "Bocadito de pan de hamburguesa 255 g",
+      "family": "Panadería y pastelería",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 346.0,
+        "protein_g": 10.0,
+        "carbohydrate_g": 54.0,
+        "fat_g": 10.0
+      }
+    },
+    {
+      "product_id": "carrefour:colines-con-aceite-de-olive-virgen-extra-carrefour-250-g-carrefour",
+      "name": "Colines con aceite de olive virgen extra Carrefour 250 g.",
+      "family": "Panadería y pastelería",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 389.0,
+        "protein_g": 13.0,
+        "carbohydrate_g": 76.0,
+        "fat_g": 2.8
+      }
+    },
+    {
+      "product_id": "carrefour:fajitas-barbacoa-kit-old-el-paso-500-g-carrefour",
+      "name": "Fajitas barbacoa Kit Old El Paso 500 g.",
+      "family": "Panadería y pastelería",
+      "culinary_type": "COOKING_INGREDIENT",
+      "nutrition": {
+        "calories": 224.0,
+        "protein_g": 6.7,
+        "carbohydrate_g": 40.3,
+        "fat_g": 3.6
+      }
+    },
+    {
+      "product_id": "carrefour:berlina-dunkin-de-avellana-y-cacao-1-ud-carrefour",
+      "name": "Berlina Dunkin de Avellana y Cacao 1 ud.",
+      "family": "Panadería y pastelería",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 449.0,
+        "protein_g": 7.3,
+        "carbohydrate_g": 45.0,
+        "fat_g": 26.0
+      }
+    },
+    {
+      "product_id": "carrefour:barritas-de-pan-crujientes-con-pipas-velarte-sin-azucar-anadido-80-g-carrefour",
+      "name": "Barritas de pan crujientes con pipas Velarte sin azúcar añadido 80 g.",
+      "family": "Panadería y pastelería",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 518.0,
+        "protein_g": 11.0,
+        "carbohydrate_g": 50.0,
+        "fat_g": 30.0
+      }
+    },
+    {
+      "product_id": "carrefour:bizcocho-el-greco-sin-lactosa-300-g-carrefour",
+      "name": "Bizcocho El Greco sin lactosa 300 g.",
+      "family": "Panadería y pastelería",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 288.0,
+        "protein_g": 6.6,
+        "carbohydrate_g": 58.0,
+        "fat_g": 2.8
+      }
+    },
+    {
+      "product_id": "carrefour:bizcocho-sin-azucares-la-bella-easo-230-g-carrefour",
+      "name": "Bizcocho sin azúcares La Bella Easo 230 g.",
+      "family": "Panadería y pastelería",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 311.0,
+        "protein_g": 5.9,
+        "carbohydrate_g": 53.0,
+        "fat_g": 12.0
+      }
+    },
+    {
+      "product_id": "carrefour:croquetas-de-espinacas-recetas-artesanas-la-cocinera-400-g-carrefour",
+      "name": "Croquetas de espinacas Recetas Artesanas La Cocinera 400 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 129.0,
+        "protein_g": 3.8,
+        "carbohydrate_g": 21.0,
+        "fat_g": 3.1
+      }
+    },
+    {
+      "product_id": "carrefour:minipizzas-prosciutto-ristorante-mini-pizzas-dr-oetker-280-g-dr-oetker-carrefour",
+      "name": "Minipizzas prosciutto Ristorante Mini Pizzas Dr. Oetker 280 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 202.0,
+        "protein_g": 10.0,
+        "carbohydrate_g": 27.0,
+        "fat_g": 5.3
+      }
+    },
+    {
+      "product_id": "carrefour:masa-pizza-ecologica-carrefour-bio-260-g-carrefour",
+      "name": "Masa pizza ecológica Carrefour Bio 260 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "COOKING_INGREDIENT",
+      "nutrition": {
+        "calories": 290.0,
+        "protein_g": 6.8,
+        "carbohydrate_g": 48.0,
+        "fat_g": 6.7
+      }
+    },
+    {
+      "product_id": "carrefour:placas-para-canelones-precocidas-el-pavo-80-g-carrefour",
+      "name": "Placas para canelones precocidas El Pavo 80 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "DRY_PASTA",
+      "nutrition": {
+        "calories": 360.0,
+        "protein_g": 12.0,
+        "carbohydrate_g": 73.0,
+        "fat_g": 1.4
+      }
+    },
+    {
+      "product_id": "carrefour:ensaladilla-rusa-con-atun-carrefour-sin-gluten-250-g-carrefour",
+      "name": "Ensaladilla rusa con atún Carrefour sin gluten 250 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 129.0,
+        "protein_g": 5.5,
+        "carbohydrate_g": 10.0,
+        "fat_g": 7.2
+      }
+    },
+    {
+      "product_id": "carrefour:pollo-al-ajillo-con-patatas-asadas-carretilla-sin-gluten-2-unidades-de-250-g-carrefour",
+      "name": "Pollo al ajillo con patatas asadas Carretilla sin gluten 2 unidades de 250 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 149.0,
+        "protein_g": 12.5,
+        "carbohydrate_g": 7.5,
+        "fat_g": 7.0
+      }
+    },
+    {
+      "product_id": "carrefour:tortilla-de-patatas-carrefour-classic-sin-gluten-sin-lactosa-600-g-carrefour",
+      "name": "Tortilla de patatas Carrefour Classic' sin gluten sin lactosa 600 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "FRESH_STARCH",
+      "nutrition": {
+        "calories": 173.0,
+        "protein_g": 5.7,
+        "carbohydrate_g": 12.0,
+        "fat_g": 11.0
+      }
+    },
+    {
+      "product_id": "carrefour:alubias-cocidas-en-salsa-de-tomate-heinz-415-g-carrefour",
+      "name": "Alubias cocidas en salsa de tomate Heinz 415 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "LEGUME",
+      "nutrition": {
+        "calories": 85.0,
+        "protein_g": 4.7,
+        "carbohydrate_g": 12.9,
+        "fat_g": 0.2
+      }
+    },
+    {
+      "product_id": "carrefour:croquetas-caseras-de-bacalao-295-g-carrefour-carrefour",
+      "name": "Croquetas caseras de bacalao 295 g",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 257.0,
+        "protein_g": 7.0,
+        "carbohydrate_g": 21.0,
+        "fat_g": 16.0
+      }
+    },
+    {
+      "product_id": "carrefour:empanada-hojaldre-de-atun-el-mercado-600-g-carrefour-carrefour",
+      "name": "Empanada hojaldre de Atún El Mercado 600 g",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 216.0,
+        "protein_g": 6.9,
+        "carbohydrate_g": 20.0,
+        "fat_g": 12.0
+      }
+    },
+    {
+      "product_id": "carrefour:ensalada-mejicana-de-atun-calvo-150-g-carrefour",
+      "name": "Ensalada mejicana de atún Calvo 150 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 139.0,
+        "protein_g": 8.5,
+        "carbohydrate_g": 8.6,
+        "fat_g": 7.2
+      }
+    },
+    {
+      "product_id": "carrefour:canelones-de-carne-de-cerdo-carrefour-extra-500-g-carrefour",
+      "name": "Canelones de carne de cerdo Carrefour Extra 500 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 124.0,
+        "protein_g": 6.1,
+        "carbohydrate_g": 13.0,
+        "fat_g": 5.1
+      }
+    },
+    {
+      "product_id": "carrefour:croquetas-de-pollo-10-ud-carrefour-carrefour",
+      "name": "Croquetas de pollo 10 ud",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 261.0,
+        "protein_g": 9.7,
+        "carbohydrate_g": 19.0,
+        "fat_g": 16.0
+      }
+    },
+    {
+      "product_id": "carrefour:croquetas-de-pollo-sabrosisimas-la-cocinera-500-g-carrefour",
+      "name": "Croquetas de pollo Sabrosísimas La Cocinera 500 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "MAIN_MEAT",
+      "nutrition": {
+        "calories": 147.0,
+        "protein_g": 5.4,
+        "carbohydrate_g": 24.0,
+        "fat_g": 3.1
+      }
+    },
+    {
+      "product_id": "carrefour:guisantes-con-jamon-carretilla-sin-gluten-300-g-carrefour",
+      "name": "Guisantes con jamón Carretilla sin gluten 300 g.",
+      "family": "Pizzas y platos preparados",
+      "culinary_type": "VEGETABLE",
+      "nutrition": {
+        "calories": 180.0,
+        "protein_g": 5.3,
+        "carbohydrate_g": 9.1,
+        "fat_g": 12.7
+      }
+    },
+    {
+      "product_id": "carrefour:bifidus-desnatado-con-trozos-de-melocoton-y-maracuya-sin-azucar-anadido-carrefour-pack-de-4-unidades-de-125-g-carrefour",
+      "name": "Bífidus desnatado con trozos de melocotón y maracuyá sin azúcar añadido Carrefour pack de 4 unidades de 125 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 43.0,
+        "protein_g": 4.4,
+        "carbohydrate_g": 5.8,
+        "fat_g": 0.5
+      }
+    },
+    {
+      "product_id": "carrefour:petit-sabor-fresa-danone-danonino-sin-gluten-pack-de-6-unidades-de-50-g-carrefour",
+      "name": "Petit sabor fresa Danone Danonino sin gluten pack de 6 unidades de 50 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 88.0,
+        "protein_g": 5.9,
+        "carbohydrate_g": 11.3,
+        "fat_g": 2.1
+      }
+    },
+    {
+      "product_id": "carrefour:petit-sabor-fresa-y-platano-danone-danonino-pack-de-6-unidades-de-50-g-carrefour",
+      "name": "Petit sabor fresa y plátano Danone Danonino pack de 6 unidades de 50 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "CHEESE",
+      "nutrition": {
+        "calories": 87.7,
+        "protein_g": 5.9,
+        "carbohydrate_g": 11.3,
+        "fat_g": 2.1
+      }
+    },
+    {
+      "product_id": "carrefour:bifidus-con-frutos-del-bosque-danone-activia-pack-de-4-unidades-de-120-g-carrefour",
+      "name": "Bífidus con frutos del bosque Danone Activia pack de 4 unidades de 120 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "CREAMY_BASE",
+      "nutrition": {
+        "calories": 94.0,
+        "protein_g": 3.5,
+        "carbohydrate_g": 11.7,
+        "fat_g": 3.3
+      }
+    },
+    {
+      "product_id": "carrefour:bifidus-con-mango-danone-activia-pack-de-4-unidades-de-120-g-carrefour",
+      "name": "Bífidus con mango Danone Activia pack de 4 unidades de 120 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "CREAMY_BASE",
+      "nutrition": {
+        "calories": 89.0,
+        "protein_g": 3.6,
+        "carbohydrate_g": 12.4,
+        "fat_g": 2.7
+      }
+    },
+    {
+      "product_id": "carrefour:bifidus-con-mango-y-papaya-con-soja-danone-activia-pack-de-4-unidades-de-120-g-carrefour",
+      "name": "Bífidus con mango y papaya con soja Danone Activia pack de 4 unidades de 120 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "CREAMY_BASE",
+      "nutrition": {
+        "calories": 101.0,
+        "protein_g": 3.8,
+        "carbohydrate_g": 13.1,
+        "fat_g": 3.3
+      }
+    },
+    {
+      "product_id": "carrefour:preparado-de-soja-sabor-mango-sin-azucar-anadido-alpro-mas-fruta-sin-gluten-y-sin-lactosa-400-g-carrefour",
+      "name": "Preparado de soja sabor mango sin azúcar añadido Alpro Más Fruta sin gluten y sin lactosa 400 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "FRUIT",
+      "nutrition": {
+        "calories": 62.0,
+        "protein_g": 3.7,
+        "carbohydrate_g": 5.8,
+        "fat_g": 2.0
+      }
+    },
+    {
+      "product_id": "carrefour:kefir-de-arandanos-carrefour-sensation-pack-de-4-unidades-de-125-g-carrefour",
+      "name": "Kéfir de arándanos Carrefour Sensation pack de 4 unidades de 125 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 94.0,
+        "protein_g": 3.7,
+        "carbohydrate_g": 11.0,
+        "fat_g": 4.1
+      }
+    },
+    {
+      "product_id": "carrefour:kefir-natural-carrefour-sensation-500-g-carrefour",
+      "name": "Kéfir natural Carrefour Sensation 500 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 62.0,
+        "protein_g": 3.4,
+        "carbohydrate_g": 4.1,
+        "fat_g": 3.5
+      }
+    },
+    {
+      "product_id": "carrefour:kefir-natural-carrefour-sensation-500-g-carrefour-VC4AECOMM-486724",
+      "name": "Kéfir natural Carrefour Sensation 500 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 62.0,
+        "protein_g": 3.4,
+        "carbohydrate_g": 4.1,
+        "fat_g": 3.5
+      }
+    },
+    {
+      "product_id": "carrefour:salsa-de-yogur-para-ensaladas-classic-carrefour-envase-300-g-carrefour",
+      "name": "Salsa de yogur para ensaladas Classic Carrefour envase 300 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "SAUCE",
+      "nutrition": {
+        "calories": 343.0,
+        "protein_g": 0.6,
+        "carbohydrate_g": 5.4,
+        "fat_g": 35.0
+      }
+    },
+    {
+      "product_id": "carrefour:flan-de-clara-de-huevo-proteina-plus-carrefour-sin-gluten-pack-de-2-unidades-de-160-g-carrefour",
+      "name": "Flan de clara de huevo Proteína Plus Carrefour sin gluten pack de 2 unidades de 160 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 64.0,
+        "protein_g": 8.0,
+        "carbohydrate_g": 8.1,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:flan-de-huevo-al-bano-maria-carrefour-classic-sin-gluten-pack-de-4-unidades-de-100-g-carrefour",
+      "name": "Flan de huevo al baño María Carrefour Classic sin gluten pack de 4 unidades de 100 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 141.0,
+        "protein_g": 4.8,
+        "carbohydrate_g": 24.0,
+        "fat_g": 3.0
+      }
+    },
+    {
+      "product_id": "carrefour:flan-de-vainilla-con-caramelo-nestle-la-lechera-pack-de-6-unidades-de-100-g-carrefour",
+      "name": "Flan de vainilla con caramelo Nestlé La Lechera pack de 6 unidades de 100 g.",
+      "family": "Postres y yogures",
+      "culinary_type": "SNACK_DESSERT",
+      "nutrition": {
+        "calories": 100.0,
+        "protein_g": 3.0,
+        "carbohydrate_g": 20.1,
+        "fat_g": 0.8
+      }
+    },
+    {
+      "product_id": "carrefour:bebida-de-10-frutas-y-10-vitaminas-juver-disfruta-la-fruta-sin-azucares-anadidos-pack-3-briks-20-cl-carrefour",
+      "name": "Bebida de 10 frutas y 10 vitaminas Juver Disfruta La Fruta sin azúcares añadidos pack 3 briks 20 cl.",
+      "family": "Zumos",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 25.0,
+        "protein_g": 0.2,
+        "carbohydrate_g": 5.6,
+        "fat_g": 0.1
+      }
+    },
+    {
+      "product_id": "carrefour:nectar-tropical-carrefour-classic-brik-1-l-carrefour",
+      "name": "Néctar tropical Carrefour Classic brik 1 l.",
+      "family": "Zumos",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 33.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 8.0,
+        "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:zumo-de-arandano-ocean-spray-brik-75-cl-carrefour",
+      "name": "Zumo de arándano Ocean Spray brik 75 cl.",
+      "family": "Zumos",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 42.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 10.0,
+        "fat_g": 0.0
+      }
+    }
+  ]
+}
