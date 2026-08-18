@@ -13,8 +13,8 @@ import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
-import kotlin.test.Test
-import kotlin.test.assertTrue
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class CertifiedDayWitnessPersistenceTest {
     private val target = Recommendation(2000, 100, 250, 67, "test")
@@ -25,7 +25,7 @@ class CertifiedDayWitnessPersistenceTest {
     )
 
     @Test
-    fun `adding optional foods cannot invalidate an already valid viable witness`() {
+    fun addingOptionalFoodsCannotInvalidateAnAlreadyValidViableWitness() {
         val baseFoods = listOf(
             food(1, 500.0, 25.0, 62.5, 16.75),
             food(2, 500.0, 25.0, 62.5, 16.75),
