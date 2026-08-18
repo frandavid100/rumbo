@@ -1760,15 +1760,9 @@ private fun HomeScreen(
         )
     }
     val searchTextState = rememberTextFieldState()
-    var searchFilter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
-    var searchCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
-    val searchCategory = searchCategoryName?.let { name ->
-        FoodCategory.entries.firstOrNull { it.name == name }
-    }
-    var searchCulinaryTypeName by rememberSaveable { mutableStateOf<String?>(null) }
-    val searchCulinaryType = searchCulinaryTypeName?.let { name ->
-        CulinaryType.entries.firstOrNull { it.name == name }
-    }
+    var searchRetailer by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchNutritionalRole by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchCulinaryRole by rememberSaveable { mutableStateOf<String?>(null) }
     var searchMessage by remember { mutableStateOf<String?>(null) }
     val searchBarState = rememberSearchBarState()
     val searchListState = rememberLazyListState()
@@ -1796,12 +1790,12 @@ private fun HomeScreen(
                 repertoireAssessment = repertoireAssessment,
                 recommendation = recommendation,
                 textFieldState = searchTextState,
-                filter = searchFilter,
-                onFilterChange = { searchFilter = it },
-                categoryFilter = searchCategory,
-                onCategoryFilterChange = { searchCategoryName = it?.name },
-                culinaryTypeFilter = searchCulinaryType,
-                onCulinaryTypeFilterChange = { searchCulinaryTypeName = it?.name },
+                retailerFilter = searchRetailer,
+                onRetailerFilterChange = { searchRetailer = it },
+                nutritionalRoleFilter = searchNutritionalRole,
+                onNutritionalRoleFilterChange = { searchNutritionalRole = it },
+                culinaryRoleFilter = searchCulinaryRole,
+                onCulinaryRoleFilterChange = { searchCulinaryRole = it },
                 scanMessage = searchMessage,
                 onScanMessageChange = { searchMessage = it },
                 state = searchBarState,
@@ -6566,10 +6560,9 @@ private fun HomeCatalogSearch(
     repertoireAssessment: RepertoireAssessment?,
     recommendation: Recommendation?,
     textFieldState: TextFieldState,
-    filter: CatalogFilter, onFilterChange: (CatalogFilter) -> Unit,
-    categoryFilter: FoodCategory?, onCategoryFilterChange: (FoodCategory?) -> Unit,
-    culinaryTypeFilter: CulinaryType?,
-    onCulinaryTypeFilterChange: (CulinaryType?) -> Unit,
+    retailerFilter: String?, onRetailerFilterChange: (String?) -> Unit,
+    nutritionalRoleFilter: String?, onNutritionalRoleFilterChange: (String?) -> Unit,
+    culinaryRoleFilter: String?, onCulinaryRoleFilterChange: (String?) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     state: SearchBarState,
     listState: LazyListState,
@@ -6604,6 +6597,13 @@ private fun HomeCatalogSearch(
         scrolledSearchBarContainerColor = searchContainerColor
     )
     val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val retailerOptions = remember(foods) { foods.flatMap { it.retailerValues() }.distinct().sorted() }
+    val nutritionalRoleOptions = remember(foods) {
+        foods.flatMap { it.nutritionalRoles }.distinct().sortedBy(::nutritionalRoleLabel)
+    }
+    val culinaryRoleOptions = remember(foods) {
+        foods.flatMap { it.culinaryRoles }.distinct().sortedBy(::culinaryRoleLabel)
+    }
     val suggestionsByFoodId = remember(foodSuggestions) {
         foodSuggestions.associateBy { it.food.id }
     }
@@ -6618,55 +6618,53 @@ private fun HomeCatalogSearch(
         }
     }
     val entries = remember(
-        foods, dishes, normalized, filter, categoryFilter, culinaryTypeFilter, repertoireFoodIds,
-        foodSuggestions, suggestionsByFoodId, topSuggestionIds, personalizedScores
+        foods, dishes, normalized, retailerFilter, nutritionalRoleFilter, culinaryRoleFilter,
+        repertoireFoodIds, foodSuggestions, suggestionsByFoodId, topSuggestionIds, personalizedScores
     ) {
         buildList {
-            if (filter != CatalogFilter.DISHES) foods.forEach { food ->
+            foods.forEach { food ->
                 val searchText = normalizeSearch(
-                    listOfNotNull(food.name, food.brand, food.barcode).joinToString(" ")
+                    listOfNotNull(food.name, food.brand, food.barcode, food.retailer).joinToString(" ")
                 )
                 val suggested = food.id in topSuggestionIds
-                if ((categoryFilter == null || food.category == categoryFilter) &&
-                    (culinaryTypeFilter == null || food.culinaryType == culinaryTypeFilter) &&
+                val matchesFilters =
+                    (retailerFilter == null || retailerFilter in food.retailerValues()) &&
+                    (nutritionalRoleFilter == null || nutritionalRoleFilter in food.nutritionalRoles) &&
+                    (culinaryRoleFilter == null || culinaryRoleFilter in food.culinaryRoles)
+                if (matchesFilters &&
                     (normalized.isBlank() && (suggested || food.id in repertoireFoodIds) ||
-                    normalized.isNotBlank() && matchesSearch(searchText, normalized))
-                ) {
+                        normalized.isNotBlank() && matchesSearch(searchText, normalized))) {
                     add(CatalogEntry(food.id, food.name, false))
                 }
             }
-            if (filter != CatalogFilter.FOODS) dishes.forEach { dish ->
-                val favorite = dish.ingredients.any { it.foodId in repertoireFoodIds }
-                val dishCategory = dish.dominantCategory(foodsById)
-                if ((categoryFilter == null || dishCategory == categoryFilter) &&
-                    culinaryTypeFilter == null &&
-                    (normalized.isBlank() && favorite ||
-                    normalized.isNotBlank() && matchesSearch(normalizeSearch(dish.name), normalized))
-                ) {
-                    add(CatalogEntry(dish.id, dish.name, true))
+            if (retailerFilter == null && nutritionalRoleFilter == null && culinaryRoleFilter == null) {
+                dishes.forEach { dish ->
+                    val favorite = dish.ingredients.any { it.foodId in repertoireFoodIds }
+                    if (normalized.isBlank() && favorite ||
+                        normalized.isNotBlank() && matchesSearch(normalizeSearch(dish.name), normalized)) {
+                        add(CatalogEntry(dish.id, dish.name, true))
+                    }
                 }
             }
         }.sortedWith(
             if (normalized.isBlank()) {
                 compareBy<CatalogEntry> {
                     if (it.isDish) Int.MAX_VALUE
-                    else foodSuggestions.indexOfFirst { suggestion ->
-                        suggestion.food.id == it.id
-                    }.takeIf { index -> index >= 0 } ?: Int.MAX_VALUE
+                    else foodSuggestions.indexOfFirst { suggestion -> suggestion.food.id == it.id }
+                        .takeIf { index -> index >= 0 } ?: Int.MAX_VALUE
                 }.thenByDescending {
                     if (it.isDish) Double.NEGATIVE_INFINITY
                     else suggestionsByFoodId[it.id]?.score ?: Double.NEGATIVE_INFINITY
                 }.thenBy { it.name.lowercase() }
             } else {
-                compareBy<CatalogEntry> {
-                    searchMatchRank(it.name, normalized)
-                }.thenByDescending {
-                    if (it.isDish) Double.NEGATIVE_INFINITY
-                    else personalizedScores[it.id] ?: Double.NEGATIVE_INFINITY
-                }.thenByDescending {
-                    if (it.isDish) Double.NEGATIVE_INFINITY
-                    else suggestionsByFoodId[it.id]?.score ?: Double.NEGATIVE_INFINITY
-                }.thenBy { it.name.lowercase() }
+                compareBy<CatalogEntry> { searchMatchRank(it.name, normalized) }
+                    .thenByDescending {
+                        if (it.isDish) Double.NEGATIVE_INFINITY
+                        else personalizedScores[it.id] ?: Double.NEGATIVE_INFINITY
+                    }.thenByDescending {
+                        if (it.isDish) Double.NEGATIVE_INFINITY
+                        else suggestionsByFoodId[it.id]?.score ?: Double.NEGATIVE_INFINITY
+                    }.thenBy { it.name.lowercase() }
             }
         )
     }
@@ -6802,11 +6800,10 @@ private fun HomeCatalogSearch(
                             modifier = Modifier.horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            CatalogFilterMenu(filter, onFilterChange)
-                            CatalogCategoryMenu(categoryFilter, onCategoryFilterChange)
-                            CatalogCulinaryTypeMenu(
-                                culinaryTypeFilter,
-                                onCulinaryTypeFilterChange
+                            CatalogCanonicalFilterRow(
+                                retailerFilter, onRetailerFilterChange, retailerOptions,
+                                nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
+                                culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions
                             )
                         }
                         if (query.isBlank()) {
