@@ -8,32 +8,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply-complete-level2:
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/certified-day-witness-level1' && github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/certified-day-witness-level1
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Aplicar certificación COMPLETE
-        run: |
-          python tools/apply_complete_day_level2.py
-          git diff --check
-      - name: Guardar cambios
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/es/david/rumbo/logic/CertifiedDayWitnessEvaluator.kt app/src/main/java/es/david/rumbo/ui/App.kt app/src/test/java/es/david/rumbo/logic/CertifiedDayWitnessCompleteTest.kt
-          git commit -m "Certificar nivel 2 con un día completo"
-          git push origin HEAD:agent/certified-day-witness-level1
-
   build:
     runs-on: ubuntu-latest
     steps:
