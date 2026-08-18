@@ -1,16 +1,6 @@
 name: Catalog Carrefour quality rebuild
 
 on:
-  push:
-    branches: [agent/catalog-phase1]
-    paths:
-      - 'tools/catalog/nutrition_validation.py'
-      - 'tools/catalog/classifier_quality.py'
-      - 'tools/catalog/carrefour_radar_catalog_importer_v2.py'
-      - 'tools/catalog/audit_carrefour_quality.py'
-      - 'tools/catalog/test_classifier_quality.py'
-      - 'tools/catalog/test_carrefour_parser_v2.py'
-      - '.github/workflows/catalog-carrefour-quality.yml'
   workflow_dispatch:
 
 permissions:
@@ -18,7 +8,7 @@ permissions:
 
 concurrency:
   group: carrefour-quality-full
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   rebuild:
