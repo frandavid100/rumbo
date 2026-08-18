@@ -220,10 +220,14 @@ object FoodSuggestionEngine {
         )
         val nutrient = functionalNutrient(source)
         val sourceScore = nutrientScore(source, nutrient)
+        val sourceCulinaryRoles = CulinaryPolicy.roles(source)
         return common.asSequence()
             .filter {
-                it.food.id != source.id &&
-                    CulinaryPolicy.roles(it.food).intersect(CulinaryPolicy.roles(source)).isNotEmpty() &&
+                val candidateCulinaryRoles = CulinaryPolicy.roles(it.food)
+                val sameCulinaryFunction =
+                    sourceCulinaryRoles.intersect(candidateCulinaryRoles).isNotEmpty() ||
+                    (sourceCulinaryRoles.isEmpty() && candidateCulinaryRoles.isEmpty())
+                it.food.id != source.id && sameCulinaryFunction &&
                     nutrient in efficientNutrients(it.food) &&
                     it.nutrientScores.getValue(nutrient) > sourceScore
             }

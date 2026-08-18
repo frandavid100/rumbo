@@ -355,9 +355,11 @@ object WeeklyMenuGenerator {
         dishesById: Map<Long, Dish>
     ): List<Set<CulinaryRole>> = rules.flatMap { rule ->
         when (rule.itemKind) {
-            PlannedItemKind.FOOD -> listOf(foodsById[rule.itemId]?.let(CulinaryPolicy::roles).orEmpty())
-            PlannedItemKind.DISH -> dishesById[rule.itemId]?.ingredients.orEmpty().map { ingredient ->
-                foodsById[ingredient.foodId]?.let(CulinaryPolicy::roles).orEmpty()
+            PlannedItemKind.FOOD -> listOfNotNull(
+                foodsById[rule.itemId]?.let(CulinaryPolicy::roles)?.takeIf { it.isNotEmpty() }
+            )
+            PlannedItemKind.DISH -> dishesById[rule.itemId]?.ingredients.orEmpty().mapNotNull { ingredient ->
+                foodsById[ingredient.foodId]?.let(CulinaryPolicy::roles)?.takeIf { it.isNotEmpty() }
             }
         }
     }
@@ -368,7 +370,6 @@ object WeeklyMenuGenerator {
         dishesById: Map<Long, Dish>
     ): Boolean {
         val choices = roleChoices(rules, foodsById, dishesById)
-        if (choices.any { it.isEmpty() }) return false
         // A partial composition may still be completed later; only reject cardinality
         // when no role choice avoids it.
         return choices.isEmpty() || choices.fold(listOf(emptyList<CulinaryRole>())) { states, options ->
