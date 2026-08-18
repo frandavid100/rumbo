@@ -1,0 +1,17 @@
+{
+  "retailer": "ALCAMPO",
+  "source": "https://www.compraonline.alcampo.es",
+  "built_at": "2026-08-18T06:47:33.042795+00:00",
+  "counts": {
+    "discovered": 0,
+    "fetched": 0,
+    "fetch_errors": 0,
+    "with_gtin": 0,
+    "with_ingredients": 0,
+    "declared_valid_nutrition": 0,
+    "declared_incomplete_nutrition": 0,
+    "declared_invalid_nutrition": 0
+  },
+  "categories_discovered": null,
+  "third_party_product_data": false
+}
