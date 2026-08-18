@@ -46,12 +46,9 @@ data class MenuWitness(
 )
 
 /**
- * Compatibility constraint model for the current catalogue schema.
- *
- * This deliberately contains no importer/classifier concepts. It normalises the
- * existing planning rules once and is consumed by both repertoire evaluation and
- * menu generation. Future catalogue roles/policies can be adapted into this model
- * without changing the evaluator/generator contract.
+ * Shared constraint model consumed by both repertoire evaluation and menu generation.
+ * Catalogue/importer details are deliberately absent: foods expose canonical culinary
+ * roles and the central CulinaryPolicy supplies their hard rules.
  */
 data class MenuConstraintModel(
     val activeRules: List<PlanningRule>,
@@ -77,10 +74,12 @@ data class MenuConstraintModel(
             }
             val violations = buildList {
                 if (activeRules.isEmpty()) {
-                    add(ConstraintViolation(
-                        ConstraintViolationKind.NO_ACTIVE_RULES,
-                        "No hay alimentos activos y correctamente programados."
-                    ))
+                    add(
+                        ConstraintViolation(
+                            ConstraintViolationKind.NO_ACTIVE_RULES,
+                            "No hay alimentos activos y correctamente programados."
+                        )
+                    )
                 }
                 activeMealTypes.forEach { mealType ->
                     val mealRules = activeRules.filter { rule ->
@@ -88,44 +87,44 @@ data class MenuConstraintModel(
                             rule.requiredSlots().any { it.mealType == mealType }
                     }
                     if (mealRules.isEmpty()) {
-                        add(ConstraintViolation(
-                            ConstraintViolationKind.MISSING_MEAL_COVERAGE,
-                            "No hay opciones para ${mealType.label.lowercase()}.",
-                            mealType
-                        ))
+                        add(
+                            ConstraintViolation(
+                                ConstraintViolationKind.MISSING_MEAL_COVERAGE,
+                                "No hay opciones para ${mealType.label.lowercase()}.",
+                                mealType
+                            )
+                        )
                     }
 
-                    val requiredRules = mealRules.filter { it.frequency == PlanningFrequency.ALWAYS }
+                    // This is a proof, not a search heuristic. For every mandatory item,
+                    // check whether at least one of its possible culinary uses can satisfy
+                    // its required companion using the rules available in this meal.
                     val allChoices = mealRules.mapNotNull { rule ->
                         foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
                     }
-                    requiredRules.forEach { required ->
-                        val requiredChoices = foodsById[required.itemId]?.let(CulinaryPolicy::roles).orEmpty()
+                    mealRules.filter { it.frequency == PlanningFrequency.ALWAYS }.forEach { required ->
+                        val requiredChoices = foodsById[required.itemId]
+                            ?.let(CulinaryPolicy::roles)
+                            .orEmpty()
                         if (requiredChoices.isNotEmpty()) {
-                            val impossible = requiredChoices.all { role ->
-                                CulinaryPolicy.policy(role).requiredRoles.any { needed ->
+                            val everyUseImpossible = requiredChoices.all { role ->
+                                val requirements = CulinaryPolicy.policy(role).requiredRoles
+                                requirements.isNotEmpty() && requirements.any { needed ->
                                     allChoices.none { needed in it }
                                 }
                             }
-                            if (impossible) {
-                                add(ConstraintViolation(
-                                    ConstraintViolationKind.MISSING_REQUIRED_COMPANION,
-                                    "Hay un alimento obligatorio que necesita un acompañamiento culinario en " +
-                                        mealType.label.lowercase() + ", pero no existe ninguna opción programada.",
-                                    mealType,
-                                    setOf(required.itemId)
-                                ))
+                            if (everyUseImpossible) {
+                                add(
+                                    ConstraintViolation(
+                                        ConstraintViolationKind.MISSING_REQUIRED_COMPANION,
+                                        "Hay un alimento obligatorio que necesita un acompañamiento culinario en " +
+                                            mealType.label.lowercase() +
+                                            ", pero no existe ninguna opción programada.",
+                                        mealType,
+                                        setOf(required.itemId)
+                                    )
+                                )
                             }
-                        }
-                    }
-                        if (!hasCompatibleBase) {
-                            add(ConstraintViolation(
-                                ConstraintViolationKind.MISSING_REQUIRED_COMPANION,
-                                "Hay un alimento obligatorio que necesita una base compatible en " +
-                                    mealType.label.lowercase() + ", pero no existe ninguna opción programada.",
-                                mealType,
-                                requiredDependentRules.mapTo(mutableSetOf()) { it.itemId }
-                            ))
                         }
                     }
                 }
@@ -140,10 +139,7 @@ data class MenuConstraintModel(
     }
 }
 
-/**
- * Shared generator entry point. The old signature remains untouched for source
- * compatibility; new evaluator/generator contract tests use this overload.
- */
+/** Shared generator entry point used by evaluator and generator contract tests. */
 fun WeeklyMenuGenerator.generate(
     constraints: MenuConstraintModel,
     currentMeals: List<PlannedMeal>,
