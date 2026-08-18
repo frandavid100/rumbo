@@ -12,8 +12,8 @@ import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
-import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.CulinaryPolicyOverride
+import es.david.rumbo.model.legacyCulinaryRoles
 import es.david.rumbo.model.NutritionToleranceSettings
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MealType
@@ -80,22 +80,22 @@ class AppRepository(context: Context) {
     fun saveCulinaryPolicyOverride(override: CulinaryPolicyOverride): AppData {
         val current = load()
         val active = current.activeProfileData ?: return current
-        val type = override.culinaryType
+        val role = override.culinaryRole
         val updated = active.copy(
             culinaryPolicyOverrides = active.culinaryPolicyOverrides
-                .filterNot { it.culinaryType == type } + override
+                .filterNot { it.culinaryRole == role } + override
         )
         return updateActive(current, updated)
     }
 
-    fun resetCulinaryPolicyOverride(type: CulinaryType): AppData {
+    fun resetCulinaryPolicyOverride(role: String): AppData {
         val current = load()
         val active = current.activeProfileData ?: return current
         return updateActive(
             current,
             active.copy(
                 culinaryPolicyOverrides = active.culinaryPolicyOverrides
-                    .filterNot { it.culinaryType == type }
+                    .filterNot { it.culinaryRole == role }
             )
         )
     }
@@ -590,7 +590,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 22)
+        put("schemaVersion", 23)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -684,7 +684,6 @@ class AppRepository(context: Context) {
                 putNullable("unitAmount", food.unitAmount)
                 put("wholeUnitsOnly", food.wholeUnitsOnly)
                 put("unitDivisions", food.unitDivisions)
-                put("culinaryType", food.culinaryType.name)
                 put("nutritionalRoles", JSONArray(food.nutritionalRoles.toList()))
                 put("culinaryRoles", JSONArray(food.culinaryRoles.toList()))
             })
@@ -784,12 +783,11 @@ class AppRepository(context: Context) {
     ): JSONArray = JSONArray().apply {
         overrides.forEach { override ->
             put(JSONObject().apply {
-                put("culinaryType", override.culinaryType.name)
-                put("roles", JSONArray(override.roles.toList()))
+                put("culinaryRole", override.culinaryRole)
                 putNullable("preferredGrams", override.preferredGrams)
                 putNullable("minimumGrams", override.minimumGrams)
                 putNullable("maximumGrams", override.maximumGrams)
-                put("standaloneAllowed", override.standaloneAllowed)
+                putNullable("standaloneAllowed", override.standaloneAllowed)
             })
         }
     }
@@ -955,15 +953,14 @@ class AppRepository(context: Context) {
                     unitAmount = item.optionalDouble("unitAmount"),
                     wholeUnitsOnly = item.optBoolean("wholeUnitsOnly", false),
                     unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100),
-                    culinaryType = item.optionalEnum("culinaryType", CulinaryType::valueOf)
-                        ?: baseFoodsById[item.getLong("id")]?.culinaryType
-                        ?: CulinaryType.UNKNOWN,
                     nutritionalRoles = item.optJSONArray("nutritionalRoles")?.let { values ->
                         buildSet { for (i in 0 until values.length()) add(values.getString(i)) }
                     } ?: baseFoodsById[item.getLong("id")]?.nutritionalRoles.orEmpty(),
                     culinaryRoles = item.optJSONArray("culinaryRoles")?.let { values ->
                         buildSet { for (i in 0 until values.length()) add(values.getString(i)) }
-                    } ?: baseFoodsById[item.getLong("id")]?.culinaryRoles.orEmpty()
+                    } ?: baseFoodsById[item.getLong("id")]?.culinaryRoles
+                        ?.takeIf { it.isNotEmpty() }
+                        ?: legacyCulinaryRoles(item.optionalString("culinaryType"))
                 )
             )
         }
@@ -1109,19 +1106,21 @@ class AppRepository(context: Context) {
     ): List<CulinaryPolicyOverride> = buildList {
         for (index in 0 until array.length()) {
             val item = array.getJSONObject(index)
-            val roles = item.optJSONArray("roles") ?: JSONArray()
-            add(
-                CulinaryPolicyOverride(
-                    culinaryType = CulinaryType.valueOf(item.getString("culinaryType")),
-                    roles = buildSet {
-                        for (roleIndex in 0 until roles.length()) add(roles.getString(roleIndex))
-                    },
-                    preferredGrams = item.optionalDouble("preferredGrams"),
-                    minimumGrams = item.optionalDouble("minimumGrams"),
-                    maximumGrams = item.optionalDouble("maximumGrams"),
-                    standaloneAllowed = item.optBoolean("standaloneAllowed", true)
+            val roles = item.optionalString("culinaryRole")?.let(::setOf)
+                ?: legacyCulinaryRoles(item.optionalString("culinaryType"))
+            roles.forEach { role ->
+                add(
+                    CulinaryPolicyOverride(
+                        culinaryRole = role,
+                        preferredGrams = item.optionalDouble("preferredGrams"),
+                        minimumGrams = item.optionalDouble("minimumGrams"),
+                        maximumGrams = item.optionalDouble("maximumGrams"),
+                        standaloneAllowed = if (item.has("standaloneAllowed") && !item.isNull("standaloneAllowed")) {
+                            item.getBoolean("standaloneAllowed")
+                        } else null
+                    )
                 )
-            )
+            }
         }
     }
 

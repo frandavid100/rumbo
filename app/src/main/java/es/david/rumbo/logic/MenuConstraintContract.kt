@@ -70,8 +70,7 @@ data class MenuConstraintModel(
             val activeRules = rules.filter {
                 it.itemKind == PlannedItemKind.FOOD &&
                     it.isActive && it.frequency != PlanningFrequency.NEVER && it.isValid() &&
-                    foodsById[it.itemId]?.hasComparableNutrition() == true &&
-                    foodsById[it.itemId]?.let(CulinaryPolicy::standaloneAllowed) != false
+                    foodsById[it.itemId]?.hasComparableNutrition() == true
             }
             val activeMealTypes = MealType.entries.filterTo(mutableSetOf()) {
                 (mealShares[it] ?: defaultShares.getValue(it)) > 0.0
@@ -96,23 +95,29 @@ data class MenuConstraintModel(
                         ))
                     }
 
-                    // This is a proof, not a heuristic: an ALWAYS dependent item must
-                    // appear in this meal every day. If there is no compatible base
-                    // anywhere in the usable rule set for this meal, neither the
-                    // generator nor any alternative search can satisfy the hard
-                    // dependency using the current catalogue model.
-                    val requiredDependentRules = mealRules.filter { rule ->
-                        rule.frequency == PlanningFrequency.ALWAYS &&
-                            foodsById[rule.itemId]?.let(CulinaryPolicy::roles).orEmpty().let { roles ->
-                                CulinaryRole.DEPENDENT_PREPARATION in roles ||
-                                    CulinaryRole.BREAKFAST_CEREAL in roles
-                            }
+                    val requiredRules = mealRules.filter { it.frequency == PlanningFrequency.ALWAYS }
+                    val allChoices = mealRules.mapNotNull { rule ->
+                        foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
                     }
-                    if (requiredDependentRules.isNotEmpty()) {
-                        val hasCompatibleBase = mealRules.any { rule ->
-                            CulinaryRole.LIQUID_OR_CREAMY_BASE in
-                                foodsById[rule.itemId]?.let(CulinaryPolicy::roles).orEmpty()
+                    requiredRules.forEach { required ->
+                        val requiredChoices = foodsById[required.itemId]?.let(CulinaryPolicy::roles).orEmpty()
+                        if (requiredChoices.isNotEmpty()) {
+                            val impossible = requiredChoices.all { role ->
+                                CulinaryPolicy.policy(role).requiredRoles.any { needed ->
+                                    allChoices.none { needed in it }
+                                }
+                            }
+                            if (impossible) {
+                                add(ConstraintViolation(
+                                    ConstraintViolationKind.MISSING_REQUIRED_COMPANION,
+                                    "Hay un alimento obligatorio que necesita un acompañamiento culinario en " +
+                                        mealType.label.lowercase() + ", pero no existe ninguna opción programada.",
+                                    mealType,
+                                    setOf(required.itemId)
+                                ))
+                            }
                         }
+                    }
                         if (!hasCompatibleBase) {
                             add(ConstraintViolation(
                                 ConstraintViolationKind.MISSING_REQUIRED_COMPANION,

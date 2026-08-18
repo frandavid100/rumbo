@@ -1,7 +1,6 @@
 package es.david.rumbo.logic
 
 import es.david.rumbo.model.Dish
-import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
@@ -39,7 +38,7 @@ enum class CulinaryNeedKind { COMPANION_BASE, STARCH_BASE, PRIMARY_PROTEIN, FAT_
 data class CulinaryNeed(
     val kind: CulinaryNeedKind,
     val mealType: MealType,
-    val acceptedTypes: Set<CulinaryType>,
+    val acceptedRoles: Set<CulinaryRole>,
     val message: String
 )
 
@@ -312,26 +311,21 @@ object RepertoireEvaluator {
     private fun dependencyNeeds(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>
-    ): List<CulinaryNeed> {
-        val bases = setOf(CulinaryType.MILK_BASE, CulinaryType.CREAMY_BASE)
-        return MealType.entries.mapNotNull { mealType ->
-            val mealRules = rules.filter {
-                mealType in it.allowedMealTypes || it.requiredSlots().any { slot ->
-                    slot.mealType == mealType
-                }
-            }
-            val hasDependent = mealRules.any {
-                foodsById[it.itemId]?.culinaryType in setOf(
-                    CulinaryType.PROTEIN_POWDER, CulinaryType.BREAKFAST_CEREAL
-                )
-            }
-            val hasBase = mealRules.any { foodsById[it.itemId]?.culinaryType in bases }
-            if (hasDependent && !hasBase) CulinaryNeed(
-                CulinaryNeedKind.COMPANION_BASE, mealType, bases,
-                "Uno de tus alimentos necesita leche, yogur o una base similar en " +
-                    mealType.label.lowercase() + "."
-            ) else null
+    ): List<CulinaryNeed> = MealType.entries.mapNotNull { mealType ->
+        val mealRules = rules.filter {
+            mealType in it.allowedMealTypes || it.requiredSlots().any { slot -> slot.mealType == mealType }
         }
+        val roleChoices = mealRules.mapNotNull { rule ->
+            foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
+        }
+        val missing = CulinaryPolicy.missingRequiredRoles(roleChoices)
+        if (missing.isEmpty()) null else CulinaryNeed(
+            CulinaryNeedKind.COMPANION_BASE,
+            mealType,
+            missing,
+            "Falta ${missing.joinToString(" o ") { it.label.lowercase() }} para completar una combinación en " +
+                mealType.label.lowercase() + "."
+        )
     }
 
     private fun macroCulinaryNeeds(
@@ -348,22 +342,22 @@ object RepertoireEvaluator {
         }
         if (isLow(NutrientKind.CARBOHYDRATES)) {
             listOf(MealType.LUNCH, MealType.DINNER).firstOrNull {
-                lacksRole(it, CulinaryRole.STARCH_BASE)
+                lacksRole(it, CulinaryRole.PLATE_BASE)
             }?.let { meal ->
                 add(CulinaryNeed(
                     CulinaryNeedKind.STARCH_BASE, meal,
-                    setOf(CulinaryType.DRY_RICE, CulinaryType.DRY_PASTA, CulinaryType.FRESH_STARCH),
+                    setOf(CulinaryRole.PLATE_BASE),
                     "Añade una base de hidratos para ${meal.label.lowercase()}."
                 ))
             }
         }
         if (isLow(NutrientKind.PROTEIN)) {
             listOf(MealType.LUNCH, MealType.DINNER).firstOrNull {
-                lacksRole(it, CulinaryRole.PRIMARY_PROTEIN)
+                lacksRole(it, CulinaryRole.PLATE_CENTER)
             }?.let { meal ->
                 add(CulinaryNeed(
                     CulinaryNeedKind.PRIMARY_PROTEIN, meal,
-                    setOf(CulinaryType.MAIN_MEAT, CulinaryType.MAIN_FISH, CulinaryType.MAIN_EGG),
+                    setOf(CulinaryRole.PLATE_CENTER),
                     "Añade un alimento principal con proteína para ${meal.label.lowercase()}."
                 ))
             }
@@ -375,7 +369,7 @@ object RepertoireEvaluator {
                 ?: MealType.AFTERNOON_SNACK
             add(CulinaryNeed(
                 CulinaryNeedKind.FAT_COMPLEMENT, meal,
-                setOf(CulinaryType.FAT_COMPLEMENT),
+                setOf(CulinaryRole.TOPPING, CulinaryRole.COOKING_MEDIUM, CulinaryRole.STANDALONE),
                 "Añade un complemento graso para ${meal.label.lowercase()}."
             ))
         }

@@ -57,8 +57,7 @@ object WeeklyMenuGenerator {
         seed: Long = 11L
     ): GeneratedWeeklyMenu {
         val foodRules = rules.filter {
-            it.itemKind == PlannedItemKind.FOOD && it.isActive &&
-                foodsById[it.itemId]?.let(CulinaryPolicy::standaloneAllowed) != false
+            it.itemKind == PlannedItemKind.FOOD && it.isActive
         }
             .map { rule ->
                 rule.copy(
@@ -315,8 +314,7 @@ object WeeklyMenuGenerator {
         }
         if (hasUnmetDependency(chosen, foodsById, dishesById)) {
             throw PlanningConflictException(
-                "Hay un alimento que necesita leche, bebida vegetal, yogur o una base similar " +
-                    "en ${slot.mealType.label.lowercase()}."
+                "Hay una combinación culinaria incompleta en ${slot.mealType.label.lowercase()}."
             )
         }
         return chosen
@@ -339,8 +337,6 @@ object WeeklyMenuGenerator {
 
         val companions = eligible.filter { companion ->
             companion.itemKind == PlannedItemKind.FOOD &&
-                companion.roles(foodsById, dishesById)
-                    .contains(CulinaryRole.LIQUID_OR_CREAMY_BASE) &&
                 direct.none { it.sameItem(companion) || it.overlaps(companion, dishesById) } &&
                 hasCompatibleExclusiveRoles(direct + companion, foodsById, dishesById) &&
                 !hasUnmetDependency(direct + companion, foodsById, dishesById)
@@ -353,52 +349,49 @@ object WeeklyMenuGenerator {
         return listOf(candidate, companion)
     }
 
+    private fun roleChoices(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): List<Set<CulinaryRole>> = rules.flatMap { rule ->
+        when (rule.itemKind) {
+            PlannedItemKind.FOOD -> listOf(foodsById[rule.itemId]?.let(CulinaryPolicy::roles).orEmpty())
+            PlannedItemKind.DISH -> dishesById[rule.itemId]?.ingredients.orEmpty().map { ingredient ->
+                foodsById[ingredient.foodId]?.let(CulinaryPolicy::roles).orEmpty()
+            }
+        }
+    }
+
     private fun hasCompatibleExclusiveRoles(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>
-    ): Boolean = listOf(
-        CulinaryRole.STARCH_BASE,
-        CulinaryRole.BREAKFAST_CEREAL,
-        CulinaryRole.PRIMARY_PROTEIN
-    ).all { exclusiveRole ->
-        rules.count { exclusiveRole in it.roles(foodsById, dishesById) } <= 1
+    ): Boolean {
+        val choices = roleChoices(rules, foodsById, dishesById)
+        if (choices.any { it.isEmpty() }) return false
+        // A partial composition may still be completed later; only reject cardinality
+        // when no role choice avoids it.
+        return choices.isEmpty() || choices.fold(listOf(emptyList<CulinaryRole>())) { states, options ->
+            states.flatMap { state -> options.map { state + it } }
+                .filter { chosen ->
+                    val counts = chosen.groupingBy { it }.eachCount()
+                    counts.none { (role, count) -> CulinaryPolicy.policy(role).maxPerMeal?.let { count > it } == true }
+                }.take(128)
+        }.isNotEmpty()
     }
 
     private fun hasUnmetDependency(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>
-    ): Boolean {
-        val roles = rules.map { it.roles(foodsById, dishesById) }
-        val needsBase = roles.any {
-            CulinaryRole.DEPENDENT_PREPARATION in it ||
-                CulinaryRole.BREAKFAST_CEREAL in it
-        }
-        val hasBase = roles.any { CulinaryRole.LIQUID_OR_CREAMY_BASE in it }
-        return needsBase && !hasBase
-    }
-
-    private fun PlanningRule.roles(
-        foodsById: Map<Long, Food>,
-        dishesById: Map<Long, Dish>
-    ): Set<CulinaryRole> = when (itemKind) {
-        PlannedItemKind.FOOD -> foodsById[itemId]?.let(CulinaryPolicy::roles).orEmpty()
-        PlannedItemKind.DISH -> dishesById[itemId]?.ingredients
-            ?.mapNotNull { foodsById[it.foodId] }
-            ?.flatMapTo(mutableSetOf(), CulinaryPolicy::roles)
-            .orEmpty()
-    }
+    ): Boolean = !CulinaryPolicy.hasValidRoleAssignment(roleChoices(rules, foodsById, dishesById))
 
     fun isCulinarilyValid(
         meals: List<PlannedMeal>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>
     ): Boolean = WeekDay.entries.all { day ->
-        meals.filter { day in it.days }.all mealValid@ { meal ->
-            if (meal.items.any {
-                    foodsById[it.foodId]?.let(CulinaryPolicy::standaloneAllowed) == false
-                }) return@mealValid false
+        meals.filter { day in it.days }.all { meal ->
             val rules = meal.items.map {
                 PlanningRule(
                     itemKind = PlannedItemKind.FOOD,
@@ -414,8 +407,7 @@ object WeeklyMenuGenerator {
                     preferredGrams = meal.resolvedGrams(it, day)
                 )
             }
-            hasCompatibleExclusiveRoles(rules, foodsById, dishesById) &&
-                !hasUnmetDependency(rules, foodsById, dishesById)
+            CulinaryPolicy.hasValidRoleAssignment(roleChoices(rules, foodsById, dishesById))
         }
     }
 

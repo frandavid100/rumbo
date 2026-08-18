@@ -202,7 +202,7 @@ import es.david.rumbo.logic.WeeklyMenuAcceptancePolicy
 import es.david.rumbo.logic.PlanningConflictException
 import es.david.rumbo.logic.CulinaryPolicy
 import es.david.rumbo.logic.CulinaryRole
-import es.david.rumbo.logic.CulinaryTypePolicy
+import es.david.rumbo.logic.CulinaryRolePolicy
 import es.david.rumbo.model.ActivityLevel
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.BodyAssessment
@@ -211,7 +211,6 @@ import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
-import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.CulinaryPolicyOverride
 import es.david.rumbo.model.NutritionToleranceSettings
 import es.david.rumbo.model.Measurement
@@ -286,7 +285,6 @@ private enum class Screen(val label: String, val icon: ImageVector, val inNaviga
     ADD_DISH("Añadir plato", Icons.Default.Restaurant, false),
     DISH_DETAIL("Plato", Icons.Default.Restaurant, false),
     EDIT_DISH("Editar plato", Icons.Default.Restaurant, false),
-    FOODS("Alimentos y platos", Icons.Default.Search, false),
     ADD_FOOD("Añadir alimento", Icons.Default.Restaurant, false),
     FOOD_DETAIL("Alimento", Icons.Default.Restaurant, false),
     EDIT_FOOD("Editar alimento", Icons.Default.Restaurant, false),
@@ -439,7 +437,7 @@ fun RumboApp(repository: AppRepository) {
                 dishReturnScreenName = null
                 destination
             }
-            screen in setOf(Screen.ADD_DISH, Screen.DISH_DETAIL) -> Screen.FOODS.name
+            screen in setOf(Screen.ADD_DISH, Screen.DISH_DETAIL) -> Screen.HOME.name
             screen == Screen.FOOD_DETAIL && foodNavigationStack.isNotEmpty() -> {
                 selectedFoodId = foodNavigationStack.last()
                 foodNavigationStack = foodNavigationStack.dropLast(1)
@@ -453,7 +451,7 @@ fun RumboApp(repository: AppRepository) {
                 foodReturnScreenName = null
                 destination
             }
-            screen in setOf(Screen.ADD_FOOD, Screen.FOOD_DETAIL) -> Screen.FOODS.name
+            screen in setOf(Screen.ADD_FOOD, Screen.FOOD_DETAIL) -> Screen.HOME.name
             else -> Screen.HOME.name
         }
     }
@@ -521,7 +519,7 @@ fun RumboApp(repository: AppRepository) {
                             selectedDishId = null
                         }
                         pendingTopDelete = null
-                        screenName = Screen.FOODS.name
+                        screenName = Screen.HOME.name
                     }
                 ) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
             },
@@ -588,8 +586,6 @@ fun RumboApp(repository: AppRepository) {
                             )
                         Screen.AUTO_PLANNING ->
                             Text("Generación automática", fontWeight = FontWeight.SemiBold)
-                        Screen.FOODS ->
-                            Text("Alimentos y platos", fontWeight = FontWeight.SemiBold)
                         Screen.FOOD_DETAIL ->
                             Text("Alimento", fontWeight = FontWeight.SemiBold)
                         Screen.DISH_DETAIL ->
@@ -781,7 +777,13 @@ fun RumboApp(repository: AppRepository) {
                         selectedPlannedMealId = it
                         screenName = Screen.EDIT_PLANNED_MEAL.name
                     },
-                    onOpenFoods = { screenName = Screen.FOODS.name },
+                    onOpenFoods = {
+                        catalogRetailerFilter = null
+                        catalogNutritionalRoleFilter = null
+                        catalogCulinaryRoleFilter = null
+                        catalogSearchRequest += 1
+                        screenName = Screen.HOME.name
+                    },
                     onOpenFood = { foodId, reason ->
                         selectedFoodId = foodId
                         selectedFoodRecommendationReason = reason
@@ -982,7 +984,7 @@ fun RumboApp(repository: AppRepository) {
                     }
                 }
                 screen == Screen.DISHES -> {
-                    screenName = Screen.FOODS.name
+                    screenName = Screen.HOME.name
                 }
                 screen == Screen.ADD_DISH -> DishEditorScreen(
                     foods = data.foods,
@@ -998,7 +1000,7 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.DISH_DETAIL -> {
                     val dish = data.dishes.firstOrNull { it.id == selectedDishId }
                     if (dish == null) {
-                        screenName = Screen.FOODS.name
+                        screenName = Screen.HOME.name
                     } else {
                         DishDetailScreen(
                             dish = dish,
@@ -1056,7 +1058,7 @@ fun RumboApp(repository: AppRepository) {
                             onDelete = {
                                 data = repository.deleteDish(dish.id)
                                 selectedDishId = null
-                                screenName = Screen.FOODS.name
+                                screenName = Screen.HOME.name
                             }
                         )
                     }
@@ -1064,7 +1066,7 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.EDIT_DISH -> {
                     val dish = data.dishes.firstOrNull { it.id == selectedDishId }
                     if (dish == null) {
-                        screenName = Screen.FOODS.name
+                        screenName = Screen.HOME.name
                     } else {
                         DishEditorScreen(
                             foods = data.foods,
@@ -1077,42 +1079,11 @@ fun RumboApp(repository: AppRepository) {
                             onDelete = {
                                 data = repository.deleteDish(dish.id)
                                 selectedDishId = null
-                                screenName = Screen.FOODS.name
+                                screenName = Screen.HOME.name
                             }
                         )
                     }
                 }
-                screen == Screen.FOODS -> FoodDishCatalogScreen(
-                    foods = data.foods,
-                    dishes = data.dishes,
-                    planningRules = data.activeProfileData?.planningRules.orEmpty(),
-                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
-                    retailerFilter = catalogRetailerFilter,
-                    onRetailerFilterChange = { catalogRetailerFilter = it },
-                    nutritionalRoleFilter = catalogNutritionalRoleFilter,
-                    onNutritionalRoleFilterChange = { catalogNutritionalRoleFilter = it },
-                    culinaryRoleFilter = catalogCulinaryRoleFilter,
-                    onCulinaryRoleFilterChange = { catalogCulinaryRoleFilter = it },
-                    onOpenFood = {
-                        selectedFoodId = it
-                        foodNavigationStack = emptyList()
-                        foodRecommendationReasonStack = emptyList()
-                        selectedFoodRecommendationReason = null
-                        foodReturnScreenName = null
-                        screenName = Screen.FOOD_DETAIL.name
-                    },
-                    onOpenDish = {
-                        selectedDishId = it
-                        dishReturnScreenName = null
-                        screenName = Screen.DISH_DETAIL.name
-                    },
-                    onAddFood = { screenName = Screen.ADD_FOOD.name },
-                    onAddDish = {
-                        draftDishFoodId = null
-                        dishReturnScreenName = null
-                        screenName = Screen.ADD_DISH.name
-                    }
-                )
                 screen == Screen.ADD_FOOD -> FoodEditorScreen(
                     foods = data.foods,
                     onSave = {
@@ -1125,7 +1096,7 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.FOOD_DETAIL -> {
                     val food = data.foods.firstOrNull { it.id == selectedFoodId }
                     if (food == null) {
-                        screenName = Screen.FOODS.name
+                        screenName = Screen.HOME.name
                     } else {
                         FoodDetailScreen(
                             food = food,
@@ -1236,7 +1207,7 @@ fun RumboApp(repository: AppRepository) {
                             onDelete = {
                                 data = repository.deleteFood(food.id)
                                 selectedFoodId = null
-                                screenName = Screen.FOODS.name
+                                screenName = Screen.HOME.name
                             }
                         )
                     }
@@ -1244,7 +1215,7 @@ fun RumboApp(repository: AppRepository) {
                 screen == Screen.EDIT_FOOD -> {
                     val food = data.foods.firstOrNull { it.id == selectedFoodId }
                     if (food == null) {
-                        screenName = Screen.FOODS.name
+                        screenName = Screen.HOME.name
                     } else {
                         FoodEditorScreen(
                             foods = data.foods,
@@ -6842,208 +6813,6 @@ private fun HomeCatalogSearch(
 }
 
 @Composable
-private fun FoodDishCatalogScreen(
-    foods: List<Food>,
-    dishes: List<Dish>,
-    planningRules: List<PlanningRule>,
-    repertoireFoodIds: Set<Long>,
-    retailerFilter: String?,
-    onRetailerFilterChange: (String?) -> Unit,
-    nutritionalRoleFilter: String?,
-    onNutritionalRoleFilterChange: (String?) -> Unit,
-    culinaryRoleFilter: String?,
-    onCulinaryRoleFilterChange: (String?) -> Unit,
-    onOpenFood: (Long) -> Unit,
-    onOpenDish: (Long) -> Unit,
-    onAddFood: () -> Unit,
-    onAddDish: () -> Unit
-) {
-    var query by rememberSaveable { mutableStateOf("") }
-    var normalizedQuery by remember { mutableStateOf("") }
-    var mode by rememberSaveable { mutableStateOf(CatalogMode.SEARCH) }
-    var searchExpanded by rememberSaveable { mutableStateOf(false) }
-    var scanMessage by remember { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
-    val foodsById = remember(foods) { foods.associateBy { it.id } }
-    val retailerOptions = remember(foods) { foods.flatMap { it.retailerValues() }.distinct().sorted() }
-    val nutritionalRoleOptions = remember(foods) { foods.flatMap { it.nutritionalRoles }.distinct().sortedBy(::nutritionalRoleLabel) }
-    val culinaryRoleOptions = remember(foods) { foods.flatMap { it.culinaryRoles }.distinct().sortedBy(::culinaryRoleLabel) }
-
-    LaunchedEffect(query) {
-        if (query.isNotBlank()) delay(200)
-        normalizedQuery = normalizeSearch(query)
-    }
-
-    val entries = remember(
-        foods, dishes, normalizedQuery, retailerFilter, nutritionalRoleFilter,
-        culinaryRoleFilter, mode, repertoireFoodIds
-    ) {
-        buildList {
-            foods.forEach { food ->
-                val searchable = normalizeSearch(
-                    listOfNotNull(
-                        food.name, food.brand, food.family, food.subcategory,
-                        food.retailer, food.barcode
-                    ).joinToString(" ")
-                )
-                val belongs = food.id in repertoireFoodIds
-                val matchesFilters =
-                    (retailerFilter == null || retailerFilter in food.retailerValues()) &&
-                    (nutritionalRoleFilter == null || nutritionalRoleFilter in food.nutritionalRoles) &&
-                    (culinaryRoleFilter == null || culinaryRoleFilter in food.culinaryRoles)
-                if (matchesFilters &&
-                    ((mode == CatalogMode.SEARCH &&
-                        (normalizedQuery.isNotBlank() || retailerFilter != null ||
-                            nutritionalRoleFilter != null || culinaryRoleFilter != null) ||
-                        mode == CatalogMode.REPERTOIRE && belongs) &&
-                    (normalizedQuery.isBlank() || matchesSearch(searchable, normalizedQuery)))) {
-                    add(CatalogEntry(food.id, food.name, false))
-                }
-            }
-            // Dishes have no retailer or canonical food roles. Keep them searchable only
-            // when none of the three food filters is active.
-            if (retailerFilter == null && nutritionalRoleFilter == null && culinaryRoleFilter == null) {
-                dishes.forEach { dish ->
-                    val belongs = dish.ingredients.any { it.foodId in repertoireFoodIds }
-                    if (((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank()) ||
-                        (mode == CatalogMode.REPERTOIRE && belongs)) &&
-                        (normalizedQuery.isBlank() || matchesSearch(normalizeSearch(dish.name), normalizedQuery))) {
-                        add(CatalogEntry(dish.id, dish.name, true))
-                    }
-                }
-            }
-        }.sortedWith(compareBy<CatalogEntry> { it.name.lowercase() })
-    }
-
-    BackHandler(enabled = searchExpanded) { searchExpanded = false }
-
-    Box(Modifier.fillMaxSize()) {
-        Column(
-            Modifier.fillMaxSize().padding(start = 20.dp, top = 16.dp, end = 20.dp)
-        ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = mode == CatalogMode.SEARCH,
-                    onClick = {
-                        mode = CatalogMode.SEARCH
-                        searchExpanded = true
-                    },
-                    label = { Text("Buscar") }
-                )
-                FilterChip(
-                    selected = mode == CatalogMode.REPERTOIRE,
-                    onClick = { mode = CatalogMode.REPERTOIRE },
-                    label = { Text("Mi repertorio") }
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            SearchBar(
-                inputField = {
-                    SearchBarDefaults.InputField(
-                        query = query,
-                        onQueryChange = { query = it },
-                        onSearch = { },
-                        expanded = searchExpanded,
-                        onExpandedChange = {
-                            searchExpanded = it
-                            if (it) mode = CatalogMode.SEARCH
-                        },
-                        placeholder = { Text("Buscar alimentos y platos") },
-                        leadingIcon = {
-                            if (searchExpanded) {
-                                IconButton(onClick = { searchExpanded = false }) {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Salir de la búsqueda")
-                                }
-                            } else {
-                                Icon(Icons.Default.Search, contentDescription = null)
-                            }
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = {
-                                scanMessage = null
-                                GmsBarcodeScanning.getClient(context).startScan()
-                                    .addOnSuccessListener { barcode ->
-                                        val value = barcode.rawValue.orEmpty()
-                                        val food = foods.firstOrNull { it.barcode == value }
-                                        if (food != null) onOpenFood(food.id) else {
-                                            query = value
-                                            scanMessage = "No encuentro este producto en tus supermercados. Puedes buscarlo por nombre o añadirlo manualmente."
-                                        }
-                                    }
-                            }) {
-                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Escanear código de barras")
-                            }
-                        }
-                    )
-                },
-                expanded = searchExpanded,
-                onExpandedChange = {
-                    searchExpanded = it
-                    if (it) mode = CatalogMode.SEARCH
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                    CatalogCanonicalFilterRow(
-                        retailerFilter, onRetailerFilterChange, retailerOptions,
-                        nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
-                        culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    scanMessage?.let {
-                        Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    CatalogEntries(
-                        entries = entries,
-                        foods = foods,
-                        foodsById = foodsById,
-                        dishes = dishes,
-                        repertoireFoodIds = repertoireFoodIds,
-                        mode = CatalogMode.SEARCH,
-                        normalizedQuery = normalizedQuery,
-                        onOpenFood = onOpenFood,
-                        onOpenDish = onOpenDish,
-                        onAddFood = onAddFood,
-                        onAddDish = onAddDish,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            if (mode == CatalogMode.REPERTOIRE) {
-                CatalogCanonicalFilterRow(
-                    retailerFilter, onRetailerFilterChange, retailerOptions,
-                    nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
-                    culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions
-                )
-                Spacer(Modifier.height(8.dp))
-                CatalogEntries(
-                    entries = entries,
-                    foods = foods,
-                    foodsById = foodsById,
-                    dishes = dishes,
-                    repertoireFoodIds = repertoireFoodIds,
-                    mode = mode,
-                    normalizedQuery = normalizedQuery,
-                    onOpenFood = onOpenFood,
-                    onOpenDish = onOpenDish,
-                    onAddFood = onAddFood,
-                    onAddDish = onAddDish,
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
-                Text(
-                    "Toca la barra para buscar por nombre o escanear un código.",
-                    modifier = Modifier.padding(vertical = 16.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun CatalogCanonicalFilterRow(
     retailer: String?, onRetailerChange: (String?) -> Unit, retailerOptions: List<String>,
     nutritionalRole: String?, onNutritionalRoleChange: (String?) -> Unit, nutritionalRoleOptions: List<String>,
@@ -7095,121 +6864,6 @@ private fun CatalogStringFilterMenu(
                     leadingIcon = { if (selected == option) Icon(Icons.Default.Check, contentDescription = null) },
                     text = { Text(label(option)) },
                     onClick = { onChange(option); expanded = false }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CatalogFilterChips(
-    filter: CatalogFilter,
-    onFilterChange: (CatalogFilter) -> Unit
-) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(
-            CatalogFilter.ALL to "Alimentos y platos",
-            CatalogFilter.FOODS to "Solo alimentos",
-            CatalogFilter.DISHES to "Solo platos"
-        ).forEach { (option, label) ->
-            FilterChip(
-                selected = filter == option,
-                onClick = { onFilterChange(option) },
-                label = { Text(label) }
-            )
-        }
-    }
-    Spacer(Modifier.height(8.dp))
-}
-
-@Composable
-private fun CatalogFilterMenu(
-    filter: CatalogFilter,
-    onFilterChange: (CatalogFilter) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = listOf(
-        CatalogFilter.ALL to "Alimentos y platos",
-        CatalogFilter.FOODS to "Solo alimentos",
-        CatalogFilter.DISHES to "Solo platos"
-    )
-    Box {
-        FilterChip(
-            selected = true,
-            onClick = { expanded = true },
-            label = { Text(options.first { it.first == filter }.second) },
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (option, label) ->
-                DropdownMenuItem(
-                    leadingIcon = {
-                        if (filter == option) Icon(Icons.Default.Check, contentDescription = null)
-                    },
-                    text = { Text(label) },
-                    onClick = { onFilterChange(option); expanded = false }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CatalogCategoryMenu(
-    category: FoodCategory?,
-    onCategoryChange: (FoodCategory?) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        FilterChip(
-            selected = category != null,
-            onClick = { expanded = true },
-            label = { Text(category?.label ?: "Todos los tipos") },
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            (listOf<FoodCategory?>(null) + FoodCategory.entries).forEach { option ->
-                DropdownMenuItem(
-                    leadingIcon = {
-                        if (category == option) Icon(Icons.Default.Check, contentDescription = null)
-                    },
-                    text = { Text(option?.label ?: "Todos los tipos") },
-                    onClick = {
-                        onCategoryChange(option)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CatalogCulinaryTypeMenu(
-    culinaryType: CulinaryType?,
-    onCulinaryTypeChange: (CulinaryType?) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        FilterChip(
-            selected = culinaryType != null,
-            onClick = { expanded = true },
-            label = { Text(culinaryType?.label ?: "Todos los tipos culinarios") },
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            (listOf<CulinaryType?>(null) + CulinaryType.entries).forEach { option ->
-                DropdownMenuItem(
-                    leadingIcon = {
-                        if (culinaryType == option) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                        }
-                    },
-                    text = { Text(option?.label ?: "Todos los tipos culinarios") },
-                    onClick = {
-                        onCulinaryTypeChange(option)
-                        expanded = false
-                    }
                 )
             }
         }
@@ -8820,7 +8474,7 @@ private fun FoodDetailScreen(
                         selectedFrequency = currentRule?.frequency
                             ?: PlanningFrequency.NORMAL
                         val recommendedMeal = repertoireAssessment?.culinaryNeeds
-                            ?.firstOrNull { food.culinaryType in it.acceptedTypes }
+                            ?.firstOrNull { CulinaryPolicy.addresses(it, food) }
                             ?.mealType
                             ?.takeIf { it in activeMealTypes }
                         selectedMeals = if (currentRule != null) {
@@ -9485,7 +9139,7 @@ private fun ProfileScreen(
     onSwitch: (Long) -> Unit,
     onDelete: (Long) -> Unit,
     onSaveCulinaryPolicy: (CulinaryPolicyOverride) -> Unit,
-    onResetCulinaryPolicy: (CulinaryType) -> Unit,
+    onResetCulinaryPolicy: (String) -> Unit,
     onSaveNutritionTolerances: (NutritionToleranceSettings) -> Unit,
     onSaveMealShares: (Map<MealType, Double>) -> Unit,
     onCancelCreate: () -> Unit
@@ -9918,22 +9572,16 @@ private fun ratioRange(minimum: Double, maximum: Double) =
 private fun CulinaryRulesCard(
     overrides: List<CulinaryPolicyOverride>,
     onSave: (CulinaryPolicyOverride) -> Unit,
-    onReset: (CulinaryType) -> Unit
+    onReset: (String) -> Unit
 ) {
-    var editingType by remember { mutableStateOf<CulinaryType?>(null) }
-    editingType?.let { type ->
+    var editingRole by remember { mutableStateOf<CulinaryRole?>(null) }
+    editingRole?.let { role ->
         CulinaryPolicyEditorDialog(
-            type = type,
-            override = overrides.firstOrNull { it.culinaryType == type },
-            onDismiss = { editingType = null },
-            onSave = {
-                onSave(it)
-                editingType = null
-            },
-            onReset = {
-                onReset(type)
-                editingType = null
-            }
+            role = role,
+            override = overrides.firstOrNull { it.culinaryRole == role.name },
+            onDismiss = { editingRole = null },
+            onSave = { onSave(it); editingRole = null },
+            onReset = { onReset(role.name); editingRole = null }
         )
     }
     Card(Modifier.fillMaxWidth()) {
@@ -9945,20 +9593,20 @@ private fun CulinaryRulesCard(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             Text(
-                "Se aplican a todos los alimentos del mismo tipo dentro de este perfil.",
+                "Cada función culinaria tiene una política común de cantidades y combinación.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
             HorizontalDivider()
-            CulinaryType.entries.filterNot { it == CulinaryType.UNKNOWN }.forEach { type ->
-                val custom = overrides.firstOrNull { it.culinaryType == type }
-                val policy = custom?.toPolicy() ?: CulinaryPolicy.defaultPolicy(type)
+            CulinaryRole.entries.forEach { role ->
+                val custom = overrides.firstOrNull { it.culinaryRole == role.name }
+                val policy = CulinaryPolicy.policy(role)
                 TextButton(
-                    onClick = { editingType = type },
+                    onClick = { editingRole = role },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
                 ) {
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                        Text(type.label, color = MaterialTheme.colorScheme.onSurface)
+                        Text(role.label, color = MaterialTheme.colorScheme.onSurface)
                         Text(
                             culinaryPolicySummary(policy),
                             style = MaterialTheme.typography.bodySmall,
@@ -9976,112 +9624,72 @@ private fun CulinaryRulesCard(
 
 @Composable
 private fun CulinaryPolicyEditorDialog(
-    type: CulinaryType,
+    role: CulinaryRole,
     override: CulinaryPolicyOverride?,
     onDismiss: () -> Unit,
     onSave: (CulinaryPolicyOverride) -> Unit,
     onReset: () -> Unit
 ) {
-    val initial = override?.toPolicy() ?: CulinaryPolicy.defaultPolicy(type)
-    var roles by remember(type, override) { mutableStateOf(initial.roles) }
-    var preferred by remember(type, override) {
-        mutableStateOf(initial.preferredGrams?.let(::formatDecimal).orEmpty())
-    }
-    var minimum by remember(type, override) {
-        mutableStateOf(initial.minimumGrams?.let(::formatDecimal).orEmpty())
-    }
-    var maximum by remember(type, override) {
-        mutableStateOf(initial.maximumGrams?.let(::formatDecimal).orEmpty())
-    }
-    var standalone by remember(type, override) { mutableStateOf(initial.standaloneAllowed) }
+    val initial = CulinaryPolicy.policy(role)
+    var preferred by remember(role, override) { mutableStateOf(initial.preferredGrams?.let(::formatDecimal).orEmpty()) }
+    var minimum by remember(role, override) { mutableStateOf(initial.minimumGrams?.let(::formatDecimal).orEmpty()) }
+    var maximum by remember(role, override) { mutableStateOf(initial.maximumGrams?.let(::formatDecimal).orEmpty()) }
+    var standalone by remember(role, override) { mutableStateOf(initial.standaloneAllowed) }
     val preferredValue = parseDecimal(preferred)
     val minimumValue = parseDecimal(minimum)
     val maximumValue = parseDecimal(maximum)
-    val quantitiesValid = listOf(preferred, minimum, maximum).all { it.isBlank() } ||
-        preferredValue != null && minimumValue != null && maximumValue != null &&
+    val quantitiesValid = preferredValue != null && minimumValue != null && maximumValue != null &&
         minimumValue > 0.0 && minimumValue <= preferredValue && preferredValue <= maximumValue
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(type.label) },
+        title = { Text(role.label) },
         text = {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("Funciones y reglas de combinación", fontWeight = FontWeight.SemiBold)
-                CulinaryRole.entries.forEach { role ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable {
-                            roles = if (role in roles) roles - role else roles + role
-                        },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = role in roles, onCheckedChange = null)
-                        Text(role.label)
-                    }
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val hardRules = buildList {
+                    if (initial.requiredRoles.isNotEmpty()) add("Requiere: ${initial.requiredRoles.joinToString { it.label }}")
+                    initial.maxPerMeal?.let { add("Máximo por comida: $it") }
                 }
+                hardRules.forEach { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 HorizontalDivider()
-                Text("Rango culinario", fontWeight = FontWeight.SemiBold)
+                Text("Rango de uso", fontWeight = FontWeight.SemiBold)
                 NumericField("Cantidad habitual (g)", preferred, { preferred = it }, Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     NumericField("Mínimo (g)", minimum, { minimum = it }, Modifier.weight(1f))
                     NumericField("Máximo (g)", maximum, { maximum = it }, Modifier.weight(1f))
                 }
-                Row(
-                    Modifier.fillMaxWidth().clickable { standalone = !standalone },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(Modifier.fillMaxWidth().clickable { standalone = !standalone }, verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = standalone, onCheckedChange = null)
-                    Text("Puede aparecer como alimento independiente")
+                    Text("Puede desempeñar esta función como único elemento de la comida")
                 }
                 if (!quantitiesValid) {
-                    Text(
-                        "Indica las tres cantidades y cumple mínimo ≤ habitual ≤ máximo, o déjalas todas vacías.",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Text("Cumple mínimo ≤ habitual ≤ máximo.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
-                if (override != null) {
-                    TextButton(onClick = onReset) { Text("Restaurar regla predeterminada") }
-                }
+                if (override != null) TextButton(onClick = onReset) { Text("Restaurar regla predeterminada") }
             }
         },
         confirmButton = {
-            TextButton(
-                enabled = quantitiesValid,
-                onClick = {
-                    onSave(
-                        CulinaryPolicyOverride(
-                            culinaryType = type,
-                            roles = roles.mapTo(mutableSetOf()) { it.name },
-                            preferredGrams = preferredValue,
-                            minimumGrams = minimumValue,
-                            maximumGrams = maximumValue,
-                            standaloneAllowed = standalone
-                        )
-                    )
-                }
-            ) { Text("Guardar") }
+            TextButton(enabled = quantitiesValid, onClick = {
+                onSave(CulinaryPolicyOverride(
+                    culinaryRole = role.name,
+                    preferredGrams = preferredValue,
+                    minimumGrams = minimumValue,
+                    maximumGrams = maximumValue,
+                    standaloneAllowed = standalone
+                ))
+            }) { Text("Guardar") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
 }
 
-private fun CulinaryPolicyOverride.toPolicy() = CulinaryTypePolicy(
-    roles = roles.mapNotNullTo(mutableSetOf()) { runCatching { CulinaryRole.valueOf(it) }.getOrNull() },
-    preferredGrams = preferredGrams,
-    minimumGrams = minimumGrams,
-    maximumGrams = maximumGrams,
-    standaloneAllowed = standaloneAllowed
-)
-
-private fun culinaryPolicySummary(policy: CulinaryTypePolicy): String {
-    val rules = policy.roles.map { it.label }.toMutableList()
-    if (!policy.standaloneAllowed) rules += "Solo como ingrediente"
+private fun culinaryPolicySummary(policy: CulinaryRolePolicy): String {
+    val rules = mutableListOf<String>()
+    if (!policy.standaloneAllowed) rules += "No puede ir sola"
+    if (policy.requiredRoles.isNotEmpty()) rules += "Requiere ${policy.requiredRoles.joinToString { it.label }}"
+    policy.maxPerMeal?.let { rules += "Máx. $it por comida" }
     policy.preferredGrams?.let { preferred ->
-        rules += "${formatDecimal(policy.minimumGrams ?: preferred)}–" +
-            "${formatDecimal(policy.maximumGrams ?: preferred)} g"
+        rules += "${formatDecimal(policy.minimumGrams ?: preferred)}–${formatDecimal(policy.maximumGrams ?: preferred)} g"
     }
     return rules.ifEmpty { listOf("Sin reglas especiales") }.joinToString(" · ")
 }
