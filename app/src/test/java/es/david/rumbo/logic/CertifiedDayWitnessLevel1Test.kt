@@ -8,9 +8,9 @@ import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class CertifiedDayWitnessLevel1Test {
     private val recommendation = Recommendation(2000, 100, 250, 67, "test")
@@ -33,7 +33,7 @@ class CertifiedDayWitnessLevel1Test {
         )
 
     @Test
-    fun `generator can search one day without constructing the rest of the week`() {
+    fun generatorCanSearchOneDayWithoutConstructingTheRestOfTheWeek() {
         val foods = listOf(
             food(1, "A", 200.0, 12.0, 30.0, 4.0),
             food(2, "B", 180.0, 10.0, 25.0, 5.0),
