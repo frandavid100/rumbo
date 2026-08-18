@@ -113,9 +113,12 @@ fun legacyCulinaryRoles(typeName: String?): Set<String> = when (typeName) {
     "PROTEIN_POWDER" -> setOf("POWDER_MIX_IN")
     "DRY_RICE", "DRY_PASTA", "FRESH_STARCH" -> setOf("PLATE_BASE")
     "BREAD" -> setOf("SANDWICH_BASE", "PLATE_BASE", "STANDALONE")
-    "MAIN_MEAT" -> setOf("PLATE_CENTER", "SANDWICH_FILLING", "TOPPING", "STANDALONE")
-    "MAIN_FISH" -> setOf("PLATE_CENTER", "STANDALONE")
-    "MAIN_EGG" -> setOf("PLATE_CENTER", "SANDWICH_FILLING", "STANDALONE")
+    // The old type was too coarse to prove secondary uses. Migrate conservatively:
+    // fresh/main proteins remain plate centers unless the new catalogue explicitly
+    // assigns SANDWICH_FILLING, TOPPING or STANDALONE.
+    "MAIN_MEAT" -> setOf("PLATE_CENTER")
+    "MAIN_FISH" -> setOf("PLATE_CENTER")
+    "MAIN_EGG" -> setOf("PLATE_CENTER")
     "VEGETABLE" -> setOf("SIDE", "PLATE_BASE", "STANDALONE")
     "FRUIT" -> setOf("STANDALONE", "DESSERT")
     "CULINARY_OIL" -> setOf("COOKING_MEDIUM", "SAUCE_DRESSING")

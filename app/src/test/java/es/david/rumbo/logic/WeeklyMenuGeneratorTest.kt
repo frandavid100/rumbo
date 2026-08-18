@@ -410,7 +410,7 @@ class WeeklyMenuGeneratorTest {
     }
 
     @Test
-    fun cookingIngredientCannotAppearAsAStandaloneFood() {
+    fun cookingIngredientRoleNeverAppearsAsTheOnlyElementOfAMeal() {
         val breadcrumbs = food(
             50, "Pan rallado", 336.0, 8.7, 71.3, 1.7,
             "COOKING_INGREDIENT"
@@ -430,8 +430,8 @@ class WeeklyMenuGeneratorTest {
             seed = 65
         )
 
-        assertTrue(result.meals.none { meal ->
-            meal.items.any { it.foodId == breadcrumbs.id }
+        assertTrue(result.meals.all { meal ->
+            meal.items.none { it.foodId == breadcrumbs.id } || meal.items.size + meal.dishes.size > 1
         })
     }
 

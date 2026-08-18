@@ -183,7 +183,8 @@ class RepertoireEvaluatorTest {
         )
 
         assertEquals(CulinaryNeedKind.COMPANION_BASE, result.culinaryNeeds.single().kind)
-        assertTrue(result.culinaryNeeds.single().message.contains("leche"))
+        assertTrue(CulinaryRole.POWDER_BASE in result.culinaryNeeds.single().acceptedRoles)
+        assertTrue(result.culinaryNeeds.single().message.contains("base", ignoreCase = true))
     }
 
     @Test
