@@ -326,19 +326,6 @@ fun RumboApp(repository: AppRepository) {
     val catalogSearchMealType = catalogSearchMealTypeName?.let {
         runCatching { MealType.valueOf(it) }.getOrNull()
     }
-    val catalogOverlayTextState = rememberTextFieldState()
-    val catalogOverlaySearchState = rememberSearchBarState()
-    val catalogOverlayListState = rememberLazyListState()
-    val catalogOverlayScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
-    var catalogOverlayMessage by remember { mutableStateOf<String?>(null) }
-    var catalogOverlaySuppressKeyboard by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(catalogSearchOverlayOpen) {
-        if (catalogSearchOverlayOpen) {
-            catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
-            catalogOverlayListState.scrollToItem(0)
-            catalogOverlaySearchState.snapTo(1f)
-        }
-    }
     var foodNavigationStack by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var selectedFoodRecommendationReason by rememberSaveable { mutableStateOf<String?>(null) }
     var foodRecommendationReasonStack by rememberSaveable {
@@ -1322,6 +1309,14 @@ fun RumboApp(repository: AppRepository) {
     }
 
     if (catalogSearchOverlayOpen) {
+        val catalogOverlayTextState = rememberTextFieldState()
+        val catalogOverlaySearchState = rememberSearchBarState(
+            initialValue = SearchBarValue.Expanded
+        )
+        val catalogOverlayListState = rememberLazyListState()
+        val catalogOverlayScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
+        var catalogOverlayMessage by remember { mutableStateOf<String?>(null) }
+        var catalogOverlaySuppressKeyboard by remember { mutableStateOf(false) }
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -1374,7 +1369,8 @@ fun RumboApp(repository: AppRepository) {
                     catalogSearchOverlayOpen = false
                     screenName = Screen.DISH_DETAIL.name
                 },
-                trailingContent = {}
+                trailingContent = {},
+                showCollapsedBar = false
             )
         }
     }
@@ -6657,7 +6653,8 @@ private fun HomeCatalogSearch(
     scrollBehavior: SearchBarScrollBehavior,
     onCloseSearch: () -> Unit,
     onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit,
-    trailingContent: @Composable () -> Unit
+    trailingContent: @Composable () -> Unit,
+    showCollapsedBar: Boolean = true
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -6828,16 +6825,18 @@ private fun HomeCatalogSearch(
         )
     }
 
-    AppBarWithSearch(
-        state = state,
-        inputField = inputField,
-        scrollBehavior = scrollBehavior,
-        colors = appBarColors,
-        actions = {},
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        tonalElevation = 0.dp
-    )
+    if (showCollapsedBar) {
+        AppBarWithSearch(
+            state = state,
+            inputField = inputField,
+            scrollBehavior = scrollBehavior,
+            colors = appBarColors,
+            actions = {},
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            tonalElevation = 0.dp
+        )
+    }
 
     ExpandedFullScreenSearchBar(
         state = state,
@@ -6874,7 +6873,7 @@ private fun HomeCatalogSearch(
                 onAddDish = {},
                 compactPresentation = true,
                 listState = listState,
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxSize(),
                 header = {
                     Column(Modifier.fillMaxWidth()) {
                         Spacer(Modifier.height(8.dp))
@@ -6887,11 +6886,17 @@ private fun HomeCatalogSearch(
                         if (query.isBlank() && !hasActiveFilters) {
                             Text(
                                 "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
-                                Modifier.padding(vertical = 12.dp),
+                                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        scanMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        scanMessage?.let {
+                            Text(
+                                it,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             )
@@ -6909,7 +6914,7 @@ private fun CatalogCanonicalFilterRow(
     mealType: MealType?, onMealTypeChange: (MealType?) -> Unit
 ) {
     LazyRow(
-        contentPadding = PaddingValues(end = 16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
@@ -7038,7 +7043,7 @@ private fun CatalogEntries(
                 sectionTitle?.let {
                     Text(
                         it,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 6.dp),
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 6.dp),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -7056,7 +7061,7 @@ private fun CatalogEntries(
                         .clickable {
                             if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
                         }
-                        .padding(vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -7115,7 +7120,11 @@ private fun CatalogEntries(
                 val food = foodsById[entry.id] ?: return@items
                 FoodListEntry(food = food, onClick = { onOpenFood(food.id) })
             }
-            if (entry != entries.lastOrNull()) HorizontalDivider()
+            if (entry != entries.lastOrNull()) {
+                HorizontalDivider(
+                    modifier = if (compactPresentation) Modifier.padding(horizontal = 16.dp) else Modifier
+                )
+            }
         }
 
         if (entries.isEmpty()) {
@@ -8283,11 +8292,12 @@ private fun CatalogAttributeChipRow(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             title,
+            modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         LazyRow(
-            contentPadding = PaddingValues(end = 16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(values, key = { it }) { value ->
@@ -8622,15 +8632,11 @@ private fun FoodDetailScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(top = innerPadding.calculateTopPadding())
-                .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = innerPadding.calculateBottomPadding() + 16.dp
-                ),
+                .padding(bottom = innerPadding.calculateBottomPadding() + 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             recommendationReason?.let { reason ->
-                Card(Modifier.fillMaxWidth()) {
+                Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     Row(
                         Modifier.fillMaxWidth().padding(start = 16.dp, top = 10.dp, bottom = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -8660,6 +8666,7 @@ private fun FoodDetailScreen(
                     ?.let {
                         Text(
                             it,
+                            modifier = Modifier.padding(horizontal = 16.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -8682,6 +8689,10 @@ private fun FoodDetailScreen(
                     label = ::culinaryRoleLabel,
                     onClick = { onOpenCatalogFilter(null, null, it) }
                 )
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                 HorizontalDivider()
                 Text(
                     "Valores por 100 g o 100 ml",
@@ -8746,10 +8757,11 @@ private fun FoodDetailScreen(
                         if (index < food.links.lastIndex) HorizontalDivider()
                     }
                 }
+                }
             }
 
             Column(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                     Text("En qué platos puedes comerlo", style = MaterialTheme.typography.titleLarge)
@@ -8781,7 +8793,7 @@ private fun FoodDetailScreen(
                 }
 
             Column(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text("Alternativas más eficientes", style = MaterialTheme.typography.titleLarge)
