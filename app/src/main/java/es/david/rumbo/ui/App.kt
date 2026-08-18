@@ -1373,6 +1373,22 @@ fun RumboApp(repository: AppRepository) {
                 )
             }
         }
+        val closeCatalogOverlay = {
+            catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
+            catalogOverlayMessage = null
+            catalogSearchReturnPending = false
+            catalogSearchSavedQuery = ""
+            catalogSearchSavedScrollIndex = 0
+            catalogSearchSavedScrollOffset = 0
+            if (catalogSearchOriginScreenName == Screen.FOOD_DETAIL.name) {
+                selectedFoodId = catalogSearchOriginFoodId
+            }
+            screenName = catalogSearchOriginScreenName ?: Screen.HOME.name
+            catalogSearchOriginScreenName = null
+            catalogSearchOriginFoodId = null
+            catalogSearchOverlayOpen = false
+        }
+        BackHandler(enabled = true) { closeCatalogOverlay() }
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -1401,15 +1417,7 @@ fun RumboApp(repository: AppRepository) {
                 suppressRestoredKeyboard = catalogOverlaySuppressKeyboard,
                 onRestoredKeyboardSuppressed = { catalogOverlaySuppressKeyboard = false },
                 scrollBehavior = catalogOverlayScrollBehavior,
-                onCloseSearch = {
-                    catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
-                    catalogOverlayMessage = null
-                    catalogSearchReturnPending = false
-                    catalogSearchSavedQuery = ""
-                    catalogSearchSavedScrollIndex = 0
-                    catalogSearchSavedScrollOffset = 0
-                    catalogSearchOverlayOpen = false
-                },
+                onCloseSearch = closeCatalogOverlay,
                 onOpenFood = { foodId ->
                     catalogSearchSavedQuery = catalogOverlayTextState.text.toString()
                     catalogSearchSavedScrollIndex = catalogOverlayListState.firstVisibleItemIndex
@@ -2178,15 +2186,25 @@ private fun repertoireProgressTarget(
         }
         completeDayDiagnostic?.let { diagnostic ->
             if (diagnostic.fruitMeals < 2) {
+                val enoughAvailable = diagnostic.availableFruitMeals >= 2
                 return 1 to RepertoireProgressTarget(
-                    message = "El mejor día encontrado solo consigue incluir fruta en ${diagnostic.fruitMeals} ${if (diagnostic.fruitMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos fruta en dos comidas distintas.",
+                    message = if (enoughAvailable) {
+                        "Tienes fruta disponible para al menos dos comidas, pero el mejor día completo que Rumbo ha conseguido construir solo la coloca en ${diagnostic.fruitMeals}. Vamos a ampliar las combinaciones posibles con otra opción eficiente."
+                    } else {
+                        "Con la configuración actual solo hay fruta disponible para ${diagnostic.availableFruitMeals} ${if (diagnostic.availableFruitMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar fruta en dos comidas distintas."
+                    },
                     buttonLabel = "Añadir otra fruta",
                     nutritionalRole = "FRUIT"
                 )
             }
             if (diagnostic.vegetableMeals < 2) {
+                val enoughAvailable = diagnostic.availableVegetableMeals >= 2
                 return 1 to RepertoireProgressTarget(
-                    message = "El mejor día encontrado solo consigue incluir verdura en ${diagnostic.vegetableMeals} ${if (diagnostic.vegetableMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos verdura en dos comidas distintas.",
+                    message = if (enoughAvailable) {
+                        "Tienes verdura disponible para al menos dos comidas, pero el mejor día completo que Rumbo ha conseguido construir solo la coloca en ${diagnostic.vegetableMeals}. Vamos a ampliar las combinaciones posibles con otra opción eficiente."
+                    } else {
+                        "Con la configuración actual solo hay verdura disponible para ${diagnostic.availableVegetableMeals} ${if (diagnostic.availableVegetableMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar verdura en dos comidas distintas."
+                    },
                     buttonLabel = "Añadir otra verdura",
                     nutritionalRole = "VEGETABLE"
                 )

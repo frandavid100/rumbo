@@ -3,6 +3,7 @@ package es.david.rumbo.ui
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -66,6 +67,17 @@ private val DarkColors = darkColorScheme(
 )
 
 
+
+private fun ColorScheme.deeperLightSurfaces(): ColorScheme = copy(
+    background = surfaceContainerLow,
+    surface = surfaceContainerLow,
+    surfaceContainerLowest = surfaceContainerLow,
+    surfaceContainerLow = surfaceContainer,
+    surfaceContainer = surfaceContainerHigh,
+    surfaceContainerHigh = surfaceContainerHighest,
+    surfaceContainerHighest = surfaceDim
+)
+
 @Composable
 fun RumboTheme(content: @Composable () -> Unit) {
     val darkTheme = isSystemInDarkTheme()
@@ -74,9 +86,9 @@ fun RumboTheme(content: @Composable () -> Unit) {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && darkTheme ->
             dynamicDarkColorScheme(context)
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            dynamicLightColorScheme(context)
+            dynamicLightColorScheme(context).deeperLightSurfaces()
         darkTheme -> DarkColors
-        else -> LightColors
+        else -> LightColors.deeperLightSurfaces()
     }
     MaterialTheme(
         colorScheme = colors,

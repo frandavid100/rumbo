@@ -104,7 +104,9 @@ object CertifiedDayWitnessEvaluator {
         val vegetableMeals: Int,
         val fiberGrams: Double,
         val viable: Boolean,
-        val limitingNutrient: NutrientKind? = null
+        val limitingNutrient: NutrientKind? = null,
+        val availableFruitMeals: Int = 0,
+        val availableVegetableMeals: Int = 0
     )
 
     data class CompleteDaySearchResult(
@@ -131,6 +133,14 @@ object CertifiedDayWitnessEvaluator {
     ): CompleteDaySearchResult {
         val constraints = MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares)
         if (constraints.structuralViolations.isNotEmpty()) return CompleteDaySearchResult(null, null)
+        fun availableMeals(category: FoodCategory): Int = constraints.activeMealTypes.count { mealType ->
+            constraints.activeRules.any { rule ->
+                mealType in rule.allowedMealTypes && rule.frequency != PlanningFrequency.NEVER &&
+                    foodsById[rule.itemId]?.category == category
+            }
+        }
+        val availableFruitMeals = availableMeals(FoodCategory.FRUIT)
+        val availableVegetableMeals = availableMeals(FoodCategory.VEGETABLE)
         val seeds = listOf(11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L, 509L, 607L, 701L, 809L)
         var bestDiagnostic: CompleteDayDiagnostic? = null
         var bestScore = Double.NEGATIVE_INFINITY
@@ -144,7 +154,8 @@ object CertifiedDayWitnessEvaluator {
                     dishesById = dishesById,
                     recommendation = recommendation,
                     seed = seed,
-                    days = setOf(WeekDay.MONDAY)
+                    days = setOf(WeekDay.MONDAY),
+                    objective = MenuGenerationObjective.COMPLETE
                 )
             }.getOrNull() ?: continue
             val assessment = MealPlanEvaluator.assessDay(
@@ -168,7 +179,9 @@ object CertifiedDayWitnessEvaluator {
                 vegetableMeals = vegetableMeals,
                 fiberGrams = assessment.actual.fiberGrams,
                 viable = viable,
-                limitingNutrient = limiting
+                limitingNutrient = limiting,
+                availableFruitMeals = availableFruitMeals,
+                availableVegetableMeals = availableVegetableMeals
             )
             val score = (if (viable) 4.0 else 0.0) +
                 fruitMeals.coerceAtMost(2) + vegetableMeals.coerceAtMost(2) +
