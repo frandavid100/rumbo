@@ -109,7 +109,7 @@ data class CatalogQuery(
     val limit: Int = 200
 ) {
     init {
-        require(limit in 1..1000)
+        require(limit in 1..20_000)
     }
 }
 
