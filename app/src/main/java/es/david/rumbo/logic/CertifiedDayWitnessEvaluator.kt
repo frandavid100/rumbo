@@ -4,6 +4,8 @@ import es.david.rumbo.model.CertifiedDayLevel
 import es.david.rumbo.model.CertifiedDayWitness
 import es.david.rumbo.model.Dish
 import es.david.rumbo.model.Food
+import es.david.rumbo.model.FoodCategory
+import es.david.rumbo.model.WeekDay
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
@@ -34,7 +36,7 @@ object CertifiedDayWitnessEvaluator {
         recommendation: Recommendation,
         mealShares: Map<MealType, Double>
     ): Boolean {
-        if (witness.level != CertifiedDayLevel.VIABLE || !witness.isStructurallyValid()) return false
+        if (!witness.isStructurallyValid()) return false
         val constraints = MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares)
         if (constraints.structuralViolations.isNotEmpty()) return false
         val activeRules = constraints.activeRules
@@ -81,4 +83,78 @@ object CertifiedDayWitnessEvaluator {
         )
         return WeeklyMenuAcceptancePolicy.isDayAcceptable(assessment, activeMealTypes)
     }
+
+    /** COMPLETE = viable + fruit in two distinct meals + vegetables in two distinct meals + >=25 g fibre. */
+    fun isComplete(
+        witness: CertifiedDayWitness,
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double>
+    ): Boolean {
+        if (witness.level != CertifiedDayLevel.COMPLETE || !isViable(
+                witness, rules, foodsById, dishesById, recommendation, mealShares
+            )) return false
+        return completeCriteria(witness.day, witness.meals, foodsById, dishesById, recommendation)
+    }
+
+    fun findCompleteWitness(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double>
+    ): CertifiedDayWitness? {
+        val constraints = MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares)
+        if (constraints.structuralViolations.isNotEmpty()) return null
+        val seeds = listOf(11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L, 509L, 607L, 701L, 809L)
+        for (seed in seeds) {
+            val generated = runCatching {
+                WeeklyMenuGenerator.generate(
+                    constraints = constraints,
+                    currentMeals = emptyList(),
+                    history = emptyList(),
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = recommendation,
+                    seed = seed,
+                    days = setOf(WeekDay.MONDAY)
+                )
+            }.getOrNull() ?: continue
+            if (!completeCriteria(WeekDay.MONDAY, generated.meals, foodsById, dishesById, recommendation)) continue
+            val candidate = CertifiedDayWitness(
+                level = CertifiedDayLevel.COMPLETE,
+                seed = seed,
+                day = WeekDay.MONDAY,
+                meals = generated.meals,
+                fingerprint = generated.meals.hashCode()
+            )
+            if (isComplete(candidate, rules, foodsById, dishesById, recommendation, mealShares)) return candidate
+        }
+        return null
+    }
+
+    private fun completeCriteria(
+        day: WeekDay,
+        meals: List<es.david.rumbo.model.PlannedMeal>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation
+    ): Boolean {
+        val assessment = MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, recommendation)
+        if (!WeeklyMenuAcceptancePolicy.isDayAcceptable(assessment, meals.mapTo(mutableSetOf()) { it.type })) return false
+        if (assessment.actual.fiberGrams < 25.0) return false
+        fun mealsContaining(category: FoodCategory): Int = meals.count { meal ->
+            val direct = meal.items.any { foodsById[it.foodId]?.category == category }
+            val inDish = meal.dishes.any { plannedDish ->
+                dishesById[plannedDish.dishId]?.ingredients?.any {
+                    foodsById[it.foodId]?.category == category
+                } == true
+            }
+            direct || inDish
+        }
+        return mealsContaining(FoodCategory.VEGETABLE) >= 2 && mealsContaining(FoodCategory.FRUIT) >= 2
+    }
+
 }

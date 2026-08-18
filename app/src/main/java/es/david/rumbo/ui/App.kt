@@ -1774,6 +1774,51 @@ private fun HomeScreen(
     val freshViableWitness = remember(repertoireAssessment) {
         repertoireAssessment?.witness?.let(CertifiedDayWitnessEvaluator::fromMenuWitness)
     }
+    val hasCertifiedViableDay = savedViableWitnessValid ||
+        (freshViableWitness != null && repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE)
+    val savedCompleteWitness = data.activeProfileData?.certifiedDayWitnesses
+        ?.firstOrNull { it.level == CertifiedDayLevel.COMPLETE }
+    val savedCompleteWitnessValid = remember(
+        savedCompleteWitness,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        recommendation != null && savedCompleteWitness != null &&
+            CertifiedDayWitnessEvaluator.isComplete(
+                savedCompleteWitness,
+                data.activeProfileData?.planningRules.orEmpty(),
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares
+            )
+    }
+    val freshCompleteWitness by produceState<CertifiedDayWitness?>(
+        initialValue = null,
+        hasCertifiedViableDay,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares
+    ) {
+        value = if (hasCertifiedViableDay && recommendation != null && !savedCompleteWitnessValid) {
+            withContext(Dispatchers.Default) {
+                CertifiedDayWitnessEvaluator.findCompleteWitness(
+                    data.activeProfileData?.planningRules.orEmpty(),
+                    foodsById,
+                    dishesById,
+                    recommendation,
+                    mealShares
+                )
+            }
+        } else null
+    }
     LaunchedEffect(
         savedViableWitness, savedViableWitnessValid, freshViableWitness,
         repertoireAssessment?.searchStatus
@@ -1786,8 +1831,14 @@ private fun HomeScreen(
             savedViableWitness != null -> onClearCertifiedDayWitness(CertifiedDayLevel.VIABLE)
         }
     }
-    val hasCertifiedViableDay = savedViableWitnessValid ||
-        (freshViableWitness != null && repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE)
+    LaunchedEffect(savedCompleteWitness, savedCompleteWitnessValid, freshCompleteWitness) {
+        when {
+            savedCompleteWitnessValid -> Unit
+            freshCompleteWitness != null -> onSaveCertifiedDayWitness(freshCompleteWitness!!)
+            savedCompleteWitness != null -> onClearCertifiedDayWitness(CertifiedDayLevel.COMPLETE)
+        }
+    }
+    val hasCertifiedCompleteDay = savedCompleteWitnessValid || freshCompleteWitness != null
 
     val menuReady = currentMenuAcceptable || hasCertifiedViableDay ||
         repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
@@ -2028,6 +2079,7 @@ private fun HomeScreen(
                 RepertoireProgressCard(
                     assessment = repertoireAssessment,
                     hasCertifiedViableDay = hasCertifiedViableDay,
+                    hasCertifiedCompleteDay = hasCertifiedCompleteDay,
                     foods = data.foods,
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
@@ -2087,6 +2139,7 @@ private val initialRepertoireRoleMilestones = listOf(
 private fun repertoireProgressTarget(
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
+    hasCertifiedCompleteDay: Boolean,
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>
@@ -2094,6 +2147,12 @@ private fun repertoireProgressTarget(
     if (assessment == null) {
         return 0 to RepertoireProgressTarget("Estamos analizando tus alimentos para encontrar el siguiente paso.")
     }
+    if (hasCertifiedCompleteDay) {
+        return 2 to RepertoireProgressTarget(
+            "Nivel 2 conseguido: Rumbo ha encontrado y guardado un día completo que, además de ser viable, incluye fruta en al menos dos comidas, verdura en al menos dos comidas y 25 g o más de fibra."
+        )
+    }
+
     if (hasCertifiedViableDay || assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
         val missingVegetables = (3 - assessment.vegetableConcepts).coerceAtLeast(0)
         if (missingVegetables > 0) {
@@ -2114,7 +2173,7 @@ private fun repertoireProgressTarget(
             )
         }
         return 1 to RepertoireProgressTarget(
-            "Nivel 1 conseguido: tu repertorio permite crear un menú viable. Ya tienes cubierta la variedad básica de fruta y verdura; los demás criterios del nivel 2 se evaluarán al completar el motor de menú completo."
+            "Sigues en el nivel 1: Rumbo todavía no ha encontrado un único día que reúna a la vez fruta en dos comidas, verdura en dos comidas, al menos 25 g de fibra y todos los requisitos de un menú viable. Añadir más opciones de fruta, verdura y alimentos ricos en fibra aumenta las combinaciones posibles."
         )
     }
 
@@ -2213,16 +2272,17 @@ private fun RepertoireLevelMilestones(currentLevel: Int) {
 private fun RepertoireProgressCard(
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
+    hasCertifiedCompleteDay: Boolean,
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>,
     onOpenSearch: (String?, String?, MealType?) -> Unit
 ) {
     val (level, target) = remember(
-        assessment, hasCertifiedViableDay, foods, repertoireFoodIds, planningRules
+        assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, foods, repertoireFoodIds, planningRules
     ) {
         repertoireProgressTarget(
-            assessment, hasCertifiedViableDay, foods, repertoireFoodIds, planningRules
+            assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, foods, repertoireFoodIds, planningRules
         )
     }
     val title = when (level) {
