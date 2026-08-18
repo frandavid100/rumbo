@@ -10,7 +10,11 @@ for p in files:
     s=p.read_text()
     if 'CulinaryType' in s:
         s=s.replace('import es.david.rumbo.model.CulinaryType\n','import es.david.rumbo.model.legacyCulinaryRoles\n')
-        s=re.sub(r'\.copy\(culinaryType = CulinaryType\.([A-Z_]+)\)', r'.copy(culinaryRoles = legacyCulinaryRoles("\1"))', s)
+        s=re.sub(
+            r'culinaryType\s*=\s*CulinaryType\.([A-Z_]+)',
+            r'culinaryRoles = legacyCulinaryRoles("\1")',
+            s
+        )
         if 'CulinaryType' in s:
             raise SystemExit(f'unmigrated CulinaryType in {p}')
     p.write_text(s)
