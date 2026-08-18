@@ -8,33 +8,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply-search-keyboard:
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/certified-day-witness-level1' && github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/certified-day-witness-level1
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Aplicar navegación de teclado
-        run: |
-          python tools/fix_search_keyboard_all_entries.py
-          git diff --check
-      - name: Guardar cambios
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/es/david/rumbo/ui/App.kt
-          git commit -m "Abrir el buscador sin desplegar el teclado"
-          git pull --rebase origin agent/certified-day-witness-level1
-          git push origin HEAD:agent/certified-day-witness-level1
-
   build:
     runs-on: ubuntu-latest
     steps:
