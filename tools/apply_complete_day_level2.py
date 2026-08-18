@@ -3,7 +3,7 @@ from pathlib import Path
 # 1. Replace CertifiedDayWitnessEvaluator with level-aware evaluator + complete search.
 p = Path('app/src/main/java/es/david/rumbo/logic/CertifiedDayWitnessEvaluator.kt')
 s = p.read_text()
-s = s.replace('import es.david.rumbo.model.Food\n', 'import es.david.rumbo.model.Food\nimport es.david.rumbo.model.FoodCategory\nimport es.david.rumbo.model.WeekDay\nimport es.david.rumbo.model.nutrition\n')
+s = s.replace('import es.david.rumbo.model.Food\n', 'import es.david.rumbo.model.Food\nimport es.david.rumbo.model.FoodCategory\nimport es.david.rumbo.model.WeekDay\n')
 s = s.replace('        if (witness.level != CertifiedDayLevel.VIABLE || !witness.isStructurallyValid()) return false', '        if (!witness.isStructurallyValid()) return false')
 insert = r'''
 
@@ -95,6 +95,8 @@ s = s.replace(
 '''    val freshViableWitness = remember(repertoireAssessment) {
         repertoireAssessment?.witness?.let(CertifiedDayWitnessEvaluator::fromMenuWitness)
     }
+    val hasCertifiedViableDay = savedViableWitnessValid ||
+        (freshViableWitness != null && repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE)
     val savedCompleteWitness = data.activeProfileData?.certifiedDayWitnesses
         ?.firstOrNull { it.level == CertifiedDayLevel.COMPLETE }
     val savedCompleteWitnessValid = remember(
@@ -139,18 +141,7 @@ s = s.replace(
         } else null
     }
 ''')
-# This inserted uses hasCertifiedViableDay before declaration. Move declaration earlier by deriving before block.
-s = s.replace(
-'''    val freshViableWitness = remember(repertoireAssessment) {
-        repertoireAssessment?.witness?.let(CertifiedDayWitnessEvaluator::fromMenuWitness)
-    }
-    val savedCompleteWitness''',
-'''    val freshViableWitness = remember(repertoireAssessment) {
-        repertoireAssessment?.witness?.let(CertifiedDayWitnessEvaluator::fromMenuWitness)
-    }
-    val hasCertifiedViableDay = savedViableWitnessValid ||
-        (freshViableWitness != null && repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE)
-    val savedCompleteWitness''')
+# Remove the old duplicate viable declaration and add complete persistence there.
 s = s.replace(
 '''    val hasCertifiedViableDay = savedViableWitnessValid ||
         (freshViableWitness != null && repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE)
@@ -165,7 +156,7 @@ s = s.replace(
     }
     val hasCertifiedCompleteDay = savedCompleteWitnessValid || freshCompleteWitness != null
 
-    val menuReady''')
+    val menuReady''', 1)
 s = s.replace(
 '''                    assessment = repertoireAssessment,
                     hasCertifiedViableDay = hasCertifiedViableDay,
@@ -173,7 +164,7 @@ s = s.replace(
 '''                    assessment = repertoireAssessment,
                     hasCertifiedViableDay = hasCertifiedViableDay,
                     hasCertifiedCompleteDay = hasCertifiedCompleteDay,
-''')
+''', 1)
 s = s.replace(
 '''private fun RepertoireProgressCard(
     assessment: RepertoireAssessment?,
@@ -183,7 +174,7 @@ s = s.replace(
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
     hasCertifiedCompleteDay: Boolean,
-''')
+''', 1)
 s = s.replace(
 '''        assessment, hasCertifiedViableDay, foods, repertoireFoodIds, planningRules
     ) {
@@ -194,8 +185,7 @@ s = s.replace(
     ) {
         repertoireProgressTarget(
             assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, foods, repertoireFoodIds, planningRules
-''')
-# target signature
+''', 1)
 s = s.replace(
 '''private fun repertoireProgressTarget(
     assessment: RepertoireAssessment?,
@@ -205,9 +195,8 @@ s = s.replace(
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
     hasCertifiedCompleteDay: Boolean,
-''')
-# Insert COMPLETE level before viable branch
-needle = '''    if (hasCertifiedViableDay) {
+''', 1)
+needle = '''    if (hasCertifiedViableDay || assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
 '''
 replacement = '''    if (hasCertifiedCompleteDay) {
         return 2 to RepertoireProgressTarget(
@@ -215,11 +204,10 @@ replacement = '''    if (hasCertifiedCompleteDay) {
         )
     }
 
-    if (hasCertifiedViableDay) {
+    if (hasCertifiedViableDay || assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
 '''
 assert needle in s
 s = s.replace(needle, replacement, 1)
-# Replace provisional terminal message
 old = '''        return 1 to RepertoireProgressTarget(
             "Nivel 1 conseguido: tu repertorio permite crear un menú viable. Ya tienes cubierta la variedad básica de fruta y verdura; los demás criterios del nivel 2 se evaluarán al completar el motor de menú completo."
         )
