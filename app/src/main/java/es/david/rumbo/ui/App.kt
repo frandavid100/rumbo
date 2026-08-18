@@ -319,7 +319,7 @@ fun RumboApp(repository: AppRepository) {
     var catalogRetailerFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogNutritionalRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogCulinaryRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
-    var catalogSearchRequest by rememberSaveable { mutableStateOf(0) }
+    var catalogSearchRequest by remember { mutableIntStateOf(0) }
     var foodNavigationStack by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var selectedFoodRecommendationReason by rememberSaveable { mutableStateOf<String?>(null) }
     var foodRecommendationReasonStack by rememberSaveable {
@@ -748,7 +748,6 @@ fun RumboApp(repository: AppRepository) {
                     requestedSearchNutritionalRole = catalogNutritionalRoleFilter,
                     requestedSearchCulinaryRole = catalogCulinaryRoleFilter,
                     searchOpenRequest = catalogSearchRequest,
-                    onSearchRequestConsumed = { catalogSearchRequest = 0 },
                     onOpenAccount = { screenName = Screen.ACCOUNT.name },
                     onOpenShoppingList = {
                         shoppingCurrentOnly = false
@@ -1536,7 +1535,6 @@ private fun HomeScreen(
     requestedSearchNutritionalRole: String?,
     requestedSearchCulinaryRole: String?,
     searchOpenRequest: Int,
-    onSearchRequestConsumed: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenShoppingList: () -> Unit,
     onOpenCurrentShoppingList: () -> Unit,
@@ -1746,6 +1744,8 @@ private fun HomeScreen(
     var searchRetailer by rememberSaveable { mutableStateOf<String?>(null) }
     var searchNutritionalRole by rememberSaveable { mutableStateOf<String?>(null) }
     var searchCulinaryRole by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
+    val searchMealType = searchMealTypeName?.let { runCatching { MealType.valueOf(it) }.getOrNull() }
     var searchMessage by remember { mutableStateOf<String?>(null) }
     val searchBarState = rememberSearchBarState()
     val searchListState = rememberLazyListState()
@@ -1755,10 +1755,10 @@ private fun HomeScreen(
             searchRetailer = requestedSearchRetailer
             searchNutritionalRole = requestedSearchNutritionalRole
             searchCulinaryRole = requestedSearchCulinaryRole
+            searchMealTypeName = null
             searchTextState.setTextAndPlaceCursorAtEnd("")
             searchListState.scrollToItem(0)
-            searchBarState.animateToExpanded()
-            onSearchRequestConsumed()
+            searchBarState.snapTo(1f)
         }
     }
     val searchScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
@@ -1780,6 +1780,7 @@ private fun HomeScreen(
                 foods = data.foods,
                 dishes = data.dishes,
                 repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                planningRules = data.activeProfileData?.planningRules.orEmpty(),
                 foodSuggestions = pinnedSuggestions,
                 repertoireAssessment = repertoireAssessment,
                 recommendation = recommendation,
@@ -1790,6 +1791,8 @@ private fun HomeScreen(
                 onNutritionalRoleFilterChange = { searchNutritionalRole = it },
                 culinaryRoleFilter = searchCulinaryRole,
                 onCulinaryRoleFilterChange = { searchCulinaryRole = it },
+                mealTypeFilter = searchMealType,
+                onMealTypeFilterChange = { searchMealTypeName = it?.name },
                 scanMessage = searchMessage,
                 onScanMessageChange = { searchMessage = it },
                 state = searchBarState,
@@ -6550,6 +6553,7 @@ private data class CatalogEntry(
 @Composable
 private fun HomeCatalogSearch(
     foods: List<Food>, dishes: List<Dish>, repertoireFoodIds: Set<Long>,
+    planningRules: List<PlanningRule>,
     foodSuggestions: List<FoodSuggestion>,
     repertoireAssessment: RepertoireAssessment?,
     recommendation: Recommendation?,
@@ -6557,6 +6561,7 @@ private fun HomeCatalogSearch(
     retailerFilter: String?, onRetailerFilterChange: (String?) -> Unit,
     nutritionalRoleFilter: String?, onNutritionalRoleFilterChange: (String?) -> Unit,
     culinaryRoleFilter: String?, onCulinaryRoleFilterChange: (String?) -> Unit,
+    mealTypeFilter: MealType?, onMealTypeFilterChange: (MealType?) -> Unit,
     scanMessage: String?, onScanMessageChange: (String?) -> Unit,
     state: SearchBarState,
     listState: LazyListState,
@@ -6601,9 +6606,6 @@ private fun HomeCatalogSearch(
     val suggestionsByFoodId = remember(foodSuggestions) {
         foodSuggestions.associateBy { it.food.id }
     }
-    val topSuggestionIds = remember(foodSuggestions) {
-        foodSuggestions.take(3).mapTo(mutableSetOf()) { it.food.id }
-    }
     val personalizedScores = remember(foods, repertoireAssessment, recommendation) {
         foods.associate { food ->
             food.id to FoodSuggestionEngine.personalizedSearchScore(
@@ -6611,56 +6613,50 @@ private fun HomeCatalogSearch(
             )
         }
     }
+    val activeFoodRules = remember(planningRules) {
+        planningRules.filter {
+            it.itemKind == PlannedItemKind.FOOD && it.isActive &&
+                it.frequency != PlanningFrequency.NEVER
+        }
+    }
+    val hasActiveFilters = retailerFilter != null || nutritionalRoleFilter != null ||
+        culinaryRoleFilter != null || mealTypeFilter != null
     val entries = remember(
-        foods, dishes, normalized, retailerFilter, nutritionalRoleFilter, culinaryRoleFilter,
-        repertoireFoodIds, foodSuggestions, suggestionsByFoodId, topSuggestionIds, personalizedScores
+        foods, normalized, retailerFilter, nutritionalRoleFilter, culinaryRoleFilter,
+        mealTypeFilter, repertoireFoodIds, activeFoodRules, personalizedScores
     ) {
-        buildList {
-            foods.forEach { food ->
-                val searchText = normalizeSearch(
-                    listOfNotNull(food.name, food.brand, food.barcode, food.retailer).joinToString(" ")
-                )
-                val suggested = food.id in topSuggestionIds
-                val matchesFilters =
-                    (retailerFilter == null || retailerFilter in food.retailerValues()) &&
-                    (nutritionalRoleFilter == null || nutritionalRoleFilter in food.nutritionalRoles) &&
-                    (culinaryRoleFilter == null || culinaryRoleFilter in food.culinaryRoles)
-                if (matchesFilters &&
-                    (normalized.isBlank() && (suggested || food.id in repertoireFoodIds) ||
-                        normalized.isNotBlank() && matchesSearch(searchText, normalized))) {
-                    add(CatalogEntry(food.id, food.name, false))
+        foods.asSequence().filter { food ->
+            val isMine = food.id in repertoireFoodIds
+            val searchText = normalizeSearch(
+                listOfNotNull(
+                    food.name, food.brand, food.family, food.subcategory,
+                    food.barcode, food.retailer
+                ).joinToString(" ")
+            )
+            val matchesText = normalized.isBlank() || matchesSearch(searchText, normalized)
+            val matchesMeal = when {
+                mealTypeFilter == null -> true
+                isMine -> activeFoodRules.any { rule ->
+                    rule.itemId == food.id &&
+                        (mealTypeFilter in rule.allowedMealTypes ||
+                            rule.requiredSlots().any { it.mealType == mealTypeFilter })
                 }
+                else -> CulinaryPolicy.isSuggestedForMeal(food, mealTypeFilter)
             }
-            if (retailerFilter == null && nutritionalRoleFilter == null && culinaryRoleFilter == null) {
-                dishes.forEach { dish ->
-                    val favorite = dish.ingredients.any { it.foodId in repertoireFoodIds }
-                    if (normalized.isBlank() && favorite ||
-                        normalized.isNotBlank() && matchesSearch(normalizeSearch(dish.name), normalized)) {
-                        add(CatalogEntry(dish.id, dish.name, true))
-                    }
-                }
-            }
-        }.sortedWith(
-            if (normalized.isBlank()) {
-                compareBy<CatalogEntry> {
-                    if (it.isDish) Int.MAX_VALUE
-                    else foodSuggestions.indexOfFirst { suggestion -> suggestion.food.id == it.id }
-                        .takeIf { index -> index >= 0 } ?: Int.MAX_VALUE
-                }.thenByDescending {
-                    if (it.isDish) Double.NEGATIVE_INFINITY
-                    else suggestionsByFoodId[it.id]?.score ?: Double.NEGATIVE_INFINITY
-                }.thenBy { it.name.lowercase() }
-            } else {
-                compareBy<CatalogEntry> { searchMatchRank(it.name, normalized) }
-                    .thenByDescending {
-                        if (it.isDish) Double.NEGATIVE_INFINITY
-                        else personalizedScores[it.id] ?: Double.NEGATIVE_INFINITY
-                    }.thenByDescending {
-                        if (it.isDish) Double.NEGATIVE_INFINITY
-                        else suggestionsByFoodId[it.id]?.score ?: Double.NEGATIVE_INFINITY
-                    }.thenBy { it.name.lowercase() }
-            }
-        )
+            val matchesFilters =
+                (retailerFilter == null || retailerFilter in food.retailerValues()) &&
+                (nutritionalRoleFilter == null || nutritionalRoleFilter in food.nutritionalRoles) &&
+                (culinaryRoleFilter == null || culinaryRoleFilter in food.culinaryRoles) &&
+                matchesMeal
+            val visibleByMode = if (normalized.isBlank() && !hasActiveFilters) isMine else true
+            visibleByMode && matchesText && matchesFilters
+        }.map { CatalogEntry(it.id, it.name, false) }
+            .sortedWith(
+                compareBy<CatalogEntry> { it.id !in repertoireFoodIds }
+                    .thenBy { if (normalized.isBlank()) 0 else searchMatchRank(it.name, normalized) }
+                    .thenByDescending { personalizedScores[it.id] ?: Double.NEGATIVE_INFINITY }
+                    .thenBy { it.name.lowercase() }
+            ).toList()
     }
 
     val leaveForDetail = {
@@ -6778,7 +6774,7 @@ private fun HomeCatalogSearch(
                 dishes = dishes,
                 repertoireFoodIds = repertoireFoodIds,
                 foodSuggestions = suggestionsByFoodId,
-                mode = if (query.isBlank()) CatalogMode.REPERTOIRE else CatalogMode.SEARCH,
+                mode = CatalogMode.SEARCH,
                 normalizedQuery = normalized,
                 onOpenFood = { id -> leaveForDetail(); onOpenFood(id) },
                 onOpenDish = { id -> leaveForDetail(); onOpenDish(id) },
@@ -6793,9 +6789,10 @@ private fun HomeCatalogSearch(
                         CatalogCanonicalFilterRow(
                             retailerFilter, onRetailerFilterChange, retailerOptions,
                             nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
-                            culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions
+                            culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions,
+                            mealTypeFilter, onMealTypeFilterChange
                         )
-                        if (query.isBlank()) {
+                        if (query.isBlank() && !hasActiveFilters) {
                             Text(
                                 "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
                                 Modifier.padding(vertical = 12.dp),
@@ -6816,7 +6813,8 @@ private fun HomeCatalogSearch(
 private fun CatalogCanonicalFilterRow(
     retailer: String?, onRetailerChange: (String?) -> Unit, retailerOptions: List<String>,
     nutritionalRole: String?, onNutritionalRoleChange: (String?) -> Unit, nutritionalRoleOptions: List<String>,
-    culinaryRole: String?, onCulinaryRoleChange: (String?) -> Unit, culinaryRoleOptions: List<String>
+    culinaryRole: String?, onCulinaryRoleChange: (String?) -> Unit, culinaryRoleOptions: List<String>,
+    mealType: MealType?, onMealTypeChange: (MealType?) -> Unit
 ) {
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -6834,6 +6832,38 @@ private fun CatalogCanonicalFilterRow(
             title = "Rol culinario", selected = culinaryRole, options = culinaryRoleOptions,
             label = ::culinaryRoleLabel, onChange = onCulinaryRoleChange
         )
+        CatalogMealTypeFilterMenu(mealType, onMealTypeChange)
+        Spacer(Modifier.width(16.dp))
+    }
+}
+
+@Composable
+private fun CatalogMealTypeFilterMenu(
+    selected: MealType?,
+    onChange: (MealType?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = selected != null,
+            onClick = { expanded = true },
+            label = { Text(selected?.label ?: "Comidas") },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                leadingIcon = { if (selected == null) Icon(Icons.Default.Check, contentDescription = null) },
+                text = { Text("Todas") },
+                onClick = { onChange(null); expanded = false }
+            )
+            MealType.entries.forEach { option ->
+                DropdownMenuItem(
+                    leadingIcon = { if (selected == option) Icon(Icons.Default.Check, contentDescription = null) },
+                    text = { Text(option.label) },
+                    onClick = { onChange(option); expanded = false }
+                )
+            }
+        }
     }
 }
 
@@ -6898,15 +6928,14 @@ private fun CatalogEntries(
     ) {
         if (header != null) item { header() }
         items(entries, key = { "${if (it.isDish) "dish" else "food"}_${it.id}" }) { entry ->
-            if (compactPresentation && normalizedQuery.isBlank()) {
+            if (compactPresentation) {
                 val entryIndex = entries.indexOf(entry)
                 val previous = entries.getOrNull(entryIndex - 1)
-                val isRecommended = !entry.isDish && entry.id in foodSuggestions
-                val previousWasRecommended = previous != null && !previous.isDish &&
-                    previous.id in foodSuggestions
+                val isMine = !entry.isDish && entry.id in repertoireFoodIds
+                val previousWasMine = previous != null && !previous.isDish && previous.id in repertoireFoodIds
                 val sectionTitle = when {
-                    isRecommended && !previousWasRecommended -> "Recomendados"
-                    !isRecommended && (previous == null || previousWasRecommended) -> "Tu repertorio"
+                    isMine && !previousWasMine -> "Mis alimentos"
+                    !isMine && (previous == null || previousWasMine) -> "Otros alimentos"
                     else -> null
                 }
                 sectionTitle?.let {
@@ -6992,15 +7021,7 @@ private fun CatalogEntries(
             if (entry != entries.lastOrNull()) HorizontalDivider()
         }
 
-        if (mode == CatalogMode.SEARCH && normalizedQuery.isBlank()) {
-            item {
-                Text(
-                    "Escribe el nombre de un alimento o plato, o escanea su código de barras.",
-                    modifier = Modifier.padding(vertical = 24.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else if (entries.isEmpty()) {
+        if (entries.isEmpty()) {
             item {
                 Text(
                     if (mode == CatalogMode.REPERTOIRE && repertoireFoodIds.isEmpty()) {
@@ -8179,6 +8200,7 @@ private fun CatalogAttributeChipRow(
                     label = { Text(label(value)) }
                 )
             }
+            Spacer(Modifier.width(16.dp))
         }
     }
 }

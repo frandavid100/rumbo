@@ -2,6 +2,7 @@ package es.david.rumbo.logic
 
 import es.david.rumbo.model.CulinaryPolicyOverride
 import es.david.rumbo.model.Food
+import es.david.rumbo.model.MealType
 import es.david.rumbo.model.PlanningRule
 
 enum class CulinaryRole(val label: String) {
@@ -32,7 +33,8 @@ data class CulinaryRolePolicy(
     val maximumGrams: Double? = null,
     val standaloneAllowed: Boolean = true,
     val requiredRoles: Set<CulinaryRole> = emptySet(),
-    val maxPerMeal: Int? = null
+    val maxPerMeal: Int? = null,
+    val suggestedMealTypes: Set<MealType> = MealType.entries.toSet()
 )
 
 /** Canonical culinary policy. Products only store the functional roles they can perform. */
@@ -71,6 +73,28 @@ object CulinaryPolicy {
         CulinaryRole.DESSERT to CulinaryRolePolicy(125.0, 40.0, 250.0)
     )
 
+    private val suggestedMealsByRole: Map<CulinaryRole, Set<MealType>> = mapOf(
+        CulinaryRole.CEREAL_BASE to setOf(MealType.BREAKFAST),
+        CulinaryRole.CEREAL_MIX_IN to setOf(MealType.BREAKFAST),
+        CulinaryRole.POWDER_BASE to setOf(MealType.BREAKFAST, MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK),
+        CulinaryRole.POWDER_MIX_IN to setOf(MealType.BREAKFAST, MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK),
+        CulinaryRole.SANDWICH_BASE to setOf(MealType.BREAKFAST, MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK),
+        CulinaryRole.SANDWICH_FILLING to setOf(MealType.BREAKFAST, MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK),
+        CulinaryRole.SPREAD to setOf(MealType.BREAKFAST, MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK),
+        CulinaryRole.BEVERAGE to setOf(MealType.BREAKFAST, MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK),
+        CulinaryRole.DESSERT to MealType.entries.toSet(),
+        CulinaryRole.STANDALONE to MealType.entries.toSet(),
+        CulinaryRole.PLATE_CENTER to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.PLATE_BASE to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.SIDE to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.TOPPING to MealType.entries.toSet(),
+        CulinaryRole.SAUCE_DRESSING to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.COOKING_MEDIUM to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.BINDER to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.COATING to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.SEASONING to setOf(MealType.LUNCH, MealType.DINNER)
+    )
+
     @Volatile private var profileOverrides: Map<CulinaryRole, CulinaryRolePolicy> = emptyMap()
 
     fun configure(overrides: List<CulinaryPolicyOverride>) {
@@ -86,8 +110,12 @@ object CulinaryPolicy {
         }.toMap()
     }
 
-    fun defaultPolicy(role: CulinaryRole): CulinaryRolePolicy = policies.getValue(role)
-    fun policy(role: CulinaryRole): CulinaryRolePolicy = profileOverrides[role] ?: defaultPolicy(role)
+    fun defaultPolicy(role: CulinaryRole): CulinaryRolePolicy = policies.getValue(role).copy(
+        suggestedMealTypes = suggestedMealsByRole[role] ?: MealType.entries.toSet()
+    )
+    fun policy(role: CulinaryRole): CulinaryRolePolicy = profileOverrides[role]
+        ?.copy(suggestedMealTypes = suggestedMealsByRole[role] ?: MealType.entries.toSet())
+        ?: defaultPolicy(role)
     fun parseRole(name: String): CulinaryRole? = CulinaryRole.entries.firstOrNull { it.name == name }
 
     fun roles(food: Food): Set<CulinaryRole> = food.culinaryRoles.mapNotNullTo(linkedSetOf(), ::parseRole)
@@ -120,6 +148,9 @@ object CulinaryPolicy {
 
     fun addresses(need: CulinaryNeed, food: Food): Boolean =
         roles(food).any { it in need.acceptedRoles }
+
+    fun isSuggestedForMeal(food: Food, mealType: MealType): Boolean =
+        roles(food).any { role -> mealType in policy(role).suggestedMealTypes }
 
     /**
      * True when one role can be chosen for every role-aware item so all hard rules hold.
