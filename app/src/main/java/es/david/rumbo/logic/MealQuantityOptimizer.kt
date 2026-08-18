@@ -4,6 +4,7 @@ import es.david.rumbo.model.Dish
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.MealDayAmounts
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.NutritionTotals
 import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.Recommendation
@@ -102,7 +103,12 @@ object MealQuantityOptimizer {
                     )
                     fun combinedScore(amount: Double): Double =
                         score(withoutCurrent + variable.perGram * amount, target) +
-                            score(mealWithoutCurrent + variable.perGram * amount, mealTarget) * 2.0
+                            mealPreferenceScore(
+                                mealWithoutCurrent + variable.perGram * amount,
+                                mealTarget
+                            ) +
+                            portionConsistencyScore(amount, variable) +
+                            mealPortionLoadScore(index, amount, variables, amounts)
 
                     var low = variable.minimum
                     var high = variable.maximum
@@ -252,15 +258,59 @@ object MealQuantityOptimizer {
 
     private fun score(actual: Vector, target: NutritionTarget): Double {
         val penalties = listOf(
-            NutritionTolerancePolicy.evaluate(NutrientKind.CALORIES, actual.calories, target.calories).penalty,
-            NutritionTolerancePolicy.evaluate(NutrientKind.PROTEIN, actual.protein, target.proteinGrams).penalty,
-            NutritionTolerancePolicy.evaluate(
+            NutritionTolerancePolicy.optimizationPenalty(
+                NutrientKind.CALORIES, actual.calories, target.calories
+            ),
+            NutritionTolerancePolicy.optimizationPenalty(
+                NutrientKind.PROTEIN, actual.protein, target.proteinGrams
+            ),
+            NutritionTolerancePolicy.optimizationPenalty(
                 NutrientKind.CARBOHYDRATES, actual.carbohydrates, target.carbohydrateGrams
-            ).penalty,
-            NutritionTolerancePolicy.evaluate(NutrientKind.FAT, actual.fat, target.fatGrams).penalty
+            ),
+            NutritionTolerancePolicy.optimizationPenalty(
+                NutrientKind.FAT, actual.fat, target.fatGrams
+            )
         )
         val weightedTotal = penalties[0] * 1.25 + penalties[1] * 1.15 + penalties[2] + penalties[3]
         return penalties.maxOrNull()!! * 1_000.0 + weightedTotal
+    }
+
+    private fun mealPreferenceScore(actual: Vector, target: NutritionTarget): Double {
+        fun squaredRatio(value: Double, expected: Double): Double {
+            if (expected <= 0.0) return 0.0
+            val difference = (value - expected) / expected
+            return difference * difference
+        }
+        val proteinDeficit = if (actual.protein < target.proteinGrams) {
+            squaredRatio(actual.protein, target.proteinGrams)
+        } else 0.0
+        return squaredRatio(actual.calories, target.calories) * 2.0 +
+            proteinDeficit * 0.35
+    }
+
+    /** Soft regularisation only: nutrition may override it whenever needed. */
+    private fun portionConsistencyScore(amount: Double, variable: Variable): Double {
+        val usefulRange = (variable.maximum - variable.minimum).coerceAtLeast(1.0)
+        val deviation = (amount - variable.initial) / usefulRange
+        return deviation * deviation * 0.60
+    }
+
+    /** Uses portions relative to their habitual amount instead of raw grams,
+     * so water-rich foods are not treated as a disproportionately large meal. */
+    private fun mealPortionLoadScore(
+        candidateIndex: Int,
+        candidateAmount: Double,
+        variables: List<Variable>,
+        amounts: List<Double>
+    ): Double {
+        val mealId = variables[candidateIndex].mealId
+        val indices = variables.indices.filter { variables[it].mealId == mealId }
+        if (indices.isEmpty()) return 0.0
+        val averageLoad = indices.map { index ->
+            val amount = if (index == candidateIndex) candidateAmount else amounts[index]
+            amount / variables[index].initial.coerceAtLeast(1.0)
+        }.average()
+        return (averageLoad - 1.0).let { it * it } * 0.35
     }
 
     private fun NutritionTotals.toVector() = Vector(
@@ -287,12 +337,6 @@ object MealQuantityOptimizer {
         carbohydrates * factor,
         fat * factor
     )
-    private val defaultMealShares = mapOf(
-        MealType.BREAKFAST to 0.25,
-        MealType.MORNING_SNACK to 0.10,
-        MealType.LUNCH to 0.35,
-        MealType.AFTERNOON_SNACK to 0.10,
-        MealType.DINNER to 0.20
-    )
+    private val defaultMealShares = MealDistributionPolicy.defaults
 
 }
