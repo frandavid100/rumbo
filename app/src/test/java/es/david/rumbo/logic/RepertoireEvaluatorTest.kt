@@ -1,7 +1,7 @@
 package es.david.rumbo.logic
 
 import es.david.rumbo.model.Food
-import es.david.rumbo.model.CulinaryType
+import es.david.rumbo.model.legacyCulinaryRoles
 import es.david.rumbo.model.DefaultFoodCatalog
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
@@ -168,7 +168,7 @@ class RepertoireEvaluatorTest {
         val powder = food(
             20, "Proteína en polvo", FoodCategory.PROTEIN,
             358.0, 83.0, 2.0, 2.0
-        ).copy(culinaryType = CulinaryType.PROTEIN_POWDER)
+        ).copy(culinaryRoles = legacyCulinaryRoles("PROTEIN_POWDER"))
         val result = RepertoireEvaluator.evaluate(
             rules = listOf(rule(powder.id).copy(
                 allowedMealTypes = setOf(MealType.BREAKFAST),
@@ -194,23 +194,23 @@ class RepertoireEvaluatorTest {
         )
         val importedFoods = listOf(
             food(108480000229663, "Corn flakes", FoodCategory.CARBOHYDRATE, 373.0, 6.7, 82.0, 1.1)
-                .copy(culinaryType = CulinaryType.BREAKFAST_CEREAL),
+                .copy(culinaryRoles = legacyCulinaryRoles("BREAKFAST_CEREAL")),
             food(108480000822277, "Pan rallado", FoodCategory.CARBOHYDRATE, 336.0, 8.7, 71.3, 1.7)
-                .copy(culinaryType = CulinaryType.COOKING_INGREDIENT),
+                .copy(culinaryRoles = legacyCulinaryRoles("COOKING_INGREDIENT")),
             food(108480000159533, "Barquillo", FoodCategory.CARBOHYDRATE, 390.0, 11.0, 79.0, 2.6)
-                .copy(culinaryType = CulinaryType.SNACK_DESSERT),
+                .copy(culinaryRoles = legacyCulinaryRoles("SNACK_DESSERT")),
             food(108480000063441, "Hélices", FoodCategory.CARBOHYDRATE, 359.0, 12.0, 74.0, 1.7)
-                .copy(culinaryType = CulinaryType.DRY_PASTA),
+                .copy(culinaryRoles = legacyCulinaryRoles("DRY_PASTA")),
             food(108480000242747, "Sepia", FoodCategory.PROTEIN, 78.0, 18.0, .8, .5)
-                .copy(culinaryType = CulinaryType.MAIN_FISH),
+                .copy(culinaryRoles = legacyCulinaryRoles("MAIN_FISH")),
             food(108480000062505, "Macarrones", FoodCategory.CARBOHYDRATE, 366.0, 12.0, 74.0, 1.5)
-                .copy(culinaryType = CulinaryType.DRY_PASTA),
+                .copy(culinaryRoles = legacyCulinaryRoles("DRY_PASTA")),
             food(108480000621283, "Merluza", FoodCategory.PROTEIN, 82.0, 18.0, .5, 1.2)
-                .copy(culinaryType = CulinaryType.MAIN_FISH),
+                .copy(culinaryRoles = legacyCulinaryRoles("MAIN_FISH")),
             food(108480000168764, "Membrillo", FoodCategory.CARBOHYDRATE, 142.0, .25, 41.0, .25)
-                .copy(culinaryType = CulinaryType.SNACK_DESSERT),
+                .copy(culinaryRoles = legacyCulinaryRoles("SNACK_DESSERT")),
             food(108480000167576, "Mazorca encurtida", FoodCategory.VEGETABLE, 33.0, 1.1, 4.8, .5)
-                .copy(culinaryType = CulinaryType.VEGETABLE, category = FoodCategory.FRUIT)
+                .copy(culinaryRoles = legacyCulinaryRoles("VEGETABLE"), category = FoodCategory.FRUIT)
         )
         val foods = (DefaultFoodCatalog.items.filter { it.id in ids } + importedFoods)
             .map { food ->

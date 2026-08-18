@@ -2,7 +2,7 @@ package es.david.rumbo.logic
 
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
-import es.david.rumbo.model.CulinaryType
+import es.david.rumbo.model.legacyCulinaryRoles
 import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
 import es.david.rumbo.model.MealType
@@ -297,10 +297,10 @@ class WeeklyMenuGeneratorTest {
     @Test
     fun aMealNeverContainsSeveralStandaloneStarchBases() {
         val culinaryFoods = listOf(
-            food(10, "Filetes de pechuga de pavo", 110.0, 24.0, 0.0, 1.0, CulinaryType.MAIN_MEAT),
-            food(11, "Arroz basmati Hacendado", 350.0, 7.0, 78.0, 1.0, CulinaryType.DRY_RICE),
-            food(12, "Hacendado hélices vegetales", 350.0, 12.0, 72.0, 2.0, CulinaryType.DRY_PASTA),
-            food(13, "Hacendado macarrón", 350.0, 12.0, 72.0, 2.0, CulinaryType.DRY_PASTA)
+            food(10, "Filetes de pechuga de pavo", 110.0, 24.0, 0.0, 1.0, "MAIN_MEAT"),
+            food(11, "Arroz basmati Hacendado", 350.0, 7.0, 78.0, 1.0, "DRY_RICE"),
+            food(12, "Hacendado hélices vegetales", 350.0, 12.0, 72.0, 2.0, "DRY_PASTA"),
+            food(13, "Hacendado macarrón", 350.0, 12.0, 72.0, 2.0, "DRY_PASTA")
         )
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
@@ -315,7 +315,7 @@ class WeeklyMenuGeneratorTest {
 
         result.meals.forEach { meal ->
             val starches = meal.items.count { item ->
-                CulinaryRole.STARCH_BASE in CulinaryPolicy.roles(
+                CulinaryRole.PLATE_BASE in CulinaryPolicy.roles(
                     culinaryFoods.single { it.id == item.foodId }
                 )
             }
@@ -325,8 +325,8 @@ class WeeklyMenuGeneratorTest {
 
     @Test
     fun proteinPowderAlwaysBringsAnAvailableLiquidOrCreamyBase() {
-        val powder = food(20, "Polvo de proteínas Natural Isolate", 358.0, 83.0, 2.0, 2.0, CulinaryType.PROTEIN_POWDER)
-        val milk = food(21, "Leche semidesnatada", 46.0, 3.2, 4.8, 1.6, CulinaryType.MILK_BASE)
+        val powder = food(20, "Polvo de proteínas Natural Isolate", 358.0, 83.0, 2.0, 2.0, "PROTEIN_POWDER")
+        val milk = food(21, "Leche semidesnatada", 46.0, 3.2, 4.8, 1.6, "MILK_BASE")
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
@@ -353,8 +353,8 @@ class WeeklyMenuGeneratorTest {
 
     @Test
     fun proteinPowderCannotBeGeneratedWithoutACompatibleBase() {
-        val powder = food(30, "Proteína en polvo whey", 358.0, 83.0, 2.0, 2.0, CulinaryType.PROTEIN_POWDER)
-        val cereal = food(31, "Corn flakes integrales", 380.0, 8.0, 80.0, 2.0, CulinaryType.BREAKFAST_CEREAL)
+        val powder = food(30, "Proteína en polvo whey", 358.0, 83.0, 2.0, 2.0, "PROTEIN_POWDER")
+        val cereal = food(31, "Corn flakes integrales", 380.0, 8.0, 80.0, 2.0, "BREAKFAST_CEREAL")
 
         assertThrows(PlanningConflictException::class.java) {
             WeeklyMenuGenerator.generate(
@@ -380,10 +380,10 @@ class WeeklyMenuGeneratorTest {
 
     @Test
     fun aMealUsesOneStandalonePrimaryProteinAndCulinaryOilPortions() {
-        val chicken = food(40, "Pechuga de pollo", 108.0, 22.0, 1.0, 2.0, CulinaryType.MAIN_MEAT)
-        val fish = food(41, "Lubina", 90.0, 18.0, 0.0, 2.0, CulinaryType.MAIN_FISH)
-        val rice = food(42, "Arroz basmati", 353.0, 9.0, 78.0, 1.0, CulinaryType.DRY_RICE)
-        val oil = food(43, "AOVE", 819.0, 0.0, 0.0, 91.0, CulinaryType.CULINARY_OIL)
+        val chicken = food(40, "Pechuga de pollo", 108.0, 22.0, 1.0, 2.0, "MAIN_MEAT")
+        val fish = food(41, "Lubina", 90.0, 18.0, 0.0, 2.0, "MAIN_FISH")
+        val rice = food(42, "Arroz basmati", 353.0, 9.0, 78.0, 1.0, "DRY_RICE")
+        val oil = food(43, "AOVE", 819.0, 0.0, 0.0, 91.0, "CULINARY_OIL")
         val catalog = listOf(chicken, fish, rice, oil)
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
@@ -413,9 +413,9 @@ class WeeklyMenuGeneratorTest {
     fun cookingIngredientCannotAppearAsAStandaloneFood() {
         val breadcrumbs = food(
             50, "Pan rallado", 336.0, 8.7, 71.3, 1.7,
-            CulinaryType.COOKING_INGREDIENT
+            "COOKING_INGREDIENT"
         )
-        val rice = food(51, "Arroz", 353.0, 9.0, 78.0, 1.0, CulinaryType.DRY_RICE)
+        val rice = food(51, "Arroz", 353.0, 9.0, 78.0, 1.0, "DRY_RICE")
         val result = WeeklyMenuGenerator.generate(
             currentMeals = emptyList(),
             rules = listOf(
@@ -438,21 +438,21 @@ class WeeklyMenuGeneratorTest {
     @Test
     fun culinaryAndQuantityInvariantsHoldAcrossGoalsAndSeeds() {
         val catalog = listOf(
-            food(101, "Proteína en polvo", 358.0, 83.0, 2.0, 2.0, CulinaryType.PROTEIN_POWDER),
-            food(102, "Leche", 46.0, 3.1, 4.8, 1.6, CulinaryType.MILK_BASE),
-            food(103, "Cereales", 373.0, 6.7, 82.0, 1.1, CulinaryType.BREAKFAST_CEREAL),
-            food(104, "Pavo loncheado", 90.0, 19.5, .1, 1.3, CulinaryType.MAIN_MEAT),
-            food(105, "Barquillo", 390.0, 11.0, 79.0, 2.6, CulinaryType.SNACK_DESSERT),
-            food(106, "Pollo", 108.0, 22.3, .9, 1.7, CulinaryType.MAIN_MEAT),
-            food(107, "Pavo", 104.0, 24.0, 0.0, .9, CulinaryType.MAIN_MEAT),
-            food(108, "Merluza", 82.0, 18.0, .5, 1.2, CulinaryType.MAIN_FISH),
-            food(109, "Lubina", 90.0, 18.0, 0.0, 2.0, CulinaryType.MAIN_FISH),
-            food(110, "Arroz", 353.0, 9.0, 78.0, .6, CulinaryType.DRY_RICE),
-            food(111, "Pasta", 359.0, 12.0, 74.0, 1.7, CulinaryType.DRY_PASTA),
-            food(112, "Batata", 155.0, 1.6, 26.0, 5.0, CulinaryType.FRESH_STARCH),
-            food(113, "AOVE", 819.0, 0.0, 0.0, 91.0, CulinaryType.CULINARY_OIL),
-            food(114, "Nueces", 703.0, 17.0, 2.2, 69.6, CulinaryType.FAT_COMPLEMENT),
-            food(115, "Verdura", 30.0, 1.5, 4.0, .3, CulinaryType.VEGETABLE)
+            food(101, "Proteína en polvo", 358.0, 83.0, 2.0, 2.0, "PROTEIN_POWDER"),
+            food(102, "Leche", 46.0, 3.1, 4.8, 1.6, "MILK_BASE"),
+            food(103, "Cereales", 373.0, 6.7, 82.0, 1.1, "BREAKFAST_CEREAL"),
+            food(104, "Pavo loncheado", 90.0, 19.5, .1, 1.3, "MAIN_MEAT"),
+            food(105, "Barquillo", 390.0, 11.0, 79.0, 2.6, "SNACK_DESSERT"),
+            food(106, "Pollo", 108.0, 22.3, .9, 1.7, "MAIN_MEAT"),
+            food(107, "Pavo", 104.0, 24.0, 0.0, .9, "MAIN_MEAT"),
+            food(108, "Merluza", 82.0, 18.0, .5, 1.2, "MAIN_FISH"),
+            food(109, "Lubina", 90.0, 18.0, 0.0, 2.0, "MAIN_FISH"),
+            food(110, "Arroz", 353.0, 9.0, 78.0, .6, "DRY_RICE"),
+            food(111, "Pasta", 359.0, 12.0, 74.0, 1.7, "DRY_PASTA"),
+            food(112, "Batata", 155.0, 1.6, 26.0, 5.0, "FRESH_STARCH"),
+            food(113, "AOVE", 819.0, 0.0, 0.0, 91.0, "CULINARY_OIL"),
+            food(114, "Nueces", 703.0, 17.0, 2.2, 69.6, "FAT_COMPLEMENT"),
+            food(115, "Verdura", 30.0, 1.5, 4.0, .3, "VEGETABLE")
         )
         val rules = listOf(
             rule(101, setOf(MealType.BREAKFAST)).copy(frequency = PlanningFrequency.ALWAYS),
@@ -507,9 +507,9 @@ class WeeklyMenuGeneratorTest {
     fun anAcceptableVariedWeekIsNotReplacedByOneRepeatedOptimalDay() {
         // MAIN_MEAT/MAIN_FISH use a culinary portion of 150 g. Each option
         // therefore reaches the same complete daily target at that portion.
-        val chicken = food(201, "Pollo", 433.333, 36.667, 60.0, 4.667, CulinaryType.MAIN_MEAT)
-        val turkey = food(202, "Pavo", 433.333, 36.667, 60.0, 4.667, CulinaryType.MAIN_MEAT)
-        val hake = food(203, "Merluza", 433.333, 36.667, 60.0, 4.667, CulinaryType.MAIN_FISH)
+        val chicken = food(201, "Pollo", 433.333, 36.667, 60.0, 4.667, "MAIN_MEAT")
+        val turkey = food(202, "Pavo", 433.333, 36.667, 60.0, 4.667, "MAIN_MEAT")
+        val hake = food(203, "Merluza", 433.333, 36.667, 60.0, 4.667, "MAIN_FISH")
         val catalog = listOf(chicken, turkey, hake)
         val repeatedIncumbent = WeekDay.entries.map { day ->
             PlannedMeal(
@@ -562,7 +562,7 @@ class WeeklyMenuGeneratorTest {
         protein: Double,
         carbs: Double,
         fat: Double,
-        culinaryType: CulinaryType = CulinaryType.UNKNOWN
+        legacyTypeName: String? = null
     ) = Food(
         id = id,
         name = name,
@@ -572,6 +572,6 @@ class WeeklyMenuGeneratorTest {
         carbohydrateGrams = carbs,
         proteinGrams = protein,
         fiberGrams = 1.0,
-        culinaryType = culinaryType
+        culinaryRoles = legacyCulinaryRoles(legacyTypeName)
     )
 }

@@ -1,6 +1,6 @@
 package es.david.rumbo.logic
 
-import es.david.rumbo.model.CulinaryType
+import es.david.rumbo.model.legacyCulinaryRoles
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
@@ -46,7 +46,7 @@ class MenuConstraintContractTest {
     fun mandatoryPowderWithoutAnyCompatibleBaseIsProvenInsufficient() {
         val powder = food(
             2, "Proteína en polvo", FoodCategory.PROTEIN, 360.0, 83.0, 2.0, 2.0
-        ).copy(culinaryType = CulinaryType.PROTEIN_POWDER)
+        ).copy(culinaryRoles = legacyCulinaryRoles("PROTEIN_POWDER"))
         val breakfastOnly = MealType.entries.associateWith {
             if (it == MealType.BREAKFAST) 1.0 else 0.0
         }
@@ -74,10 +74,10 @@ class MenuConstraintContractTest {
     fun mandatoryDependentFoodIsNotProvenInsufficientWhenCompatibleBaseExists() {
         val powder = food(
             3, "Proteína en polvo", FoodCategory.PROTEIN, 360.0, 83.0, 2.0, 2.0
-        ).copy(culinaryType = CulinaryType.PROTEIN_POWDER)
+        ).copy(culinaryRoles = legacyCulinaryRoles("PROTEIN_POWDER"))
         val milk = food(
             4, "Leche", FoodCategory.PROTEIN, 60.0, 3.2, 4.8, 3.2
-        ).copy(culinaryType = CulinaryType.MILK_BASE)
+        ).copy(culinaryRoles = legacyCulinaryRoles("MILK_BASE"))
         val breakfastOnly = MealType.entries.associateWith {
             if (it == MealType.BREAKFAST) 1.0 else 0.0
         }
