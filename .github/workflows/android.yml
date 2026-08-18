@@ -16,14 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && github.ref_name || github.sha }}
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
       - uses: actions/setup-python@v5
-        if: github.event_name == 'push' && github.ref_name == 'agent/certified-day-witness-level1' && github.actor != 'github-actions[bot]'
+        if: github.actor != 'github-actions[bot]' && (github.head_ref == 'agent/certified-day-witness-level1' || github.ref_name == 'agent/certified-day-witness-level1')
         with:
           python-version: '3.12'
       - name: Aplicar corrección nivel 2
-        if: github.event_name == 'push' && github.ref_name == 'agent/certified-day-witness-level1' && github.actor != 'github-actions[bot]'
+        if: github.actor != 'github-actions[bot]' && (github.head_ref == 'agent/certified-day-witness-level1' || github.ref_name == 'agent/certified-day-witness-level1')
         run: |
           python tools/fix_level2_no_regression_and_surface_hierarchy.py
           git diff --check
