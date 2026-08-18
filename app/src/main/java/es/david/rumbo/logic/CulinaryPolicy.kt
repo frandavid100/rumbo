@@ -123,23 +123,27 @@ object CulinaryPolicy {
     private fun portionRole(rule: PlanningRule, food: Food): CulinaryRole? {
         val available = roles(food)
         if (available.isEmpty()) return null
-        val contextual = available.filterTo(linkedSetOf()) { role ->
-            rule.allowedMealTypes.isEmpty() || rule.allowedMealTypes.any { mealType ->
-                mealType in policy(role).suggestedMealTypes
-            }
-        }.ifEmpty { available }
-        return contextual.minByOrNull { role ->
+
+        // A SIDE+TOPPING product used at lunch/dinner is normally functioning as
+        // an accompaniment, not as a garnish. Keep every other multi-role choice
+        // on the historic priority for now so this fix does not change unrelated
+        // repertoire behaviour while explicit per-occurrence role assignment is built.
+        if (
+            CulinaryRole.SIDE in available &&
+            CulinaryRole.TOPPING in available &&
+            rule.allowedMealTypes.any { it == MealType.LUNCH || it == MealType.DINNER }
+        ) return CulinaryRole.SIDE
+
+        return available.minByOrNull { role ->
             when (role) {
-                // Prefer the substantive use when more than one role is plausible.
-                // Example: SIDE must win over TOPPING for vegetables in lunch/dinner.
-                CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE,
-                CulinaryRole.CEREAL_BASE, CulinaryRole.POWDER_BASE, CulinaryRole.SANDWICH_BASE,
-                CulinaryRole.STANDALONE, CulinaryRole.BEVERAGE, CulinaryRole.DESSERT -> 0
-                CulinaryRole.CEREAL_MIX_IN, CulinaryRole.POWDER_MIX_IN,
-                CulinaryRole.SANDWICH_FILLING -> 1
                 CulinaryRole.COOKING_MEDIUM, CulinaryRole.SEASONING, CulinaryRole.TOPPING,
                 CulinaryRole.SAUCE_DRESSING, CulinaryRole.SPREAD, CulinaryRole.BINDER,
-                CulinaryRole.COATING -> 2
+                CulinaryRole.COATING -> 0
+                CulinaryRole.CEREAL_MIX_IN, CulinaryRole.POWDER_MIX_IN,
+                CulinaryRole.SANDWICH_FILLING -> 1
+                CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE -> 2
+                CulinaryRole.STANDALONE, CulinaryRole.BEVERAGE, CulinaryRole.DESSERT,
+                CulinaryRole.CEREAL_BASE, CulinaryRole.POWDER_BASE, CulinaryRole.SANDWICH_BASE -> 3
             }
         }
     }
