@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
@@ -320,6 +321,24 @@ fun RumboApp(repository: AppRepository) {
     var catalogNutritionalRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogCulinaryRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogSearchRequest by remember { mutableStateOf(0) }
+    var catalogSearchOverlayOpen by remember { mutableStateOf(false) }
+    var catalogSearchMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
+    val catalogSearchMealType = catalogSearchMealTypeName?.let {
+        runCatching { MealType.valueOf(it) }.getOrNull()
+    }
+    val catalogOverlayTextState = rememberTextFieldState()
+    val catalogOverlaySearchState = rememberSearchBarState()
+    val catalogOverlayListState = rememberLazyListState()
+    val catalogOverlayScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
+    var catalogOverlayMessage by remember { mutableStateOf<String?>(null) }
+    var catalogOverlaySuppressKeyboard by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(catalogSearchOverlayOpen) {
+        if (catalogSearchOverlayOpen) {
+            catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
+            catalogOverlayListState.scrollToItem(0)
+            catalogOverlaySearchState.snapTo(1f)
+        }
+    }
     var foodNavigationStack by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var selectedFoodRecommendationReason by rememberSaveable { mutableStateOf<String?>(null) }
     var foodRecommendationReasonStack by rememberSaveable {
@@ -1128,9 +1147,8 @@ fun RumboApp(repository: AppRepository) {
                                 catalogRetailerFilter = retailer
                                 catalogNutritionalRoleFilter = nutritionalRole
                                 catalogCulinaryRoleFilter = culinaryRole
-                                catalogSearchRequest += 1
-                                foodReturnScreenName = null
-                                screenName = Screen.HOME.name
+                                catalogSearchMealTypeName = null
+                                catalogSearchOverlayOpen = true
                             },
                             onOpenFood = {
                                 selectedFoodId?.let { current ->
@@ -1300,6 +1318,64 @@ fun RumboApp(repository: AppRepository) {
             }
             }
             }
+        }
+    }
+
+    if (catalogSearchOverlayOpen) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            HomeCatalogSearch(
+                foods = data.foods,
+                dishes = data.dishes,
+                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                foodSuggestions = emptyList(),
+                repertoireAssessment = null,
+                recommendation = currentRecommendation,
+                textFieldState = catalogOverlayTextState,
+                retailerFilter = catalogRetailerFilter,
+                onRetailerFilterChange = { catalogRetailerFilter = it },
+                nutritionalRoleFilter = catalogNutritionalRoleFilter,
+                onNutritionalRoleFilterChange = { catalogNutritionalRoleFilter = it },
+                culinaryRoleFilter = catalogCulinaryRoleFilter,
+                onCulinaryRoleFilterChange = { catalogCulinaryRoleFilter = it },
+                mealTypeFilter = catalogSearchMealType,
+                onMealTypeFilterChange = { catalogSearchMealTypeName = it?.name },
+                scanMessage = catalogOverlayMessage,
+                onScanMessageChange = { catalogOverlayMessage = it },
+                state = catalogOverlaySearchState,
+                listState = catalogOverlayListState,
+                suppressRestoredKeyboard = catalogOverlaySuppressKeyboard,
+                onRestoredKeyboardSuppressed = { catalogOverlaySuppressKeyboard = false },
+                scrollBehavior = catalogOverlayScrollBehavior,
+                onCloseSearch = {
+                    catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
+                    catalogOverlayMessage = null
+                    catalogSearchOverlayOpen = false
+                },
+                onOpenFood = { foodId ->
+                    selectedFoodId?.let { current ->
+                        if (screenName == Screen.FOOD_DETAIL.name && current != foodId) {
+                            foodNavigationStack = foodNavigationStack + current
+                            foodRecommendationReasonStack = foodRecommendationReasonStack +
+                                selectedFoodRecommendationReason.orEmpty()
+                        }
+                    }
+                    selectedFoodId = foodId
+                    selectedFoodRecommendationReason = null
+                    catalogSearchOverlayOpen = false
+                    screenName = Screen.FOOD_DETAIL.name
+                },
+                onOpenDish = { dishId ->
+                    selectedDishId = dishId
+                    dishReturnScreenName = screenName
+                    catalogSearchOverlayOpen = false
+                    screenName = Screen.DISH_DETAIL.name
+                },
+                trailingContent = {}
+            )
         }
     }
 
@@ -6501,6 +6577,17 @@ private fun nutritionalRoleLabel(value: String): String = when (value) {
     else -> value.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
 }
 
+private fun nutritionalRoleEfficiency(food: Food, role: String): Double? {
+    val calories = food.calories?.takeIf { it > 0.0 } ?: return null
+    val grams = when (role) {
+        "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN" -> food.proteinGrams
+        "PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_CARBOHYDRATE" -> food.carbohydrateGrams
+        "CONCENTRATED_FAT", "COMPLEMENTARY_FAT" -> food.fatGrams
+        else -> null
+    } ?: return null
+    return grams * 100.0 / calories
+}
+
 private fun culinaryRoleLabel(value: String): String = when (value) {
     "PLATE_CENTER" -> "Centro del plato"
     "PLATE_BASE" -> "Base del plato"
@@ -6653,6 +6740,11 @@ private fun HomeCatalogSearch(
         }.map { CatalogEntry(it.id, it.name, false) }
             .sortedWith(
                 compareBy<CatalogEntry> { it.id !in repertoireFoodIds }
+                    .thenByDescending { entry ->
+                        nutritionalRoleFilter?.let { role ->
+                            foodsById[entry.id]?.let { nutritionalRoleEfficiency(it, role) }
+                        } ?: Double.NEGATIVE_INFINITY
+                    }
                     .thenBy { if (normalized.isBlank()) 0 else searchMatchRank(it.name, normalized) }
                     .thenByDescending { personalizedScores[it.id] ?: Double.NEGATIVE_INFINITY }
                     .thenBy { it.name.lowercase() }
@@ -6816,24 +6908,29 @@ private fun CatalogCanonicalFilterRow(
     culinaryRole: String?, onCulinaryRoleChange: (String?) -> Unit, culinaryRoleOptions: List<String>,
     mealType: MealType?, onMealTypeChange: (MealType?) -> Unit
 ) {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
+    LazyRow(
+        contentPadding = PaddingValues(end = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        CatalogStringFilterMenu(
-            title = "Comercio", selected = retailer, options = retailerOptions,
-            label = ::catalogRetailerLabel, onChange = onRetailerChange
-        )
-        CatalogStringFilterMenu(
-            title = "Rol nutricional", selected = nutritionalRole, options = nutritionalRoleOptions,
-            label = ::nutritionalRoleLabel, onChange = onNutritionalRoleChange
-        )
-        CatalogStringFilterMenu(
-            title = "Rol culinario", selected = culinaryRole, options = culinaryRoleOptions,
-            label = ::culinaryRoleLabel, onChange = onCulinaryRoleChange
-        )
-        CatalogMealTypeFilterMenu(mealType, onMealTypeChange)
-        Spacer(Modifier.width(16.dp))
+        item {
+            CatalogStringFilterMenu(
+                title = "Comercio", selected = retailer, options = retailerOptions,
+                label = ::catalogRetailerLabel, onChange = onRetailerChange
+            )
+        }
+        item {
+            CatalogStringFilterMenu(
+                title = "Rol nutricional", selected = nutritionalRole, options = nutritionalRoleOptions,
+                label = ::nutritionalRoleLabel, onChange = onNutritionalRoleChange
+            )
+        }
+        item {
+            CatalogStringFilterMenu(
+                title = "Rol culinario", selected = culinaryRole, options = culinaryRoleOptions,
+                label = ::culinaryRoleLabel, onChange = onCulinaryRoleChange
+            )
+        }
+        item { CatalogMealTypeFilterMenu(mealType, onMealTypeChange) }
     }
 }
 
@@ -8189,18 +8286,17 @@ private fun CatalogAttributeChipRow(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        LazyRow(
+            contentPadding = PaddingValues(end = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            values.forEach { value ->
+            items(values, key = { it }) { value ->
                 FilterChip(
                     selected = false,
                     onClick = { onClick(value) },
                     label = { Text(label(value)) }
                 )
             }
-            Spacer(Modifier.width(16.dp))
         }
     }
 }
