@@ -1,0 +1,21 @@
+name: Audit search UI
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  audit:
+    if: github.head_ref == 'agent/remove-legacy-catalog-canonical-policy'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remove-legacy-catalog-canonical-policy
+      - name: Mostrar puntos de búsqueda
+        run: |
+          grep -n -B8 -A35 'fun HomeScreen' app/src/main/java/es/david/rumbo/ui/App.kt || true
+          echo '=== request state ==='
+          grep -n -B6 -A18 'catalogSearchRequest\|searchOpenRequest\|onOpenCatalogFilter' app/src/main/java/es/david/rumbo/ui/App.kt || true
+          echo '=== chips ==='
+          grep -n -B5 -A25 'CatalogAttributeChipRow' app/src/main/java/es/david/rumbo/ui/App.kt || true
+          echo '=== planning rules ==='
+          grep -n -B4 -A16 'HomeCatalogSearch(' app/src/main/java/es/david/rumbo/ui/App.kt || true
