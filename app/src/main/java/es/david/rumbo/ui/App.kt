@@ -733,11 +733,13 @@ fun RumboApp(repository: AppRepository) {
                         }
                     },
                     onOpenProfile = {
+                        screenStateHolder.removeState(Screen.PROFILE.name)
                         createProfileOnOpen = false
                         accountChildReturn = true
                         screenName = Screen.PROFILE.name
                     },
                     onAddProfile = {
+                        screenStateHolder.removeState(Screen.PROFILE.name)
                         createProfileOnOpen = true
                         accountChildReturn = true
                         screenName = Screen.PROFILE.name
