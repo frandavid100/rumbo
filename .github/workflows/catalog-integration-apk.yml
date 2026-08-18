@@ -11,6 +11,7 @@ permissions:
 jobs:
   build-catalog-apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,31 +20,62 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Restaurar catálogo nutricional legacy
         run: |
           mkdir -p app/src/main/assets
           base64 --decode tools/aesan_foods.dat.b64 > app/src/main/assets/aesan_foods.dat
-      - name: Descargar último SQLite provisional de Carrefour
+      - name: Intentar reutilizar último SQLite provisional
+        id: existing
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           RUN_ID="$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?branch=agent/catalog-phase1&status=success&per_page=100" --jq '.workflow_runs[] | select(.name == "Catalog Carrefour manual build once") | .id' | head -n1)"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
           test -n "$RUN_ID"
+          echo "Catalog source run: $RUN_ID"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[] | [.id,.name,.expired] | @tsv'
+          ARTIFACT_ID="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[] | select(.name == "carrefour-food-catalog-manual" and .expired == false) | .id' | head -n1)"
+          test -n "$ARTIFACT_ID"
           mkdir -p "$RUNNER_TEMP/carrefour"
-          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name carrefour-food-catalog-manual --dir "$RUNNER_TEMP/carrefour"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$RUNNER_TEMP/carrefour.zip"
+          unzip -q "$RUNNER_TEMP/carrefour.zip" -d "$RUNNER_TEMP/carrefour"
           SQLITE="$(find "$RUNNER_TEMP/carrefour" -name carrefour_food_catalog.sqlite -print -quit)"
           test -n "$SQLITE"
           cp "$SQLITE" app/src/main/assets/catalog.sqlite
-          echo "CARREFOUR_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+          echo "CATALOG_BUILD_SOURCE=artifact:$RUN_ID" >> "$GITHUB_ENV"
+      - name: Checkout herramientas del catálogo
+        if: steps.existing.outcome != 'success'
+        uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          path: catalog-source
+      - name: Reconstruir SQLite provisional sin modificar importador ni clasificador
+        if: steps.existing.outcome != 'success'
+        working-directory: catalog-source/tools/catalog
+        run: |
+          python -m unittest -v test_classifier_quality.py test_carrefour_parser_v2.py
+          python carrefour_radar_catalog_importer_v2.py --out carrefour-integration-build --workers 24
+          python carrefour_manual_build.py carrefour-integration-build/carrefour_food_catalog.sqlite --out carrefour-integration-build/manual
+          cp carrefour-integration-build/carrefour_food_catalog.sqlite "$GITHUB_WORKSPACE/app/src/main/assets/catalog.sqlite"
+          echo "CATALOG_BUILD_SOURCE=rebuild:agent/catalog-phase1" >> "$GITHUB_ENV"
       - name: Verificar contrato y volumen del SQLite
         run: |
           sqlite3 app/src/main/assets/catalog.sqlite ".tables"
           for table in metadata products retailer_listings nutrition classifications classification_roles; do
             sqlite3 app/src/main/assets/catalog.sqlite "SELECT 1 FROM $table LIMIT 1;" >/dev/null
           done
-          echo "PRODUCTS=$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM products;')" >> "$GITHUB_ENV"
-          echo "LISTINGS=$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM retailer_listings;')" >> "$GITHUB_ENV"
-          echo "ELIGIBLE=$(sqlite3 app/src/main/assets/catalog.sqlite \"SELECT COUNT(*) FROM classifications c JOIN nutrition n ON n.product_id=c.product_id WHERE c.status='MENU_ELIGIBLE' AND c.classified=1 AND n.calories IS NOT NULL AND n.protein_g IS NOT NULL AND n.carbohydrate_g IS NOT NULL AND n.fat_g IS NOT NULL;\")" >> "$GITHUB_ENV"
+          PRODUCTS="$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM products;')"
+          LISTINGS="$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM retailer_listings;')"
+          ELIGIBLE="$(sqlite3 app/src/main/assets/catalog.sqlite \"SELECT COUNT(*) FROM classifications c JOIN nutrition n ON n.product_id=c.product_id WHERE c.status='MENU_ELIGIBLE' AND c.classified=1 AND n.calories IS NOT NULL AND n.protein_g IS NOT NULL AND n.carbohydrate_g IS NOT NULL AND n.fat_g IS NOT NULL;\")"
+          echo "PRODUCTS=$PRODUCTS" >> "$GITHUB_ENV"
+          echo "LISTINGS=$LISTINGS" >> "$GITHUB_ENV"
+          echo "ELIGIBLE=$ELIGIBLE" >> "$GITHUB_ENV"
+          test "$PRODUCTS" -gt 1000
+          test "$ELIGIBLE" -gt 100
       - uses: gradle/actions/setup-gradle@v4
       - name: Probar y compilar con catálogo real
         run: ./gradlew test assembleRelease
@@ -69,7 +101,7 @@ jobs:
       - name: Resumen
         run: |
           echo "### Carrefour provisional" >> "$GITHUB_STEP_SUMMARY"
-          echo "- workflow run: $CARREFOUR_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "- source: $CATALOG_BUILD_SOURCE" >> "$GITHUB_STEP_SUMMARY"
           echo "- products: $PRODUCTS" >> "$GITHUB_STEP_SUMMARY"
           echo "- listings: $LISTINGS" >> "$GITHUB_STEP_SUMMARY"
           echo "- menu eligible with complete core nutrition: $ELIGIBLE" >> "$GITHUB_STEP_SUMMARY"
