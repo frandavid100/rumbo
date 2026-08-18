@@ -195,6 +195,7 @@ import es.david.rumbo.logic.QuantityOptimizationResult
 import es.david.rumbo.logic.RepertoireAssessment
 import es.david.rumbo.logic.RepertoireEvaluator
 import es.david.rumbo.logic.RepertoireStatus
+import es.david.rumbo.logic.ConstraintSearchStatus
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import es.david.rumbo.logic.RecommendationEngine
 import es.david.rumbo.logic.TargetFit
