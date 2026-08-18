@@ -19,12 +19,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Aplicar núcleo canónico
-        run: python tools/apply_canonical_culinary_roles.py
-      - name: Guardar primera fase
+      - name: Aplicar motor, persistencia e interfaz
+        run: python tools/apply_canonical_culinary_roles_phase2.py
+      - name: Guardar segunda fase
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/java
-          git commit -m "Migrar núcleo a roles culinarios canónicos"
+          git commit -m "Usar roles culinarios en motor e interfaz"
           git push origin HEAD:agent/remove-legacy-catalog-canonical-policy
