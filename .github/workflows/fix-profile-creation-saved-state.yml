@@ -1,0 +1,32 @@
+name: Fix profile creation saved state
+
+on:
+  push:
+    branches: [agent/certified-day-witness-level1]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/certified-day-witness-level1
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Corregir navegación de perfiles
+        run: |
+          python tools/fix_profile_creation_saved_state.py
+          git diff --check
+      - name: Guardar corrección
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/es/david/rumbo/ui/App.kt
+          git commit -m "Corregir creación de perfiles desde la cuenta"
+          git push origin HEAD:agent/certified-day-witness-level1
