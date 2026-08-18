@@ -169,12 +169,17 @@ fun MenuWitness.reproduce(
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
     recommendation: Recommendation
-): GeneratedWeeklyMenu = WeeklyMenuGenerator.generate(
-    constraints = constraints,
-    currentMeals = emptyList(),
-    history = emptyList(),
-    foodsById = foodsById,
-    dishesById = dishesById,
-    recommendation = recommendation,
-    seed = seed
-)
+): GeneratedWeeklyMenu {
+    val witnessDays = meals.flatMapTo(mutableSetOf()) { it.days }
+    require(witnessDays.isNotEmpty()) { "El testigo no contiene ningún día." }
+    return WeeklyMenuGenerator.generate(
+        constraints = constraints,
+        currentMeals = emptyList(),
+        history = emptyList(),
+        foodsById = foodsById,
+        dishesById = dishesById,
+        recommendation = recommendation,
+        seed = seed,
+        days = witnessDays
+    )
+}
