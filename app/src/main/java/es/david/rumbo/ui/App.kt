@@ -319,7 +319,7 @@ fun RumboApp(repository: AppRepository) {
     var catalogRetailerFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogNutritionalRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogCulinaryRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
-    var catalogSearchRequest by remember { mutableIntStateOf(0) }
+    var catalogSearchRequest by remember { mutableStateOf(0) }
     var foodNavigationStack by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var selectedFoodRecommendationReason by rememberSaveable { mutableStateOf<String?>(null) }
     var foodRecommendationReasonStack by rememberSaveable {
