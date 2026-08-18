@@ -194,18 +194,13 @@ class SqliteCatalogRepository(
         }
         return database.rawQuery(
             """
-                SELECT classifier_version, culinary_type, preferred_grams, minimum_grams,
-                       maximum_grams, classified, status
+                SELECT classifier_version, classified, status
                 FROM classifications WHERE product_id = ?
             """.trimIndent(),
             arrayOf(productId)
         ).use { cursor ->
             if (!cursor.moveToFirst()) null else CatalogClassification(
                 classifierVersion = cursor.string("classifier_version"),
-                culinaryType = cursor.string("culinary_type"),
-                preferredGrams = cursor.doubleOrNull("preferred_grams"),
-                minimumGrams = cursor.doubleOrNull("minimum_grams"),
-                maximumGrams = cursor.doubleOrNull("maximum_grams"),
                 classified = cursor.intOrNull("classified") == 1,
                 status = cursor.string("status"),
                 roles = roles

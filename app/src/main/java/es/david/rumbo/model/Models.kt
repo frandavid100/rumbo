@@ -102,35 +102,36 @@ enum class FoodCategory(val label: String) {
     OTHER("Otros")
 }
 
-enum class CulinaryType(val label: String) {
-    UNKNOWN("Sin clasificar"),
-    MILK_BASE("Leche o bebida base"),
-    CREAMY_BASE("Base cremosa"),
-    BREAKFAST_CEREAL("Cereal de desayuno"),
-    PROTEIN_POWDER("Proteína en polvo"),
-    DRY_RICE("Arroz seco"),
-    DRY_PASTA("Pasta seca"),
-    FRESH_STARCH("Tubérculo o almidón fresco"),
-    BREAD("Pan"),
-    MAIN_MEAT("Proteína principal · carne"),
-    MAIN_FISH("Proteína principal · pescado"),
-    MAIN_EGG("Proteína principal · huevo"),
-    VEGETABLE("Verdura"),
-    FRUIT("Fruta"),
-    CULINARY_OIL("Aceite culinario"),
-    FAT_COMPLEMENT("Complemento graso"),
-    SAUCE("Salsa"),
-    SNACK_DESSERT("Tentempié o postre"),
-    COOKING_INGREDIENT("Ingrediente de cocina")
+/**
+ * Converts the obsolete pre-0.74 culinary type into the canonical functional roles.
+ * New code must never persist or reason over the legacy type name itself.
+ */
+fun legacyCulinaryRoles(typeName: String?): Set<String> = when (typeName) {
+    "MILK_BASE" -> setOf("CEREAL_BASE", "POWDER_BASE", "BEVERAGE", "STANDALONE")
+    "CREAMY_BASE" -> setOf("CEREAL_BASE", "POWDER_BASE", "STANDALONE", "DESSERT")
+    "BREAKFAST_CEREAL" -> setOf("CEREAL_MIX_IN")
+    "PROTEIN_POWDER" -> setOf("POWDER_MIX_IN")
+    "DRY_RICE", "DRY_PASTA", "FRESH_STARCH" -> setOf("PLATE_BASE")
+    "BREAD" -> setOf("SANDWICH_BASE", "PLATE_BASE", "STANDALONE")
+    "MAIN_MEAT" -> setOf("PLATE_CENTER", "SANDWICH_FILLING", "TOPPING", "STANDALONE")
+    "MAIN_FISH" -> setOf("PLATE_CENTER", "STANDALONE")
+    "MAIN_EGG" -> setOf("PLATE_CENTER", "SANDWICH_FILLING", "STANDALONE")
+    "VEGETABLE" -> setOf("SIDE", "PLATE_BASE", "STANDALONE")
+    "FRUIT" -> setOf("STANDALONE", "DESSERT")
+    "CULINARY_OIL" -> setOf("COOKING_MEDIUM", "SAUCE_DRESSING")
+    "FAT_COMPLEMENT" -> setOf("TOPPING", "STANDALONE")
+    "SAUCE" -> setOf("SAUCE_DRESSING")
+    "SNACK_DESSERT" -> setOf("STANDALONE", "DESSERT")
+    "COOKING_INGREDIENT" -> setOf("SEASONING")
+    else -> emptySet()
 }
 
 data class CulinaryPolicyOverride(
-    val culinaryType: CulinaryType,
-    val roles: Set<String> = emptySet(),
+    val culinaryRole: String,
     val preferredGrams: Double? = null,
     val minimumGrams: Double? = null,
     val maximumGrams: Double? = null,
-    val standaloneAllowed: Boolean = true
+    val standaloneAllowed: Boolean? = null
 )
 
 data class NutritionToleranceSettings(
@@ -456,7 +457,6 @@ data class Food(
     val unitAmount: Double? = null,
     val wholeUnitsOnly: Boolean = false,
     val unitDivisions: Int = 1,
-    val culinaryType: CulinaryType = CulinaryType.UNKNOWN,
     val nutritionalRoles: Set<String> = emptySet(),
     val culinaryRoles: Set<String> = emptySet()
 ) {

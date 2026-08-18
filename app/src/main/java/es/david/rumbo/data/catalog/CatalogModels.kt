@@ -1,6 +1,5 @@
 package es.david.rumbo.data.catalog
 
-import es.david.rumbo.model.CulinaryType
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import java.nio.ByteBuffer
@@ -59,10 +58,6 @@ enum class CatalogRoleAxis { NUTRITIONAL, CULINARY, UNKNOWN }
 
 data class CatalogClassification(
     val classifierVersion: String?,
-    val culinaryType: String?,
-    val preferredGrams: Double?,
-    val minimumGrams: Double?,
-    val maximumGrams: Double?,
     val classified: Boolean,
     val status: String?,
     val roles: List<CatalogRole>
@@ -151,7 +146,6 @@ object CatalogFoodAdapter {
             saltGrams = nutrition.saltGrams,
             retailer = product.listings.map { it.retailer }.distinct().joinToString(", ").takeIf { it.isNotBlank() },
             source = product.provenance.catalogSource ?: nutrition.source,
-            culinaryType = legacyCulinaryType(classification.culinaryType),
             nutritionalRoles = classification.nutritionalRoles,
             culinaryRoles = classification.culinaryRoles
         ).takeIf { it.isValid() && it.hasComparableNutrition() }
@@ -175,6 +169,4 @@ object CatalogFoodAdapter {
         else -> FoodCategory.OTHER
     }
 
-    internal fun legacyCulinaryType(raw: String?): CulinaryType =
-        raw?.let { value -> CulinaryType.entries.firstOrNull { it.name == value } } ?: CulinaryType.UNKNOWN
 }
