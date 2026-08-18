@@ -1,0 +1,36 @@
+name: Apply certified day persistence
+
+on:
+  push:
+    branches: [agent/certified-day-witness-level1]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/certified-day-witness-level1
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Aplicar persistencia
+        run: |
+          python tools/apply_certified_day_persistence.py
+          git diff --check
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/es/david/rumbo/model/Models.kt \
+                  app/src/main/java/es/david/rumbo/logic/CertifiedDayWitnessEvaluator.kt \
+                  app/src/main/java/es/david/rumbo/data/AppRepository.kt \
+                  app/src/main/java/es/david/rumbo/ui/App.kt \
+                  app/src/test/java/es/david/rumbo/logic/CertifiedDayWitnessPersistenceTest.kt
+          git commit -m "Persistir y revalidar el día testigo viable"
+          git push origin HEAD:agent/certified-day-witness-level1
