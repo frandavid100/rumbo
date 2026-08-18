@@ -54,6 +54,62 @@ def nutritional_role(category: str, subcategory: str, name: str) -> str:
     return "OTHER"
 
 
+def culinary_type(family: str, subcategory: str, name: str, legal_name: str, ingredients: str) -> str:
+    # Ingredients describe components, not the product's own culinary role.
+    # Using them here would classify a prepared dish as oil, pasta or meat.
+    # Families are also deliberately excluded: AESAN uses broad families such
+    # as "fruit, vegetables ... including frozen chips" or "meat, fish and
+    # eggs". Those labels describe a database shelf, not the product itself.
+    text_value = normalized(f"{subcategory} {name} {legal_name}")
+    product = normalized(f"{name} {legal_name}")
+    family_value = normalized(family)
+    if re.search(r"\b(pan rallado|rebozador|harina para rebozar)\b", text_value):
+        return "COOKING_INGREDIENT"
+    if re.search(r"\b(mazorca de maiz agridulce|mazorcas de maiz agridulces)\b", text_value):
+        return "VEGETABLE"
+    if "platos preparados" in normalized(subcategory) or "alimentos preparados" in family_value:
+        return "UNKNOWN"
+    if re.search(r"\b(polvo de proteina|proteina en polvo|whey protein|natural isolate)\b", text_value):
+        return "PROTEIN_POWDER"
+    if re.search(r"\b(corn flakes|copos de maiz|copos de avena|muesli|granola)\b", text_value):
+        return "BREAKFAST_CEREAL"
+    if re.search(r"\b(leche entera|leche semidesnatada|leche desnatada|bebida de soja|bebida de avena|bebida de almendra)\b", text_value):
+        return "MILK_BASE"
+    if re.search(r"\b(yogur|yoghurt|kefir|queso fresco batido)\b", text_value):
+        return "CREAMY_BASE"
+    if "pasta seca" in text_value or re.search(r"\b(macarron|macarrones|espagueti|spaghetti|helices|tallarines|fideos)\b", product):
+        return "DRY_PASTA"
+    if re.search(r"\barroz\b", product) and "plato preparado" not in text_value:
+        return "DRY_RICE"
+    if re.search(r"\b(aceite de oliva|aceite de girasol|aceite vegetal)\b", product):
+        return "CULINARY_OIL"
+    if re.search(r"\b(pescado|lubina|dorada|salmon|merluza|bacalao|atun|sardina|caballa|sepia|calamar|pulpo)\b", text_value):
+        return "MAIN_FISH"
+    if re.search(r"\b(carne|pollo|pavo|cerdo|vacuno|ternera|cordero|hamburguesa|burger)\b", text_value):
+        return "MAIN_MEAT"
+    if re.search(r"\b(huevo|huevos)\b", text_value):
+        return "MAIN_EGG"
+    if re.search(r"\b(patata|patatas|boniato|batata)\b", product) and not re.search(
+        r"aperitivo|ensalada|salteado|tortilla|pure|crema|sopa|rellen", product
+    ):
+        return "FRESH_STARCH"
+    if re.search(r"\b(membrid?llo|dulce de membrillo)\b", text_value):
+        return "SNACK_DESSERT"
+    if re.search(r"\b(pan|pita|tostada|tortilla de trigo)\b", text_value):
+        return "BREAD"
+    if re.search(r"\b(manzana|pera|platano|banana|naranja|mandarina|melocoton|nectarina|albaricoque|ciruela|kiwi|pina|mango|papaya|melon|sandia|uva|fresa|frambuesa|arandano|cereza)\b", product):
+        return "FRUIT"
+    if re.search(r"\b(remolacha|calabacin|berenjena|pimiento|tomate|cebolla|zanahoria|brocoli|coliflor|esparrago|judia verde|alcachofa|pepino|lechuga|espinaca|acelga)\b", product):
+        return "VEGETABLE"
+    if re.search(r"\b(salsa|mayonesa|ketchup|tomate frito)\b", text_value):
+        return "SAUCE"
+    if re.search(r"\b(frutos secos|nueces|almendras|avellanas|cacahuete|guacamole|aceitunas)\b", text_value):
+        return "FAT_COMPLEMENT"
+    if re.search(r"\b(galleta|barquillo|bolleria|pastel|chocolate|helado)\b", text_value):
+        return "SNACK_DESSERT"
+    return "UNKNOWN"
+
+
 def number(value: object | None) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
@@ -148,6 +204,11 @@ def build(workbook: Path, output: Path) -> tuple[int, int]:
                 "su": number(row[column["Azúcares"]]),
                 "sa": number(row[column["Sal"]]),
                 "ret": "Mercadona",
+                "ct": culinary_type(
+                    family or "", subcategory or "", name,
+                    text(row[column["DenominacionLegal"]]) or "",
+                    text(row[column["Ingredientes"]]) or ""
+                ),
             }
             target.write(json.dumps(item, ensure_ascii=False, separators=(",", ":")) + "\n")
             total += 1
