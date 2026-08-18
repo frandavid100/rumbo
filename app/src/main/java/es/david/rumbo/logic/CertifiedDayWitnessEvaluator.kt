@@ -111,7 +111,8 @@ object CertifiedDayWitnessEvaluator {
 
     data class CompleteDaySearchResult(
         val witness: CertifiedDayWitness?,
-        val diagnostic: CompleteDayDiagnostic?
+        val diagnostic: CompleteDayDiagnostic?,
+        val progressWitness: CertifiedDayWitness? = null
     )
 
     fun findCompleteWitness(
@@ -129,7 +130,8 @@ object CertifiedDayWitnessEvaluator {
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
-        mealShares: Map<MealType, Double>
+        mealShares: Map<MealType, Double>,
+        baselineWitness: CertifiedDayWitness? = null
     ): CompleteDaySearchResult {
         val constraints = MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares)
         if (constraints.structuralViolations.isNotEmpty()) return CompleteDaySearchResult(null, null)
@@ -143,7 +145,42 @@ object CertifiedDayWitnessEvaluator {
         val availableVegetableMeals = availableMeals(FoodCategory.VEGETABLE)
         val seeds = listOf(11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L, 509L, 607L, 701L, 809L)
         var bestDiagnostic: CompleteDayDiagnostic? = null
+        var bestProgressWitness: CertifiedDayWitness? = null
         var bestScore = Double.NEGATIVE_INFINITY
+
+        fun considerProgressWitness(candidate: CertifiedDayWitness) {
+            if (!isViable(candidate, rules, foodsById, dishesById, recommendation, mealShares)) return
+            val assessment = MealPlanEvaluator.assessDay(
+                candidate.day, candidate.meals, foodsById, dishesById, recommendation
+            )
+            val fruitMeals = mealsContaining(candidate.meals, FoodCategory.FRUIT, foodsById, dishesById)
+            val vegetableMeals = mealsContaining(candidate.meals, FoodCategory.VEGETABLE, foodsById, dishesById)
+            val limiting = assessment.evaluations
+                .filter { it.fit == TargetFit.OUTSIDE }
+                .maxByOrNull { kotlin.math.abs(it.difference / it.target.coerceAtLeast(1.0)) }
+                ?.kind
+            val diagnostic = CompleteDayDiagnostic(
+                fruitMeals = fruitMeals,
+                vegetableMeals = vegetableMeals,
+                fiberGrams = assessment.actual.fiberGrams,
+                viable = true,
+                limitingNutrient = limiting,
+                availableFruitMeals = availableFruitMeals,
+                availableVegetableMeals = availableVegetableMeals
+            )
+            // Lexicographic in practice: first secure both fruit/vegetable slots, then fibre.
+            val score = fruitMeals.coerceAtMost(2) * 1_000_000.0 +
+                vegetableMeals.coerceAtMost(2) * 1_000_000.0 +
+                assessment.actual.fiberGrams.coerceAtMost(25.0) * 1_000.0
+            if (score > bestScore) {
+                bestScore = score
+                bestDiagnostic = diagnostic
+                bestProgressWitness = candidate.copy(level = CertifiedDayLevel.VIABLE)
+            }
+        }
+
+        baselineWitness?.takeIf { it.isStructurallyValid() }?.let(::considerProgressWitness)
+
         for (seed in seeds) {
             val generated = runCatching {
                 WeeklyMenuGenerator.generate(
@@ -184,27 +221,22 @@ object CertifiedDayWitnessEvaluator {
                 availableFruitMeals = availableFruitMeals,
                 availableVegetableMeals = availableVegetableMeals
             )
-            val score = (if (viable) 4.0 else 0.0) +
-                fruitMeals.coerceAtMost(2) + vegetableMeals.coerceAtMost(2) +
-                (assessment.actual.fiberGrams / 25.0).coerceIn(0.0, 1.0)
-            if (score > bestScore) {
-                bestScore = score
-                bestDiagnostic = diagnostic
-            }
+            val progressCandidate = CertifiedDayWitness(
+                level = CertifiedDayLevel.VIABLE,
+                seed = seed,
+                day = WeekDay.MONDAY,
+                meals = generated.meals,
+                fingerprint = generated.meals.hashCode()
+            )
+            if (viable) considerProgressWitness(progressCandidate)
             if (viable && fruitMeals >= 2 && vegetableMeals >= 2 && assessment.actual.fiberGrams >= 25.0) {
-                val candidate = CertifiedDayWitness(
-                    level = CertifiedDayLevel.COMPLETE,
-                    seed = seed,
-                    day = WeekDay.MONDAY,
-                    meals = generated.meals,
-                    fingerprint = generated.meals.hashCode()
-                )
+                val candidate = progressCandidate.copy(level = CertifiedDayLevel.COMPLETE)
                 if (isComplete(candidate, rules, foodsById, dishesById, recommendation, mealShares)) {
-                    return CompleteDaySearchResult(candidate, diagnostic)
+                    return CompleteDaySearchResult(candidate, diagnostic, progressCandidate)
                 }
             }
         }
-        return CompleteDaySearchResult(null, bestDiagnostic)
+        return CompleteDaySearchResult(null, bestDiagnostic, bestProgressWitness)
     }
 
     private fun mealsContaining(

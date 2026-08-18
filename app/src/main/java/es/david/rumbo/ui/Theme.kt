@@ -69,13 +69,16 @@ private val DarkColors = darkColorScheme(
 
 
 private fun ColorScheme.deeperLightSurfaces(): ColorScheme = copy(
-    background = surfaceContainerLow,
+    // Keep Android's dynamic hue/chroma, but give the hierarchy visible depth:
+    // page background is a stronger tonal surface; cards remain one step lighter.
+    background = surfaceContainer,
     surface = surfaceContainerLow,
-    surfaceContainerLowest = surfaceContainerLow,
-    surfaceContainerLow = surfaceContainer,
-    surfaceContainer = surfaceContainerHigh,
-    surfaceContainerHigh = surfaceContainerHighest,
-    surfaceContainerHighest = surfaceDim
+    surfaceVariant = surfaceContainer,
+    surfaceContainerLowest = surfaceContainerLowest,
+    surfaceContainerLow = surfaceContainerLow,
+    surfaceContainer = surfaceContainer,
+    surfaceContainerHigh = surfaceContainerHigh,
+    surfaceContainerHighest = surfaceContainerHighest
 )
 
 @Composable

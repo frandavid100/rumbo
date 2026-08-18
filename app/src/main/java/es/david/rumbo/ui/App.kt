@@ -1389,6 +1389,11 @@ fun RumboApp(repository: AppRepository) {
             catalogSearchOverlayOpen = false
         }
         BackHandler(enabled = true) { closeCatalogOverlay() }
+        LaunchedEffect(catalogOverlaySearchState.targetValue) {
+            if (catalogOverlaySearchState.targetValue == SearchBarValue.Collapsed) {
+                closeCatalogOverlay()
+            }
+        }
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -1822,13 +1827,15 @@ private fun HomeScreen(
                     foodsById,
                     dishesById,
                     recommendation,
-                    mealShares
+                    mealShares,
+                    baselineWitness = savedViableWitness?.takeIf { savedViableWitnessValid }
                 )
             }
         } else null
     }
     val freshCompleteWitness = completeDaySearch?.witness
     val completeDayDiagnostic = completeDaySearch?.diagnostic
+    val completeProgressWitness = completeDaySearch?.progressWitness
     LaunchedEffect(
         savedViableWitness, savedViableWitnessValid, freshViableWitness,
         repertoireAssessment?.searchStatus
@@ -1846,6 +1853,12 @@ private fun HomeScreen(
             savedCompleteWitnessValid -> Unit
             freshCompleteWitness != null -> onSaveCertifiedDayWitness(freshCompleteWitness!!)
             savedCompleteWitness != null -> onClearCertifiedDayWitness(CertifiedDayLevel.COMPLETE)
+        }
+    }
+    LaunchedEffect(completeProgressWitness, savedViableWitness?.fingerprint) {
+        val progress = completeProgressWitness
+        if (progress != null && progress.fingerprint != savedViableWitness?.fingerprint) {
+            onSaveCertifiedDayWitness(progress.copy(level = CertifiedDayLevel.VIABLE))
         }
     }
     val hasCertifiedCompleteDay = savedCompleteWitnessValid || freshCompleteWitness != null
@@ -2211,7 +2224,7 @@ private fun repertoireProgressTarget(
             }
             if (diagnostic.fiberGrams < 25.0) {
                 return 1 to RepertoireProgressTarget(
-                    message = "El mejor día encontrado alcanza ${formatOneDecimal(diagnostic.fiberGrams)} g de fibra. Para el nivel 2 necesitamos al menos 25 g. Añade una opción rica en fibra para darle al generador más margen.",
+                    message = "Rumbo ya ha encontrado un día viable con al menos ${formatOneDecimal(diagnostic.fiberGrams)} g de fibra. Para el nivel 2 necesitamos 25 g. Añade una opción rica en fibra para ampliar las combinaciones sin perder ese progreso.",
                     buttonLabel = "Añadir verdura rica en fibra",
                     nutritionalRole = "VEGETABLE"
                 )
