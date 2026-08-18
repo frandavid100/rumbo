@@ -14,8 +14,8 @@ android {
         applicationId = "es.david.rumbo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 45
-        versionName = "0.45.0"
+        versionCode = 72
+        versionName = "0.72.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -40,6 +40,8 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+
+
 }
 
 kotlin {

@@ -1,0 +1,69 @@
+name: Carrefour role filters APK
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Recuperar SQLite Carrefour ya validado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/old-artifact" app/src/main/assets
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/9320190279/zip" > "$RUNNER_TEMP/old-artifact.zip"
+          unzip -q "$RUNNER_TEMP/old-artifact.zip" -d "$RUNNER_TEMP/old-artifact"
+          OLD_APK="$(find "$RUNNER_TEMP/old-artifact" -name '*.apk' -print -quit)"
+          test -n "$OLD_APK"
+          unzip -p "$OLD_APK" assets/catalog.sqlite > app/src/main/assets/catalog.sqlite
+          test -s app/src/main/assets/catalog.sqlite
+      - name: Verificar catálogo empaquetado
+        run: |
+          PRODUCTS=$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM products;')
+          ELIGIBLE=$(sqlite3 app/src/main/assets/catalog.sqlite "SELECT COUNT(*) FROM classifications c JOIN nutrition n ON n.product_id=c.product_id WHERE c.status='MENU_ELIGIBLE' AND c.classified=1 AND n.calories IS NOT NULL AND n.protein_g IS NOT NULL AND n.carbohydrate_g IS NOT NULL AND n.fat_g IS NOT NULL;")
+          echo "PRODUCTS=$PRODUCTS" >> "$GITHUB_ENV"
+          echo "ELIGIBLE=$ELIGIBLE" >> "$GITHUB_ENV"
+          test "$PRODUCTS" -eq 8449
+          test "$ELIGIBLE" -eq 1051
+          test "$(sqlite3 app/src/main/assets/catalog.sqlite "SELECT COUNT(*) FROM retailer_listings WHERE UPPER(retailer)='CARREFOUR';")" -eq 8449
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Probar y compilar con Carrefour
+        run: ./gradlew test assembleRelease
+      - name: Leer versión
+        run: echo "RUMBO_VERSION=$(sed -n 's/.*versionName = \"\(.*\)\"/\1/p' app/build.gradle)" >> "$GITHUB_ENV"
+      - name: Preparar herramientas de firma
+        run: |
+          BUILD_TOOLS="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          mkdir -p build/signing-tools/lib build/signing-tools/lib64
+          cp "$BUILD_TOOLS/apksigner" "$BUILD_TOOLS/zipalign" build/signing-tools/
+          cp "$BUILD_TOOLS/lib/apksigner.jar" build/signing-tools/lib/
+          cp "$BUILD_TOOLS/lib64/libc++.so" build/signing-tools/lib64/
+      - name: Firmar APK
+        env:
+          RUMBO_SIGNING_KEY_BASE64: ${{ secrets.RUMBO_SIGNING_KEY_BASE64 }}
+          RUMBO_SIGNING_PASSWORD: ${{ secrets.RUMBO_SIGNING_PASSWORD }}
+        run: |
+          mkdir -p build/signed
+          printf '%s' "$RUMBO_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/rumbo-release.jks"
+          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-$RUMBO_VERSION-carrefour-roles-aligned.apk"
+          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$RUMBO_SIGNING_PASSWORD" --key-pass "pass:$RUMBO_SIGNING_PASSWORD" --out "build/signed/Rumbo-$RUMBO_VERSION-carrefour-roles.apk" "$RUNNER_TEMP/Rumbo-$RUMBO_VERSION-carrefour-roles-aligned.apk"
+          build/signing-tools/apksigner verify --verbose --print-certs "build/signed/Rumbo-$RUMBO_VERSION-carrefour-roles.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rumbo-${{ env.RUMBO_VERSION }}-carrefour-role-filters
+          path: build/signed/Rumbo-${{ env.RUMBO_VERSION }}-carrefour-roles.apk
+          if-no-files-found: error
+          retention-days: 1

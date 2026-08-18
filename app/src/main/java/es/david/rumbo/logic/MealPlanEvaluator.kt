@@ -4,6 +4,7 @@ import es.david.rumbo.model.Food
 import es.david.rumbo.model.Dish
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.NutritionTotals
+import es.david.rumbo.model.NutritionToleranceSettings
 import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.Recommendation
 import es.david.rumbo.model.WeekDay
@@ -72,6 +73,19 @@ object NutritionTolerancePolicy {
         val scale = maxOf(outer, adequate, 1.0)
         val penalty = ((magnitude - optimal).coerceAtLeast(0.0) / scale).let { it * it }
         return NutrientEvaluation(kind, actual, target, fit, difference, penalty)
+    }
+
+    /**
+     * Objective used while choosing quantities. Acceptance deliberately keeps
+     * its dead bands, but optimisation must still prefer the centre of them;
+     * otherwise it systematically settles at low protein/carbohydrates and
+     * high fat because every point inside the band appears equally good.
+     */
+    fun optimizationPenalty(kind: NutrientKind, actual: Double, target: Double): Double {
+        val tolerancePenalty = evaluate(kind, actual, target).penalty
+        if (target <= 0.0) return tolerancePenalty
+        val relativeDifference = (actual - target) / target
+        return tolerancePenalty + relativeDifference * relativeDifference * 0.25
     }
 }
 
@@ -233,4 +247,59 @@ object MealPlanEvaluator {
         fiberGrams = fiberGrams + other.fiberGrams,
         isComplete = isComplete && other.isComplete
     )
+}
+
+/** Decides whether a complete week is usable. Weekly nutrition is the actual
+ * acceptance criterion; daily limits only reject clearly lopsided days. Meal
+ * macro distribution is deliberately not part of this gate. */
+object WeeklyMenuAcceptancePolicy {
+    @Volatile
+    private var settings = NutritionToleranceSettings()
+
+    fun configure(value: NutritionToleranceSettings) {
+        settings = value.takeIf { it.isValid() } ?: NutritionToleranceSettings()
+    }
+
+    fun isAcceptable(
+        assessments: List<PlanNutritionAssessment>,
+        activeMealTypes: Set<MealType> = MealType.entries.toSet()
+    ): Boolean {
+        if (assessments.size != WeekDay.entries.size) return false
+        if (assessments.any { assessment ->
+                !assessment.actual.isComplete ||
+                    activeMealTypes.any { it in assessment.missingMealTypes }
+            }
+        ) return false
+
+        fun averageRatio(
+            actual: (PlanNutritionAssessment) -> Double,
+            target: (PlanNutritionAssessment) -> Double
+        ) = assessments.map { actual(it) }.average() /
+            assessments.map { target(it) }.average().coerceAtLeast(1.0)
+
+        val tolerance = settings
+        val weeklyAcceptable =
+            averageRatio({ it.actual.calories }, { it.target.calories }) in
+                tolerance.caloriesMinimum..tolerance.caloriesMaximum &&
+            averageRatio({ it.actual.proteinGrams }, { it.target.proteinGrams }) in
+                tolerance.proteinMinimum..tolerance.proteinMaximum &&
+            averageRatio(
+                { it.actual.carbohydrateGrams }, { it.target.carbohydrateGrams }
+            ) in tolerance.carbohydratesMinimum..tolerance.carbohydratesMaximum &&
+            averageRatio({ it.actual.fatGrams }, { it.target.fatGrams }) in
+                tolerance.fatMinimum..tolerance.fatMaximum
+        if (!weeklyAcceptable) return false
+
+        fun PlanNutritionAssessment.ratio(actual: Double, target: Double) =
+            actual / target.coerceAtLeast(1.0)
+
+        return assessments.all {
+            it.ratio(it.actual.calories, it.target.calories) in 0.70..1.30 &&
+                it.ratio(it.actual.proteinGrams, it.target.proteinGrams) in 0.60..1.50 &&
+                it.ratio(
+                    it.actual.carbohydrateGrams, it.target.carbohydrateGrams
+                ) in 0.55..1.50 &&
+                it.ratio(it.actual.fatGrams, it.target.fatGrams) in 0.50..1.60
+        }
+    }
 }
