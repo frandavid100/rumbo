@@ -68,9 +68,9 @@ jobs:
           for table in metadata products retailer_listings nutrition classifications classification_roles; do
             sqlite3 app/src/main/assets/catalog.sqlite "SELECT 1 FROM $table LIMIT 1;" >/dev/null
           done
-          PRODUCTS="$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM products;')"
-          LISTINGS="$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM retailer_listings;')"
-          ELIGIBLE="$(sqlite3 app/src/main/assets/catalog.sqlite \"SELECT COUNT(*) FROM classifications c JOIN nutrition n ON n.product_id=c.product_id WHERE c.status='MENU_ELIGIBLE' AND c.classified=1 AND n.calories IS NOT NULL AND n.protein_g IS NOT NULL AND n.carbohydrate_g IS NOT NULL AND n.fat_g IS NOT NULL;\")"
+          PRODUCTS=$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM products;')
+          LISTINGS=$(sqlite3 app/src/main/assets/catalog.sqlite 'SELECT COUNT(*) FROM retailer_listings;')
+          ELIGIBLE=$(sqlite3 app/src/main/assets/catalog.sqlite "SELECT COUNT(*) FROM classifications c JOIN nutrition n ON n.product_id=c.product_id WHERE c.status='MENU_ELIGIBLE' AND c.classified=1 AND n.calories IS NOT NULL AND n.protein_g IS NOT NULL AND n.carbohydrate_g IS NOT NULL AND n.fat_g IS NOT NULL;")
           echo "PRODUCTS=$PRODUCTS" >> "$GITHUB_ENV"
           echo "LISTINGS=$LISTINGS" >> "$GITHUB_ENV"
           echo "ELIGIBLE=$ELIGIBLE" >> "$GITHUB_ENV"
