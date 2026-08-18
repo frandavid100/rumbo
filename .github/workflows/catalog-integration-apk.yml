@@ -27,7 +27,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow catalog-carrefour-manual-build-once.yml --branch agent/catalog-phase1 --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          RUN_ID="$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?branch=agent/catalog-phase1&status=success&per_page=100" --jq '.workflow_runs[] | select(.name == "Catalog Carrefour manual build once") | .id' | head -n1)"
           test -n "$RUN_ID"
           mkdir -p "$RUNNER_TEMP/carrefour"
           gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name carrefour-food-catalog-manual --dir "$RUNNER_TEMP/carrefour"
