@@ -54,8 +54,10 @@ object WeeklyMenuGenerator {
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
         mealShares: Map<MealType, Double> = defaultMealShares,
-        seed: Long = 11L
+        seed: Long = 11L,
+        days: Set<WeekDay> = WeekDay.entries.toSet()
     ): GeneratedWeeklyMenu {
+        require(days.isNotEmpty()) { "Indica al menos un día para generar." }
         val foodRules = rules.filter {
             it.itemKind == PlannedItemKind.FOOD && it.isActive
         }
@@ -93,6 +95,7 @@ object WeeklyMenuGenerator {
             )
         }
         val fixedBySlot = resolveFixedSlots(foodRules, usableDishes)
+            .filterKeys { it.day in days }
 
         val generatedTypes = MealType.entries.filter { type ->
             (mealShares[type] ?: defaultMealShares.getValue(type)) > 0.0 &&
@@ -101,7 +104,7 @@ object WeeklyMenuGenerator {
         }.toSet()
         require(generatedTypes.isNotEmpty()) { "Indica al menos una comida en las reglas del menú." }
 
-        val slots = WeekDay.entries.flatMap { day ->
+        val slots = WeekDay.entries.filter(days::contains).flatMap { day ->
             generatedTypes.map { type -> PlanningSlot(day, type) }
         }
         slots.forEach { slot ->
@@ -161,11 +164,12 @@ object WeeklyMenuGenerator {
             }
             val optimized = MealQuantityOptimizer.optimize(
                 preserved + generated, foodsById, dishesById, recommendation,
+                days = days,
                 mealShares = mealShares
             ).meals
             val score = score(
                 optimized, assignments, recent, foodsById, dishesById, recommendation,
-                mealShares
+                mealShares, days
             )
             if (score < bestScore) {
                 bestScore = score
@@ -195,7 +199,7 @@ object WeeklyMenuGenerator {
             meals = generatedMeals,
             history = newHistory,
             generation = generation,
-            diagnostics = WeekDay.entries.map { day ->
+            diagnostics = WeekDay.entries.filter(days::contains).map { day ->
                 deviation(day, MealPlanEvaluator.assessDay(
                     day, generatedMeals, foodsById, dishesById, recommendation
                 ))
@@ -601,13 +605,15 @@ object WeeklyMenuGenerator {
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
-        mealShares: Map<MealType, Double>
+        mealShares: Map<MealType, Double>,
+        days: Set<WeekDay>
     ): Double {
-        val daily = WeekDay.entries.map {
+        val orderedDays = WeekDay.entries.filter(days::contains)
+        val daily = orderedDays.map {
             MealPlanEvaluator.assessDay(it, meals, foodsById, dishesById, recommendation)
         }
         val deviations = daily.mapIndexed { index, assessment ->
-            deviation(WeekDay.entries[index], assessment)
+            deviation(orderedDays[index], assessment)
         }
         // The weekly result is decisive. Daily fit remains a secondary
         // quality objective, so one imperfect day cannot outweigh a clearly
