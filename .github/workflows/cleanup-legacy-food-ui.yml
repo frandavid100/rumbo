@@ -1,0 +1,32 @@
+name: Cleanup legacy food UI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.head_ref == 'agent/remove-legacy-catalog-canonical-policy'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remove-legacy-catalog-canonical-policy
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Limpiar UI antigua
+        run: |
+          python tools/cleanup_legacy_food_ui.py
+          git diff --check
+      - name: Guardar limpieza
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/es/david/rumbo/ui/App.kt
+          git commit -m "Retirar interfaz antigua de alimentos"
+          git push origin HEAD:agent/remove-legacy-catalog-canonical-policy
