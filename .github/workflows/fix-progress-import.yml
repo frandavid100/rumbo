@@ -1,0 +1,32 @@
+name: Fix progress import
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.head_ref == 'agent/remove-legacy-catalog-canonical-policy'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remove-legacy-catalog-canonical-policy
+          fetch-depth: 0
+      - name: Añadir import faltante
+        run: |
+          FILE=app/src/main/java/es/david/rumbo/ui/App.kt
+          test "$(grep -c '^import es.david.rumbo.logic.ConstraintSearchStatus$' "$FILE")" -eq 0
+          sed -i '/^import es.david.rumbo.logic.RepertoireStatus$/a import es.david.rumbo.logic.ConstraintSearchStatus' "$FILE"
+          git diff --check
+          test "$(grep -c '^import es.david.rumbo.logic.ConstraintSearchStatus$' "$FILE")" -eq 1
+      - name: Guardar corrección
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/es/david/rumbo/ui/App.kt
+          git commit -m "Corregir import de estado de viabilidad"
+          git push origin HEAD:agent/remove-legacy-catalog-canonical-policy
