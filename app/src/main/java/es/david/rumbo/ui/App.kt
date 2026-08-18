@@ -1361,7 +1361,7 @@ fun RumboApp(repository: AppRepository) {
         val catalogOverlayListState = rememberLazyListState()
         val catalogOverlayScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
         var catalogOverlayMessage by remember { mutableStateOf<String?>(null) }
-        var catalogOverlaySuppressKeyboard by remember { mutableStateOf(false) }
+        var catalogOverlaySuppressKeyboard by remember { mutableStateOf(true) }
         LaunchedEffect(Unit) {
             if (catalogSearchSavedQuery.isNotEmpty()) {
                 catalogOverlayTextState.setTextAndPlaceCursorAtEnd(catalogSearchSavedQuery)
