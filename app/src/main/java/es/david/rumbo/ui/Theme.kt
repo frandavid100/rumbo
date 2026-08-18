@@ -75,10 +75,11 @@ private fun ColorScheme.deeperLightSurfaces(): ColorScheme {
     val sourceHigh = surfaceContainerHigh
     val sourceHighest = surfaceContainerHighest
     val pageTone = lerp(sourceContainer, sourceLow, 0.22f)
-    val cardTone = lerp(sourceLow, pageTone, 0.38f)
+    val cardTone = lerp(sourceLow, surfaceContainerLowest, 0.28f)
     return copy(
-        // Preserve Android's dynamic hue/chroma. Move the page only slightly
-        // lighter than before and filled cards only slightly darker.
+        // Preserve Android's dynamic hue/chroma. Page is softly tinted; cards
+        // are visibly but gently lighter. Keep the highest token untouched so
+        // the search bar retains the system-derived tone it had before.
         background = pageTone,
         surface = cardTone,
         surfaceVariant = pageTone,
@@ -86,7 +87,7 @@ private fun ColorScheme.deeperLightSurfaces(): ColorScheme {
         surfaceContainerLow = sourceLow,
         surfaceContainer = sourceContainer,
         surfaceContainerHigh = sourceHigh,
-        surfaceContainerHighest = cardTone
+        surfaceContainerHighest = sourceHighest
     )
 }
 
