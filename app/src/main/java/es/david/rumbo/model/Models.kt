@@ -456,7 +456,9 @@ data class Food(
     val unitAmount: Double? = null,
     val wholeUnitsOnly: Boolean = false,
     val unitDivisions: Int = 1,
-    val culinaryType: CulinaryType = CulinaryType.UNKNOWN
+    val culinaryType: CulinaryType = CulinaryType.UNKNOWN,
+    val nutritionalRoles: Set<String> = emptySet(),
+    val culinaryRoles: Set<String> = emptySet()
 ) {
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 160 &&
         validCalories(calories) && validNutrient(fatGrams) &&
@@ -470,6 +472,9 @@ data class Food(
         unitGender in setOf("MASCULINE", "FEMININE") && unitDivisions in 1..100 &&
         (unitAmount == null || unitAmount in 0.1..5000.0) &&
         (!wholeUnitsOnly || unitName?.isNotBlank() == true) &&
+        nutritionalRoles.size <= 20 && culinaryRoles.size <= 30 &&
+        nutritionalRoles.all { it.length in 1..80 } &&
+        culinaryRoles.all { it.length in 1..80 } &&
         links.size <= 10 &&
         links.distinct().size == links.size && links.all {
             it.length <= 500 && (it.startsWith("https://") || it.startsWith("http://"))

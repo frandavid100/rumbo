@@ -52,7 +52,10 @@ class CatalogFoodAdapterTest {
             setOf("CEREAL_BASE", "POWDER_BASE", "BEVERAGE", "STANDALONE"),
             product.classification!!.culinaryRoles
         )
-        assertEquals(CulinaryType.MILK_BASE, CatalogFoodAdapter.toFood(product)!!.culinaryType)
+        val food = CatalogFoodAdapter.toFood(product)!!
+        assertEquals(CulinaryType.MILK_BASE, food.culinaryType)
+        assertEquals(product.classification!!.nutritionalRoles, food.nutritionalRoles)
+        assertEquals(product.classification!!.culinaryRoles, food.culinaryRoles)
     }
 
     @Test

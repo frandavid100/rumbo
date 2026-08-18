@@ -318,6 +318,9 @@ fun RumboApp(repository: AppRepository) {
     }
     var selectedMeasurementId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var catalogRetailerFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var catalogNutritionalRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var catalogCulinaryRoleFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var foodNavigationStack by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var selectedFoodRecommendationReason by rememberSaveable { mutableStateOf<String?>(null) }
     var foodRecommendationReasonStack by rememberSaveable {
@@ -1078,6 +1081,12 @@ fun RumboApp(repository: AppRepository) {
                     dishes = data.dishes,
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                    retailerFilter = catalogRetailerFilter,
+                    onRetailerFilterChange = { catalogRetailerFilter = it },
+                    nutritionalRoleFilter = catalogNutritionalRoleFilter,
+                    onNutritionalRoleFilterChange = { catalogNutritionalRoleFilter = it },
+                    culinaryRoleFilter = catalogCulinaryRoleFilter,
+                    onCulinaryRoleFilterChange = { catalogCulinaryRoleFilter = it },
                     onOpenFood = {
                         selectedFoodId = it
                         foodNavigationStack = emptyList()
@@ -1139,6 +1148,13 @@ fun RumboApp(repository: AppRepository) {
                             onBack = navigateBack,
                             plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
                             dishes = data.dishes,
+                            onOpenCatalogFilter = { retailer, nutritionalRole, culinaryRole ->
+                                catalogRetailerFilter = retailer
+                                catalogNutritionalRoleFilter = nutritionalRole
+                                catalogCulinaryRoleFilter = culinaryRole
+                                foodReturnScreenName = null
+                                screenName = Screen.FOODS.name
+                            },
                             onOpenFood = {
                                 selectedFoodId?.let { current ->
                                     foodNavigationStack = foodNavigationStack + current
@@ -6472,6 +6488,51 @@ private fun MealItemPickerDialog(
 
 private enum class CatalogFilter { ALL, FOODS, DISHES }
 
+private fun Food.retailerValues(): Set<String> = retailer
+    ?.split(",")
+    ?.map { it.trim() }
+    ?.filter { it.isNotBlank() }
+    ?.toSet()
+    .orEmpty()
+
+private fun catalogRetailerLabel(value: String): String = value.lowercase()
+    .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+private fun nutritionalRoleLabel(value: String): String = when (value) {
+    "PRIMARY_PROTEIN" -> "Proteína principal"
+    "COMPLEMENTARY_PROTEIN" -> "Proteína complementaria"
+    "PRIMARY_CARBOHYDRATE" -> "Hidrato principal"
+    "COMPLEMENTARY_CARBOHYDRATE" -> "Hidrato complementario"
+    "CONCENTRATED_FAT" -> "Grasa concentrada"
+    "COMPLEMENTARY_FAT" -> "Grasa complementaria"
+    "VEGETABLE" -> "Verdura"
+    "FRUIT" -> "Fruta"
+    else -> value.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
+}
+
+private fun culinaryRoleLabel(value: String): String = when (value) {
+    "PLATE_CENTER" -> "Centro del plato"
+    "PLATE_BASE" -> "Base del plato"
+    "SIDE" -> "Acompañamiento"
+    "TOPPING" -> "Topping"
+    "SAUCE_DRESSING" -> "Salsa o aliño"
+    "CEREAL_BASE" -> "Base para cereal"
+    "CEREAL_MIX_IN" -> "Cereal para mezclar"
+    "POWDER_BASE" -> "Base para polvo"
+    "POWDER_MIX_IN" -> "Polvo para mezclar"
+    "SANDWICH_BASE" -> "Base de bocadillo"
+    "SANDWICH_FILLING" -> "Relleno de bocadillo"
+    "SPREAD" -> "Untable"
+    "COOKING_MEDIUM" -> "Medio de cocción"
+    "BINDER" -> "Ligante"
+    "COATING" -> "Rebozado"
+    "SEASONING" -> "Condimento"
+    "STANDALONE" -> "Puede tomarse solo"
+    "BEVERAGE" -> "Bebida"
+    "DESSERT" -> "Postre"
+    else -> value.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
+}
+
 private fun matchesSearch(searchable: String, query: String): Boolean {
     val terms = query.split(Regex("\\s+")).filter { it.isNotBlank() }
     return terms.isEmpty() || terms.all(searchable::contains)
@@ -6771,6 +6832,12 @@ private fun FoodDishCatalogScreen(
     dishes: List<Dish>,
     planningRules: List<PlanningRule>,
     repertoireFoodIds: Set<Long>,
+    retailerFilter: String?,
+    onRetailerFilterChange: (String?) -> Unit,
+    nutritionalRoleFilter: String?,
+    onNutritionalRoleFilterChange: (String?) -> Unit,
+    culinaryRoleFilter: String?,
+    onCulinaryRoleFilterChange: (String?) -> Unit,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onAddFood: () -> Unit,
@@ -6778,20 +6845,14 @@ private fun FoodDishCatalogScreen(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var normalizedQuery by remember { mutableStateOf("") }
-    var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
-    var categoryFilterName by rememberSaveable { mutableStateOf<String?>(null) }
-    val categoryFilter = categoryFilterName?.let { name ->
-        FoodCategory.entries.firstOrNull { it.name == name }
-    }
-    var culinaryTypeFilterName by rememberSaveable { mutableStateOf<String?>(null) }
-    val culinaryTypeFilter = culinaryTypeFilterName?.let { name ->
-        CulinaryType.entries.firstOrNull { it.name == name }
-    }
     var mode by rememberSaveable { mutableStateOf(CatalogMode.SEARCH) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var scanMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val retailerOptions = remember(foods) { foods.flatMap { it.retailerValues() }.distinct().sorted() }
+    val nutritionalRoleOptions = remember(foods) { foods.flatMap { it.nutritionalRoles }.distinct().sortedBy(::nutritionalRoleLabel) }
+    val culinaryRoleOptions = remember(foods) { foods.flatMap { it.culinaryRoles }.distinct().sortedBy(::culinaryRoleLabel) }
 
     LaunchedEffect(query) {
         if (query.isNotBlank()) delay(200)
@@ -6799,51 +6860,44 @@ private fun FoodDishCatalogScreen(
     }
 
     val entries = remember(
-        foods, dishes, normalizedQuery, filter, categoryFilter,
-        culinaryTypeFilter, mode, repertoireFoodIds
+        foods, dishes, normalizedQuery, retailerFilter, nutritionalRoleFilter,
+        culinaryRoleFilter, mode, repertoireFoodIds
     ) {
         buildList {
-            if (filter != CatalogFilter.DISHES) {
-                foods.forEach { food ->
-                    val searchable = normalizeSearch(
-                        listOfNotNull(
-                            food.name, food.category.label, food.brand, food.family,
-                            food.subcategory, food.retailer, food.barcode
-                        ).joinToString(" ")
-                    )
-                    val belongs = food.id in repertoireFoodIds
-                    if ((categoryFilter == null || food.category == categoryFilter) &&
-                        (culinaryTypeFilter == null || food.culinaryType == culinaryTypeFilter) &&
-                        ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
-                            mode == CatalogMode.REPERTOIRE && belongs) &&
-                        (normalizedQuery.isBlank() || matchesSearch(searchable, normalizedQuery)))) {
-                        add(CatalogEntry(food.id, food.name, false))
-                    }
+            foods.forEach { food ->
+                val searchable = normalizeSearch(
+                    listOfNotNull(
+                        food.name, food.brand, food.family, food.subcategory,
+                        food.retailer, food.barcode
+                    ).joinToString(" ")
+                )
+                val belongs = food.id in repertoireFoodIds
+                val matchesFilters =
+                    (retailerFilter == null || retailerFilter in food.retailerValues()) &&
+                    (nutritionalRoleFilter == null || nutritionalRoleFilter in food.nutritionalRoles) &&
+                    (culinaryRoleFilter == null || culinaryRoleFilter in food.culinaryRoles)
+                if (matchesFilters &&
+                    ((mode == CatalogMode.SEARCH &&
+                        (normalizedQuery.isNotBlank() || retailerFilter != null ||
+                            nutritionalRoleFilter != null || culinaryRoleFilter != null) ||
+                        mode == CatalogMode.REPERTOIRE && belongs) &&
+                    (normalizedQuery.isBlank() || matchesSearch(searchable, normalizedQuery)))) {
+                    add(CatalogEntry(food.id, food.name, false))
                 }
             }
-            if (filter != CatalogFilter.FOODS) {
+            // Dishes have no retailer or canonical food roles. Keep them searchable only
+            // when none of the three food filters is active.
+            if (retailerFilter == null && nutritionalRoleFilter == null && culinaryRoleFilter == null) {
                 dishes.forEach { dish ->
-                    val ingredientNames = dish.ingredients.mapNotNull { foodsById[it.foodId]?.name }
-                    val searchable = normalizeSearch(
-                        (listOf(dish.name) + ingredientNames).joinToString(" ")
-                    )
                     val belongs = dish.ingredients.any { it.foodId in repertoireFoodIds }
-                    val dishCategory = dish.dominantCategory(foodsById)
-                    if ((categoryFilter == null || dishCategory == categoryFilter) &&
-                        culinaryTypeFilter == null &&
-                        ((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank() ||
-                            mode == CatalogMode.REPERTOIRE && belongs) &&
-                        (normalizedQuery.isBlank() || matchesSearch(searchable, normalizedQuery)))) {
+                    if (((mode == CatalogMode.SEARCH && normalizedQuery.isNotBlank()) ||
+                        (mode == CatalogMode.REPERTOIRE && belongs)) &&
+                        (normalizedQuery.isBlank() || matchesSearch(normalizeSearch(dish.name), normalizedQuery))) {
                         add(CatalogEntry(dish.id, dish.name, true))
                     }
                 }
             }
-        }.sortedWith(
-            compareBy<CatalogEntry> { !normalizeSearch(it.name).startsWith(normalizedQuery) }
-                .thenBy { it.name.length }
-                .thenBy { it.name.lowercase() }
-                .thenBy { it.isDish }
-        )
+        }.sortedWith(compareBy<CatalogEntry> { it.name.lowercase() })
     }
 
     BackHandler(enabled = searchExpanded) { searchExpanded = false }
@@ -6915,11 +6969,11 @@ private fun FoodDishCatalogScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                    CatalogFilterChips(filter = filter, onFilterChange = { filter = it })
-                    CatalogCategoryMenu(categoryFilter) { categoryFilterName = it?.name }
-                    CatalogCulinaryTypeMenu(culinaryTypeFilter) {
-                        culinaryTypeFilterName = it?.name
-                    }
+                    CatalogCanonicalFilterRow(
+                        retailerFilter, onRetailerFilterChange, retailerOptions,
+                        nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
+                        culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions
+                    )
                     Spacer(Modifier.height(8.dp))
                     scanMessage?.let {
                         Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -6943,11 +6997,11 @@ private fun FoodDishCatalogScreen(
             }
             Spacer(Modifier.height(8.dp))
             if (mode == CatalogMode.REPERTOIRE) {
-                CatalogFilterChips(filter = filter, onFilterChange = { filter = it })
-                CatalogCategoryMenu(categoryFilter) { categoryFilterName = it?.name }
-                CatalogCulinaryTypeMenu(culinaryTypeFilter) {
-                    culinaryTypeFilterName = it?.name
-                }
+                CatalogCanonicalFilterRow(
+                    retailerFilter, onRetailerFilterChange, retailerOptions,
+                    nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
+                    culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions
+                )
                 Spacer(Modifier.height(8.dp))
                 CatalogEntries(
                     entries = entries,
@@ -6968,6 +7022,64 @@ private fun FoodDishCatalogScreen(
                     "Toca la barra para buscar por nombre o escanear un código.",
                     modifier = Modifier.padding(vertical = 16.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CatalogCanonicalFilterRow(
+    retailer: String?, onRetailerChange: (String?) -> Unit, retailerOptions: List<String>,
+    nutritionalRole: String?, onNutritionalRoleChange: (String?) -> Unit, nutritionalRoleOptions: List<String>,
+    culinaryRole: String?, onCulinaryRoleChange: (String?) -> Unit, culinaryRoleOptions: List<String>
+) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        CatalogStringFilterMenu(
+            title = "Comercio", selected = retailer, options = retailerOptions,
+            label = ::catalogRetailerLabel, onChange = onRetailerChange
+        )
+        CatalogStringFilterMenu(
+            title = "Rol nutricional", selected = nutritionalRole, options = nutritionalRoleOptions,
+            label = ::nutritionalRoleLabel, onChange = onNutritionalRoleChange
+        )
+        CatalogStringFilterMenu(
+            title = "Rol culinario", selected = culinaryRole, options = culinaryRoleOptions,
+            label = ::culinaryRoleLabel, onChange = onCulinaryRoleChange
+        )
+    }
+}
+
+@Composable
+private fun CatalogStringFilterMenu(
+    title: String,
+    selected: String?,
+    options: List<String>,
+    label: (String) -> String,
+    onChange: (String?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = selected != null,
+            onClick = { expanded = true },
+            label = { Text(selected?.let(label) ?: title) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                leadingIcon = { if (selected == null) Icon(Icons.Default.Check, contentDescription = null) },
+                text = { Text("Todos") },
+                onClick = { onChange(null); expanded = false }
+            )
+            options.forEach { option ->
+                DropdownMenuItem(
+                    leadingIcon = { if (selected == option) Icon(Icons.Default.Check, contentDescription = null) },
+                    text = { Text(label(option)) },
+                    onClick = { onChange(option); expanded = false }
                 )
             }
         }
@@ -8373,6 +8485,35 @@ private val defaultUnitDefinitions = listOf(
 )
 
 @Composable
+private fun CatalogAttributeChipRow(
+    title: String,
+    values: List<String>,
+    label: (String) -> String,
+    onClick: (String) -> Unit
+) {
+    if (values.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            values.forEach { value ->
+                FilterChip(
+                    selected = false,
+                    onClick = { onClick(value) },
+                    label = { Text(label(value)) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun FoodDetailScreen(
     food: Food,
     foods: List<Food>,
@@ -8385,6 +8526,7 @@ private fun FoodDetailScreen(
     onBack: () -> Unit,
     plannedMeals: List<PlannedMeal>,
     dishes: List<Dish>,
+    onOpenCatalogFilter: (String?, String?, String?) -> Unit,
     onOpenFood: (Long) -> Unit,
     recommendationReason: String?,
     onDismissRecommendation: () -> Unit,
@@ -8734,15 +8876,23 @@ private fun FoodDetailScreen(
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
-                Text(
-                    food.category.label,
-                    color = foodCategoryColor(food.category),
-                    style = MaterialTheme.typography.bodyMedium
+                CatalogAttributeChipRow(
+                    title = "Comercio",
+                    values = food.retailerValues().sorted(),
+                    label = ::catalogRetailerLabel,
+                    onClick = { onOpenCatalogFilter(it, null, null) }
                 )
-                Text(
-                    "Tipo culinario: ${food.culinaryType.label}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
+                CatalogAttributeChipRow(
+                    title = "Roles nutricionales",
+                    values = food.nutritionalRoles.sortedBy(::nutritionalRoleLabel),
+                    label = ::nutritionalRoleLabel,
+                    onClick = { onOpenCatalogFilter(null, it, null) }
+                )
+                CatalogAttributeChipRow(
+                    title = "Roles culinarios",
+                    values = food.culinaryRoles.sortedBy(::culinaryRoleLabel),
+                    label = ::culinaryRoleLabel,
+                    onClick = { onOpenCatalogFilter(null, null, it) }
                 )
                 HorizontalDivider()
                 Text(

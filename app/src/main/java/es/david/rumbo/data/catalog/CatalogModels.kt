@@ -151,7 +151,9 @@ object CatalogFoodAdapter {
             saltGrams = nutrition.saltGrams,
             retailer = product.listings.map { it.retailer }.distinct().joinToString(", ").takeIf { it.isNotBlank() },
             source = product.provenance.catalogSource ?: nutrition.source,
-            culinaryType = legacyCulinaryType(classification.culinaryType)
+            culinaryType = legacyCulinaryType(classification.culinaryType),
+            nutritionalRoles = classification.nutritionalRoles,
+            culinaryRoles = classification.culinaryRoles
         ).takeIf { it.isValid() && it.hasComparableNutrition() }
     }
 

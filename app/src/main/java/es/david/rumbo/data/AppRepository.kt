@@ -5,12 +5,11 @@ import androidx.core.content.edit
 import es.david.rumbo.logic.RecommendationEngine
 import es.david.rumbo.logic.GeneratedWeeklyMenu
 import es.david.rumbo.model.ActivityLevel
-import es.david.rumbo.model.MercadonaFoodCatalog
+import es.david.rumbo.data.catalog.CatalogBackedFoodCatalog
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.DietCompliance
 import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
-import es.david.rumbo.model.DefaultFoodCatalog
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.CulinaryType
@@ -41,7 +40,7 @@ import java.time.LocalDate
 class AppRepository(context: Context) {
     private val preferences = context.getSharedPreferences("rumbo_data", Context.MODE_PRIVATE)
     private val baseFoods: List<Food> by lazy {
-        (DefaultFoodCatalog.items + MercadonaFoodCatalog.load(context))
+        CatalogBackedFoodCatalog.load(context)
             .distinctBy { it.id }
             .sortedWith(foodComparator)
     }
@@ -686,6 +685,8 @@ class AppRepository(context: Context) {
                 put("wholeUnitsOnly", food.wholeUnitsOnly)
                 put("unitDivisions", food.unitDivisions)
                 put("culinaryType", food.culinaryType.name)
+                put("nutritionalRoles", JSONArray(food.nutritionalRoles.toList()))
+                put("culinaryRoles", JSONArray(food.culinaryRoles.toList()))
             })
         }
     }
@@ -956,7 +957,13 @@ class AppRepository(context: Context) {
                     unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100),
                     culinaryType = item.optionalEnum("culinaryType", CulinaryType::valueOf)
                         ?: baseFoodsById[item.getLong("id")]?.culinaryType
-                        ?: CulinaryType.UNKNOWN
+                        ?: CulinaryType.UNKNOWN,
+                    nutritionalRoles = item.optJSONArray("nutritionalRoles")?.let { values ->
+                        buildSet { for (i in 0 until values.length()) add(values.getString(i)) }
+                    } ?: baseFoodsById[item.getLong("id")]?.nutritionalRoles.orEmpty(),
+                    culinaryRoles = item.optJSONArray("culinaryRoles")?.let { values ->
+                        buildSet { for (i in 0 until values.length()) add(values.getString(i)) }
+                    } ?: baseFoodsById[item.getLong("id")]?.culinaryRoles.orEmpty()
                 )
             )
         }
@@ -1207,14 +1214,14 @@ class AppRepository(context: Context) {
         if (decoded == null) return baseFoods
         val legacyFoods = if (schemaVersion < 5) addDefaultLinks(decoded) else decoded
         val legacyById = legacyFoods.associateBy { it.id }
-        val defaultById = DefaultFoodCatalog.items.associateBy { it.id }
+        val defaultById = emptyMap<Long, Food>()
         val deletedDefaultIds = defaultById.keys - legacyById.keys
         val overrides = legacyFoods.filter { food -> defaultById[food.id] != food }
         return mergeFoodChanges(overrides, deletedDefaultIds)
     }
 
     private fun addDefaultLinks(foods: List<Food>): List<Food> {
-        val defaults = DefaultFoodCatalog.items.associateBy { it.id }
+        val defaults = emptyMap<Long, Food>()
         return foods.map { food ->
             val default = defaults[food.id]
             if (food.links.isEmpty() && default?.name == food.name) food.copy(links = default.links) else food
