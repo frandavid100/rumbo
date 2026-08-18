@@ -99,16 +99,41 @@ object CertifiedDayWitnessEvaluator {
         return completeCriteria(witness.day, witness.meals, foodsById, dishesById, recommendation)
     }
 
+    data class CompleteDayDiagnostic(
+        val fruitMeals: Int,
+        val vegetableMeals: Int,
+        val fiberGrams: Double,
+        val viable: Boolean,
+        val limitingNutrient: NutrientKind? = null
+    )
+
+    data class CompleteDaySearchResult(
+        val witness: CertifiedDayWitness?,
+        val diagnostic: CompleteDayDiagnostic?
+    )
+
     fun findCompleteWitness(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
         mealShares: Map<MealType, Double>
-    ): CertifiedDayWitness? {
+    ): CertifiedDayWitness? = findCompleteDay(
+        rules, foodsById, dishesById, recommendation, mealShares
+    ).witness
+
+    fun findCompleteDay(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double>
+    ): CompleteDaySearchResult {
         val constraints = MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares)
-        if (constraints.structuralViolations.isNotEmpty()) return null
+        if (constraints.structuralViolations.isNotEmpty()) return CompleteDaySearchResult(null, null)
         val seeds = listOf(11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L, 509L, 607L, 701L, 809L)
+        var bestDiagnostic: CompleteDayDiagnostic? = null
+        var bestScore = Double.NEGATIVE_INFINITY
         for (seed in seeds) {
             val generated = runCatching {
                 WeeklyMenuGenerator.generate(
@@ -122,17 +147,65 @@ object CertifiedDayWitnessEvaluator {
                     days = setOf(WeekDay.MONDAY)
                 )
             }.getOrNull() ?: continue
-            if (!completeCriteria(WeekDay.MONDAY, generated.meals, foodsById, dishesById, recommendation)) continue
-            val candidate = CertifiedDayWitness(
-                level = CertifiedDayLevel.COMPLETE,
-                seed = seed,
-                day = WeekDay.MONDAY,
-                meals = generated.meals,
-                fingerprint = generated.meals.hashCode()
+            val assessment = MealPlanEvaluator.assessDay(
+                WeekDay.MONDAY, generated.meals, foodsById, dishesById, recommendation
             )
-            if (isComplete(candidate, rules, foodsById, dishesById, recommendation, mealShares)) return candidate
+            val fruitMeals = mealsContaining(
+                generated.meals, FoodCategory.FRUIT, foodsById, dishesById
+            )
+            val vegetableMeals = mealsContaining(
+                generated.meals, FoodCategory.VEGETABLE, foodsById, dishesById
+            )
+            val viable = WeeklyMenuAcceptancePolicy.isDayAcceptable(
+                assessment, constraints.activeMealTypes
+            )
+            val limiting = assessment.evaluations
+                .filter { it.fit == TargetFit.OUTSIDE }
+                .maxByOrNull { kotlin.math.abs(it.difference / it.target.coerceAtLeast(1.0)) }
+                ?.kind
+            val diagnostic = CompleteDayDiagnostic(
+                fruitMeals = fruitMeals,
+                vegetableMeals = vegetableMeals,
+                fiberGrams = assessment.actual.fiberGrams,
+                viable = viable,
+                limitingNutrient = limiting
+            )
+            val score = (if (viable) 4.0 else 0.0) +
+                fruitMeals.coerceAtMost(2) + vegetableMeals.coerceAtMost(2) +
+                (assessment.actual.fiberGrams / 25.0).coerceIn(0.0, 1.0)
+            if (score > bestScore) {
+                bestScore = score
+                bestDiagnostic = diagnostic
+            }
+            if (viable && fruitMeals >= 2 && vegetableMeals >= 2 && assessment.actual.fiberGrams >= 25.0) {
+                val candidate = CertifiedDayWitness(
+                    level = CertifiedDayLevel.COMPLETE,
+                    seed = seed,
+                    day = WeekDay.MONDAY,
+                    meals = generated.meals,
+                    fingerprint = generated.meals.hashCode()
+                )
+                if (isComplete(candidate, rules, foodsById, dishesById, recommendation, mealShares)) {
+                    return CompleteDaySearchResult(candidate, diagnostic)
+                }
+            }
         }
-        return null
+        return CompleteDaySearchResult(null, bestDiagnostic)
+    }
+
+    private fun mealsContaining(
+        meals: List<es.david.rumbo.model.PlannedMeal>,
+        category: FoodCategory,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): Int = meals.count { meal ->
+        val direct = meal.items.any { foodsById[it.foodId]?.category == category }
+        val inDish = meal.dishes.any { plannedDish ->
+            dishesById[plannedDish.dishId]?.ingredients?.any {
+                foodsById[it.foodId]?.category == category
+            } == true
+        }
+        direct || inDish
     }
 
     private fun completeCriteria(
@@ -145,16 +218,8 @@ object CertifiedDayWitnessEvaluator {
         val assessment = MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, recommendation)
         if (!WeeklyMenuAcceptancePolicy.isDayAcceptable(assessment, meals.mapTo(mutableSetOf()) { it.type })) return false
         if (assessment.actual.fiberGrams < 25.0) return false
-        fun mealsContaining(category: FoodCategory): Int = meals.count { meal ->
-            val direct = meal.items.any { foodsById[it.foodId]?.category == category }
-            val inDish = meal.dishes.any { plannedDish ->
-                dishesById[plannedDish.dishId]?.ingredients?.any {
-                    foodsById[it.foodId]?.category == category
-                } == true
-            }
-            direct || inDish
-        }
-        return mealsContaining(FoodCategory.VEGETABLE) >= 2 && mealsContaining(FoodCategory.FRUIT) >= 2
+        return mealsContaining(meals, FoodCategory.VEGETABLE, foodsById, dishesById) >= 2 &&
+            mealsContaining(meals, FoodCategory.FRUIT, foodsById, dishesById) >= 2
     }
 
 }

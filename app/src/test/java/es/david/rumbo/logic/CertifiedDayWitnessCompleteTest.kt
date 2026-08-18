@@ -70,4 +70,15 @@ class CertifiedDayWitnessCompleteTest {
             witness, rules, foods, emptyMap(), target, MealDistributionPolicy.defaults
         ))
     }
+
+    @Test
+    fun completeSearchReturnsActionableDiagnosticWhenNoWitnessExists() {
+        val (_, rules, foods) = fixture(4.0)
+        val result = CertifiedDayWitnessEvaluator.findCompleteDay(
+            rules, foods, emptyMap(), target, MealDistributionPolicy.defaults
+        )
+        assertTrue(result.witness == null)
+        assertTrue(result.diagnostic != null)
+    }
+
 }
