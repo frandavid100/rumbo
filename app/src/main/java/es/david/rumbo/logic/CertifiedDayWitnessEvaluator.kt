@@ -147,12 +147,13 @@ object CertifiedDayWitnessEvaluator {
         for (seed in seeds) {
             val generated = runCatching {
                 WeeklyMenuGenerator.generate(
-                    constraints = constraints,
                     currentMeals = emptyList(),
+                    rules = rules,
                     history = emptyList(),
                     foodsById = foodsById,
                     dishesById = dishesById,
                     recommendation = recommendation,
+                    mealShares = mealShares,
                     seed = seed,
                     days = setOf(WeekDay.MONDAY),
                     objective = MenuGenerationObjective.COMPLETE
