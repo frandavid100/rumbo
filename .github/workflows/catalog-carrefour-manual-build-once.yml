@@ -1,0 +1,55 @@
+name: Catalog Carrefour manual build once
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-manual-build-once.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carrefour-manual-build-once
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Regression tests
+        working-directory: tools/catalog
+        run: python -m unittest -v test_classifier_quality.py test_carrefour_parser_v2.py
+      - name: Rebuild corrected Carrefour food catalog
+        working-directory: tools/catalog
+        run: python carrefour_radar_catalog_importer_v2.py --out carrefour-manual-full --workers 24
+      - name: Apply frozen manual classification
+        working-directory: tools/catalog
+        run: python carrefour_manual_build.py carrefour-manual-full/carrefour_food_catalog.sqlite --out carrefour-manual-full/manual
+      - name: Persist compact manual summary
+        run: |
+          cp tools/catalog/carrefour-manual-full/manual/summary.json tools/catalog/fixtures/carrefour_manual_latest_summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/carrefour_manual_latest_summary.json
+          git diff --cached --quiet || git commit -m "catalog: persist manual Carrefour classification summary"
+          git push origin HEAD:agent/catalog-phase1
+      - name: Upload manually classified catalog
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-food-catalog-manual
+          path: |
+            tools/catalog/carrefour-manual-full/carrefour_food_catalog.sqlite
+            tools/catalog/carrefour-manual-full/summary.json
+            tools/catalog/carrefour-manual-full/manual/carrefour_manual_classification.jsonl
+            tools/catalog/carrefour-manual-full/manual/summary.json
+          retention-days: 7
+          if-no-files-found: error
