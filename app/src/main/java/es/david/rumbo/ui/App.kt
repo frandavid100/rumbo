@@ -7014,6 +7014,7 @@ private fun HomeCatalogSearch(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
+    var suppressNextExpandedKeyboard by remember { mutableStateOf(state.targetValue == SearchBarValue.Collapsed) }
     val query = textFieldState.text.toString()
     val normalized = normalizeSearch(query)
     val searchContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
@@ -7123,7 +7124,16 @@ private fun HomeCatalogSearch(
     }
 
     LaunchedEffect(state.targetValue) {
+        if (state.targetValue == SearchBarValue.Expanded && suppressNextExpandedKeyboard) {
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            delay(300)
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            suppressNextExpandedKeyboard = false
+        }
         if (state.targetValue == SearchBarValue.Collapsed) {
+            suppressNextExpandedKeyboard = true
             focusManager.clearFocus(force = true)
             keyboard?.hide()
             if (textFieldState.text.isNotEmpty()) textFieldState.setTextAndPlaceCursorAtEnd("")
