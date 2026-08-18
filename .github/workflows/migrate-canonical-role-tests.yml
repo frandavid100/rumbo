@@ -1,0 +1,28 @@
+name: Migrate canonical role tests
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.head_ref == 'agent/remove-legacy-catalog-canonical-policy'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remove-legacy-catalog-canonical-policy
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/migrate_culinary_role_tests.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/test
+          git commit -m "Migrar pruebas a roles culinarios canónicos"
+          git push origin HEAD:agent/remove-legacy-catalog-canonical-policy
