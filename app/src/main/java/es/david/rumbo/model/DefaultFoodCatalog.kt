@@ -88,8 +88,31 @@ object DefaultFoodCatalog {
         carbohydrates,
         protein,
         fiber,
-        links.ifEmpty { listOf(mercadonaSearch(name)) }
+        links = links.ifEmpty { listOf(mercadonaSearch(name)) },
+        culinaryRoles = legacyCulinaryRoles(legacyTypeName(id))
     )
+
+    private fun legacyTypeName(id: Long): String? = when (id) {
+        1L -> "MILK_BASE"
+        2L -> "SNACK_DESSERT"
+        3L, 16L, 17L -> "DRY_RICE"
+        in 4L..7L -> "BREAD"
+        8L, 9L, 15L -> "FRESH_STARCH"
+        10L, in 18L..20L -> "FRUIT"
+        11L -> "BREAKFAST_CEREAL"
+        in 12L..14L -> "DRY_PASTA"
+        21L, 23L, 24L, 25L, 28L -> "FAT_COMPLEMENT"
+        22L -> "CULINARY_OIL"
+        26L, 27L -> "SAUCE"
+        29L -> "VEGETABLE"
+        30L, in 34L..35L, 38L -> "MAIN_FISH"
+        31L, 42L -> "PROTEIN_POWDER"
+        32L -> "CREAMY_BASE"
+        43L -> "MAIN_EGG"
+        33L, 36L, 37L, 39L, 40L, 41L, in 44L..48L -> "MAIN_MEAT"
+        in 49L..52L -> "VEGETABLE"
+        else -> null
+    }
 
     private fun mercadonaSearch(name: String): String =
         "https://tienda.mercadona.es/search-results?query=" +

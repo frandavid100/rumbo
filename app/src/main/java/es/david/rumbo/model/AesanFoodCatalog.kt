@@ -1,18 +1,27 @@
 package es.david.rumbo.model
 
 import android.content.Context
+import es.david.rumbo.data.catalog.CatalogBackedFoodCatalog
 import org.json.JSONObject
 import java.util.zip.GZIPInputStream
 
+/**
+ * Compatibility facade while the old embedded catalogue remains available as fallback.
+ * New catalogue foods are appended through the stable data.catalog boundary.
+ */
 object MercadonaFoodCatalog {
     private const val SOURCE_PAGE =
         "https://www.aesan.gob.es/AECOSAN/web/seguridad_alimentaria/subseccion/alimentosBebidas.htm"
 
-    fun load(context: Context): List<Food> = context.assets.open("aesan_foods.dat").use { asset ->
-        GZIPInputStream(asset).bufferedReader(Charsets.UTF_8).useLines { lines ->
-            lines.filter(String::isNotBlank).map(::decode).toList()
+    fun load(context: Context): List<Food> =
+        (loadLegacy(context) + CatalogBackedFoodCatalog.load(context)).distinctBy { it.id }
+
+    private fun loadLegacy(context: Context): List<Food> =
+        context.assets.open("aesan_foods.dat").use { asset ->
+            GZIPInputStream(asset).bufferedReader(Charsets.UTF_8).useLines { lines ->
+                lines.filter(String::isNotBlank).map(::decode).toList()
+            }
         }
-    }
 
     private fun decode(line: String): Food {
         val item = JSONObject(line)
@@ -36,7 +45,8 @@ object MercadonaFoodCatalog {
             sugarGrams = item.optionalDouble("su"),
             saltGrams = item.optionalDouble("sa"),
             retailer = item.optionalString("ret"),
-            source = "Mercadona · declaración nutricional recopilada por AESAN (2022)"
+            source = "Mercadona · declaración nutricional recopilada por AESAN (2022)",
+            culinaryRoles = legacyCulinaryRoles(item.optionalString("ct"))
         )
     }
 

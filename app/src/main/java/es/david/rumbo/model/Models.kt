@@ -102,6 +102,61 @@ enum class FoodCategory(val label: String) {
     OTHER("Otros")
 }
 
+/**
+ * Converts the obsolete pre-0.74 culinary type into the canonical functional roles.
+ * New code must never persist or reason over the legacy type name itself.
+ */
+fun legacyCulinaryRoles(typeName: String?): Set<String> = when (typeName) {
+    "MILK_BASE" -> setOf("CEREAL_BASE", "POWDER_BASE", "BEVERAGE", "STANDALONE")
+    "CREAMY_BASE" -> setOf("CEREAL_BASE", "POWDER_BASE", "STANDALONE", "DESSERT")
+    "BREAKFAST_CEREAL" -> setOf("CEREAL_MIX_IN")
+    "PROTEIN_POWDER" -> setOf("POWDER_MIX_IN")
+    "DRY_RICE", "DRY_PASTA", "FRESH_STARCH" -> setOf("PLATE_BASE")
+    "BREAD" -> setOf("SANDWICH_BASE", "PLATE_BASE", "STANDALONE")
+    // The old type was too coarse to prove secondary uses. Migrate conservatively:
+    // fresh/main proteins remain plate centers unless the new catalogue explicitly
+    // assigns SANDWICH_FILLING, TOPPING or STANDALONE.
+    "MAIN_MEAT" -> setOf("PLATE_CENTER")
+    "MAIN_FISH" -> setOf("PLATE_CENTER")
+    "MAIN_EGG" -> setOf("PLATE_CENTER")
+    "VEGETABLE" -> setOf("SIDE", "PLATE_BASE", "STANDALONE")
+    "FRUIT" -> setOf("STANDALONE", "DESSERT")
+    "CULINARY_OIL" -> setOf("COOKING_MEDIUM", "SAUCE_DRESSING")
+    "FAT_COMPLEMENT" -> setOf("TOPPING", "STANDALONE")
+    "SAUCE" -> setOf("SAUCE_DRESSING")
+    "SNACK_DESSERT" -> setOf("STANDALONE", "DESSERT")
+    "COOKING_INGREDIENT" -> setOf("SEASONING")
+    else -> emptySet()
+}
+
+data class CulinaryPolicyOverride(
+    val culinaryRole: String,
+    val preferredGrams: Double? = null,
+    val minimumGrams: Double? = null,
+    val maximumGrams: Double? = null,
+    val standaloneAllowed: Boolean? = null
+)
+
+data class NutritionToleranceSettings(
+    val caloriesMinimum: Double = 0.90,
+    val caloriesMaximum: Double = 1.10,
+    val proteinMinimum: Double = 0.90,
+    val proteinMaximum: Double = 1.15,
+    val carbohydratesMinimum: Double = 0.85,
+    val carbohydratesMaximum: Double = 1.15,
+    val fatMinimum: Double = 0.85,
+    val fatMaximum: Double = 1.15
+) {
+    fun isValid(): Boolean = listOf(
+        caloriesMinimum to caloriesMaximum,
+        proteinMinimum to proteinMaximum,
+        carbohydratesMinimum to carbohydratesMaximum,
+        fatMinimum to fatMaximum
+    ).all { (minimum, maximum) ->
+        minimum in 0.50..1.0 && maximum in 1.0..1.60 && minimum <= maximum
+    }
+}
+
 enum class MealType(val label: String) {
     BREAKFAST("Desayuno"),
     MORNING_SNACK("Almuerzo"),
@@ -127,10 +182,10 @@ enum class WeekDay(val label: String, val shortLabel: String) {
 
 enum class PlanningFrequency(val label: String, val weight: Double) {
     NEVER("Nunca", 0.0),
-    OCCASIONAL("A veces", 1.0),
+    OCCASIONAL("De vez en cuando", 1.0),
     NORMAL("A menudo", 3.0),
-    FREQUENT("A menudo", 6.0),
-    ALWAYS("Siempre", 0.0)
+    FREQUENT("Muy a menudo", 6.0),
+    ALWAYS("Todos los días", 0.0)
 }
 
 enum class PlannedItemKind {
@@ -158,17 +213,16 @@ data class PlanningRule(
 ) {
     fun isValid(): Boolean =
         itemId > 0 &&
-            ruleId > 0 && allowedDays.isNotEmpty() &&
+            ruleId > 0 &&
             (frequency == PlanningFrequency.NEVER || allowedMealTypes.isNotEmpty()) &&
-            (allowedMealTypes.isNotEmpty() || fixedSlots.isNotEmpty()) &&
             preferredGrams in 1.0..5000.0 &&
             minimumFactor in 0.1..1.0 && maximumFactor in 1.0..5.0
 
     fun requiredSlots(): Set<PlanningSlot> = if (frequency == PlanningFrequency.ALWAYS) {
-        allowedDays.flatMapTo(mutableSetOf()) { day ->
+        WeekDay.entries.flatMapTo(mutableSetOf()) { day ->
             allowedMealTypes.map { type -> PlanningSlot(day, type) }
         }
-    } else fixedSlots
+    } else emptySet()
 }
 
 data class MenuHistoryEntry(
@@ -405,7 +459,9 @@ data class Food(
     val unitGender: String = "MASCULINE",
     val unitAmount: Double? = null,
     val wholeUnitsOnly: Boolean = false,
-    val unitDivisions: Int = 1
+    val unitDivisions: Int = 1,
+    val nutritionalRoles: Set<String> = emptySet(),
+    val culinaryRoles: Set<String> = emptySet()
 ) {
     fun isValid(): Boolean = id > 0 && name.trim().isNotEmpty() && name.length <= 160 &&
         validCalories(calories) && validNutrient(fatGrams) &&
@@ -419,6 +475,9 @@ data class Food(
         unitGender in setOf("MASCULINE", "FEMININE") && unitDivisions in 1..100 &&
         (unitAmount == null || unitAmount in 0.1..5000.0) &&
         (!wholeUnitsOnly || unitName?.isNotBlank() == true) &&
+        nutritionalRoles.size <= 20 && culinaryRoles.size <= 30 &&
+        nutritionalRoles.all { it.length in 1..80 } &&
+        culinaryRoles.all { it.length in 1..80 } &&
         links.size <= 10 &&
         links.distinct().size == links.size && links.all {
             it.length <= 500 && (it.startsWith("https://") || it.startsWith("http://"))
@@ -451,7 +510,11 @@ data class ProfileData(
     val planningRules: List<PlanningRule> = emptyList(),
     val repertoireFoodIds: Set<Long> = planningRules
         .filter { it.itemKind == PlannedItemKind.FOOD }.mapTo(mutableSetOf()) { it.itemId },
-    val menuHistory: List<MenuHistoryEntry> = emptyList()
+    val menuHistory: List<MenuHistoryEntry> = emptyList(),
+    val dismissedSuggestionFoodIds: Set<Long> = emptySet(),
+    val culinaryPolicyOverrides: List<CulinaryPolicyOverride> = emptyList(),
+    val nutritionToleranceSettings: NutritionToleranceSettings = NutritionToleranceSettings(),
+    val mealShares: Map<MealType, Double>? = null
 )
 
 data class AppData(

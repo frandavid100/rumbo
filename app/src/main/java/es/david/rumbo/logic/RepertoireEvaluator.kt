@@ -4,7 +4,9 @@ import es.david.rumbo.model.Dish
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
 import es.david.rumbo.model.MealType
+import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.PlannedItemKind
+import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
@@ -31,6 +33,15 @@ data class NutrientCapacity(
 
 data class MealCoverage(val mealType: MealType, val alternatives: Int)
 
+enum class CulinaryNeedKind { COMPANION_BASE, STARCH_BASE, PRIMARY_PROTEIN, FAT_COMPLEMENT }
+
+data class CulinaryNeed(
+    val kind: CulinaryNeedKind,
+    val mealType: MealType,
+    val acceptedRoles: Set<CulinaryRole>,
+    val message: String
+)
+
 data class RepertoireAssessment(
     val status: RepertoireStatus,
     val nutrition: Map<NutrientKind, NutrientCapacity>,
@@ -41,7 +52,11 @@ data class RepertoireAssessment(
     val limitingFactors: List<String>,
     val suggestions: List<FoodCategory>,
     val reactivationFoodIds: List<Long>,
-    val metrics: RepertoireMetrics
+    val metrics: RepertoireMetrics,
+    val culinaryNeeds: List<CulinaryNeed> = emptyList(),
+    val searchStatus: ConstraintSearchStatus = ConstraintSearchStatus.SEARCH_INCONCLUSIVE,
+    val witness: MenuWitness? = null,
+    val constraintViolations: List<ConstraintViolation> = emptyList()
 )
 
 data class RepertoireMetrics(
@@ -55,19 +70,14 @@ data class RepertoireMetrics(
 
 /** Evaluates exactly the repertoire that the menu generator can use.
  *
- * It deliberately delegates construction, practical units, fixed slots and
- * dish derivation to [WeeklyMenuGenerator], preventing a second, contradictory
- * nutrition solver from developing beside the real one.
+ * The compatibility [RepertoireStatus] remains for the current UI. The
+ * independent [ConstraintSearchStatus] is the authoritative statement about
+ * feasibility: bounded heuristic failure is SEARCH_INCONCLUSIVE, never a proof
+ * of insufficiency.
  */
 object RepertoireEvaluator {
-    private val seeds = listOf(11L, 97L, 313L, 997L)
-    private val defaultShares = mapOf(
-        MealType.BREAKFAST to .20,
-        MealType.MORNING_SNACK to .10,
-        MealType.LUNCH to .35,
-        MealType.AFTERNOON_SNACK to .10,
-        MealType.DINNER to .25
-    )
+    private val seeds = listOf(11L, 37L, 89L)
+    private val defaultShares = MealDistributionPolicy.defaults
 
     fun evaluate(
         rules: List<PlanningRule>,
@@ -77,62 +87,77 @@ object RepertoireEvaluator {
         mealShares: Map<MealType, Double> = defaultShares,
         thresholds: RepertoireThresholds = RepertoireThresholds()
     ): RepertoireAssessment {
-        val activeRules = rules.filter {
-            it.itemKind == PlannedItemKind.FOOD &&
-                it.isActive && it.frequency != PlanningFrequency.NEVER && it.isValid() &&
-                foodsById[it.itemId]?.hasComparableNutrition() == true
-        }
+        val constraints = MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares)
+        val activeRules = constraints.activeRules
         val activeFoods = activeRules.mapNotNull { foodsById[it.itemId] }.distinctBy { it.id }
+        val dependencyNeeds = dependencyNeeds(activeRules, foodsById)
         val inactiveFoods = rules.filter {
             it.itemKind == PlannedItemKind.FOOD && !it.isActive
         }.mapNotNull { foodsById[it.itemId] }.distinctBy { it.id }
-        val coverage = MealType.entries.filter { (mealShares[it] ?: defaultShares.getValue(it)) > 0.0 }
-            .map { type ->
-                MealCoverage(type, activeRules.count { rule ->
-                    type in rule.allowedMealTypes || rule.requiredSlots().any { it.mealType == type }
-                })
-            }
+        val coverage = constraints.activeMealTypes.map { type ->
+            MealCoverage(type, activeRules.count { rule ->
+                type in rule.allowedMealTypes || rule.requiredSlots().any { it.mealType == type }
+            })
+        }
         val vegetableGroups = activeFoods.filter { it.category == FoodCategory.VEGETABLE }
             .map(::conceptKey).distinct().size
         val fruitGroups = activeFoods.filter { it.category == FoodCategory.FRUIT }
             .map(::conceptKey).distinct().size
 
-        if (activeRules.isEmpty() || coverage.any { it.alternatives == 0 }) {
-            val factors = buildList {
-                if (activeRules.isEmpty()) add("No hay alimentos activos y correctamente programados.")
-                coverage.filter { it.alternatives == 0 }.forEach {
-                    add("No hay opciones para ${it.mealType.label.lowercase()}.")
-                }
-            }
+        if (constraints.structuralViolations.isNotEmpty()) {
             return emptyAssessment(
-                recommendation, coverage, fruitGroups, vegetableGroups, activeFoods,
-                factors, thresholds, inactiveFoods
+                recommendation = recommendation,
+                coverage = coverage,
+                fruit = fruitGroups,
+                vegetables = vegetableGroups,
+                foods = activeFoods,
+                factors = constraints.structuralViolations.map { it.message },
+                thresholds = thresholds,
+                inactiveFoods = inactiveFoods,
+                culinaryNeeds = dependencyNeeds,
+                searchStatus = ConstraintSearchStatus.INSUFFICIENT,
+                constraintViolations = constraints.structuralViolations
             )
         }
 
         val attempts = seeds.mapNotNull { seed ->
             runCatching {
-                WeeklyMenuGenerator.generate(
-                    currentMeals = emptyList(), rules = activeRules, history = emptyList(),
-                    foodsById = foodsById, dishesById = dishesById,
-                    recommendation = recommendation, mealShares = mealShares, seed = seed
+                seed to WeeklyMenuGenerator.generate(
+                    constraints = constraints,
+                    currentMeals = emptyList(),
+                    history = emptyList(),
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = recommendation,
+                    seed = seed
                 )
             }.getOrNull()
         }
         if (attempts.isEmpty()) {
             return emptyAssessment(
-                recommendation, coverage, fruitGroups, vegetableGroups, activeFoods,
-                listOf("Las reglas obligatorias no permiten construir todas las comidas."),
-                thresholds, inactiveFoods
+                recommendation = recommendation,
+                coverage = coverage,
+                fruit = fruitGroups,
+                vegetables = vegetableGroups,
+                foods = activeFoods,
+                factors = listOf(
+                    "La búsqueda no encontró un menú testigo; no se ha demostrado que el repertorio sea insuficiente."
+                ),
+                thresholds = thresholds,
+                inactiveFoods = inactiveFoods,
+                culinaryNeeds = dependencyNeeds,
+                searchStatus = ConstraintSearchStatus.SEARCH_INCONCLUSIVE
             )
         }
 
-        val ranked = attempts.map { generated ->
+        val ranked = attempts.map { (seed, generated) ->
             val assessments = WeekDay.entries.map { day ->
                 MealPlanEvaluator.assessDay(day, generated.meals, foodsById, dishesById, recommendation)
             }
             val evaluations = assessments.flatMap { it.evaluations }
             Candidate(
+                seed = seed,
+                meals = generated.meals,
                 assessments = assessments,
                 worstPenalty = evaluations.maxOf { it.penalty },
                 totalPenalty = evaluations.sumOf { it.penalty },
@@ -142,7 +167,10 @@ object RepertoireEvaluator {
             )
         }.sortedWith(compareBy<Candidate> { it.worstPenalty }.thenBy { it.totalPenalty })
         val best = ranked.first()
-        val acceptable = ranked.filter { it.worstPenalty <= thresholds.acceptableWorstPenalty }
+        val activeMealTypes = coverage.mapTo(mutableSetOf()) { it.mealType }
+        val acceptable = ranked.filter {
+            WeeklyMenuAcceptancePolicy.isAcceptable(it.assessments, activeMealTypes)
+        }
         val distinctAcceptable = acceptable.distinctBy { it.fingerprint }
         val average = averageNutrition(best.assessments)
         val target = MealPlanEvaluator.dailyTarget(recommendation)
@@ -159,25 +187,68 @@ object RepertoireEvaluator {
         val profiles = activeFoods.map(::nutritionProfile).distinct().size
         val factors = limitingFactors(nutrition, coverage, fruitGroups, vegetableGroups, thresholds)
         val suggestions = suggestionsFor(nutrition, fruitGroups, vegetableGroups)
+        val culinaryNeeds = dependencyNeeds + macroCulinaryNeeds(activeRules, foodsById, nutrition)
         val reactivations = matchingInactiveFoods(inactiveFoods, suggestions)
         val status = when {
-            best.worstPenalty > thresholds.acceptableWorstPenalty -> RepertoireStatus.INSUFFICIENT
+            acceptable.isEmpty() -> RepertoireStatus.INSUFFICIENT
             distinctAcceptable.size >= thresholds.robustSolutionCount && limitedMeals == 0 &&
                 profiles >= thresholds.robustSolutionCount -> RepertoireStatus.ROBUST
-            best.worstPenalty <= thresholds.goodWorstPenalty && limitedMeals == 0 -> RepertoireStatus.SUFFICIENT
-            else -> RepertoireStatus.LIMITED
+            else -> RepertoireStatus.SUFFICIENT
         }
+        val witnessCandidate = acceptable.firstOrNull()
         return RepertoireAssessment(
-            status, nutrition, coverage, fruitGroups, vegetableGroups,
-            distinctAcceptable.size, factors, suggestions, reactivations,
-            RepertoireMetrics(
+            status = status,
+            nutrition = nutrition,
+            coverage = coverage,
+            fruitConcepts = fruitGroups,
+            vegetableConcepts = vegetableGroups,
+            acceptableSolutions = distinctAcceptable.size,
+            limitingFactors = factors,
+            suggestions = suggestions,
+            reactivationFoodIds = reactivations,
+            metrics = RepertoireMetrics(
                 best.worstPenalty, best.totalPenalty, activeFoods.size, profiles,
                 limitedMeals, ranked.size
-            )
+            ),
+            culinaryNeeds = culinaryNeeds.distinctBy { it.kind to it.mealType },
+            searchStatus = if (witnessCandidate == null) {
+                ConstraintSearchStatus.SEARCH_INCONCLUSIVE
+            } else {
+                ConstraintSearchStatus.FEASIBLE
+            },
+            witness = witnessCandidate?.let { MenuWitness(it.seed, it.meals) }
+        )
+    }
+
+    fun evaluateCandidates(
+        rules: List<PlanningRule>,
+        candidates: List<Food>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double> = defaultShares,
+        thresholds: RepertoireThresholds = RepertoireThresholds()
+    ): Map<Long, RepertoireAssessment> = candidates.associate { candidate ->
+        val hypotheticalRule = PlanningRule(
+            itemKind = PlannedItemKind.FOOD,
+            itemId = candidate.id,
+            allowedMealTypes = MealType.entries.toSet(),
+            frequency = PlanningFrequency.FREQUENT,
+            preferredGrams = (candidate.unitAmount ?: 100.0).coerceIn(30.0, 250.0)
+        )
+        candidate.id to evaluate(
+            rules = rules + hypotheticalRule,
+            foodsById = foodsById,
+            dishesById = dishesById,
+            recommendation = recommendation,
+            mealShares = mealShares,
+            thresholds = thresholds
         )
     }
 
     private data class Candidate(
+        val seed: Long,
+        val meals: List<PlannedMeal>,
         val assessments: List<PlanNutritionAssessment>,
         val worstPenalty: Double,
         val totalPenalty: Double,
@@ -202,7 +273,10 @@ object RepertoireEvaluator {
         foods: List<Food>,
         factors: List<String>,
         thresholds: RepertoireThresholds,
-        inactiveFoods: List<Food>
+        inactiveFoods: List<Food>,
+        culinaryNeeds: List<CulinaryNeed> = emptyList(),
+        searchStatus: ConstraintSearchStatus = ConstraintSearchStatus.INSUFFICIENT,
+        constraintViolations: List<ConstraintViolation> = emptyList()
     ): RepertoireAssessment {
         val target = MealPlanEvaluator.dailyTarget(recommendation)
         val nutrition = mapOf(
@@ -213,12 +287,92 @@ object RepertoireEvaluator {
         )
         val suggestions = suggestionsFor(nutrition, fruit, vegetables)
         return RepertoireAssessment(
-            RepertoireStatus.INSUFFICIENT, nutrition, coverage, fruit, vegetables, 0,
-            factors, suggestions, matchingInactiveFoods(inactiveFoods, suggestions),
-            RepertoireMetrics(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, foods.size,
+            status = RepertoireStatus.INSUFFICIENT,
+            nutrition = nutrition,
+            coverage = coverage,
+            fruitConcepts = fruit,
+            vegetableConcepts = vegetables,
+            acceptableSolutions = 0,
+            limitingFactors = factors,
+            suggestions = suggestions,
+            reactivationFoodIds = matchingInactiveFoods(inactiveFoods, suggestions),
+            metrics = RepertoireMetrics(
+                Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, foods.size,
                 foods.map(::nutritionProfile).distinct().size,
-                coverage.count { it.alternatives <= thresholds.limitedMealAlternatives }, 0)
+                coverage.count { it.alternatives <= thresholds.limitedMealAlternatives }, 0
+            ),
+            culinaryNeeds = culinaryNeeds,
+            searchStatus = searchStatus,
+            witness = null,
+            constraintViolations = constraintViolations
         )
+    }
+
+    private fun dependencyNeeds(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>
+    ): List<CulinaryNeed> = MealType.entries.mapNotNull { mealType ->
+        val mealRules = rules.filter {
+            mealType in it.allowedMealTypes || it.requiredSlots().any { slot -> slot.mealType == mealType }
+        }
+        val roleChoices = mealRules.mapNotNull { rule ->
+            foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
+        }
+        val missing = CulinaryPolicy.missingRequiredRoles(roleChoices)
+        if (missing.isEmpty()) null else CulinaryNeed(
+            CulinaryNeedKind.COMPANION_BASE,
+            mealType,
+            missing,
+            "Falta ${missing.joinToString(" o ") { it.label.lowercase() }} para completar una combinación en " +
+                mealType.label.lowercase() + "."
+        )
+    }
+
+    private fun macroCulinaryNeeds(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        nutrition: Map<NutrientKind, NutrientCapacity>
+    ): List<CulinaryNeed> = buildList {
+        fun lacksRole(meal: MealType, role: CulinaryRole) = rules.none {
+            meal in it.allowedMealTypes && role in
+                foodsById[it.itemId]?.let(CulinaryPolicy::roles).orEmpty()
+        }
+        val isLow: (NutrientKind) -> Boolean = { kind ->
+            nutrition[kind]?.let { it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET } == true
+        }
+        if (isLow(NutrientKind.CARBOHYDRATES)) {
+            listOf(MealType.LUNCH, MealType.DINNER).firstOrNull {
+                lacksRole(it, CulinaryRole.PLATE_BASE)
+            }?.let { meal ->
+                add(CulinaryNeed(
+                    CulinaryNeedKind.STARCH_BASE, meal,
+                    setOf(CulinaryRole.PLATE_BASE),
+                    "Añade una base de hidratos para ${meal.label.lowercase()}."
+                ))
+            }
+        }
+        if (isLow(NutrientKind.PROTEIN)) {
+            listOf(MealType.LUNCH, MealType.DINNER).firstOrNull {
+                lacksRole(it, CulinaryRole.PLATE_CENTER)
+            }?.let { meal ->
+                add(CulinaryNeed(
+                    CulinaryNeedKind.PRIMARY_PROTEIN, meal,
+                    setOf(CulinaryRole.PLATE_CENTER),
+                    "Añade un alimento principal con proteína para ${meal.label.lowercase()}."
+                ))
+            }
+        }
+        if (isLow(NutrientKind.FAT)) {
+            val meal = listOf(MealType.BREAKFAST, MealType.MORNING_SNACK,
+                MealType.AFTERNOON_SNACK, MealType.LUNCH, MealType.DINNER)
+                .minByOrNull { candidate -> rules.count { candidate in it.allowedMealTypes } }
+                ?: MealType.AFTERNOON_SNACK
+            add(CulinaryNeed(
+                CulinaryNeedKind.FAT_COMPLEMENT, meal,
+                setOf(CulinaryRole.TOPPING, CulinaryRole.COOKING_MEDIUM, CulinaryRole.STANDALONE),
+                "Añade un complemento graso para ${meal.label.lowercase()}."
+            ))
+        }
     }
 
     private fun limitingFactors(

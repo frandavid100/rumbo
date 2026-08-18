@@ -5,14 +5,16 @@ import androidx.core.content.edit
 import es.david.rumbo.logic.RecommendationEngine
 import es.david.rumbo.logic.GeneratedWeeklyMenu
 import es.david.rumbo.model.ActivityLevel
-import es.david.rumbo.model.MercadonaFoodCatalog
+import es.david.rumbo.data.catalog.CatalogBackedFoodCatalog
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.DietCompliance
 import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
-import es.david.rumbo.model.DefaultFoodCatalog
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.FoodCategory
+import es.david.rumbo.model.CulinaryPolicyOverride
+import es.david.rumbo.model.legacyCulinaryRoles
+import es.david.rumbo.model.NutritionToleranceSettings
 import es.david.rumbo.model.Measurement
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.MenuHistoryEntry
@@ -38,7 +40,7 @@ import java.time.LocalDate
 class AppRepository(context: Context) {
     private val preferences = context.getSharedPreferences("rumbo_data", Context.MODE_PRIVATE)
     private val baseFoods: List<Food> by lazy {
-        (DefaultFoodCatalog.items + MercadonaFoodCatalog.load(context))
+        CatalogBackedFoodCatalog.load(context)
             .distinctBy { it.id }
             .sortedWith(foodComparator)
     }
@@ -60,7 +62,12 @@ class AppRepository(context: Context) {
             plannedMeals = existing?.plannedMeals.orEmpty(),
             planningRules = existing?.planningRules.orEmpty(),
             repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
-            menuHistory = existing?.menuHistory.orEmpty()
+            dismissedSuggestionFoodIds = existing?.dismissedSuggestionFoodIds.orEmpty(),
+            menuHistory = existing?.menuHistory.orEmpty(),
+            culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty(),
+            nutritionToleranceSettings = existing?.nutritionToleranceSettings
+                ?: NutritionToleranceSettings(),
+            mealShares = existing?.mealShares
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -68,6 +75,47 @@ class AppRepository(context: Context) {
             current.profiles.map { if (it.profile.id == profile.id) updatedProfile else it }
         }
         return persistAndReturn(AppData(profiles, profile.id, current.foods, current.dishes))
+    }
+
+    fun saveCulinaryPolicyOverride(override: CulinaryPolicyOverride): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        val role = override.culinaryRole
+        val updated = active.copy(
+            culinaryPolicyOverrides = active.culinaryPolicyOverrides
+                .filterNot { it.culinaryRole == role } + override
+        )
+        return updateActive(current, updated)
+    }
+
+    fun resetCulinaryPolicyOverride(role: String): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(
+            current,
+            active.copy(
+                culinaryPolicyOverrides = active.culinaryPolicyOverrides
+                    .filterNot { it.culinaryRole == role }
+            )
+        )
+    }
+
+    fun saveNutritionToleranceSettings(settings: NutritionToleranceSettings): AppData {
+        require(settings.isValid()) { "Las tolerancias nutricionales no son válidas" }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(current, active.copy(nutritionToleranceSettings = settings))
+    }
+
+    fun saveMealShares(shares: Map<MealType, Double>): AppData {
+        require(shares.keys.containsAll(MealType.entries)) { "Faltan comidas en la distribución" }
+        require(shares.values.all { it in 0.0..0.9 }) { "La distribución no es válida" }
+        require(kotlin.math.abs(shares.values.sum() - 1.0) < 0.001) {
+            "La distribución debe sumar 100 %"
+        }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(current, active.copy(mealShares = shares))
     }
 
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
@@ -84,7 +132,12 @@ class AppRepository(context: Context) {
             plannedMeals = existing?.plannedMeals.orEmpty(),
             planningRules = existing?.planningRules.orEmpty(),
             repertoireFoodIds = existing?.repertoireFoodIds.orEmpty(),
-            menuHistory = existing?.menuHistory.orEmpty()
+            dismissedSuggestionFoodIds = existing?.dismissedSuggestionFoodIds.orEmpty(),
+            menuHistory = existing?.menuHistory.orEmpty(),
+            culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty(),
+            nutritionToleranceSettings = existing?.nutritionToleranceSettings
+                ?: NutritionToleranceSettings(),
+            mealShares = existing?.mealShares
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -311,6 +364,16 @@ class AppRepository(context: Context) {
         return updateActive(current, active.copy(repertoireFoodIds = active.repertoireFoodIds + foodId))
     }
 
+    fun dismissFoodSuggestion(foodId: Long): AppData {
+        val current = load()
+        require(current.foods.any { it.id == foodId }) { "El alimento ya no existe" }
+        val active = current.activeProfileData ?: return current
+        return updateActive(
+            current,
+            active.copy(dismissedSuggestionFoodIds = active.dismissedSuggestionFoodIds + foodId)
+        )
+    }
+
     fun removeFromRepertoire(foodId: Long): AppData {
         val current = load()
         val active = current.activeProfileData ?: return current
@@ -437,6 +500,8 @@ class AppRepository(context: Context) {
                     }
                 },
                 repertoireFoodIds = profileData.repertoireFoodIds.filterTo(mutableSetOf()) { it in foodIds },
+                dismissedSuggestionFoodIds = profileData.dismissedSuggestionFoodIds
+                    .filterTo(mutableSetOf()) { it in foodIds },
                 menuHistory = profileData.menuHistory.filter { entry ->
                     when (entry.itemKind) {
                         PlannedItemKind.FOOD -> entry.itemId in foodIds
@@ -525,7 +590,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 19)
+        put("schemaVersion", 23)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -537,7 +602,23 @@ class AppRepository(context: Context) {
                     put("repertoireFoodIds", JSONArray().apply {
                         profileData.repertoireFoodIds.forEach(::put)
                     })
+                    put("dismissedSuggestionFoodIds", JSONArray().apply {
+                        profileData.dismissedSuggestionFoodIds.forEach(::put)
+                    })
                     put("menuHistory", encodeMenuHistory(profileData.menuHistory))
+                    put(
+                        "culinaryPolicyOverrides",
+                        encodeCulinaryPolicyOverrides(profileData.culinaryPolicyOverrides)
+                    )
+                    put(
+                        "nutritionToleranceSettings",
+                        encodeNutritionToleranceSettings(profileData.nutritionToleranceSettings)
+                    )
+                    profileData.mealShares?.let { shares ->
+                        put("mealShares", JSONObject().apply {
+                            shares.forEach { (type, share) -> put(type.name, share) }
+                        })
+                    }
                 })
             }
         })
@@ -603,6 +684,8 @@ class AppRepository(context: Context) {
                 putNullable("unitAmount", food.unitAmount)
                 put("wholeUnitsOnly", food.wholeUnitsOnly)
                 put("unitDivisions", food.unitDivisions)
+                put("nutritionalRoles", JSONArray(food.nutritionalRoles.toList()))
+                put("culinaryRoles", JSONArray(food.culinaryRoles.toList()))
             })
         }
     }
@@ -674,16 +757,7 @@ class AppRepository(context: Context) {
                 put("allowedMealTypes", JSONArray().apply {
                     rule.allowedMealTypes.forEach { put(it.name) }
                 })
-                put("fixedSlots", JSONArray().apply {
-                    rule.fixedSlots.forEach { slot ->
-                        put(JSONObject().apply {
-                            put("day", slot.day.name)
-                            put("mealType", slot.mealType.name)
-                        })
-                    }
-                })
                 put("frequency", rule.frequency.name)
-                put("allowedDays", JSONArray().apply { rule.allowedDays.forEach { put(it.name) } })
                 put("isActive", rule.isActive)
                 put("preferredGrams", rule.preferredGrams)
                 put("minimumFactor", rule.minimumFactor)
@@ -704,6 +778,33 @@ class AppRepository(context: Context) {
         }
     }
 
+    private fun encodeCulinaryPolicyOverrides(
+        overrides: List<CulinaryPolicyOverride>
+    ): JSONArray = JSONArray().apply {
+        overrides.forEach { override ->
+            put(JSONObject().apply {
+                put("culinaryRole", override.culinaryRole)
+                putNullable("preferredGrams", override.preferredGrams)
+                putNullable("minimumGrams", override.minimumGrams)
+                putNullable("maximumGrams", override.maximumGrams)
+                putNullable("standaloneAllowed", override.standaloneAllowed)
+            })
+        }
+    }
+
+    private fun encodeNutritionToleranceSettings(
+        settings: NutritionToleranceSettings
+    ) = JSONObject().apply {
+        put("caloriesMinimum", settings.caloriesMinimum)
+        put("caloriesMaximum", settings.caloriesMaximum)
+        put("proteinMinimum", settings.proteinMinimum)
+        put("proteinMaximum", settings.proteinMaximum)
+        put("carbohydratesMinimum", settings.carbohydratesMinimum)
+        put("carbohydratesMaximum", settings.carbohydratesMaximum)
+        put("fatMinimum", settings.fatMinimum)
+        put("fatMaximum", settings.fatMaximum)
+    }
+
     private fun encodeDishes(dishes: List<Dish>): JSONArray = JSONArray().apply {
         dishes.forEach { dish ->
             put(JSONObject().apply {
@@ -716,7 +817,6 @@ class AppRepository(context: Context) {
                 put("wholeUnitsOnly", dish.wholeUnitsOnly)
                 put("unitDivisions", dish.unitDivisions)
                 put("allowedMealTypes", JSONArray(dish.allowedMealTypes.map { it.name }))
-                put("allowedDays", JSONArray(dish.allowedDays.map { it.name }))
                 put("ingredients", JSONArray().apply {
                     dish.ingredients.forEach { ingredient ->
                         put(JSONObject().apply {
@@ -753,7 +853,18 @@ class AppRepository(context: Context) {
                                 ?: decodePlanningRules(item.optJSONArray("planningRules") ?: JSONArray())
                                     .filter { it.itemKind == PlannedItemKind.FOOD }
                                     .mapTo(mutableSetOf()) { it.itemId },
-                            menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray())
+                            dismissedSuggestionFoodIds = item
+                                .optJSONArray("dismissedSuggestionFoodIds")
+                                ?.let(::decodeIds)
+                                .orEmpty(),
+                            menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray()),
+                            culinaryPolicyOverrides = decodeCulinaryPolicyOverrides(
+                                item.optJSONArray("culinaryPolicyOverrides") ?: JSONArray()
+                            ),
+                            nutritionToleranceSettings = decodeNutritionToleranceSettings(
+                                item.optJSONObject("nutritionToleranceSettings")
+                            ),
+                            mealShares = decodeMealShares(item.optJSONObject("mealShares"))
                         )
                     )
                 }
@@ -841,7 +952,15 @@ class AppRepository(context: Context) {
                     unitGender = item.optString("unitGender", "MASCULINE"),
                     unitAmount = item.optionalDouble("unitAmount"),
                     wholeUnitsOnly = item.optBoolean("wholeUnitsOnly", false),
-                    unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100)
+                    unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100),
+                    nutritionalRoles = item.optJSONArray("nutritionalRoles")?.let { values ->
+                        buildSet { for (i in 0 until values.length()) add(values.getString(i)) }
+                    } ?: baseFoodsById[item.getLong("id")]?.nutritionalRoles.orEmpty(),
+                    culinaryRoles = item.optJSONArray("culinaryRoles")?.let { values ->
+                        buildSet { for (i in 0 until values.length()) add(values.getString(i)) }
+                    } ?: baseFoodsById[item.getLong("id")]?.culinaryRoles
+                        ?.takeIf { it.isNotEmpty() }
+                        ?: legacyCulinaryRoles(item.optionalString("culinaryType"))
                 )
             )
         }
@@ -941,51 +1060,29 @@ class AppRepository(context: Context) {
             val item = array.getJSONObject(index)
             val allowed = item.optJSONArray("allowedMealTypes") ?: JSONArray()
             val fixed = item.optJSONArray("fixedSlots") ?: JSONArray()
-            val days = item.optJSONArray("allowedDays")
+            val legacyFixedMealTypes = buildSet {
+                for (i in 0 until fixed.length()) {
+                    add(MealType.valueOf(fixed.getJSONObject(i).getString("mealType")))
+                }
+            }
             add(
                 PlanningRule(
                     itemKind = PlannedItemKind.valueOf(item.getString("itemKind")),
                     itemId = item.getLong("itemId"),
                     allowedMealTypes = buildSet {
                         for (i in 0 until allowed.length()) add(MealType.valueOf(allowed.getString(i)))
+                        addAll(legacyFixedMealTypes)
                     },
-                    fixedSlots = buildSet {
-                        for (i in 0 until fixed.length()) {
-                            val slot = fixed.getJSONObject(i)
-                            add(
-                                PlanningSlot(
-                                    WeekDay.valueOf(slot.getString("day")),
-                                    MealType.valueOf(slot.getString("mealType"))
-                                )
-                            )
-                        }
-                    },
+                    fixedSlots = emptySet(),
                     frequency = PlanningFrequency.valueOf(item.optString("frequency", PlanningFrequency.NORMAL.name)),
                     isActive = item.optBoolean("isActive", true),
                     preferredGrams = item.optDouble("preferredGrams", 100.0),
                     minimumFactor = item.optDouble("minimumFactor", 0.5),
                     maximumFactor = item.optDouble("maximumFactor", 1.5),
                     ruleId = item.optLong("ruleId", item.getLong("itemId")),
-                    allowedDays = if (days == null) WeekDay.entries.toSet() else buildSet {
-                        for (i in 0 until days.length()) add(WeekDay.valueOf(days.getString(i)))
-                    }
+                    allowedDays = WeekDay.entries.toSet()
                 )
             )
-        }
-    }.flatMap { rule ->
-        if (rule.fixedSlots.isEmpty()) listOf(rule) else buildList {
-            if (rule.frequency != PlanningFrequency.NEVER && rule.allowedMealTypes.isNotEmpty()) {
-                add(rule.copy(fixedSlots = emptySet()))
-            }
-            rule.fixedSlots.groupBy { it.mealType }.entries.forEachIndexed { index, (mealType, slots) ->
-                add(rule.copy(
-                    ruleId = rule.ruleId * 1000 + index + 1,
-                    allowedMealTypes = setOf(mealType),
-                    allowedDays = slots.mapTo(mutableSetOf()) { it.day },
-                    fixedSlots = emptySet(),
-                    frequency = PlanningFrequency.ALWAYS
-                ))
-            }
         }
     }
 
@@ -1001,6 +1098,61 @@ class AppRepository(context: Context) {
                     mealType = MealType.valueOf(item.getString("mealType"))
                 )
             )
+        }
+    }
+
+    private fun decodeCulinaryPolicyOverrides(
+        array: JSONArray
+    ): List<CulinaryPolicyOverride> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.getJSONObject(index)
+            val roles = item.optionalString("culinaryRole")?.let(::setOf)
+                ?: legacyCulinaryRoles(item.optionalString("culinaryType"))
+            roles.forEach { role ->
+                add(
+                    CulinaryPolicyOverride(
+                        culinaryRole = role,
+                        preferredGrams = item.optionalDouble("preferredGrams"),
+                        minimumGrams = item.optionalDouble("minimumGrams"),
+                        maximumGrams = item.optionalDouble("maximumGrams"),
+                        standaloneAllowed = if (item.has("standaloneAllowed") && !item.isNull("standaloneAllowed")) {
+                            item.getBoolean("standaloneAllowed")
+                        } else null
+                    )
+                )
+            }
+        }
+    }
+
+    private fun decodeNutritionToleranceSettings(
+        item: JSONObject?
+    ): NutritionToleranceSettings {
+        if (item == null) return NutritionToleranceSettings()
+        val defaults = NutritionToleranceSettings()
+        return NutritionToleranceSettings(
+            caloriesMinimum = item.optDouble("caloriesMinimum", defaults.caloriesMinimum),
+            caloriesMaximum = item.optDouble("caloriesMaximum", defaults.caloriesMaximum),
+            proteinMinimum = item.optDouble("proteinMinimum", defaults.proteinMinimum),
+            proteinMaximum = item.optDouble("proteinMaximum", defaults.proteinMaximum),
+            carbohydratesMinimum = item.optDouble(
+                "carbohydratesMinimum", defaults.carbohydratesMinimum
+            ),
+            carbohydratesMaximum = item.optDouble(
+                "carbohydratesMaximum", defaults.carbohydratesMaximum
+            ),
+            fatMinimum = item.optDouble("fatMinimum", defaults.fatMinimum),
+            fatMaximum = item.optDouble("fatMaximum", defaults.fatMaximum)
+        ).takeIf { it.isValid() } ?: defaults
+    }
+
+    private fun decodeMealShares(item: JSONObject?): Map<MealType, Double>? {
+        item ?: return null
+        val shares = MealType.entries.associateWith { type ->
+            item.optDouble(type.name, Double.NaN)
+        }
+        return shares.takeIf {
+            it.values.all { share -> share.isFinite() && share in 0.0..0.9 } &&
+                kotlin.math.abs(it.values.sum() - 1.0) < 0.001
         }
     }
 
@@ -1025,13 +1177,7 @@ class AppRepository(context: Context) {
                             }
                         }
                     } ?: MealType.entries.toSet(),
-                    allowedDays = item.optJSONArray("allowedDays")?.let { values ->
-                        buildSet {
-                            for (valueIndex in 0 until values.length()) {
-                                runCatching { WeekDay.valueOf(values.getString(valueIndex)) }.getOrNull()?.let(::add)
-                            }
-                        }
-                    } ?: WeekDay.entries.toSet(),
+                    allowedDays = WeekDay.entries.toSet(),
                     ingredients = buildList {
                         for (ingredientIndex in 0 until ingredientsJson.length()) {
                             val ingredient = ingredientsJson.getJSONObject(ingredientIndex)
@@ -1067,14 +1213,14 @@ class AppRepository(context: Context) {
         if (decoded == null) return baseFoods
         val legacyFoods = if (schemaVersion < 5) addDefaultLinks(decoded) else decoded
         val legacyById = legacyFoods.associateBy { it.id }
-        val defaultById = DefaultFoodCatalog.items.associateBy { it.id }
+        val defaultById = emptyMap<Long, Food>()
         val deletedDefaultIds = defaultById.keys - legacyById.keys
         val overrides = legacyFoods.filter { food -> defaultById[food.id] != food }
         return mergeFoodChanges(overrides, deletedDefaultIds)
     }
 
     private fun addDefaultLinks(foods: List<Food>): List<Food> {
-        val defaults = DefaultFoodCatalog.items.associateBy { it.id }
+        val defaults = emptyMap<Long, Food>()
         return foods.map { food ->
             val default = defaults[food.id]
             if (food.links.isEmpty() && default?.name == food.name) food.copy(links = default.links) else food
