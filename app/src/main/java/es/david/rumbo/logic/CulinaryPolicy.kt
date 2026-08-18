@@ -121,20 +121,31 @@ object CulinaryPolicy {
     fun addresses(need: CulinaryNeed, food: Food): Boolean =
         roles(food).any { it in need.acceptedRoles }
 
-    /** True when one role can be chosen for every item so all hard rules hold. */
+    /**
+     * True when one role can be chosen for every role-aware item so all hard rules hold.
+     * Empty role sets belong only to migrated/custom legacy foods and mean that Rumbo has
+     * no culinary restriction to enforce for that item. Published MENU_ELIGIBLE catalogue
+     * products are expected to carry canonical roles.
+     */
     fun hasValidRoleAssignment(roleChoices: List<Set<CulinaryRole>>): Boolean {
-        if (roleChoices.isEmpty()) return false
-        if (roleChoices.any { it.isEmpty() }) return false
-        val chosen = ArrayList<CulinaryRole>(roleChoices.size)
+        val constrained = roleChoices.filter { it.isNotEmpty() }
+        if (constrained.isEmpty()) return true
+        val chosen = ArrayList<CulinaryRole>(constrained.size)
         fun visit(index: Int): Boolean {
-            if (index == roleChoices.size) {
+            if (index == constrained.size) {
                 val counts = chosen.groupingBy { it }.eachCount()
-                if (chosen.size == 1 && !policy(chosen.single()).standaloneAllowed) return false
-                if (chosen.any { role -> policy(role).requiredRoles.any { required -> counts.getOrDefault(required, 0) == 0 } }) return false
-                if (counts.any { (role, count) -> policy(role).maxPerMeal?.let { count > it } == true }) return false
+                if (constrained.size == 1 && !policy(chosen.single()).standaloneAllowed) return false
+                if (chosen.any { role ->
+                        policy(role).requiredRoles.any { required -> counts.getOrDefault(required, 0) == 0 }
+                    }
+                ) return false
+                if (counts.any { (role, count) ->
+                        policy(role).maxPerMeal?.let { count > it } == true
+                    }
+                ) return false
                 return true
             }
-            for (role in roleChoices[index]) {
+            for (role in constrained[index]) {
                 chosen += role
                 if (visit(index + 1)) return true
                 chosen.removeAt(chosen.lastIndex)
@@ -145,8 +156,9 @@ object CulinaryPolicy {
     }
 
     fun missingRequiredRoles(roleChoices: List<Set<CulinaryRole>>): Set<CulinaryRole> {
-        val available = roleChoices.flatten().toSet()
-        return roleChoices.flatten().flatMapTo(linkedSetOf()) { role ->
+        val constrained = roleChoices.filter { it.isNotEmpty() }
+        val available = constrained.flatten().toSet()
+        return constrained.flatten().flatMapTo(linkedSetOf()) { role ->
             policy(role).requiredRoles.filter { it !in available }
         }
     }
