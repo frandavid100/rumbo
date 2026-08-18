@@ -205,7 +205,10 @@ import es.david.rumbo.logic.PlanningConflictException
 import es.david.rumbo.logic.CulinaryPolicy
 import es.david.rumbo.logic.CulinaryRole
 import es.david.rumbo.logic.CulinaryRolePolicy
+import es.david.rumbo.logic.CertifiedDayWitnessEvaluator
 import es.david.rumbo.model.ActivityLevel
+import es.david.rumbo.model.CertifiedDayLevel
+import es.david.rumbo.model.CertifiedDayWitness
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.BodyAssessment
 import es.david.rumbo.model.DietCompliance
@@ -789,6 +792,12 @@ fun RumboApp(repository: AppRepository) {
                         catalogCulinaryRoleFilter = null
                         catalogSearchRequest += 1
                         screenName = Screen.HOME.name
+                    },
+                    onSaveCertifiedDayWitness = {
+                        data = repository.saveCertifiedDayWitness(it)
+                    },
+                    onClearCertifiedDayWitness = {
+                        data = repository.clearCertifiedDayWitness(it)
                     },
                     onOpenProgressSearch = { nutritionalRole, culinaryRole, mealType ->
                         catalogRetailerFilter = null
@@ -1630,6 +1639,8 @@ private fun HomeScreen(
     onDismissFoodSuggestion: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onOpenFoods: () -> Unit,
+    onSaveCertifiedDayWitness: (CertifiedDayWitness) -> Unit,
+    onClearCertifiedDayWitness: (CertifiedDayLevel) -> Unit,
     onOpenProgressSearch: (String?, String?, MealType?) -> Unit,
     onAddMissingMeal: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
@@ -1698,7 +1709,47 @@ private fun HomeScreen(
             }
         }
     }
-    val menuReady = currentMenuAcceptable ||
+    val savedViableWitness = data.activeProfileData?.certifiedDayWitnesses
+        ?.firstOrNull { it.level == CertifiedDayLevel.VIABLE }
+    val savedViableWitnessValid = remember(
+        savedViableWitness,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        recommendation != null && savedViableWitness != null &&
+            CertifiedDayWitnessEvaluator.isViable(
+                witness = savedViableWitness,
+                rules = data.activeProfileData?.planningRules.orEmpty(),
+                foodsById = foodsById,
+                dishesById = dishesById,
+                recommendation = recommendation,
+                mealShares = mealShares
+            )
+    }
+    val freshViableWitness = remember(repertoireAssessment) {
+        repertoireAssessment?.witness?.let(CertifiedDayWitnessEvaluator::fromMenuWitness)
+    }
+    LaunchedEffect(
+        savedViableWitness, savedViableWitnessValid, freshViableWitness,
+        repertoireAssessment?.searchStatus
+    ) {
+        when {
+            savedViableWitnessValid -> Unit
+            freshViableWitness != null &&
+                repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE ->
+                onSaveCertifiedDayWitness(freshViableWitness)
+            savedViableWitness != null -> onClearCertifiedDayWitness(CertifiedDayLevel.VIABLE)
+        }
+    }
+    val hasCertifiedViableDay = savedViableWitnessValid ||
+        (freshViableWitness != null && repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE)
+
+    val menuReady = currentMenuAcceptable || hasCertifiedViableDay ||
         repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
         repertoireAssessment?.status == RepertoireStatus.ROBUST
     val foodSuggestions = remember(
@@ -1936,6 +1987,7 @@ private fun HomeScreen(
             item {
                 RepertoireProgressCard(
                     assessment = repertoireAssessment,
+                    hasCertifiedViableDay = hasCertifiedViableDay,
                     foods = data.foods,
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
@@ -1994,6 +2046,7 @@ private val initialRepertoireRoleMilestones = listOf(
 
 private fun repertoireProgressTarget(
     assessment: RepertoireAssessment?,
+    hasCertifiedViableDay: Boolean,
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>
@@ -2001,7 +2054,7 @@ private fun repertoireProgressTarget(
     if (assessment == null) {
         return 0 to RepertoireProgressTarget("Estamos analizando tus alimentos para encontrar el siguiente paso.")
     }
-    if (assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
+    if (hasCertifiedViableDay || assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
         val missingVegetables = (3 - assessment.vegetableConcepts).coerceAtLeast(0)
         if (missingVegetables > 0) {
             val noun = if (missingVegetables == 1) "verdura diferente" else "verduras diferentes"
@@ -2119,13 +2172,18 @@ private fun RepertoireLevelMilestones(currentLevel: Int) {
 @Composable
 private fun RepertoireProgressCard(
     assessment: RepertoireAssessment?,
+    hasCertifiedViableDay: Boolean,
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>,
     onOpenSearch: (String?, String?, MealType?) -> Unit
 ) {
-    val (level, target) = remember(assessment, foods, repertoireFoodIds, planningRules) {
-        repertoireProgressTarget(assessment, foods, repertoireFoodIds, planningRules)
+    val (level, target) = remember(
+        assessment, hasCertifiedViableDay, foods, repertoireFoodIds, planningRules
+    ) {
+        repertoireProgressTarget(
+            assessment, hasCertifiedViableDay, foods, repertoireFoodIds, planningRules
+        )
     }
     val title = when (level) {
         0 -> "Nivel 0 · Preparando un menú viable"

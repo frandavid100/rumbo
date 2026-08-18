@@ -7,6 +7,8 @@ import es.david.rumbo.logic.GeneratedWeeklyMenu
 import es.david.rumbo.model.ActivityLevel
 import es.david.rumbo.data.catalog.CatalogBackedFoodCatalog
 import es.david.rumbo.model.AppData
+import es.david.rumbo.model.CertifiedDayLevel
+import es.david.rumbo.model.CertifiedDayWitness
 import es.david.rumbo.model.DietCompliance
 import es.david.rumbo.model.Dish
 import es.david.rumbo.model.DishIngredient
@@ -67,7 +69,8 @@ class AppRepository(context: Context) {
             culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty(),
             nutritionToleranceSettings = existing?.nutritionToleranceSettings
                 ?: NutritionToleranceSettings(),
-            mealShares = existing?.mealShares
+            mealShares = existing?.mealShares,
+            certifiedDayWitnesses = existing?.certifiedDayWitnesses.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -118,6 +121,26 @@ class AppRepository(context: Context) {
         return updateActive(current, active.copy(mealShares = shares))
     }
 
+    fun saveCertifiedDayWitness(witness: CertifiedDayWitness): AppData {
+        require(witness.isStructurallyValid()) { "El día testigo no es válido" }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        val updated = active.certifiedDayWitnesses
+            .filterNot { it.level == witness.level } + witness
+        return updateActive(current, active.copy(certifiedDayWitnesses = updated))
+    }
+
+    fun clearCertifiedDayWitness(level: CertifiedDayLevel): AppData {
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        return updateActive(
+            current,
+            active.copy(
+                certifiedDayWitnesses = active.certifiedDayWitnesses.filterNot { it.level == level }
+            )
+        )
+    }
+
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
         require(baseline.weightKg != null || baseline.waistCm != null) {
             "El perfil inicial necesita al menos el peso o la cintura"
@@ -137,7 +160,8 @@ class AppRepository(context: Context) {
             culinaryPolicyOverrides = existing?.culinaryPolicyOverrides.orEmpty(),
             nutritionToleranceSettings = existing?.nutritionToleranceSettings
                 ?: NutritionToleranceSettings(),
-            mealShares = existing?.mealShares
+            mealShares = existing?.mealShares,
+            certifiedDayWitnesses = existing?.certifiedDayWitnesses.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -568,6 +592,17 @@ class AppRepository(context: Context) {
             require(profileData.repertoireFoodIds.all { it in foodIds }) {
                 "Hay alimentos inexistentes en el repertorio"
             }
+            require(profileData.certifiedDayWitnesses.all { it.isStructurallyValid() }) {
+                "Hay días testigo no válidos"
+            }
+            require(profileData.certifiedDayWitnesses.flatMap { it.meals }.flatMap { it.items }
+                .all { it.foodId in foodIds }) {
+                "Hay días testigo con alimentos inexistentes"
+            }
+            require(profileData.certifiedDayWitnesses.flatMap { it.meals }.flatMap { it.dishes }
+                .all { it.dishId in dishIds }) {
+                "Hay días testigo con platos inexistentes"
+            }
             require(PlanWeek.entries.all { week ->
                 MealType.entries.all { type ->
                     val days = meals.filter {
@@ -590,7 +625,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 23)
+        put("schemaVersion", 24)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -606,6 +641,10 @@ class AppRepository(context: Context) {
                         profileData.dismissedSuggestionFoodIds.forEach(::put)
                     })
                     put("menuHistory", encodeMenuHistory(profileData.menuHistory))
+                    put(
+                        "certifiedDayWitnesses",
+                        encodeCertifiedDayWitnesses(profileData.certifiedDayWitnesses)
+                    )
                     put(
                         "culinaryPolicyOverrides",
                         encodeCulinaryPolicyOverrides(profileData.culinaryPolicyOverrides)
@@ -766,6 +805,20 @@ class AppRepository(context: Context) {
         }
     }
 
+    private fun encodeCertifiedDayWitnesses(
+        witnesses: List<CertifiedDayWitness>
+    ): JSONArray = JSONArray().apply {
+        witnesses.forEach { witness ->
+            put(JSONObject().apply {
+                put("level", witness.level.name)
+                put("seed", witness.seed)
+                put("day", witness.day.name)
+                put("fingerprint", witness.fingerprint)
+                put("meals", encodePlannedMeals(witness.meals))
+            })
+        }
+    }
+
     private fun encodeMenuHistory(history: List<MenuHistoryEntry>): JSONArray = JSONArray().apply {
         history.forEach { entry ->
             put(JSONObject().apply {
@@ -858,6 +911,11 @@ class AppRepository(context: Context) {
                                 ?.let(::decodeIds)
                                 .orEmpty(),
                             menuHistory = decodeMenuHistory(item.optJSONArray("menuHistory") ?: JSONArray()),
+                            certifiedDayWitnesses = decodeCertifiedDayWitnesses(
+                                item.optJSONArray("certifiedDayWitnesses") ?: JSONArray(),
+                                dishesById,
+                                schemaVersion
+                            ),
                             culinaryPolicyOverrides = decodeCulinaryPolicyOverrides(
                                 item.optJSONArray("culinaryPolicyOverrides") ?: JSONArray()
                             ),
@@ -1083,6 +1141,31 @@ class AppRepository(context: Context) {
                     allowedDays = WeekDay.entries.toSet()
                 )
             )
+        }
+    }
+
+    private fun decodeCertifiedDayWitnesses(
+        array: JSONArray,
+        dishesById: Map<Long, Dish>,
+        schemaVersion: Int
+    ): List<CertifiedDayWitness> = buildList {
+        for (index in 0 until array.length()) {
+            val item = array.optJSONObject(index) ?: continue
+            val level = runCatching {
+                CertifiedDayLevel.valueOf(item.getString("level"))
+            }.getOrNull() ?: continue
+            val day = runCatching { WeekDay.valueOf(item.getString("day")) }.getOrNull() ?: continue
+            val meals = decodePlannedMeals(
+                item.optJSONArray("meals") ?: JSONArray(), dishesById, schemaVersion
+            )
+            val witness = CertifiedDayWitness(
+                level = level,
+                seed = item.optLong("seed", 11L),
+                day = day,
+                meals = meals,
+                fingerprint = item.optInt("fingerprint", meals.hashCode())
+            )
+            if (witness.isStructurallyValid()) add(witness)
         }
     }
 
