@@ -120,21 +120,32 @@ object CulinaryPolicy {
 
     fun roles(food: Food): Set<CulinaryRole> = food.culinaryRoles.mapNotNullTo(linkedSetOf(), ::parseRole)
 
-    private fun portionRole(food: Food): CulinaryRole? = roles(food).minByOrNull { role ->
-        when (role) {
-            CulinaryRole.COOKING_MEDIUM, CulinaryRole.SEASONING, CulinaryRole.TOPPING,
-            CulinaryRole.SAUCE_DRESSING, CulinaryRole.SPREAD, CulinaryRole.BINDER,
-            CulinaryRole.COATING -> 0
-            CulinaryRole.CEREAL_MIX_IN, CulinaryRole.POWDER_MIX_IN,
-            CulinaryRole.SANDWICH_FILLING -> 1
-            CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE -> 2
-            CulinaryRole.STANDALONE, CulinaryRole.BEVERAGE, CulinaryRole.DESSERT,
-            CulinaryRole.CEREAL_BASE, CulinaryRole.POWDER_BASE, CulinaryRole.SANDWICH_BASE -> 3
+    private fun portionRole(rule: PlanningRule, food: Food): CulinaryRole? {
+        val available = roles(food)
+        if (available.isEmpty()) return null
+        val contextual = available.filterTo(linkedSetOf()) { role ->
+            rule.allowedMealTypes.isEmpty() || rule.allowedMealTypes.any { mealType ->
+                mealType in policy(role).suggestedMealTypes
+            }
+        }.ifEmpty { available }
+        return contextual.minByOrNull { role ->
+            when (role) {
+                // Prefer the substantive use when more than one role is plausible.
+                // Example: SIDE must win over TOPPING for vegetables in lunch/dinner.
+                CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE,
+                CulinaryRole.CEREAL_BASE, CulinaryRole.POWDER_BASE, CulinaryRole.SANDWICH_BASE,
+                CulinaryRole.STANDALONE, CulinaryRole.BEVERAGE, CulinaryRole.DESSERT -> 0
+                CulinaryRole.CEREAL_MIX_IN, CulinaryRole.POWDER_MIX_IN,
+                CulinaryRole.SANDWICH_FILLING -> 1
+                CulinaryRole.COOKING_MEDIUM, CulinaryRole.SEASONING, CulinaryRole.TOPPING,
+                CulinaryRole.SAUCE_DRESSING, CulinaryRole.SPREAD, CulinaryRole.BINDER,
+                CulinaryRole.COATING -> 2
+            }
         }
     }
 
     fun applyPortion(rule: PlanningRule, food: Food): PlanningRule {
-        val role = portionRole(food) ?: return rule
+        val role = portionRole(rule, food) ?: return rule
         val p = policy(role)
         val preferred = p.preferredGrams ?: return rule
         val minimum = p.minimumGrams ?: preferred

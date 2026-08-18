@@ -261,7 +261,7 @@ private fun Card(
     modifier: Modifier = Modifier,
     shape: Shape = CardDefaults.shape,
     colors: CardColors = CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        containerColor = MaterialTheme.colorScheme.surface
     ),
     elevation: CardElevation = CardDefaults.cardElevation(),
     border: BorderStroke? = null,
@@ -1396,7 +1396,7 @@ fun RumboApp(repository: AppRepository) {
         }
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainerHighest
+            color = MaterialTheme.colorScheme.surface
         ) {
             HomeCatalogSearch(
                 foods = data.foods,
@@ -2198,26 +2198,16 @@ private fun repertoireProgressTarget(
             )
         }
         completeDayDiagnostic?.let { diagnostic ->
-            if (diagnostic.fruitMeals < 2) {
-                val enoughAvailable = diagnostic.availableFruitMeals >= 2
+            if (diagnostic.fruitMeals < 2 && diagnostic.availableFruitMeals < 2) {
                 return 1 to RepertoireProgressTarget(
-                    message = if (enoughAvailable) {
-                        "Tienes fruta disponible para al menos dos comidas, pero el mejor día completo que Rumbo ha conseguido construir solo la coloca en ${diagnostic.fruitMeals}. Vamos a ampliar las combinaciones posibles con otra opción eficiente."
-                    } else {
-                        "Con la configuración actual solo hay fruta disponible para ${diagnostic.availableFruitMeals} ${if (diagnostic.availableFruitMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar fruta en dos comidas distintas."
-                    },
+                    message = "Con la configuración actual solo hay fruta disponible para ${diagnostic.availableFruitMeals} ${if (diagnostic.availableFruitMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar fruta en dos comidas distintas.",
                     buttonLabel = "Añadir otra fruta",
                     nutritionalRole = "FRUIT"
                 )
             }
-            if (diagnostic.vegetableMeals < 2) {
-                val enoughAvailable = diagnostic.availableVegetableMeals >= 2
+            if (diagnostic.vegetableMeals < 2 && diagnostic.availableVegetableMeals < 2) {
                 return 1 to RepertoireProgressTarget(
-                    message = if (enoughAvailable) {
-                        "Tienes verdura disponible para al menos dos comidas, pero el mejor día completo que Rumbo ha conseguido construir solo la coloca en ${diagnostic.vegetableMeals}. Vamos a ampliar las combinaciones posibles con otra opción eficiente."
-                    } else {
-                        "Con la configuración actual solo hay verdura disponible para ${diagnostic.availableVegetableMeals} ${if (diagnostic.availableVegetableMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar verdura en dos comidas distintas."
-                    },
+                    message = "Con la configuración actual solo hay verdura disponible para ${diagnostic.availableVegetableMeals} ${if (diagnostic.availableVegetableMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar verdura en dos comidas distintas.",
                     buttonLabel = "Añadir otra verdura",
                     nutritionalRole = "VEGETABLE"
                 )

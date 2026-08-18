@@ -147,6 +147,8 @@ object CertifiedDayWitnessEvaluator {
         var bestDiagnostic: CompleteDayDiagnostic? = null
         var bestProgressWitness: CertifiedDayWitness? = null
         var bestScore = Double.NEGATIVE_INFINITY
+        var bestAttemptDiagnostic: CompleteDayDiagnostic? = null
+        var bestAttemptScore = Double.NEGATIVE_INFINITY
 
         fun considerProgressWitness(candidate: CertifiedDayWitness) {
             if (!isViable(candidate, rules, foodsById, dishesById, recommendation, mealShares)) return
@@ -221,6 +223,14 @@ object CertifiedDayWitnessEvaluator {
                 availableFruitMeals = availableFruitMeals,
                 availableVegetableMeals = availableVegetableMeals
             )
+            val attemptScore = fruitMeals.coerceAtMost(2) * 1_000_000.0 +
+                vegetableMeals.coerceAtMost(2) * 1_000_000.0 +
+                assessment.actual.fiberGrams.coerceAtMost(25.0) * 1_000.0 +
+                if (viable) 100.0 else 0.0
+            if (attemptScore > bestAttemptScore) {
+                bestAttemptScore = attemptScore
+                bestAttemptDiagnostic = diagnostic
+            }
             val progressCandidate = CertifiedDayWitness(
                 level = CertifiedDayLevel.VIABLE,
                 seed = seed,
@@ -236,7 +246,11 @@ object CertifiedDayWitnessEvaluator {
                 }
             }
         }
-        return CompleteDaySearchResult(null, bestDiagnostic, bestProgressWitness)
+        return CompleteDaySearchResult(
+            null,
+            bestAttemptDiagnostic ?: bestDiagnostic,
+            bestProgressWitness
+        )
     }
 
     private fun mealsContaining(
