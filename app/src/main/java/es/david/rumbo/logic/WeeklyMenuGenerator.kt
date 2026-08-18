@@ -265,7 +265,37 @@ object WeeklyMenuGenerator {
                     hasCompatibleExclusiveRoles(chosen + candidate, foodsById, dishesById)
             }
             if (candidates.isEmpty()) break
-            if (chosen.isEmpty() && candidates.any { it.itemKind == PlannedItemKind.DISH }) {
+
+            // COMPLETE is not just a scoring preference. While the day still
+            // needs fruit/vegetable coverage, reserve a slot for a compatible
+            // candidate that can satisfy the missing category. Otherwise the
+            // generic macro composition may fill all positions first and make
+            // COMPLETE impossible even when the repertoire has suitable foods.
+            if (objective == MenuGenerationObjective.COMPLETE) {
+                fun needsCategory(category: es.david.rumbo.model.FoodCategory): Boolean {
+                    if (chosen.any { it.containsCategory(category, foodsById, dishesById) }) return false
+                    val previousMeals = assigned.entries.count { (assignedSlot, assignedRules) ->
+                        assignedSlot.day == slot.day && assignedRules.any {
+                            it.containsCategory(category, foodsById, dishesById)
+                        }
+                    }
+                    return previousMeals < 2
+                }
+                val pendingCategories = listOf(
+                    es.david.rumbo.model.FoodCategory.FRUIT,
+                    es.david.rumbo.model.FoodCategory.VEGETABLE
+                ).filter(::needsCategory)
+                val requiredCandidates = candidates.filter { candidate ->
+                    pendingCategories.any { category ->
+                        candidate.containsCategory(category, foodsById, dishesById)
+                    }
+                }
+                if (requiredCandidates.isNotEmpty()) {
+                    candidates = requiredCandidates
+                } else if (chosen.isEmpty() && candidates.any { it.itemKind == PlannedItemKind.DISH }) {
+                    candidates = candidates.filter { it.itemKind == PlannedItemKind.DISH }
+                }
+            } else if (chosen.isEmpty() && candidates.any { it.itemKind == PlannedItemKind.DISH }) {
                 candidates = candidates.filter { it.itemKind == PlannedItemKind.DISH }
             }
 

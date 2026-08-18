@@ -68,18 +68,25 @@ private val DarkColors = darkColorScheme(
 
 
 
-private fun ColorScheme.deeperLightSurfaces(): ColorScheme = copy(
-    // Keep Android's dynamic hue/chroma, but give the hierarchy visible depth:
-    // page background is a stronger tonal surface; cards remain one step lighter.
-    background = surfaceContainer,
-    surface = surfaceContainerLow,
-    surfaceVariant = surfaceContainer,
-    surfaceContainerLowest = surfaceContainerLowest,
-    surfaceContainerLow = surfaceContainerLow,
-    surfaceContainer = surfaceContainer,
-    surfaceContainerHigh = surfaceContainerHigh,
-    surfaceContainerHighest = surfaceContainerHighest
-)
+private fun ColorScheme.deeperLightSurfaces(): ColorScheme {
+    val sourceContainer = surfaceContainer
+    val sourceHigh = surfaceContainerHigh
+    val sourceHighest = surfaceContainerHighest
+    return copy(
+        // Keep Android's dynamic hue/chroma. The page background stays on the
+        // same tone that already matches the system wallpaper picker.
+        background = sourceContainer,
+        surface = surfaceContainerLow,
+        surfaceVariant = sourceContainer,
+        surfaceContainerLowest = surfaceContainerLowest,
+        surfaceContainerLow = surfaceContainerLow,
+        surfaceContainer = sourceContainer,
+        surfaceContainerHigh = sourceHigh,
+        // Filled Card uses the highest container token. Move it one dynamic
+        // step toward the page instead of leaving it near white.
+        surfaceContainerHighest = sourceHigh
+    )
+}
 
 @Composable
 fun RumboTheme(content: @Composable () -> Unit) {
