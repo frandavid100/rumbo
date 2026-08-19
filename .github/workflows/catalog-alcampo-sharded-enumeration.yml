@@ -1,10 +1,16 @@
-name: Catalog Alcampo sharded enumeration
+name: Catalog Alcampo complete first-party pipeline
 on:
   push:
     branches: [agent/catalog-phase1]
     paths:
       - 'tools/catalog/alcampo_child_enumerate.py'
       - 'tools/catalog/alcampo_merge_children.py'
+      - 'tools/catalog/alcampo_split_detail_batches.py'
+      - 'tools/catalog/alcampo_merge_detail_batches.py'
+      - 'tools/catalog/alcampo_detail_enricher.py'
+      - 'tools/catalog/alcampo_build_final_catalog.py'
+      - 'tools/catalog/finalize_alcampo_classification.py'
+      - 'tools/catalog/alcampo_export_final.py'
       - '.github/workflows/catalog-alcampo-sharded-enumeration.yml'
       - 'tools/catalog/fixtures/alcampo_root_children_latest.json'
   workflow_dispatch:
@@ -16,6 +22,7 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       expected_children: ${{ steps.matrix.outputs.expected_children }}
+      detail_matrix: ${{ steps.matrix.outputs.detail_matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,27 +32,28 @@ jobs:
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json,re
           d=json.load(open('tools/catalog/fixtures/alcampo_root_children_latest.json',encoding='utf-8'))
-          deny=re.compile(r'\b(vino|vinos|cerveza|cervezas|licor|licores|champagne|cava|sidra|sangr[ií]a|alcoh[oó]l|perfumer[ií]a|droguer[ií]a|herbolario|control de peso)\b',re.I)
+          deny=re.compile(r'\b(vino|vinos|cerveza|cervezas|licor|licores|whisky|whiskey|ron|ginebra|vodka|brandy|cognac|champagne|cava|sidra|vermut|vermouth|sangr[ií]a|espirituosas?|bebidas?\s+alcoh[oó]licas?|perfumer[ií]a|droguer[ií]a|herbolario|control\s+de\s+peso)\b',re.I)
           rows=[];seen=set()
           for root in d.get('roots',[]):
               for c in root.get('children',[]):
                   name=c.get('name') or ''; rid=c.get('retailerCategoryId')
                   if not rid or deny.search(name): continue
-                  # Keep each retailer category once; overlaps across special collections are deduplicated later by product UUID.
                   if rid in seen: continue
                   seen.add(rid)
                   rows.append({'label':name,'rid':rid,'expected':int(c.get('productCount') or 0)})
           print('matrix='+json.dumps({'include':rows},ensure_ascii=False,separators=(',',':')))
           print('expected_children='+str(len(rows)))
+          print('detail_matrix='+json.dumps({'include':[{'batch':f'{i:03d}'} for i in range(96)]},separators=(',',':')))
           PY
+
   enumerate:
     needs: prepare
     strategy:
       fail-fast: false
-      max-parallel: 20
+      max-parallel: 8
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,7 +61,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Enumerate one first-party Alcampo category
+      - name: Enumerate one first-party Alcampo category tree
         working-directory: tools/catalog
         run: python alcampo_child_enumerate.py --label "${{ matrix.label }}" --rid "${{ matrix.rid }}" --expected "${{ matrix.expected }}" --out "alcampo-child-${{ matrix.rid }}"
       - uses: actions/upload-artifact@v4
@@ -62,11 +70,12 @@ jobs:
           name: alcampo-child-${{ matrix.rid }}
           path: tools/catalog/alcampo-child-${{ matrix.rid }}/
           retention-days: 7
+
   merge:
     needs: [prepare, enumerate]
     if: always() && needs.prepare.result == 'success'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,9 +87,17 @@ jobs:
         with:
           pattern: alcampo-child-*
           path: downloaded
-      - name: Merge and audit enumeration
+      - name: Merge and audit recursive enumeration
         working-directory: tools/catalog
         run: python alcampo_merge_children.py --downloaded ../../downloaded --out alcampo-sharded-full --min-products 5000
+      - name: Split first-party product manifest for detail enrichment
+        working-directory: tools/catalog
+        run: python alcampo_split_detail_batches.py --input alcampo-sharded-full/products.jsonl --out alcampo-detail-inputs --batches 96
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-detail-inputs
+          path: tools/catalog/alcampo-detail-inputs/
+          retention-days: 7
       - name: Persist enumeration result
         if: always()
         run: |
@@ -91,7 +108,7 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add tools/catalog/fixtures/alcampo_sharded_enumeration_latest.json tools/catalog/fixtures/alcampo_sharded_catalog_summary_latest.json
             if ! git diff --cached --quiet; then
-              git commit -m "catalog: persist sharded Alcampo enumeration summary"
+              git commit -m "catalog: persist recursive Alcampo enumeration summary"
               git pull --rebase origin agent/catalog-phase1
               git push origin HEAD:agent/catalog-phase1
             fi
@@ -102,3 +119,86 @@ jobs:
           name: alcampo-food-catalog-sharded-enumeration
           path: tools/catalog/alcampo-sharded-full/
           retention-days: 7
+
+  detail:
+    needs: [prepare, merge]
+    if: needs.merge.result == 'success'
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.prepare.outputs.detail_matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: alcampo-detail-inputs
+          path: detail-inputs
+      - name: Fetch declared Alcampo product detail and nutrition
+        working-directory: tools/catalog
+        run: python alcampo_detail_enricher.py --input "../../detail-inputs/batch-${{ matrix.batch }}.jsonl" --workers 1 --retry-rounds 3 --out "alcampo-detail-${{ matrix.batch }}" --min-valid 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-detail-result-${{ matrix.batch }}
+          path: tools/catalog/alcampo-detail-${{ matrix.batch }}/
+          retention-days: 7
+
+  final:
+    needs: [merge, detail]
+    if: always() && needs.merge.result == 'success' && needs.detail.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: alcampo-food-catalog-sharded-enumeration
+          path: enumeration
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alcampo-detail-result-*
+          path: downloaded-details
+      - name: Merge detail batches
+        working-directory: tools/catalog
+        run: python alcampo_merge_detail_batches.py --downloaded ../../downloaded-details --out ../../alcampo-final/details.jsonl --expected-products ../../enumeration/products.jsonl
+      - name: Build canonical first-party SQLite
+        working-directory: tools/catalog
+        run: python alcampo_build_final_catalog.py --products ../../enumeration/products.jsonl --details ../../alcampo-final/details.jsonl --output ../../alcampo-final/alcampo_catalog.sqlite
+      - name: Apply auditable Rumbo classification policy
+        working-directory: tools/catalog
+        run: python finalize_alcampo_classification.py ../../alcampo-final/alcampo_catalog.sqlite ../../enumeration/products.jsonl
+      - name: Export classified JSONL and coverage report
+        working-directory: tools/catalog
+        run: python alcampo_export_final.py ../../alcampo-final/alcampo_catalog.sqlite --jsonl ../../alcampo-final/alcampo_catalog.jsonl --summary ../../alcampo-final/summary.json --detail-summary ../../alcampo-final/detail_merge_summary.json --enumeration-report ../../enumeration/enumeration_report.json
+      - name: Preserve first-party evidence streams
+        run: |
+          cp enumeration/products.jsonl alcampo-final/source_products.jsonl
+          cp enumeration/enumeration_report.json alcampo-final/enumeration_report.json
+      - name: Persist final coverage summary
+        run: |
+          cp alcampo-final/summary.json tools/catalog/fixtures/alcampo_final_summary_latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_final_summary_latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist final classified Alcampo summary"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-food-catalog-complete-classified
+          path: alcampo-final/
+          retention-days: 14
