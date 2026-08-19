@@ -1,0 +1,1030 @@
+       }
+                }
+                if (itemAmounts.isNotEmpty() || dishId != dishAmounts.keys.lastOrNull()) {
+                    HorizontalDivider()
+                }
+            }
+        }
+        itemAmounts.forEach { (foodId, draft) ->
+            val food = foodsById[foodId] ?: return@forEach
+            Column {
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 12.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Column(
+                        Modifier.weight(1f).clickable { onOpenFood(foodId) },
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SmallFoodCategoryBadge(food.category)
+                            Text(
+                                food.name,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (foodId in selectedForDish) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Seleccionado para crear plato",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        val grams = parseDecimal(draft.grams)
+                        val calories = grams?.let { amount -> food.calories?.times(amount)?.div(100.0) }
+                        Text(
+                            calories?.let { "${formatDecimal(it)} kcal en esta cantidad" }
+                                ?: "Introduce una cantidad",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    CompactGramField(draft.grams) {
+                        itemAmounts = itemAmounts + (foodId to draft.copy(grams = it))
+                    }
+                    Box {
+                        IconButton(onClick = { expandedFoodMenuId = foodId }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones de ${food.name}")
+                        }
+                        DropdownMenu(
+                            expanded = expandedFoodMenuId == foodId,
+                            onDismissRequest = { expandedFoodMenuId = null }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(if (draft.adjustable) "Dejar cantidad fija" else "Permitir ajuste automático") },
+                                onClick = {
+                                    itemAmounts = itemAmounts + (foodId to draft.withAdjustable(
+                                            !draft.adjustable,
+                                            adjustmentRange.first,
+                                            adjustmentRange.second
+                                        ))
+                                    expandedFoodMenuId = null
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (foodId in selectedForDish) "No usar para crear plato"
+                                        else "Seleccionar para crear plato"
+                                    )
+                                },
+                                onClick = {
+                                    selectedForDish = if (foodId in selectedForDish) {
+                                        selectedForDish - foodId
+                                    } else selectedForDish + foodId
+                                    expandedFoodMenuId = null
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Sustituir por uno similar") },
+                                onClick = {
+                                    replacingFoodId = foodId
+                                    expandedFoodMenuId = null
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Quitar") },
+                                onClick = {
+                                    itemAmounts = itemAmounts - foodId
+                                    selectedForDish = selectedForDish - foodId
+                                    expandedFoodMenuId = null
+                                }
+                            )
+                        }
+                    }
+                }
+                if (foodId != itemAmounts.keys.lastOrNull()) {
+                    HorizontalDivider()
+                }
+            }
+        }
+        OutlinedButton(onClick = { choosingElement = true }, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Añadir")
+        }
+            }
+        }
+        if (selectedForDish.size >= 2) {
+            FilledTonalButton(
+                onClick = {
+                    newDishName = ""
+                    namingDish = true
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Crear plato con ${selectedForDish.size} alimentos") }
+        }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        OutlinedButton(
+            onClick = {
+                val parsedItems = itemAmounts.mapNotNull { (foodId, draft) -> draft.toPlannedFood(foodId) }
+                val parsedDishes = dishAmounts.mapNotNull { (dishId, draft) -> draft.toPlannedDish(dishId) }
+                error = when {
+                    selectedDays.isEmpty() -> "Selecciona al menos un día."
+                    itemAmounts.isEmpty() && dishAmounts.isEmpty() -> "Añade al menos un alimento o un plato."
+                    parsedItems.size != itemAmounts.size ->
+                        "Revisa gramos, mínimo y máximo de los ingredientes ajustables."
+                    parsedDishes.size != dishAmounts.size ->
+                        "Revisa gramos, mínimo y máximo de los platos ajustables."
+                    selectedDays.any(occupiedDays::contains) ->
+                        "Ya existe otra comida del mismo tipo en alguno de esos días."
+                    else -> null
+                }
+                if (error == null) {
+                    onSave(
+                        PlannedMeal(
+                            id = initial?.id ?: System.currentTimeMillis(),
+                            type = type,
+                            planWeek = planWeek,
+                            days = selectedDays,
+                            items = parsedItems,
+                            dishes = parsedDishes,
+                            dayAmounts = initial?.dayAmounts.orEmpty()
+                        ).sanitizedDayAmounts()
+                    )
+                }
+            },
+            modifier = Modifier.weight(1f)
+        ) { Text("Guardar") }
+        if (onDelete != null) {
+            OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) {
+                Text("Eliminar")
+            }
+        }
+        }
+    }
+}
+
+@Composable
+private fun SimilarFoodReplacementDialog(
+    source: Food,
+    foods: List<Food>,
+    excludedFoodIds: Set<Long>,
+    onChoose: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val similar = remember(source, foods, excludedFoodIds) {
+        FoodSimilarityEngine.findSimilar(source, foods, limit = 20)
+            .filterNot { it.id in excludedFoodIds }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sustituir ${source.name}") },
+        text = {
+            if (similar.isEmpty()) {
+                Text("No se ha encontrado ningún alimento suficientemente similar.")
+            } else {
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
+                    items(similar, key = { it.id }) { food ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onChoose(food.id) }.padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(food.name, modifier = Modifier.weight(1f))
+                        }
+                        HorizontalDivider()
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+@Composable
+private fun FoodPickerDialog(
+    foods: List<Food>,
+    excludedFoodIds: Set<Long>,
+    preferredFoodIds: Set<Long>,
+    onChoose: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val normalized = normalizeSearch(query)
+    val index = remember(foods) { foods.map { IndexedFood(it, normalizeSearch(it.name)) } }
+    val results = remember(index, excludedFoodIds, preferredFoodIds, normalized) {
+        index.asSequence()
+            .filterNot { it.food.id in excludedFoodIds }
+            .filter { indexed ->
+                when {
+                    normalized.isBlank() -> indexed.food.id in preferredFoodIds
+                    normalized.length < 2 -> indexed.food.id in preferredFoodIds &&
+                        matchesSearch(indexed.searchText, normalized)
+                    else -> matchesSearch(indexed.searchText, normalized)
+                }
+            }
+            .sortedWith(
+                compareBy<IndexedFood> { it.food.id !in preferredFoodIds }
+                    .thenBy { it.food.name.lowercase() }
+            )
+            .map { it.food }
+            .take(50)
+            .toList()
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir ingrediente") },
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Buscar alimento") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                if (normalized.length < 2) {
+                    Text(
+                        "Usados anteriormente; escribe dos caracteres para buscar en todo el catálogo.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                    items(results, key = { it.id }) { food ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onChoose(food.id) }.padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            FoodCategoryBadge(food.category)
+                            Text(food.name, modifier = Modifier.weight(1f))
+                        }
+                        HorizontalDivider()
+                    }
+                    if (results.isEmpty() && normalized.length >= 2) {
+                        item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+    )
+}
+
+private data class MealPickerResult(
+    val id: Long,
+    val name: String,
+    val category: FoodCategory? = null,
+    val isDish: Boolean = false,
+    val preferred: Boolean = false
+)
+
+@Composable
+private fun MealItemPickerDialog(
+    foods: List<Food>,
+    dishes: List<Dish>,
+    excludedFoodIds: Set<Long>,
+    excludedDishIds: Set<Long>,
+    preferredFoodIds: Set<Long>,
+    preferredDishIds: Set<Long>,
+    onChooseFood: (Long) -> Unit,
+    onChooseDish: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val normalized = normalizeSearch(query)
+    val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val foodIndex = remember(foods) { foods.map { IndexedFood(it, normalizeSearch(it.name)) } }
+    val results = remember(
+        foodIndex, dishes, excludedFoodIds, excludedDishIds,
+        preferredFoodIds, preferredDishIds, normalized, foodsById
+    ) {
+        val dishResults = dishes.asSequence()
+            .filterNot { it.id in excludedDishIds }
+            .filter { normalized.isBlank() || matchesSearch(normalizeSearch(it.name), normalized) }
+            .map {
+                MealPickerResult(
+                    it.id, it.name, category = it.dominantCategory(foodsById),
+                    isDish = true, preferred = it.id in preferredDishIds
+                )
+            }
+        val foodResults = foodIndex.asSequence()
+            .filterNot { it.food.id in excludedFoodIds }
+            .filter {
+                when {
+                    normalized.isBlank() -> it.food.id in preferredFoodIds
+                    normalized.length < 2 -> it.food.id in preferredFoodIds &&
+                        matchesSearch(it.searchText, normalized)
+                    else -> matchesSearch(it.searchText, normalized)
+                }
+            }
+            .map {
+                MealPickerResult(
+                    it.food.id, it.food.name, category = it.food.category,
+                    preferred = it.food.id in preferredFoodIds
+                )
+            }
+        (dishResults + foodResults)
+            .sortedWith(compareBy<MealPickerResult> { !it.preferred }.thenBy { it.name.lowercase() })
+            .take(50).toList()
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir a la comida") },
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Buscar platos o alimentos") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                if (normalized.length < 2) {
+                    Text(
+                        "Usados anteriormente primero; escribe dos caracteres para buscar en todo el catálogo.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                        items(results, key = { "meal_picker_${it.isDish}_${it.id}" }) { result ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    if (result.isDish) onChooseDish(result.id) else onChooseFood(result.id)
+                                }.padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                result.category?.let { SmallFoodCategoryBadge(it) }
+                                Column(Modifier.weight(1f)) {
+                                    Text(result.name)
+                                    Text(
+                                        if (result.isDish) "Plato" else "Alimento",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            HorizontalDivider()
+                        }
+                        if (results.isEmpty() && normalized.length >= 2) {
+                            item { Text("No hay resultados.", modifier = Modifier.padding(vertical = 16.dp)) }
+                        }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+    )
+}
+
+private enum class CatalogFilter { ALL, FOODS, DISHES }
+
+private fun Food.retailerValues(): Set<String> = retailer
+    ?.split(",")
+    ?.map { it.trim() }
+    ?.filter { it.isNotBlank() }
+    ?.toSet()
+    .orEmpty()
+
+private fun catalogRetailerLabel(value: String): String = value.lowercase()
+    .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+private fun nutritionalRoleLabel(value: String): String = when (value) {
+    "PRIMARY_PROTEIN" -> "Proteína principal"
+    "COMPLEMENTARY_PROTEIN" -> "Proteína complementaria"
+    "PRIMARY_CARBOHYDRATE" -> "Hidrato principal"
+    "COMPLEMENTARY_CARBOHYDRATE" -> "Hidrato complementario"
+    "CONCENTRATED_FAT" -> "Grasa concentrada"
+    "COMPLEMENTARY_FAT" -> "Grasa complementaria"
+    "VEGETABLE" -> "Verdura"
+    "FRUIT" -> "Fruta"
+    else -> value.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
+}
+
+private fun nutritionalRoleEfficiency(food: Food, role: String): Double? {
+    val calories = food.calories?.takeIf { it > 0.0 } ?: return null
+    val grams = when (role) {
+        "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN" -> food.proteinGrams
+        "PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_CARBOHYDRATE" -> food.carbohydrateGrams
+        "CONCENTRATED_FAT", "COMPLEMENTARY_FAT" -> food.fatGrams
+        "VEGETABLE", "FRUIT" -> food.fiberGrams
+        else -> null
+    } ?: return null
+    return grams * 100.0 / calories
+}
+
+private fun culinaryRoleLabel(value: String): String = when (value) {
+    "PLATE_CENTER" -> "Centro del plato"
+    "PLATE_BASE" -> "Base del plato"
+    "SIDE" -> "Acompañamiento"
+    "TOPPING" -> "Topping"
+    "SAUCE_DRESSING" -> "Salsa o aliño"
+    "CEREAL_BASE" -> "Base para cereal"
+    "CEREAL_MIX_IN" -> "Cereal para mezclar"
+    "POWDER_BASE" -> "Base para polvo"
+    "POWDER_MIX_IN" -> "Polvo para mezclar"
+    "SANDWICH_BASE" -> "Base de bocadillo"
+    "SANDWICH_FILLING" -> "Relleno de bocadillo"
+    "SPREAD" -> "Untable"
+    "COOKING_MEDIUM" -> "Medio de cocción"
+    "BINDER" -> "Ligante"
+    "COATING" -> "Rebozado"
+    "SEASONING" -> "Condimento"
+    "STANDALONE" -> "Puede tomarse solo"
+    "BEVERAGE" -> "Bebida"
+    "DESSERT" -> "Postre"
+    else -> value.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
+}
+
+private fun matchesSearch(searchable: String, query: String): Boolean {
+    val terms = query.split(Regex("\\s+")).filter { it.isNotBlank() }
+    return terms.isEmpty() || terms.all(searchable::contains)
+}
+
+private fun searchMatchRank(name: String, query: String): Int {
+    val normalizedName = normalizeSearch(name)
+    return when {
+        normalizedName == query -> 0
+        normalizedName.startsWith(query) -> 1
+        query.split(Regex("\\s+")).filter { it.isNotBlank() }
+            .all { term -> normalizedName.contains(term) } -> 2
+        else -> 3
+    }
+}
+private enum class CatalogMode { SEARCH, REPERTOIRE }
+private enum class RepertoireFilter(val label: String) {
+    ALL("Todos"), ACTIVE("Activos"), INACTIVE("Inactivos"), PENDING("Pendientes")
+}
+
+private data class CatalogEntry(
+    val id: Long,
+    val name: String,
+    val isDish: Boolean
+)
+
+@Composable
+private fun HomeCatalogSearch(
+    foods: List<Food>, dishes: List<Dish>, repertoireFoodIds: Set<Long>,
+    planningRules: List<PlanningRule>,
+    foodSuggestions: List<FoodSuggestion>,
+    repertoireAssessment: RepertoireAssessment?,
+    recommendation: Recommendation?,
+    textFieldState: TextFieldState,
+    retailerFilter: String?, onRetailerFilterChange: (String?) -> Unit,
+    nutritionalRoleFilter: String?, onNutritionalRoleFilterChange: (String?) -> Unit,
+    culinaryRoleFilter: String?, onCulinaryRoleFilterChange: (String?) -> Unit,
+    mealTypeFilter: MealType?, onMealTypeFilterChange: (MealType?) -> Unit,
+    scanMessage: String?, onScanMessageChange: (String?) -> Unit,
+    state: SearchBarState,
+    listState: LazyListState,
+    suppressRestoredKeyboard: Boolean,
+    onRestoredKeyboardSuppressed: () -> Unit,
+    scrollBehavior: SearchBarScrollBehavior,
+    onCloseSearch: () -> Unit,
+    onOpenFood: (Long) -> Unit, onOpenDish: (Long) -> Unit,
+    trailingContent: @Composable () -> Unit,
+    showCollapsedBar: Boolean = true
+) {
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val scope = rememberCoroutineScope()
+    var suppressNextExpandedKeyboard by remember { mutableStateOf(state.targetValue == SearchBarValue.Collapsed) }
+    val query = textFieldState.text.toString()
+    val normalized = normalizeSearch(query)
+    val searchContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val searchInputColors = SearchBarDefaults.inputFieldColors(
+        focusedContainerColor = searchContainerColor,
+        unfocusedContainerColor = searchContainerColor,
+        disabledContainerColor = searchContainerColor
+    )
+    val searchBarColors = SearchBarDefaults.colors(
+        containerColor = searchContainerColor,
+        dividerColor = Color.Transparent,
+        inputFieldColors = searchInputColors
+    )
+    val appBarColors = SearchBarDefaults.appBarWithSearchColors(
+        searchBarColors = searchBarColors,
+        appBarContainerColor = MaterialTheme.colorScheme.background,
+        scrolledAppBarContainerColor = MaterialTheme.colorScheme.background,
+        scrolledSearchBarContainerColor = searchContainerColor
+    )
+    val foodsById = remember(foods) { foods.associateBy { it.id } }
+    val retailerOptions = remember(foods) { foods.flatMap { it.retailerValues() }.distinct().sorted() }
+    val nutritionalRoleOptions = remember(foods) {
+        foods.flatMap { it.nutritionalRoles }.distinct().sortedBy(::nutritionalRoleLabel)
+    }
+    val culinaryRoleOptions = remember(foods) {
+        foods.flatMap { it.culinaryRoles }.distinct().sortedBy(::culinaryRoleLabel)
+    }
+    val suggestionsByFoodId = remember(foodSuggestions) {
+        foodSuggestions.associateBy { it.food.id }
+    }
+    val personalizedScores = remember(foods, repertoireAssessment, recommendation) {
+        foods.associate { food ->
+            food.id to FoodSuggestionEngine.personalizedSearchScore(
+                food, repertoireAssessment, recommendation
+            )
+        }
+    }
+    val activeFoodRules = remember(planningRules) {
+        planningRules.filter {
+            it.itemKind == PlannedItemKind.FOOD && it.isActive &&
+                it.frequency != PlanningFrequency.NEVER
+        }
+    }
+    val hasActiveFilters = retailerFilter != null || nutritionalRoleFilter != null ||
+        culinaryRoleFilter != null || mealTypeFilter != null
+    val entries = remember(
+        foods, normalized, retailerFilter, nutritionalRoleFilter, culinaryRoleFilter,
+        mealTypeFilter, repertoireFoodIds, activeFoodRules, personalizedScores
+    ) {
+        foods.asSequence().filter { food ->
+            val isMine = food.id in repertoireFoodIds
+            val searchText = normalizeSearch(
+                listOfNotNull(
+                    food.name, food.brand, food.family, food.subcategory,
+                    food.barcode, food.retailer
+                ).joinToString(" ")
+            )
+            val matchesText = normalized.isBlank() || matchesSearch(searchText, normalized)
+            val matchesMeal = when {
+                mealTypeFilter == null -> true
+                isMine -> activeFoodRules.any { rule ->
+                    rule.itemId == food.id &&
+                        (mealTypeFilter in rule.allowedMealTypes ||
+                            rule.requiredSlots().any { it.mealType == mealTypeFilter })
+                }
+                else -> CulinaryPolicy.isSuggestedForMeal(food, mealTypeFilter)
+            }
+            val matchesFilters =
+                (retailerFilter == null || retailerFilter in food.retailerValues()) &&
+                (nutritionalRoleFilter == null || nutritionalRoleFilter in food.nutritionalRoles) &&
+                (culinaryRoleFilter == null || culinaryRoleFilter in food.culinaryRoles) &&
+                matchesMeal
+            val visibleByMode = if (normalized.isBlank() && !hasActiveFilters) isMine else true
+            visibleByMode && matchesText && matchesFilters
+        }.map { CatalogEntry(it.id, it.name, false) }
+            .sortedWith(
+                compareBy<CatalogEntry> { it.id !in repertoireFoodIds }
+                    .thenByDescending { entry ->
+                        nutritionalRoleFilter?.let { role ->
+                            foodsById[entry.id]?.let { nutritionalRoleEfficiency(it, role) }
+                        } ?: Double.NEGATIVE_INFINITY
+                    }
+                    .thenBy { if (normalized.isBlank()) 0 else searchMatchRank(it.name, normalized) }
+                    .thenByDescending { personalizedScores[it.id] ?: Double.NEGATIVE_INFINITY }
+                    .thenBy { it.name.lowercase() }
+            ).toList()
+    }
+
+    val leaveForDetail = {
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+    }
+    val close = {
+        leaveForDetail()
+        onCloseSearch()
+    }
+
+    LaunchedEffect(suppressRestoredKeyboard, state.targetValue) {
+        if (suppressRestoredKeyboard && state.targetValue == SearchBarValue.Expanded) {
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            delay(500)
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            onRestoredKeyboardSuppressed()
+        }
+    }
+
+    LaunchedEffect(state.targetValue) {
+        if (state.targetValue == SearchBarValue.Expanded && suppressNextExpandedKeyboard) {
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            delay(300)
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            suppressNextExpandedKeyboard = false
+        }
+        if (state.targetValue == SearchBarValue.Collapsed) {
+            suppressNextExpandedKeyboard = true
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            if (textFieldState.text.isNotEmpty()) textFieldState.setTextAndPlaceCursorAtEnd("")
+            onScanMessageChange(null)
+            scrollBehavior.scrollOffset = 0f
+            scrollBehavior.contentOffset = 0f
+        }
+    }
+
+    val scan = {
+        onScanMessageChange(null)
+        GmsBarcodeScanning.getClient(context).startScan().addOnSuccessListener { barcode ->
+            val value = barcode.rawValue.orEmpty()
+            foods.firstOrNull { it.barcode == value }?.let { food ->
+                leaveForDetail()
+                onOpenFood(food.id)
+            } ?: run {
+                textFieldState.setTextAndPlaceCursorAtEnd(value)
+                onScanMessageChange("No encuentro este producto en tus supermercados.")
+                scope.launch { state.animateToExpanded() }
+            }
+        }
+        Unit
+    }
+
+    val inputField: @Composable () -> Unit = {
+        SearchBarDefaults.InputField(
+            textFieldState = textFieldState,
+            searchBarState = state,
+            enabled = !suppressRestoredKeyboard,
+            colors = appBarColors.searchBarColors.inputFieldColors,
+            onSearch = {},
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Buscar alimentos y platos") },
+            leadingIcon = {
+                if (state.targetValue == SearchBarValue.Expanded) {
+                    IconButton(onClick = close) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar búsqueda")
+                    }
+                } else {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                }
+            },
+            trailingIcon = {
+                if (state.targetValue == SearchBarValue.Expanded) {
+                    IconButton(onClick = scan) {
+                        Icon(Icons.Default.QrCodeScanner, "Escanear código de barras")
+                    }
+                } else {
+                    trailingContent()
+                }
+            }
+        )
+    }
+
+    if (showCollapsedBar) {
+        AppBarWithSearch(
+            state = state,
+            inputField = inputField,
+            scrollBehavior = scrollBehavior,
+            colors = appBarColors,
+            actions = {},
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            tonalElevation = 0.dp
+        )
+    }
+
+    ExpandedFullScreenSearchBar(
+        state = state,
+        inputField = {
+            Box(Modifier.fillMaxWidth()) {
+                inputField()
+            }
+        },
+        colors = searchBarColors,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        windowInsets = {
+            WindowInsets.safeDrawing.only(
+                WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+            )
+        }
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            CatalogEntries(
+                entries = entries,
+                foods = foods,
+                foodsById = foodsById,
+                dishes = dishes,
+                repertoireFoodIds = repertoireFoodIds,
+                foodSuggestions = suggestionsByFoodId,
+                mode = CatalogMode.SEARCH,
+                normalizedQuery = normalized,
+                onOpenFood = { id -> leaveForDetail(); onOpenFood(id) },
+                onOpenDish = { id -> leaveForDetail(); onOpenDish(id) },
+                onAddFood = {},
+                onAddDish = {},
+                compactPresentation = true,
+                listState = listState,
+                modifier = Modifier.fillMaxSize(),
+                header = {
+                    Column(Modifier.fillMaxWidth()) {
+                        Spacer(Modifier.height(8.dp))
+                        CatalogCanonicalFilterRow(
+                            retailerFilter, onRetailerFilterChange, retailerOptions,
+                            nutritionalRoleFilter, onNutritionalRoleFilterChange, nutritionalRoleOptions,
+                            culinaryRoleFilter, onCulinaryRoleFilterChange, culinaryRoleOptions,
+                            mealTypeFilter, onMealTypeFilterChange
+                        )
+                        if (query.isBlank() && !hasActiveFilters) {
+                            Text(
+                                "Escribe el nombre de un alimento o plato, escanea su código de barras o elígelo de tu repertorio.",
+                                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        scanMessage?.let {
+                            Text(
+                                it,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            )
+        }
+    }
+
+    BackHandler(enabled = state.targetValue == SearchBarValue.Expanded) { close() }
+}
+
+@Composable
+private fun CatalogCanonicalFilterRow(
+    retailer: String?, onRetailerChange: (String?) -> Unit, retailerOptions: List<String>,
+    nutritionalRole: String?, onNutritionalRoleChange: (String?) -> Unit, nutritionalRoleOptions: List<String>,
+    culinaryRole: String?, onCulinaryRoleChange: (String?) -> Unit, culinaryRoleOptions: List<String>,
+    mealType: MealType?, onMealTypeChange: (MealType?) -> Unit
+) {
+    LazyRow(
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            CatalogStringFilterMenu(
+                title = "Comercio", selected = retailer, options = retailerOptions,
+                label = ::catalogRetailerLabel, onChange = onRetailerChange
+            )
+        }
+        item {
+            CatalogStringFilterMenu(
+                title = "Rol nutricional", selected = nutritionalRole, options = nutritionalRoleOptions,
+                label = ::nutritionalRoleLabel, onChange = onNutritionalRoleChange
+            )
+        }
+        item {
+            CatalogStringFilterMenu(
+                title = "Rol culinario", selected = culinaryRole, options = culinaryRoleOptions,
+                label = ::culinaryRoleLabel, onChange = onCulinaryRoleChange
+            )
+        }
+        item { CatalogMealTypeFilterMenu(mealType, onMealTypeChange) }
+    }
+}
+
+@Composable
+private fun CatalogMealTypeFilterMenu(
+    selected: MealType?,
+    onChange: (MealType?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = selected != null,
+            onClick = { expanded = true },
+            label = { Text(selected?.label ?: "Comidas") },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                leadingIcon = { if (selected == null) Icon(Icons.Default.Check, contentDescription = null) },
+                text = { Text("Todas") },
+                onClick = { onChange(null); expanded = false }
+            )
+            MealType.entries.forEach { option ->
+                DropdownMenuItem(
+                    leadingIcon = { if (selected == option) Icon(Icons.Default.Check, contentDescription = null) },
+                    text = { Text(option.label) },
+                    onClick = { onChange(option); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CatalogStringFilterMenu(
+    title: String,
+    selected: String?,
+    options: List<String>,
+    label: (String) -> String,
+    onChange: (String?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = selected != null,
+            onClick = { expanded = true },
+            label = { Text(selected?.let(label) ?: title) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                leadingIcon = { if (selected == null) Icon(Icons.Default.Check, contentDescription = null) },
+                text = { Text("Todos") },
+                onClick = { onChange(null); expanded = false }
+            )
+            options.forEach { option ->
+                DropdownMenuItem(
+                    leadingIcon = { if (selected == option) Icon(Icons.Default.Check, contentDescription = null) },
+                    text = { Text(label(option)) },
+                    onClick = { onChange(option); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CatalogEntries(
+    entries: List<CatalogEntry>,
+    foods: List<Food>,
+    foodsById: Map<Long, Food>,
+    dishes: List<Dish>,
+    repertoireFoodIds: Set<Long>,
+    foodSuggestions: Map<Long, FoodSuggestion> = emptyMap(),
+    mode: CatalogMode,
+    normalizedQuery: String,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
+    onAddFood: () -> Unit,
+    onAddDish: () -> Unit,
+    modifier: Modifier = Modifier,
+    header: (@Composable () -> Unit)? = null,
+    compactPresentation: Boolean = false,
+    listState: LazyListState? = null
+) {
+    var addMenuExpanded by remember { mutableStateOf(false) }
+    val resolvedListState = listState ?: rememberLazyListState()
+    LazyColumn(
+        modifier = modifier,
+        state = resolvedListState,
+        contentPadding = PaddingValues(bottom = 32.dp)
+    ) {
+        if (header != null) item { header() }
+        items(entries, key = { "${if (it.isDish) "dish" else "food"}_${it.id}" }) { entry ->
+            if (compactPresentation) {
+                val entryIndex = entries.indexOf(entry)
+                val previous = entries.getOrNull(entryIndex - 1)
+                val isMine = !entry.isDish && entry.id in repertoireFoodIds
+                val previousWasMine = previous != null && !previous.isDish && previous.id in repertoireFoodIds
+                val sectionTitle = when {
+                    isMine && !previousWasMine -> "Mis alimentos"
+                    !isMine && (previous == null || previousWasMine) -> "Otros alimentos"
+                    else -> null
+                }
+                sectionTitle?.let {
+                    Text(
+                        it,
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 6.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            if (compactPresentation) {
+                val food = if (entry.isDish) null else foodsById[entry.id]
+                val dish = if (entry.isDish) dishes.firstOrNull { it.id == entry.id } else null
+                if (food == null && dish == null) return@items
+                val category = food?.category ?: dish!!.dominantCategory(foodsById)
+                val dishNutrition = dish?.nutrition(foodsById)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
+                        }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FoodCategoryBadge(category)
+                    Column(
+                        Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            entry.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            if (entry.isDish) "Plato"
+                            else foodSuggestions[entry.id]?.reason ?: category.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                    SearchNutritionGrid(
+                        calories = food?.calories ?: dishNutrition?.calories,
+                        protein = food?.proteinGrams ?: dishNutrition?.proteinGrams,
+                        carbohydrates = food?.carbohydrateGrams ?: dishNutrition?.carbohydrateGrams,
+                        fat = food?.fatGrams ?: dishNutrition?.fatGrams,
+                        modifier = Modifier.width(98.dp)
+                    )
+                }
+            } else if (entry.isDish) {
+                val dish = dishes.firstOrNull { it.id == entry.id } ?: return@items
+                val totals = dish.nutrition(foodsById)
+                Row(
+                    Modifier.fillMaxWidth().clickable { onOpenDish(dish.id) }.padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    SmallFoodCategoryBadge(dish.dominantCategory(foodsById))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(dish.name, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "${dish.ingredients.size} ingredientes · Plato",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        if (totals.isComplete) "${formatDecimal(totals.calories)}\nkcal" else "datos\nincompletos",
+                        textAlign = TextAlign.End,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else {
+                val food = foodsById[entry.id] ?: return@items
+                FoodListEntry(food = food, onClick = { onOpenFood(food.id) })
+            }
+            if (entry != entries.lastOrNull()) {
+                HorizontalDivider(
+                    modifier = if (compactPresentation) Modifier.padding(horizontal = 16.dp) else Modifier
+                )
+            }
+        }
+
+        if (entries.isEmpty()) {
+            item {
+                Text(
+                    if (mode == CatalogMode.REPERTOIRE && repertoireFoodIds.isEmpty()) {
+                        "Tu repertorio todavía está vacío. Configura alimentos desde la generación automática."
+                    } else if (foods.isEmpty() && dishes.isEmpty()) {
+                        "Todavía no hay alimentos ni platos."
+                    } else {
+                        "No hay resultados con estos criterios."
+                    },
+                    modifier = Modifier.padding(top = 24.dp, bottom = 12.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (mode == CatalogMode.SEARCH) {
+                    Box {
+                        FilledTonalButton(onClick = { addMenuExpanded = true }) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                                Text("Añadir manualmente")
+                        }
+                        DropdownMenu(
+                            expanded = addMenuExpanded,
+                            onDismissRequest = { addMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Añadir alimento") },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    onAddFood()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Crear plato") },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    onAddDish()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DishesScreen(
+    dishes: List<Dish>,
+    foods: List<Food>,
+    onOpenDish: (Long) -> Unit
+) {
+    val foodsById = remember(foods) { foods.associateBy { it.id } }
+    LazyColumn(
+        conte

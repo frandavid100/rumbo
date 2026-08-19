@@ -1,0 +1,958 @@
+ommendation,
+                    mealShares,
+                    baselineWitness = savedViableWitness?.takeIf { savedViableWitnessValid }
+                )
+            }
+        } else null
+    }
+    val freshCompleteWitness = completeDaySearch?.witness
+    val completeDayDiagnostic = completeDaySearch?.diagnostic
+    val completeProgressWitness = completeDaySearch?.progressWitness
+    val isSearchingCompleteDay = hasCertifiedViableDay && recommendation != null &&
+        !savedCompleteWitnessValid && completeDaySearch == null
+    LaunchedEffect(
+        savedViableWitness, savedViableWitnessValid, freshViableWitness,
+        repertoireAssessment?.searchStatus
+    ) {
+        when {
+            savedViableWitnessValid -> Unit
+            freshViableWitness != null &&
+                repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE ->
+                onSaveCertifiedDayWitness(freshViableWitness)
+            savedViableWitness != null -> onClearCertifiedDayWitness(CertifiedDayLevel.VIABLE)
+        }
+    }
+    LaunchedEffect(savedCompleteWitness, savedCompleteWitnessValid, freshCompleteWitness) {
+        when {
+            savedCompleteWitnessValid -> Unit
+            freshCompleteWitness != null -> onSaveCertifiedDayWitness(freshCompleteWitness!!)
+            savedCompleteWitness != null -> onClearCertifiedDayWitness(CertifiedDayLevel.COMPLETE)
+        }
+    }
+    LaunchedEffect(completeProgressWitness, savedViableWitness?.fingerprint) {
+        val progress = completeProgressWitness
+        if (progress != null && progress.fingerprint != savedViableWitness?.fingerprint) {
+            onSaveCertifiedDayWitness(progress.copy(level = CertifiedDayLevel.VIABLE))
+        }
+    }
+    val hasCertifiedCompleteDay = savedCompleteWitnessValid || freshCompleteWitness != null
+    val savedCulinaryWitness = data.activeProfileData?.certifiedDayWitnesses
+        ?.firstOrNull { it.level == CertifiedDayLevel.CULINARILY_SATISFACTORY }
+    val savedCulinaryWitnessValid = remember(
+        savedCulinaryWitness,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        recommendation != null && savedCulinaryWitness != null &&
+            CulinarySatisfactionEvaluator.isCulinarilySatisfactory(
+                savedCulinaryWitness,
+                data.activeProfileData?.planningRules.orEmpty(),
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares
+            )
+    }
+    val baselineCompleteWitness = savedCompleteWitness?.takeIf { savedCompleteWitnessValid }
+        ?: freshCompleteWitness
+    val culinaryDaySearch by produceState<es.david.rumbo.logic.CulinarilySatisfactoryDaySearchResult?>(
+        initialValue = null,
+        hasCertifiedCompleteDay,
+        savedCulinaryWitnessValid,
+        baselineCompleteWitness?.fingerprint,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares
+    ) {
+        value = if (hasCertifiedCompleteDay && recommendation != null && !savedCulinaryWitnessValid) {
+            withContext(Dispatchers.Default) {
+                CulinarilySatisfactoryDaySearch.find(
+                    rules = data.activeProfileData?.planningRules.orEmpty(),
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = recommendation,
+                    mealShares = mealShares,
+                    baselineCompleteWitness = baselineCompleteWitness
+                )
+            }
+        } else null
+    }
+    val freshCulinaryWitness = culinaryDaySearch?.witness
+    val culinaryDayDiagnostic = culinaryDaySearch?.diagnostic
+    val isSearchingCulinaryDay = hasCertifiedCompleteDay && recommendation != null &&
+        !savedCulinaryWitnessValid && culinaryDaySearch == null
+    LaunchedEffect(savedCulinaryWitness, savedCulinaryWitnessValid, freshCulinaryWitness) {
+        when {
+            savedCulinaryWitnessValid -> Unit
+            freshCulinaryWitness != null -> onSaveCertifiedDayWitness(freshCulinaryWitness)
+            savedCulinaryWitness != null ->
+                onClearCertifiedDayWitness(CertifiedDayLevel.CULINARILY_SATISFACTORY)
+        }
+    }
+    val hasCertifiedCulinaryDay = savedCulinaryWitnessValid || freshCulinaryWitness != null
+
+    val displayedCertifiedWitness = when {
+        savedCulinaryWitnessValid -> savedCulinaryWitness
+        freshCulinaryWitness != null -> freshCulinaryWitness
+        savedCompleteWitnessValid -> savedCompleteWitness
+        freshCompleteWitness != null -> freshCompleteWitness
+        savedViableWitnessValid -> savedViableWitness
+        else -> freshViableWitness
+    }
+    val foodSuggestions = remember(
+        data.foods,
+        data.activeProfileData?.repertoireFoodIds,
+        data.activeProfileData?.dismissedSuggestionFoodIds,
+        data.activeProfileData?.planningRules,
+        data.dishes,
+        recommendation,
+        repertoireAssessment
+    ) {
+        FoodSuggestionEngine.suggest(
+            foods = data.foods,
+            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+            planningRules = data.activeProfileData?.planningRules.orEmpty(),
+            plannedMeals = emptyList(),
+            dishesById = dishesById,
+            recommendation = recommendation,
+            excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
+            repertoireAssessment = repertoireAssessment,
+            candidateAssessments = null,
+            limit = 100
+        )
+    }
+    var pinnedSuggestions by remember { mutableStateOf<List<FoodSuggestion>>(emptyList()) }
+    var pinnedRecommendationMessage by remember { mutableStateOf<String?>(null) }
+    var mayRefreshPinnedSuggestions by remember { mutableStateOf(true) }
+    var recommendationFocusName by rememberSaveable(data.profile?.id) {
+        mutableStateOf<String?>(null)
+    }
+    var resolvedRecommendationFocusNames by rememberSaveable(data.profile?.id) {
+        mutableStateOf(emptyList<String>())
+    }
+    val handledSuggestionIds = remember(
+        data.activeProfileData?.repertoireFoodIds,
+        data.activeProfileData?.dismissedSuggestionFoodIds
+    ) {
+        data.activeProfileData?.repertoireFoodIds.orEmpty() +
+            data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty()
+    }
+    LaunchedEffect(handledSuggestionIds) {
+        if (pinnedSuggestions.any { it.food.id in handledSuggestionIds }) {
+            pinnedSuggestions = emptyList()
+            pinnedRecommendationMessage = null
+            mayRefreshPinnedSuggestions = true
+        }
+    }
+    LaunchedEffect(repertoireAssessment, foodSuggestions, mayRefreshPinnedSuggestions) {
+        val currentAssessment = repertoireAssessment
+        if (currentAssessment != null && mayRefreshPinnedSuggestions) {
+            val culinaryNeed = currentAssessment.culinaryNeeds.firstOrNull()
+            val previousFocus = recommendationFocusName?.let { name ->
+                EfficientNutrient.entries.firstOrNull { it.name == name }
+            }
+            val resolved = resolvedRecommendationFocusNames.mapNotNullTo(mutableSetOf()) { name ->
+                EfficientNutrient.entries.firstOrNull { it.name == name }
+            }
+            if (previousFocus != null && !currentAssessment.hasDeficit(previousFocus)) {
+                resolved += previousFocus
+                resolvedRecommendationFocusNames = resolved.map { it.name }
+            }
+            val focus = if (culinaryNeed == null) {
+                previousFocus
+                    ?.takeIf { it !in resolved && currentAssessment.hasDeficit(it) }
+                    ?: recommendationFocus(currentAssessment, resolved)
+            } else {
+                null
+            }
+            val strictSuggestions = if (culinaryNeed != null) {
+                FoodSuggestionEngine.culinaryFocusedSuggestions(
+                    suggestions = foodSuggestions,
+                    need = culinaryNeed,
+                    limit = 3
+                )
+            } else focus?.let { nutrient ->
+                FoodSuggestionEngine.focusedSuggestions(
+                    suggestions = foodSuggestions,
+                    nutrient = nutrient,
+                    limit = 3
+                )
+            }.orEmpty()
+            val focusedSuggestions = if (
+                culinaryNeed != null || strictSuggestions.isNotEmpty() || focus == null
+            ) {
+                strictSuggestions
+            } else {
+                FoodSuggestionEngine.relaxedFocusedSuggestions(
+                    foods = data.foods,
+                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                    excludedFoodIds = data.activeProfileData?.dismissedSuggestionFoodIds.orEmpty(),
+                    nutrient = focus,
+                    limit = 3
+                )
+            }
+            if (focus != null && focus in resolved) {
+                resolved -= focus
+                resolvedRecommendationFocusNames = resolved.map { it.name }
+            }
+            pinnedSuggestions = focusedSuggestions
+            val baseMessage = if (culinaryNeed != null) {
+                culinaryNeed.message
+            } else if (strictSuggestions.isEmpty() && focusedSuggestions.isNotEmpty()) {
+                relaxedRecommendationFocusMessage(focus)
+            } else {
+                recommendationFocusMessage(focus, currentAssessment)
+            }
+            pinnedRecommendationMessage = if (
+                (focus != null || culinaryNeed != null) && focusedSuggestions.isEmpty()
+            ) {
+                "$baseMessage No quedan recomendaciones compatibles con tus elecciones; " +
+                    "usa la búsqueda para añadir otro alimento."
+            } else baseMessage
+            recommendationFocusName = focus?.name
+            mayRefreshPinnedSuggestions = false
+        }
+    }
+    val openFood = { foodId: Long ->
+        onOpenFood(
+            foodId,
+            pinnedSuggestions.firstOrNull { it.food.id == foodId }?.reason
+        )
+    }
+    val searchTextState = rememberTextFieldState()
+    var searchRetailer by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchNutritionalRole by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchCulinaryRole by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
+    val searchMealType = searchMealTypeName?.let { runCatching { MealType.valueOf(it) }.getOrNull() }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    val searchBarState = rememberSearchBarState()
+    val searchListState = rememberLazyListState()
+    var suppressRestoredSearchKeyboard by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(searchOpenRequest) {
+        if (searchOpenRequest > 0) {
+            searchRetailer = requestedSearchRetailer
+            searchNutritionalRole = requestedSearchNutritionalRole
+            searchCulinaryRole = requestedSearchCulinaryRole
+            searchMealTypeName = null
+            searchTextState.setTextAndPlaceCursorAtEnd("")
+            searchListState.scrollToItem(0)
+            searchBarState.snapTo(1f)
+        }
+    }
+    val searchScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
+    val searchScope = rememberCoroutineScope()
+    val closeSearch = {
+        searchTextState.setTextAndPlaceCursorAtEnd("")
+        searchMessage = null
+        searchScrollBehavior.scrollOffset = 0f
+        searchScrollBehavior.contentOffset = 0f
+        searchScope.launch { searchBarState.animateToCollapsed() }
+        Unit
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(searchScrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            HomeCatalogSearch(
+                foods = data.foods,
+                dishes = data.dishes,
+                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                foodSuggestions = pinnedSuggestions,
+                repertoireAssessment = repertoireAssessment,
+                recommendation = recommendation,
+                textFieldState = searchTextState,
+                retailerFilter = searchRetailer,
+                onRetailerFilterChange = { searchRetailer = it },
+                nutritionalRoleFilter = searchNutritionalRole,
+                onNutritionalRoleFilterChange = { searchNutritionalRole = it },
+                culinaryRoleFilter = searchCulinaryRole,
+                onCulinaryRoleFilterChange = { searchCulinaryRole = it },
+                mealTypeFilter = searchMealType,
+                onMealTypeFilterChange = { searchMealTypeName = it?.name },
+                scanMessage = searchMessage,
+                onScanMessageChange = { searchMessage = it },
+                state = searchBarState,
+                listState = searchListState,
+                suppressRestoredKeyboard = suppressRestoredSearchKeyboard,
+                onRestoredKeyboardSuppressed = { suppressRestoredSearchKeyboard = false },
+                scrollBehavior = searchScrollBehavior,
+                onCloseSearch = closeSearch,
+                onOpenFood = {
+                    suppressRestoredSearchKeyboard = true
+                    openFood(it)
+                },
+                onOpenDish = {
+                    suppressRestoredSearchKeyboard = true
+                    onOpenDish(it)
+                },
+                trailingContent = {
+                    ProfileSwitcher(
+                        activeProfile = data.profile,
+                        onOpen = onOpenAccount,
+                        avatarSize = 36
+                    )
+                }
+            )
+        }
+    ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+        if (assessment != null && recommendedGoal != null) {
+            item {
+                BodyGoalNutritionCard(
+                    assessment = assessment,
+                    recommendedGoal = recommendedGoal,
+                    weightKg = RecommendationEngine.effectiveValues(data.measurements).weightKg,
+                    goal = goal,
+                    chosenWeeklyRate = effectiveGoal.weeklyRateKg,
+                    recommendation = recommendation,
+                    onGoalChange = onGoalChange,
+                    onExplain = onExplainBody,
+                    onAddMeasurement = onAddMeasurement
+                )
+            }
+        }
+
+        val missingWeight = effectiveGoal.weightKg == null
+        val missingWaist = effectiveGoal.waistCm == null
+        if (missingWeight || missingWaist) {
+            item {
+                MissingMeasurementCard(
+                    missingWeight = missingWeight,
+                    missingWaist = missingWaist,
+                    onAddMeasurement = onAddMeasurement
+                )
+            }
+        }
+        if (recommendation != null) {
+            item {
+                RepertoireProgressCard(
+                    assessment = repertoireAssessment,
+                    hasCertifiedViableDay = hasCertifiedViableDay,
+                    hasCertifiedCompleteDay = hasCertifiedCompleteDay,
+                    isSearchingCompleteDay = isSearchingCompleteDay,
+                    completeDayDiagnostic = completeDayDiagnostic,
+                    hasCertifiedCulinaryDay = hasCertifiedCulinaryDay,
+                    isSearchingCulinaryDay = isSearchingCulinaryDay,
+                    culinaryDayDiagnostic = culinaryDayDiagnostic,
+                    foods = data.foods,
+                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                    planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                    onOpenSearch = onOpenProgressSearch
+                )
+            }
+        }
+        if (recommendation != null && displayedCertifiedWitness != null) {
+            item {
+                CertifiedDayWitnessSection(
+                    witness = displayedCertifiedWitness,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = recommendation,
+                    onOpenFood = openFood,
+                    onOpenDish = onOpenDish
+                )
+            }
+        }
+        }
+    }
+}
+
+private data class RepertoireProgressTarget(
+    val message: String,
+    val buttonLabel: String? = null,
+    val nutritionalRole: String? = null,
+    val culinaryRole: String? = null,
+    val mealType: MealType? = null
+)
+
+private data class RepertoireRoleMilestone(
+    val role: String,
+    val target: Int,
+    val singular: String,
+    val plural: String
+)
+
+private val initialRepertoireRoleMilestones = listOf(
+    RepertoireRoleMilestone("PRIMARY_PROTEIN", 3, "proteína principal", "proteínas principales"),
+    RepertoireRoleMilestone("COMPLEMENTARY_PROTEIN", 3, "proteína complementaria", "proteínas complementarias"),
+    RepertoireRoleMilestone("PRIMARY_CARBOHYDRATE", 3, "hidrato principal", "hidratos principales"),
+    RepertoireRoleMilestone("COMPLEMENTARY_CARBOHYDRATE", 3, "hidrato complementario", "hidratos complementarios"),
+    RepertoireRoleMilestone("CONCENTRATED_FAT", 1, "grasa concentrada", "grasas concentradas"),
+    RepertoireRoleMilestone("COMPLEMENTARY_FAT", 3, "grasa complementaria", "grasas complementarias")
+)
+
+private fun repertoireProgressTarget(
+    assessment: RepertoireAssessment?,
+    hasCertifiedViableDay: Boolean,
+    hasCertifiedCompleteDay: Boolean,
+    isSearchingCompleteDay: Boolean,
+    completeDayDiagnostic: CertifiedDayWitnessEvaluator.CompleteDayDiagnostic?,
+    hasCertifiedCulinaryDay: Boolean,
+    isSearchingCulinaryDay: Boolean,
+    culinaryDayDiagnostic: CulinarilySatisfactoryDayDiagnostic?,
+    foods: List<Food>,
+    repertoireFoodIds: Set<Long>,
+    planningRules: List<PlanningRule>
+): Pair<Int, RepertoireProgressTarget> {
+    if (assessment == null) {
+        return 0 to RepertoireProgressTarget(
+            "Estamos analizando tus alimentos para encontrar el siguiente paso."
+        )
+    }
+
+    if (hasCertifiedCulinaryDay) {
+        return 3 to RepertoireProgressTarget(
+            "Nivel 3 conseguido: Rumbo ha encontrado y guardado un día completo cuyas combinaciones y cantidades son culinariamente satisfactorias."
+        )
+    }
+
+    if (hasCertifiedCompleteDay) {
+        if (isSearchingCulinaryDay) {
+            return 2 to RepertoireProgressTarget(
+                "Nivel 2 conseguido. Rumbo está buscando si tus alimentos actuales permiten también un día culinariamente satisfactorio…"
+            )
+        }
+        culinaryDayDiagnostic?.let { diagnostic ->
+            val roleless = diagnostic.issues.firstOrNull {
+                it.kind == CulinarySatisfactionIssueKind.ROLE_UNRESOLVED
+            }
+            if (roleless != null) {
+                return 2 to RepertoireProgressTarget(
+                    "Nivel 2 conseguido. Para certificar el nivel 3 hay al menos un alimento sin una clasificación culinaria suficiente (${roleless.foodName ?: "alimento sin clasificar"}). No necesitas añadir otro alimento: hay que resolver esa clasificación o encontrar una composición que no lo necesite."
+                )
+            }
+            val quantity = diagnostic.issues.firstOrNull {
+                it.kind == CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE
+            }
+            if (quantity != null) {
+                return 2 to RepertoireProgressTarget(
+                    "Nivel 2 conseguido. El mejor día encontrado todavía necesita una cantidad culinariamente extrema de ${quantity.foodName ?: "uno de tus alimentos"}. Rumbo seguirá tratando esto como un problema de combinación y ajuste, no como prueba de que te falten alimentos."
+                )
+            }
+            val soft = diagnostic.issues.firstOrNull {
+                it.kind == CulinarySatisfactionIssueKind.SOFT_RELATION_UNSATISFIED
+            }
+            if (soft != null) {
+                if (diagnostic.compatibleCompanionAlreadyAvailable) {
+                    return 2 to RepertoireProgressTarget(
+                        "Nivel 2 conseguido. Ya tienes en tu repertorio alimentos capaces de completar la combinación culinaria pendiente en ${soft.mealType.label.lowercase()}, pero la búsqueda acotada todavía no ha encontrado una composición completa compatible. No necesitas añadir otro alimento equivalente."
+                    )
+                }
+                val missingRole = diagnostic.unavailablePreferredRoles.sortedBy { it.ordinal }.firstOrNull()
+                if (missingRole != null) {
+                    return 2 to RepertoireProgressTarget(
+                        message = "Nivel 2 conseguido. Para ampliar las combinaciones capaces de alcanzar el nivel 3 falta una opción que pueda funcionar como ${missingRole.label.lowercase()} en ${soft.mealType.label.lowercase()}.",
+                        buttonLabel = "Añadir ${missingRole.label.lowercase()}",
+                        culinaryRole = missingRole.name,
+                        mealType = soft.mealType
+                    )
+                }
+            }
+            return 2 to RepertoireProgressTarget(
+                "Nivel 2 conseguido. La búsqueda acotada todavía no ha podido certificar un día culinariamente satisfactorio. Esto no demuestra que te falten alimentos."
+            )
+        }
+        return 2 to RepertoireProgressTarget(
+            "Nivel 2 conseguido: Rumbo ha encontrado y guardado un día completo."
+        )
+    }
+
+    if (hasCertifiedViableDay || assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
+        if (isSearchingCompleteDay) {
+            return 1 to RepertoireProgressTarget(
+                "Nivel 1 conseguido. Rumbo está buscando si tus alimentos actuales permiten también un día completo…"
+            )
+        }
+        val missingVegetables = (3 - assessment.vegetableConcepts).coerceAtLeast(0)
+        if (missingVegetables > 0) {
+            val noun = if (missingVegetables == 1) "verdura diferente" else "verduras diferentes"
+            return 1 to RepertoireProgressTarget(
+                message = "Ya puedes crear un menú viable. Para avanzar hacia un menú completo, amplía primero la variedad de verduras.",
+                buttonLabel = "Añadir $missingVegetables $noun",
+                nutritionalRole = "VEGETABLE"
+            )
+        }
+        val missingFruit = (2 - assessment.fruitConcepts).coerceAtLeast(0)
+        if (missingFruit > 0) {
+            val noun = if (missingFruit == 1) "fruta diferente" else "frutas diferentes"
+            return 1 to RepertoireProgressTarget(
+                message = "Ya puedes crear un menú viable. El siguiente paso es ampliar la fruta para acercarte al nivel 2.",
+                buttonLabel = "Añadir $missingFruit $noun",
+                nutritionalRole = "FRUIT"
+            )
+        }
+        completeDayDiagnostic?.let { diagnostic ->
+            if (diagnostic.fruitMeals < 2 && diagnostic.availableFruitMeals < 2) {
+                return 1 to RepertoireProgressTarget(
+                    message = "Con la configuración actual solo hay fruta disponible para ${diagnostic.availableFruitMeals} ${if (diagnostic.availableFruitMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar fruta en dos comidas distintas.",
+                    buttonLabel = "Añadir otra fruta",
+                    nutritionalRole = "FRUIT"
+                )
+            }
+            if (diagnostic.vegetableMeals < 2 && diagnostic.availableVegetableMeals < 2) {
+                return 1 to RepertoireProgressTarget(
+                    message = "Con la configuración actual solo hay verdura disponible para ${diagnostic.availableVegetableMeals} ${if (diagnostic.availableVegetableMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar verdura en dos comidas distintas.",
+                    buttonLabel = "Añadir otra verdura",
+                    nutritionalRole = "VEGETABLE"
+                )
+            }
+            if (diagnostic.fiberGrams < 25.0) {
+                return 1 to RepertoireProgressTarget(
+                    message = "Rumbo ya ha encontrado un día viable con al menos ${formatOneDecimal(diagnostic.fiberGrams)} g de fibra. Para el nivel 2 necesitamos 25 g. Añade una opción rica en fibra para ampliar las combinaciones sin perder ese progreso.",
+                    buttonLabel = "Añadir verdura rica en fibra",
+                    nutritionalRole = "VEGETABLE"
+                )
+            }
+            if (!diagnostic.viable) {
+                val limitingLabel = when (diagnostic.limitingNutrient) {
+                    NutrientKind.PROTEIN -> "proteína"
+                    NutrientKind.CARBOHYDRATES -> "hidratos"
+                    NutrientKind.FAT -> "grasa"
+                    NutrientKind.CALORIES -> "calorías"
+                    null -> "los objetivos nutricionales"
+                }
+                val direction = when {
+                    (diagnostic.limitingDifference ?: 0.0) > 0.0 -> "por encima"
+                    (diagnostic.limitingDifference ?: 0.0) < 0.0 -> "por debajo"
+                    else -> "fuera"
+                }
+                return 1 to RepertoireProgressTarget(
+                    message = "Rumbo ya dispone de los alimentos necesarios para el nivel 2: consigue colocar fruta, verdura y fibra suficientes. El mejor intento deja $limitingLabel $direction del objetivo, así que el problema ahora es encontrar una combinación compatible con los alimentos que ya tienes; no necesitas volver a añadir alimentos de los requisitos del nivel 1."
+                )
+            }
+        }
+        return 1 to RepertoireProgressTarget(
+            "La búsqueda acotada todavía no ha podido demostrar un día completo. Esto no demuestra que te falten alimentos y Rumbo no te pedirá añadirlos por ese motivo."
+        )
+    }
+
+    val activeConfiguredIds = planningRules.asSequence()
+        .filter {
+            it.itemKind == PlannedItemKind.FOOD && it.isActive &&
+                it.frequency != PlanningFrequency.NEVER
+        }
+        .map { it.itemId }
+        .toSet()
+        .intersect(repertoireFoodIds)
+    val configuredFoods = foods.filter { it.id in activeConfiguredIds }
+
+    initialRepertoireRoleMilestones.forEach { milestone ->
+        val current = configuredFoods.count { milestone.role in it.nutritionalRoles }
+        val missing = (milestone.target - current).coerceAtLeast(0)
+        if (missing > 0) {
+            val noun = if (missing == 1) milestone.singular else milestone.plural
+            return 0 to RepertoireProgressTarget(
+                message = "Para poder crear un menú viable, el siguiente paso es cubrir ${milestone.plural} en tu repertorio.",
+                buttonLabel = "Añadir $missing $noun",
+                nutritionalRole = milestone.role
+            )
+        }
+    }
+
+    assessment.culinaryNeeds.firstOrNull()?.let { need ->
+        val role = need.acceptedRoles.firstOrNull()
+        if (role != null) {
+            return 0 to RepertoireProgressTarget(
+                message = need.message,
+                buttonLabel = "Añadir ${role.label.lowercase()}",
+                culinaryRole = role.name,
+                mealType = need.mealType
+            )
+        }
+    }
+
+    val deficit = listOf(
+        NutrientKind.PROTEIN to "PRIMARY_PROTEIN",
+        NutrientKind.CARBOHYDRATES to "PRIMARY_CARBOHYDRATE",
+        NutrientKind.FAT to "COMPLEMENTARY_FAT"
+    ).firstOrNull { (kind, _) ->
+        assessment.nutrition[kind]?.let { it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET } == true
+    }
+    if (deficit != null) {
+        val nutrientLabel = when (deficit.first) {
+            NutrientKind.PROTEIN -> "proteína"
+            NutrientKind.CARBOHYDRATES -> "hidratos"
+            NutrientKind.FAT -> "grasa"
+            NutrientKind.CALORIES -> "calorías"
+        }
+        return 0 to RepertoireProgressTarget(
+            message = "Tu repertorio básico ya contiene los tipos de alimentos necesarios. " +
+                "El mejor intento sigue dejando $nutrientLabel por debajo " +
+                "del objetivo, pero eso es un problema de combinación o cantidades, no una " +
+                "nueva petición de ${nutritionalRoleLabel(deficit.second).lowercase()}.",
+            buttonLabel = null
+        )
+    }
+
+    return 0 to RepertoireProgressTarget(
+        assessment.limitingFactors.firstOrNull()
+            ?: "Todavía no hemos podido demostrar que exista un menú viable con la configuración actual. Revisa las comidas asignadas a tus alimentos."
+    )
+}
+
+@Composable
+private fun RepertoireLevelMilestones(currentLevel: Int) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        (0..4).forEach { level ->
+            val reached = level <= currentLevel
+            val circleColor = if (reached) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.outlineVariant
+            Box(
+                Modifier.size(30.dp).background(circleColor, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    level.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (reached) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (level < 4) {
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    thickness = 2.dp,
+                    color = if (level < currentLevel) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RepertoireProgressCard(
+    assessment: RepertoireAssessment?,
+    hasCertifiedViableDay: Boolean,
+    hasCertifiedCompleteDay: Boolean,
+    isSearchingCompleteDay: Boolean,
+    completeDayDiagnostic: CertifiedDayWitnessEvaluator.CompleteDayDiagnostic?,
+    hasCertifiedCulinaryDay: Boolean,
+    isSearchingCulinaryDay: Boolean,
+    culinaryDayDiagnostic: CulinarilySatisfactoryDayDiagnostic?,
+    foods: List<Food>,
+    repertoireFoodIds: Set<Long>,
+    planningRules: List<PlanningRule>,
+    onOpenSearch: (String?, String?, MealType?) -> Unit
+) {
+    val (level, target) = remember(
+        assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
+        completeDayDiagnostic, hasCertifiedCulinaryDay, isSearchingCulinaryDay,
+        culinaryDayDiagnostic, foods, repertoireFoodIds, planningRules
+    ) {
+        repertoireProgressTarget(
+            assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
+            completeDayDiagnostic, hasCertifiedCulinaryDay, isSearchingCulinaryDay,
+            culinaryDayDiagnostic, foods, repertoireFoodIds, planningRules
+        )
+    }
+    val title = when (level) {
+        0 -> "Nivel 0 · Preparando un menú viable"
+        1 -> "Nivel 1 · Menú viable"
+        2 -> "Nivel 2 · Menú completo"
+        3 -> "Nivel 3 · Culinariamente satisfactorio"
+        else -> "Nivel 4 · Menú variado"
+    }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Tu repertorio", style = MaterialTheme.typography.titleLarge)
+        Card(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                RepertoireLevelMilestones(level)
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(target.message, style = MaterialTheme.typography.bodyLarge)
+                target.buttonLabel?.let { label ->
+                    FilledTonalButton(
+                        onClick = {
+                            onOpenSearch(
+                                target.nutritionalRole,
+                                target.culinaryRole,
+                                target.mealType
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(label)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FoodSuggestionsCard(
+    suggestions: List<FoodSuggestion>,
+    showMenuReadiness: Boolean,
+    assessment: RepertoireAssessment?,
+    recommendationMessage: String?,
+    recommendationFocus: EfficientNutrient?,
+    onOpenFood: (Long) -> Unit,
+    onDismiss: (Long) -> Unit
+) {
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Tus alimentos recomendados", style = MaterialTheme.typography.titleLarge)
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                if (showMenuReadiness || suggestions.isNotEmpty()) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            if (showMenuReadiness) {
+                                "Para que podamos crearte un menú adecuado, añade alimentos " +
+                                    "recomendados o usa la búsqueda para elegir los que tú quieras."
+                            } else {
+                                "Ya tienes suficientes alimentos para crear menús adecuados. " +
+                                    "Añade más para que Rumbo pueda ofrecerte combinaciones más variadas."
+                            },
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        if (assessment == null) {
+                            Text(
+                                "Analizando tus alimentos…",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                        } else if (!recommendationMessage.isNullOrBlank()) {
+                            Text(
+                                if (showMenuReadiness) recommendationMessage else
+                                    optionalRecommendationFocusMessage(recommendationFocus),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+                if (suggestions.isNotEmpty()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                repeat(3) { index ->
+                    val suggestion = suggestions.getOrNull(index)
+                    var displayedSuggestion by remember(index) {
+                        mutableStateOf(suggestion)
+                    }
+                    if (suggestion != null) displayedSuggestion = suggestion
+                    AnimatedVisibility(
+                        visible = suggestion != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        displayedSuggestion?.let { currentSuggestion ->
+                            Column {
+                                if (index > 0) {
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outlineVariant
+                                    )
+                                }
+                                AnimatedContent(
+                                    targetState = currentSuggestion,
+                                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                    label = "Texto de recomendación"
+                                ) { animatedSuggestion ->
+                                    FoodSuggestionEntry(
+                                        suggestion = animatedSuggestion,
+                                        onClick = { onOpenFood(animatedSuggestion.food.id) },
+                                        onDismiss = { onDismiss(animatedSuggestion.food.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FoodSuggestionEntry(
+    suggestion: FoodSuggestion,
+    onClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                suggestion.food.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                suggestion.reason,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        IconButton(onClick = onDismiss) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "No me interesa",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun MissingMeasurementCard(
+    missingWeight: Boolean,
+    missingWaist: Boolean,
+    onAddMeasurement: () -> Unit
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                "Añade una medición",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            HorizontalDivider()
+            Text(
+                when {
+                    missingWeight && missingWaist ->
+                        "Añade tu peso o tu cintura para que Rumbo pueda empezar a funcionar. Lo ideal es introducir ambos datos, porque así la valoración es más fiable."
+                    missingWeight ->
+                        "La cintura ya permite orientar el objetivo, pero con el peso también podremos calcular el IMC y las calorías que necesitas."
+                    else ->
+                        "El peso ya permite calcular las calorías, pero la cintura hará más precisa la valoración de la distribución abdominal."
+                },
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            WaistMeasurementHelp()
+            OutlinedButton(onClick = onAddMeasurement, modifier = Modifier.fillMaxWidth()) {
+                Text("Añadir medición")
+            }
+        }
+    }
+}
+
+@Composable
+private fun BodyGoalNutritionCard(
+    assessment: BodyAssessment,
+    recommendedGoal: RecommendedGoal,
+    weightKg: Double?,
+    goal: WeightGoal,
+    chosenWeeklyRate: Double?,
+    recommendation: es.david.rumbo.model.Recommendation?,
+    onGoalChange: (Double?) -> Unit,
+    onExplain: () -> Unit,
+    onAddMeasurement: () -> Unit
+) {
+    var choosingGoal by remember { mutableStateOf(false) }
+    var manualMagnitude by rememberSaveable { mutableStateOf("") }
+    var manualDirection by remember { mutableStateOf(-1.0) }
+    var manualError by rememberSaveable { mutableStateOf<String?>(null) }
+    val recommendedRate = RecommendationEngine.weeklyRateFor(recommendedGoal.goal, weightKg) ?: 0.0
+    val selectedRate = if (goal == WeightGoal.AUTOMATIC) {
+        recommendedRate
+    } else {
+        chosenWeeklyRate ?: RecommendationEngine.weeklyRateFor(goal, weightKg) ?: 0.0
+    }
+    if (choosingGoal) {
+        ModalBottomSheet(onDismissRequest = { choosingGoal = false }) {
+                Column(
+                    Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Cambiar objetivo semanal", style = MaterialTheme.typography.headlineSmall)
+                    Text("Rumbo recomienda ${weeklyRateAction(recommendedRate)} cada semana.")
+                    OutlinedButton(
+                        onClick = {
+                            onGoalChange(null)
+                            choosingGoal = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (goal == WeightGoal.AUTOMATIC) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text("Volver a lo recomendado")
+                    }
+                    HorizontalDivider()
+                    Text("Elegir una cifra manual", fontWeight = FontWeight.SemiBold)
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        listOf(-1.0 to "Perder", 1.0 to "Ganar").forEachIndexed { index, (value, label) ->
+                            SegmentedButton(
+                                selected = manualDirection == value,
+                                onClick = { manualDirection = value },
+                                shape = SegmentedButtonDefaults.itemShape(index, 2)
+                            ) { Text(label) }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = manualMagnitude,
+                        onValueChange = {
+                            manualMagnitude = it.filter { char ->
+                                char.isDigit() || char == ',' || char == '.'
+                            }.take(12)
+                            manualError = null
+                        },
+                        label = { Text("Kg por semana") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        "La cifra elegida se conserva, pero el cálculo puede limitarla por seguridad.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    manualError?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Button(onClick = {
+                    val magnitude = parseDecimal(manualMagnitude)
+                    if (magnitude == null || !magnitude.isFinite() || magnitude < 0.0) {
+                        manualError = "Introduce una cifra numérica válida."
+                    } else {
+                        onGoalChange(if (magnitude == 0.0) 0.0 else magnitude * manualDirection)
+                        choosingGoal = false
+                    }
+                    }, Modifier.fillMaxWidth()) { Text("Usar esta cifra") }
+                    TextButton(onClick = { choosingGoal = false }, Modifier.fillMaxWidth()) { Text("Cancelar") }
+                    Spacer(Modifier.height(16.dp))
+                }
+        }
+    }
+    Text("Tu objetivo", style = MaterialTheme.typography.titleLarge)
+    Spacer(Modifier

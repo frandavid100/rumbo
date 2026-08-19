@@ -1,0 +1,931 @@
+surement,
+                            onDismiss = { screenName = Screen.MEASUREMENT_DETAIL.name },
+                            onSave = {
+                                data = repository.addMeasurement(it)
+                                screenName = Screen.MEASUREMENT_DETAIL.name
+                            }
+                        )
+                    }
+                }
+                screen == Screen.PLANNER -> {
+                    val selectedWeek = PlanWeek.valueOf(plannerWeekName)
+                    WeeklyMenuReplicaScreen(
+                        meals = data.activeProfileData?.plannedMeals.orEmpty()
+                            .filter { it.planWeek == selectedWeek },
+                        foodsById = data.foods.associateBy { it.id },
+                        dishesById = data.dishes.associateBy { it.id },
+                        recommendation = currentRecommendation,
+                        sectionTitle = "",
+                        onOpenShoppingList = {
+                            shoppingCurrentOnly = false
+                            shoppingWeekName = selectedWeek.name
+                            screenName = Screen.SHOPPING_LIST.name
+                        },
+                        onRegenerateWeek = {
+                        generateMenuAsync(selectedWeek)
+                    },
+                    isGeneratingMenu = generatingMenuWeekName == selectedWeek.name,
+                    onOpenMeal = { mealId ->
+                            plannerWeekName = selectedWeek.name
+                            selectedPlannedMealId = mealId
+                            screenName = Screen.EDIT_PLANNED_MEAL.name
+                        },
+                        onOpenFood = {
+                            selectedFoodId = it
+                        foodNavigationStack = emptyList()
+                            foodReturnScreenName = Screen.PLANNER.name
+                            screenName = Screen.FOOD_DETAIL.name
+                        },
+                        onOpenDish = {
+                            selectedDishId = it
+                            dishReturnScreenName = Screen.PLANNER.name
+                            screenName = Screen.DISH_DETAIL.name
+                        },
+                        onApplyAdjustedMeals = { adjustedMeals ->
+                            data = repository.savePlannedMeals(adjustedMeals, selectedWeek)
+                        }
+                    )
+                }
+                screen == Screen.AUTO_PLANNING -> AutomaticPlanningScreen(
+                    rules = data.activeProfileData?.planningRules.orEmpty(),
+                    repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                    foods = data.foods,
+                    dishes = data.dishes,
+                    recommendation = currentRecommendation,
+                    mealShares = mealShares,
+                    onSaveRule = { data = repository.savePlanningRule(it) },
+                    onDeleteRule = { ruleId -> data = repository.deletePlanningRule(ruleId) },
+                    onAddToRepertoire = { data = repository.addToRepertoire(it) },
+                    onRemoveFromRepertoire = { data = repository.removeFromRepertoire(it) },
+                    onSetActive = { id, active -> data = repository.setRepertoireFoodActive(id, active) },
+                    onReplace = { oldId, newId -> data = repository.replaceRepertoireFood(oldId, newId) }
+                )
+                screen == Screen.ADD_PLANNED_MEAL -> PlannedMealEditorScreen(
+                    foods = data.foods,
+                    dishes = data.dishes,
+                    existingMeals = data.activeProfileData?.plannedMeals.orEmpty(),
+                    recommendation = currentRecommendation,
+                    mealShares = mealShares,
+                    adjustmentRange = adjustmentRange,
+                    initialType = draftMealTypeName?.let { MealType.valueOf(it) },
+                    initialPlanWeek = PlanWeek.valueOf(plannerWeekName),
+                    initialDays = draftMealDayName?.let { setOf(WeekDay.valueOf(it)) }.orEmpty(),
+                    initialFoodId = draftFoodId,
+                    initialDishId = draftDishId,
+                    preferredFoodIds = preferredFoodIds,
+                    preferredDishIds = preferredDishIds,
+                    onCreateDish = { data = repository.saveDish(it) },
+                    onOpenFood = {
+                        selectedFoodId = it
+                        foodNavigationStack = emptyList()
+                        foodRecommendationReasonStack = emptyList()
+                        selectedFoodRecommendationReason = null
+                        foodReturnScreenName = Screen.ADD_PLANNED_MEAL.name
+                        screenName = Screen.FOOD_DETAIL.name
+                    },
+                    onOpenDish = {
+                        selectedDishId = it
+                        dishReturnScreenName = Screen.ADD_PLANNED_MEAL.name
+                        screenName = Screen.DISH_DETAIL.name
+                    },
+                    onSave = {
+                        data = repository.savePlannedMeal(it)
+                        draftMealTypeName = null
+                        draftMealDayName = null
+                        draftFoodId = null
+                        draftDishId = null
+                        screenName = Screen.PLANNER.name
+                    }
+                )
+                screen == Screen.EDIT_PLANNED_MEAL -> {
+                    val meal = data.activeProfileData?.plannedMeals
+                        ?.firstOrNull { it.id == selectedPlannedMealId }
+                    if (meal == null) {
+                        screenName = Screen.PLANNER.name
+                    } else {
+                        PlannedMealEditorScreen(
+                            foods = data.foods,
+                            dishes = data.dishes,
+                            existingMeals = data.activeProfileData?.plannedMeals.orEmpty(),
+                            recommendation = currentRecommendation,
+                            mealShares = mealShares,
+                            adjustmentRange = adjustmentRange,
+                            initial = meal,
+                            preferredFoodIds = preferredFoodIds,
+                            preferredDishIds = preferredDishIds,
+                            onCreateDish = { data = repository.saveDish(it) },
+                            onOpenFood = {
+                                selectedFoodId = it
+                        foodNavigationStack = emptyList()
+                                foodReturnScreenName = Screen.EDIT_PLANNED_MEAL.name
+                                screenName = Screen.FOOD_DETAIL.name
+                            },
+                            onOpenDish = {
+                                selectedDishId = it
+                                dishReturnScreenName = Screen.EDIT_PLANNED_MEAL.name
+                                screenName = Screen.DISH_DETAIL.name
+                            },
+                            onSave = {
+                                data = repository.savePlannedMeal(it)
+                                screenName = Screen.PLANNER.name
+                            },
+                            onDelete = {
+                                data = repository.deletePlannedMeal(meal.id)
+                                selectedPlannedMealId = null
+                                screenName = Screen.PLANNER.name
+                            }
+                        )
+                    }
+                }
+                screen == Screen.DISHES -> {
+                    screenName = Screen.HOME.name
+                }
+                screen == Screen.ADD_DISH -> DishEditorScreen(
+                    foods = data.foods,
+                    initialFoodId = draftDishFoodId,
+                    preferredFoodIds = preferredFoodIds,
+                    onSave = {
+                        data = repository.saveDish(it)
+                        draftDishFoodId = null
+                        selectedDishId = it.id
+                        screenName = Screen.DISH_DETAIL.name
+                    }
+                )
+                screen == Screen.DISH_DETAIL -> {
+                    val dish = data.dishes.firstOrNull { it.id == selectedDishId }
+                    if (dish == null) {
+                        screenName = Screen.HOME.name
+                    } else {
+                        DishDetailScreen(
+                            dish = dish,
+                            foods = data.foods,
+                            plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
+                            onOpenFood = {
+                                selectedFoodId = it
+                        foodNavigationStack = emptyList()
+                                foodReturnScreenName = Screen.DISH_DETAIL.name
+                                screenName = Screen.FOOD_DETAIL.name
+                            },
+                            onOpenMeal = {
+                                selectedPlannedMealId = it
+                                screenName = Screen.EDIT_PLANNED_MEAL.name
+                            },
+                            onAddToMeal = { mealId ->
+                                val meal = data.activeProfileData?.plannedMeals?.firstOrNull { it.id == mealId }
+                                if (meal != null) {
+                                    val existing = meal.dishes.firstOrNull { it.dishId == dish.id }
+                                    val amount = dish.totalWeightGrams().takeIf { it > 0.0 } ?: 100.0
+                                    val updated = if (existing == null) {
+                                        meal.copy(dishes = meal.dishes + PlannedDish(dish.id, amount, false, amount * 0.5, amount * 1.5))
+                                    } else {
+                                        meal.copy(dishes = meal.dishes.map {
+                                            if (it.dishId == dish.id) it.copy(
+                                                grams = it.grams + amount,
+                                                minimumGrams = (it.grams + amount) * 0.5,
+                                                maximumGrams = (it.grams + amount) * 1.5
+                                            ) else it
+                                        })
+                                    }
+                                    data = repository.savePlannedMeal(updated)
+                                }
+                            },
+                            onAddNewMeal = {
+                                screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
+                                draftFoodId = null
+                                draftDishId = dish.id
+                                draftMealTypeName = null
+                                draftMealDayName = null
+                                screenName = Screen.ADD_PLANNED_MEAL.name
+                            },
+                            planningRule = data.activeProfileData?.planningRules?.firstOrNull {
+                                it.itemKind == PlannedItemKind.DISH && it.itemId == dish.id
+                            },
+                            onSavePlanningRule = {
+                                data = repository.savePlanningRule(it)
+                                selectedFoodRecommendationReason = null
+                            },
+                            onDeletePlanningRule = {
+                                data = repository.deletePlanningRule(PlannedItemKind.DISH, dish.id)
+                            },
+                            onSaveDish = { data = repository.saveDish(it) },
+                            onEdit = { screenName = Screen.EDIT_DISH.name },
+                            onDelete = {
+                                data = repository.deleteDish(dish.id)
+                                selectedDishId = null
+                                screenName = Screen.HOME.name
+                            }
+                        )
+                    }
+                }
+                screen == Screen.EDIT_DISH -> {
+                    val dish = data.dishes.firstOrNull { it.id == selectedDishId }
+                    if (dish == null) {
+                        screenName = Screen.HOME.name
+                    } else {
+                        DishEditorScreen(
+                            foods = data.foods,
+                            initial = dish,
+                            preferredFoodIds = preferredFoodIds,
+                            onSave = {
+                                data = repository.saveDish(it)
+                                screenName = Screen.DISH_DETAIL.name
+                            },
+                            onDelete = {
+                                data = repository.deleteDish(dish.id)
+                                selectedDishId = null
+                                screenName = Screen.HOME.name
+                            }
+                        )
+                    }
+                }
+                screen == Screen.ADD_FOOD -> FoodEditorScreen(
+                    foods = data.foods,
+                    onSave = {
+                        data = repository.saveFood(it)
+                        selectedFoodId = it.id
+                        foodNavigationStack = emptyList()
+                        screenName = Screen.FOOD_DETAIL.name
+                    }
+                )
+                screen == Screen.FOOD_DETAIL -> {
+                    val food = data.foods.firstOrNull { it.id == selectedFoodId }
+                    if (food == null) {
+                        screenName = Screen.HOME.name
+                    } else {
+                        FoodDetailScreen(
+                            food = food,
+                            foods = data.foods,
+                            repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                            dismissedFoodIds = data.activeProfileData
+                                ?.dismissedSuggestionFoodIds.orEmpty(),
+                            allPlanningRules = data.activeProfileData?.planningRules.orEmpty(),
+                            recommendation = currentRecommendation,
+                            repertoireAssessment = RepertoireAssessmentMemory.get(
+                                RepertoireAssessmentCacheKey(
+                                    profileId = data.activeProfileId,
+                                    planningRulesHash = data.activeProfileData
+                                        ?.planningRules.orEmpty().hashCode(),
+                                    foodsHash = data.foods.hashCode(),
+                                    dishesHash = data.dishes.hashCode(),
+                                    recommendationHash = currentRecommendation.hashCode(),
+                                    mealSharesHash = mealShares.hashCode(),
+                                    culinaryPolicyOverridesHash = data.activeProfileData
+                                        ?.culinaryPolicyOverrides.orEmpty().hashCode(),
+                                    nutritionToleranceSettingsHash = data.activeProfileData
+                                        ?.nutritionToleranceSettings.hashCode()
+                                )
+                            ),
+                            activeMealTypes = mealShares.filterValues { it > 0.0 }.keys,
+                            onBack = navigateBack,
+                            plannedMeals = data.activeProfileData?.plannedMeals.orEmpty(),
+                            dishes = data.dishes,
+                            onOpenCatalogFilter = { retailer, nutritionalRole, culinaryRole ->
+                                catalogRetailerFilter = retailer
+                                catalogNutritionalRoleFilter = nutritionalRole
+                                catalogCulinaryRoleFilter = culinaryRole
+                                catalogSearchMealTypeName = null
+                                catalogSearchOriginScreenName = Screen.FOOD_DETAIL.name
+                                catalogSearchOriginFoodId = selectedFoodId
+                                catalogSearchReturnPending = false
+                                catalogSearchSavedQuery = ""
+                                catalogSearchSavedScrollIndex = 0
+                                catalogSearchSavedScrollOffset = 0
+                                catalogSearchOverlayOpen = true
+                            },
+                            onOpenFood = {
+                                selectedFoodId?.let { current ->
+                                    foodNavigationStack = foodNavigationStack + current
+                                    foodRecommendationReasonStack =
+                                        foodRecommendationReasonStack +
+                                            selectedFoodRecommendationReason.orEmpty()
+                                }
+                                selectedFoodRecommendationReason = null
+                                selectedFoodId = it
+                            },
+                            recommendationReason = selectedFoodRecommendationReason.takeIf {
+                                food.id !in data.activeProfileData?.repertoireFoodIds.orEmpty()
+                            },
+                            onDismissRecommendation = {
+                                data = repository.dismissFoodSuggestion(food.id)
+                                selectedFoodRecommendationReason = null
+                            },
+                            onDismissAlternative = {
+                                data = repository.dismissFoodSuggestion(it)
+                            },
+                            onOpenDish = {
+                                selectedDishId = it
+                                dishReturnScreenName = Screen.FOOD_DETAIL.name
+                                screenName = Screen.DISH_DETAIL.name
+                            },
+                            onOpenMeal = {
+                                selectedPlannedMealId = it
+                                screenName = Screen.EDIT_PLANNED_MEAL.name
+                            },
+                            onAddToMeal = { mealId ->
+                                val meal = data.activeProfileData?.plannedMeals?.firstOrNull { it.id == mealId }
+                                if (meal != null) {
+                                    val existing = meal.items.firstOrNull { it.foodId == food.id }
+                                    val amount = 100.0
+                                    val updated = if (existing == null) {
+                                        meal.copy(items = meal.items + PlannedFood(food.id, amount, false, amount * 0.5, amount * 1.5))
+                                    } else {
+                                        meal.copy(items = meal.items.map {
+                                            if (it.foodId == food.id) it.copy(
+                                                grams = it.grams + amount,
+                                                minimumGrams = (it.grams + amount) * 0.5,
+                                                maximumGrams = (it.grams + amount) * 1.5
+                                            ) else it
+                                        })
+                                    }
+                                    data = repository.savePlannedMeal(updated)
+                                }
+                            },
+                            onAddNewMeal = {
+                                screenStateHolder.removeState(Screen.ADD_PLANNED_MEAL.name)
+                                draftFoodId = food.id
+                                draftDishId = null
+                                draftMealTypeName = null
+                                draftMealDayName = null
+                                screenName = Screen.ADD_PLANNED_MEAL.name
+                            },
+                            onAddDish = {
+                                draftDishFoodId = food.id
+                                dishReturnScreenName = Screen.FOOD_DETAIL.name
+                                screenName = Screen.ADD_DISH.name
+                            },
+                            planningRules = data.activeProfileData?.planningRules?.filter {
+                                it.itemKind == PlannedItemKind.FOOD && it.itemId == food.id
+                            }.orEmpty(),
+                            onSavePlanningRule = { data = repository.savePlanningRule(it) },
+                            onDeletePlanningRule = { data = repository.deletePlanningRule(it) },
+                            onRemoveFromMenu = {
+                                data = repository.removeFromRepertoire(food.id)
+                            },
+                            onSaveFood = { data = repository.saveFood(it) },
+                            onEdit = { screenName = Screen.EDIT_FOOD.name },
+                            onDelete = {
+                                data = repository.deleteFood(food.id)
+                                selectedFoodId = null
+                                screenName = Screen.HOME.name
+                            }
+                        )
+                    }
+                }
+                screen == Screen.EDIT_FOOD -> {
+                    val food = data.foods.firstOrNull { it.id == selectedFoodId }
+                    if (food == null) {
+                        screenName = Screen.HOME.name
+                    } else {
+                        FoodEditorScreen(
+                            foods = data.foods,
+                            initial = food,
+                            onSave = {
+                                data = repository.saveFood(it)
+                                screenName = Screen.FOOD_DETAIL.name
+                            }
+                        )
+                    }
+                }
+                screen == Screen.PROFILE -> ProfileScreen(
+                    profile = data.profile,
+                    profiles = data.profiles.map { it.profile },
+                    isOnboarding = false,
+                    startCreating = createProfileOnOpen,
+                    mealShares = mealShares,
+                    culinaryPolicyOverrides = data.activeProfileData
+                        ?.culinaryPolicyOverrides.orEmpty(),
+                    nutritionToleranceSettings = data.activeProfileData
+                        ?.nutritionToleranceSettings ?: NutritionToleranceSettings(),
+                    onCreate = { profile, shares ->
+                        data = repository.saveProfile(profile)
+                        data = repository.saveMealShares(shares)
+                        mealShares = shares
+                        createProfileOnOpen = false
+                        screenName = if (accountChildReturn) Screen.ACCOUNT.name else Screen.HOME.name
+                    },
+                    onSave = {
+                        data = repository.saveProfile(it)
+                        scope.launch { snackbarHostState.showSnackbar("Datos personales guardados") }
+                    },
+                    onSwitch = {
+                        data = repository.switchProfile(it)
+                        mealShares = data.activeProfileData?.mealShares ?: loadMealShares(context)
+                        screenName = if (data.isActiveProfileReady) Screen.HOME.name else Screen.PROFILE.name
+                    },
+                    onDelete = { data = repository.deleteProfile(it) },
+                    onSaveCulinaryPolicy = {
+                        data = repository.saveCulinaryPolicyOverride(it)
+                    },
+                    onResetCulinaryPolicy = {
+                        data = repository.resetCulinaryPolicyOverride(it)
+                    },
+                    onSaveNutritionTolerances = {
+                        data = repository.saveNutritionToleranceSettings(it)
+                    },
+                    onSaveMealShares = {
+                        data = repository.saveMealShares(it)
+                        mealShares = it
+                    },
+                    onCancelCreate = {
+                        createProfileOnOpen = false
+                        navigateBack()
+                    }
+                )
+                screen == Screen.SHOPPING_LIST -> ShoppingListScreen(
+                    data = data,
+                    week = PlanWeek.valueOf(shoppingWeekName),
+                    onWeekChange = { shoppingWeekName = it.name },
+                    showWeekSelector = true,
+                    onBack = { shoppingCurrentOnly = false; screenName = Screen.HOME.name }
+                )
+                screen == Screen.SETTINGS -> SettingsScreen(
+                    adjustmentRange = adjustmentRange,
+                    onSaveAdjustmentRange = {
+                        saveAdjustmentRange(context, it)
+                        adjustmentRange = it
+                    },
+                    onExport = { exportLauncher.launch("rumbo-copia-${LocalDate.now()}.json") },
+                    onImport = { importLauncher.launch(arrayOf("application/json", "text/plain")) }
+                )
+                screen == Screen.HELP -> HelpScreen()
+                screen == Screen.GOAL_EXPLANATION -> GoalExplanationScreen(data)
+                screen in setOf(Screen.BODY_EXPLANATION, Screen.RECOMMENDATION_EXPLANATION) ->
+                    BodyExplanationScreen(
+                        data = data,
+                        onOpenMeasurement = {
+                            selectedMeasurementId = it
+                            screenName = Screen.MEASUREMENT_DETAIL.name
+                        }
+                    )
+            }
+            }
+            }
+        }
+    }
+
+    if (catalogSearchOverlayOpen) {
+        val catalogOverlayTextState = rememberTextFieldState()
+        val catalogOverlaySearchState = rememberSearchBarState(
+            initialValue = SearchBarValue.Expanded
+        )
+        val catalogOverlayListState = rememberLazyListState()
+        val catalogOverlayScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
+        var catalogOverlayMessage by remember { mutableStateOf<String?>(null) }
+        var catalogOverlaySuppressKeyboard by remember { mutableStateOf(true) }
+        LaunchedEffect(Unit) {
+            if (catalogSearchSavedQuery.isNotEmpty()) {
+                catalogOverlayTextState.setTextAndPlaceCursorAtEnd(catalogSearchSavedQuery)
+            }
+            if (catalogSearchSavedScrollIndex > 0 || catalogSearchSavedScrollOffset > 0) {
+                catalogOverlayListState.scrollToItem(
+                    catalogSearchSavedScrollIndex,
+                    catalogSearchSavedScrollOffset
+                )
+            }
+        }
+        val closeCatalogOverlay = {
+            catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
+            catalogOverlayMessage = null
+            catalogSearchReturnPending = false
+            catalogSearchSavedQuery = ""
+            catalogSearchSavedScrollIndex = 0
+            catalogSearchSavedScrollOffset = 0
+            if (catalogSearchOriginScreenName == Screen.FOOD_DETAIL.name) {
+                selectedFoodId = catalogSearchOriginFoodId
+            }
+            screenName = catalogSearchOriginScreenName ?: Screen.HOME.name
+            catalogSearchOriginScreenName = null
+            catalogSearchOriginFoodId = null
+            catalogSearchOverlayOpen = false
+        }
+        BackHandler(enabled = true) { closeCatalogOverlay() }
+        LaunchedEffect(catalogOverlaySearchState.targetValue) {
+            if (catalogOverlaySearchState.targetValue == SearchBarValue.Collapsed) {
+                closeCatalogOverlay()
+            }
+        }
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            HomeCatalogSearch(
+                foods = data.foods,
+                dishes = data.dishes,
+                repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
+                planningRules = data.activeProfileData?.planningRules.orEmpty(),
+                foodSuggestions = emptyList(),
+                repertoireAssessment = null,
+                recommendation = currentRecommendation,
+                textFieldState = catalogOverlayTextState,
+                retailerFilter = catalogRetailerFilter,
+                onRetailerFilterChange = { catalogRetailerFilter = it },
+                nutritionalRoleFilter = catalogNutritionalRoleFilter,
+                onNutritionalRoleFilterChange = { catalogNutritionalRoleFilter = it },
+                culinaryRoleFilter = catalogCulinaryRoleFilter,
+                onCulinaryRoleFilterChange = { catalogCulinaryRoleFilter = it },
+                mealTypeFilter = catalogSearchMealType,
+                onMealTypeFilterChange = { catalogSearchMealTypeName = it?.name },
+                scanMessage = catalogOverlayMessage,
+                onScanMessageChange = { catalogOverlayMessage = it },
+                state = catalogOverlaySearchState,
+                listState = catalogOverlayListState,
+                suppressRestoredKeyboard = catalogOverlaySuppressKeyboard,
+                onRestoredKeyboardSuppressed = { catalogOverlaySuppressKeyboard = false },
+                scrollBehavior = catalogOverlayScrollBehavior,
+                onCloseSearch = closeCatalogOverlay,
+                onOpenFood = { foodId ->
+                    catalogSearchSavedQuery = catalogOverlayTextState.text.toString()
+                    catalogSearchSavedScrollIndex = catalogOverlayListState.firstVisibleItemIndex
+                    catalogSearchSavedScrollOffset = catalogOverlayListState.firstVisibleItemScrollOffset
+                    catalogSearchReturnPending = true
+                    selectedFoodId = foodId
+                    selectedFoodRecommendationReason = null
+                    catalogSearchOverlayOpen = false
+                    screenName = Screen.FOOD_DETAIL.name
+                },
+                onOpenDish = { dishId ->
+                    selectedDishId = dishId
+                    dishReturnScreenName = screenName
+                    catalogSearchOverlayOpen = false
+                    screenName = Screen.DISH_DETAIL.name
+                },
+                trailingContent = {},
+                showCollapsedBar = false
+            )
+        }
+    }
+
+    if (addingMeasurement) {
+        AddMeasurementScreen(
+            data = data,
+            onDismiss = { addingMeasurement = false },
+            onSave = {
+                data = repository.addMeasurement(it)
+                addingMeasurement = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun AccountScreen(
+    profiles: List<UserProfile>,
+    activeProfile: UserProfile?,
+    onClose: () -> Unit,
+    onSwitch: (Long) -> Unit,
+    onOpenProfile: () -> Unit,
+    onAddProfile: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenHelp: () -> Unit
+) {
+    var profilesExpanded by remember { mutableStateOf(false) }
+    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
+        containerColor = backgroundColor,
+        topBar = {
+            TopAppBar(
+                title = {},
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor),
+                actions = {
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Spacer(Modifier.height(4.dp))
+            ProfileAvatar(activeProfile, 96.dp)
+            Text(
+                "¡Hola, ${activeProfile?.name.orEmpty()}!",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp)) {
+                AccountRow(
+                    icon = Icons.Default.Person,
+                    label = "Datos del perfil",
+                    trailingIcon = Icons.Default.KeyboardArrowRight,
+                    onClick = onOpenProfile
+                )
+                HorizontalDivider()
+                AccountRow(
+                    icon = null,
+                    label = "Cambiar de perfil",
+                    trailingIcon = if (profilesExpanded) {
+                        Icons.Default.KeyboardArrowUp
+                    } else {
+                        Icons.Default.KeyboardArrowDown
+                    },
+                    onClick = { profilesExpanded = !profilesExpanded }
+                )
+                AnimatedVisibility(
+                    visible = profilesExpanded,
+                    enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                    exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+                ) {
+                    Column {
+                        profiles.forEach { profile ->
+                            HorizontalDivider()
+                            AccountRow(
+                                icon = if (profile.id == activeProfile?.id) {
+                                    Icons.Default.Check
+                                } else {
+                                    null
+                                },
+                                avatar = if (profile.id == activeProfile?.id) null else profile,
+                                label = profile.name,
+                                trailingIcon = null,
+                                onClick = {
+                                    profilesExpanded = false
+                                    onSwitch(profile.id)
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+                        AccountRow(
+                            icon = Icons.Default.PersonAdd,
+                            label = "Añadir perfil",
+                            trailingIcon = Icons.Default.KeyboardArrowRight,
+                            onClick = onAddProfile
+                        )
+                    }
+                }
+            }
+            Text(
+                "Rumbo",
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 8.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp)) {
+                AccountRow(
+                    icon = Icons.Default.Settings,
+                    label = "Ajustes",
+                    trailingIcon = Icons.Default.KeyboardArrowRight,
+                    onClick = onOpenSettings
+                )
+                HorizontalDivider()
+                AccountRow(
+                    icon = Icons.Default.Info,
+                    label = "Ayuda",
+                    trailingIcon = Icons.Default.KeyboardArrowRight,
+                    onClick = onOpenHelp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountRow(
+    icon: ImageVector?,
+    label: String,
+    trailingIcon: ImageVector?,
+    onClick: () -> Unit,
+    avatar: UserProfile? = null
+) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        when {
+            avatar != null -> ProfileAvatar(avatar, 28.dp)
+            icon != null -> Icon(icon, contentDescription = null)
+            else -> Spacer(Modifier.size(28.dp))
+        }
+        Spacer(Modifier.width(16.dp))
+        Text(label, Modifier.weight(1f))
+        trailingIcon?.let { Icon(it, contentDescription = null) }
+    }
+}
+
+@Composable
+private fun ProfileSwitcher(
+    activeProfile: UserProfile?,
+    onOpen: () -> Unit,
+    avatarSize: Int = 36
+) {
+    IconButton(onClick = onOpen) {
+        ProfileAvatar(activeProfile, avatarSize.dp)
+    }
+}
+
+@Composable
+private fun ProfileAvatar(profile: UserProfile?, size: androidx.compose.ui.unit.Dp) {
+    val context = LocalContext.current
+    val bitmap = remember(profile?.photoUri) {
+        profile?.photoUri?.let { uri -> runCatching {
+            context.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use {
+                android.graphics.BitmapFactory.decodeStream(it)
+            }
+        }.getOrNull() }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = profile?.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(CircleShape)
+        )
+    } else Box(
+        Modifier.size(size).background(profileColor(profile?.id), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            profile?.name?.trim()?.firstOrNull()?.uppercase() ?: "?",
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+private fun profileColor(id: Long?): Color {
+    val colors = listOf(
+        Color(0xFF455A64), Color(0xFF5D4037), Color(0xFF6A1B9A),
+        Color(0xFF1565C0), Color(0xFF00695C), Color(0xFFAD1457)
+    )
+    val index = (((id ?: 0L) % colors.size) + colors.size) % colors.size
+    return colors[index.toInt()]
+}
+
+private data class RepertoireAssessmentCacheKey(
+    val profileId: Long?,
+    val planningRulesHash: Int,
+    val foodsHash: Int,
+    val dishesHash: Int,
+    val recommendationHash: Int,
+    val mealSharesHash: Int,
+    val culinaryPolicyOverridesHash: Int,
+    val nutritionToleranceSettingsHash: Int
+)
+
+private object RepertoireAssessmentMemory {
+    private var key: RepertoireAssessmentCacheKey? = null
+    private var assessment: RepertoireAssessment? = null
+
+    fun get(expectedKey: RepertoireAssessmentCacheKey): RepertoireAssessment? =
+        assessment.takeIf { key == expectedKey }
+
+    fun put(newKey: RepertoireAssessmentCacheKey, newAssessment: RepertoireAssessment) {
+        key = newKey
+        assessment = newAssessment
+    }
+
+}
+
+@Composable
+private fun HomeScreen(
+    data: AppData,
+    mealShares: Map<MealType, Double>,
+    requestedSearchRetailer: String?,
+    requestedSearchNutritionalRole: String?,
+    requestedSearchCulinaryRole: String?,
+    searchOpenRequest: Int,
+    onOpenAccount: () -> Unit,
+    onOpenShoppingList: () -> Unit,
+    onOpenCurrentShoppingList: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onGoalChange: (Double?) -> Unit,
+    onAddMeasurement: () -> Unit,
+    onExplainBody: () -> Unit,
+    onOpenNextWeek: () -> Unit,
+    onRegenerateWeek: () -> String?,
+    isGeneratingMenu: Boolean,
+    onOpenMeal: (Long) -> Unit,
+    onOpenFood: (Long, String?) -> Unit,
+    onDismissFoodSuggestion: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit,
+    onOpenFoods: () -> Unit,
+    onSaveCertifiedDayWitness: (CertifiedDayWitness) -> Unit,
+    onClearCertifiedDayWitness: (CertifiedDayLevel) -> Unit,
+    onOpenProgressSearch: (String?, String?, MealType?) -> Unit,
+    onAddMissingMeal: (MealType, WeekDay) -> Unit,
+    onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
+) {
+    val profile = data.profile
+    val latest = data.measurements.maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })
+    val recommendation = latest?.recommendation
+    val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
+    val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
+    val effectiveGoal = RecommendationEngine.effectiveValues(data.measurements)
+    val goal = effectiveGoal.goal
+    val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
+    val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
+    val repertoireAssessmentKey = remember(
+        data.activeProfileId,
+        data.activeProfileData?.planningRules,
+        data.foods,
+        data.dishes,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        RepertoireAssessmentCacheKey(
+            profileId = data.activeProfileId,
+            planningRulesHash = data.activeProfileData?.planningRules.orEmpty().hashCode(),
+            foodsHash = data.foods.hashCode(),
+            dishesHash = data.dishes.hashCode(),
+            recommendationHash = recommendation.hashCode(),
+            mealSharesHash = mealShares.hashCode(),
+            culinaryPolicyOverridesHash = data.activeProfileData
+                ?.culinaryPolicyOverrides.orEmpty().hashCode(),
+            nutritionToleranceSettingsHash = data.activeProfileData
+                ?.nutritionToleranceSettings.hashCode()
+        )
+    }
+    val cachedRepertoireAssessment = remember(repertoireAssessmentKey) {
+        RepertoireAssessmentMemory.get(repertoireAssessmentKey)
+    }
+    val repertoireAssessment by produceState<RepertoireAssessment?>(
+        initialValue = cachedRepertoireAssessment,
+        repertoireAssessmentKey
+    ) {
+        if (cachedRepertoireAssessment == null) {
+            value = recommendation?.let { target ->
+                withContext(Dispatchers.Default) {
+                    RepertoireEvaluator.evaluateAutomatically(
+                        rules = data.activeProfileData?.planningRules.orEmpty(),
+                        foodsById = foodsById,
+                        dishesById = dishesById,
+                        recommendation = target,
+                        mealShares = mealShares
+                    )
+                }.also { assessment ->
+                    RepertoireAssessmentMemory.put(repertoireAssessmentKey, assessment)
+                }
+            }
+        }
+    }
+    val savedViableWitness = data.activeProfileData?.certifiedDayWitnesses
+        ?.firstOrNull { it.level == CertifiedDayLevel.VIABLE }
+    val savedViableWitnessValid = remember(
+        savedViableWitness,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        recommendation != null && savedViableWitness != null &&
+            CertifiedDayWitnessEvaluator.isViable(
+                witness = savedViableWitness,
+                rules = data.activeProfileData?.planningRules.orEmpty(),
+                foodsById = foodsById,
+                dishesById = dishesById,
+                recommendation = recommendation,
+                mealShares = mealShares
+            )
+    }
+    val freshViableWitness = remember(repertoireAssessment) {
+        repertoireAssessment?.witness?.let(CertifiedDayWitnessEvaluator::fromMenuWitness)
+    }
+    val hasCertifiedViableDay = savedViableWitnessValid ||
+        (freshViableWitness != null && repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE)
+    val savedCompleteWitness = data.activeProfileData?.certifiedDayWitnesses
+        ?.firstOrNull { it.level == CertifiedDayLevel.COMPLETE }
+    val savedCompleteWitnessValid = remember(
+        savedCompleteWitness,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        recommendation != null && savedCompleteWitness != null &&
+            CertifiedDayWitnessEvaluator.isComplete(
+                savedCompleteWitness,
+                data.activeProfileData?.planningRules.orEmpty(),
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares
+            )
+    }
+    val completeDaySearch by produceState<CertifiedDayWitnessEvaluator.CompleteDaySearchResult?>(
+        initialValue = null,
+        hasCertifiedViableDay,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares
+    ) {
+        value = if (hasCertifiedViableDay && recommendation != null && !savedCompleteWitnessValid) {
+            withContext(Dispatchers.Default) {
+                CertifiedDayWitnessEvaluator.findCompleteDay(
+                    data.activeProfileData?.planningRules.orEmpty(),
+                    foodsById,
+                    dishesById,
+                    rec

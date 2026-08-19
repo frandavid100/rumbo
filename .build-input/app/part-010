@@ -1,0 +1,507 @@
+id ?: System.currentTimeMillis(),
+                    name = name.trim(),
+                    heightCm = parseDecimal(height) ?: 0.0,
+                    birthYear = birthYear.toIntOrNull() ?: 0,
+                    sex = sex,
+                    photoUri = photoUri
+                )
+                val weights = MealType.entries.associateWith { type -> when (mealSizes[type]) { "LARGE" -> 3.0; "NORMAL" -> 2.0; "NONE" -> 0.0; else -> 1.0 } }
+                val weightTotal = weights.values.sum()
+                val parsedShares = weights.mapValues { if (weightTotal > 0.0) it.value / weightTotal else 0.0 }
+                error = when {
+                    !candidate.isValid() -> "Revisa el nombre, la altura y el año de nacimiento. La app está diseñada para personas adultas."
+                    creating && weightTotal <= 0.0 -> "Selecciona al menos una comida que sí hagas."
+                    else -> null
+                }
+                if (error == null) {
+                    if (creating) onCreate(candidate, parsedShares) else onSave(candidate)
+                    creating = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                when {
+                    creating -> "Crear perfil"
+                    else -> "Guardar cambios"
+                }
+            )
+        }
+
+        if (!isOnboarding && !creating && profiles.size > 1 && profile != null) {
+            TextButton(onClick = { pendingDelete = profile }, modifier = Modifier.fillMaxWidth()) {
+                Text("Eliminar este perfil", color = MaterialTheme.colorScheme.error)
+            }
+        }
+        if (!isOnboarding && creating) {
+            TextButton(onClick = onCancelCreate, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancelar")
+            }
+        }
+    }
+}
+
+@Composable
+private fun MealDistributionCard(
+    mealShares: Map<MealType, Double>,
+    onSave: (Map<MealType, Double>) -> Unit
+) {
+    var values by remember(mealShares) {
+        mutableStateOf(MealType.entries.associateWith { type ->
+            ((mealShares[type] ?: defaultMealShares.getValue(type)) * 100.0)
+                .roundToInt().toString()
+        })
+    }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                "Distribución de las calorías",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            HorizontalDivider()
+            Text(
+                "Indica qué porcentaje del total diario corresponde a cada comida. Usa 0 % para saltarte el almuerzo o la merienda. La suma debe ser 100 %.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            MealType.entries.forEach { type ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(type.label, modifier = Modifier.weight(1f))
+                    OutlinedTextField(
+                        value = values[type].orEmpty(),
+                        onValueChange = { raw ->
+                            values = values + (type to raw.filter(Char::isDigit).take(2))
+                            error = null
+                        },
+                        modifier = Modifier.width(82.dp),
+                        suffix = { Text("%") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                }
+            }
+            error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            OutlinedButton(
+                onClick = {
+                    val parsed = MealType.entries.associateWith { values[it]?.toIntOrNull() }
+                    error = when {
+                        parsed.values.any { it == null } -> "Completa todos los porcentajes."
+                        parsed.values.any { it!! !in 0..90 } ->
+                            "Cada porcentaje debe estar entre 0 y 90."
+                        parsed.values.sumOf { it!! } != 100 ->
+                            "Los porcentajes deben sumar 100 %."
+                        else -> null
+                    }
+                    if (error == null) onSave(parsed.mapValues { it.value!! / 100.0 })
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Guardar distribución") }
+        }
+    }
+}
+
+@Composable
+private fun NutritionTolerancesCard(
+    settings: NutritionToleranceSettings,
+    onSave: (NutritionToleranceSettings) -> Unit
+) {
+    var editing by remember { mutableStateOf(false) }
+    if (editing) {
+        NutritionTolerancesDialog(
+            initial = settings,
+            onDismiss = { editing = false },
+            onSave = {
+                onSave(it)
+                editing = false
+            }
+        )
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "Tolerancia nutricional",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                "Decide qué desviaciones puede aceptar Rumbo al validar un menú semanal.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "Calorías ${ratioRange(settings.caloriesMinimum, settings.caloriesMaximum)} · " +
+                    "Proteína ${ratioRange(settings.proteinMinimum, settings.proteinMaximum)}\n" +
+                    "Hidratos ${ratioRange(settings.carbohydratesMinimum, settings.carbohydratesMaximum)} · " +
+                    "Grasa ${ratioRange(settings.fatMinimum, settings.fatMaximum)}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(onClick = { editing = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Cambiar tolerancia")
+            }
+        }
+    }
+}
+
+@Composable
+private fun NutritionTolerancesDialog(
+    initial: NutritionToleranceSettings,
+    onDismiss: () -> Unit,
+    onSave: (NutritionToleranceSettings) -> Unit
+) {
+    var current by remember(initial) { mutableStateOf(initial) }
+    fun percent(value: Double) = (value * 100.0).roundToInt().toString()
+    var caloriesMin by remember(initial) { mutableStateOf(percent(initial.caloriesMinimum)) }
+    var caloriesMax by remember(initial) { mutableStateOf(percent(initial.caloriesMaximum)) }
+    var proteinMin by remember(initial) { mutableStateOf(percent(initial.proteinMinimum)) }
+    var proteinMax by remember(initial) { mutableStateOf(percent(initial.proteinMaximum)) }
+    var carbohydratesMin by remember(initial) { mutableStateOf(percent(initial.carbohydratesMinimum)) }
+    var carbohydratesMax by remember(initial) { mutableStateOf(percent(initial.carbohydratesMaximum)) }
+    var fatMin by remember(initial) { mutableStateOf(percent(initial.fatMinimum)) }
+    var fatMax by remember(initial) { mutableStateOf(percent(initial.fatMaximum)) }
+
+    fun setPreset(value: NutritionToleranceSettings) {
+        current = value
+        caloriesMin = percent(value.caloriesMinimum); caloriesMax = percent(value.caloriesMaximum)
+        proteinMin = percent(value.proteinMinimum); proteinMax = percent(value.proteinMaximum)
+        carbohydratesMin = percent(value.carbohydratesMinimum); carbohydratesMax = percent(value.carbohydratesMaximum)
+        fatMin = percent(value.fatMinimum); fatMax = percent(value.fatMaximum)
+    }
+    fun parsed() = NutritionToleranceSettings(
+        caloriesMinimum = caloriesMin.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        caloriesMaximum = caloriesMax.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        proteinMinimum = proteinMin.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        proteinMaximum = proteinMax.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        carbohydratesMinimum = carbohydratesMin.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        carbohydratesMaximum = carbohydratesMax.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        fatMinimum = fatMin.toDoubleOrNull()?.div(100.0) ?: 0.0,
+        fatMaximum = fatMax.toDoubleOrNull()?.div(100.0) ?: 0.0
+    )
+    val candidate = parsed()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tolerancia nutricional") },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = false,
+                        onClick = { setPreset(NutritionToleranceSettings(.95, 1.05, .95, 1.05, .95, 1.05, .95, 1.05)) },
+                        label = { Text("Estricto") }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = { setPreset(NutritionToleranceSettings()) },
+                        label = { Text("Equilibrado") }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = { setPreset(NutritionToleranceSettings(.85, 1.15, .85, 1.15, .85, 1.15, .85, 1.15)) },
+                        label = { Text("Flexible") }
+                    )
+                }
+                ToleranceFields("Calorías", caloriesMin, { caloriesMin = it }, caloriesMax, { caloriesMax = it })
+                ToleranceFields("Proteína", proteinMin, { proteinMin = it }, proteinMax, { proteinMax = it })
+                ToleranceFields("Hidratos", carbohydratesMin, { carbohydratesMin = it }, carbohydratesMax, { carbohydratesMax = it })
+                ToleranceFields("Grasa", fatMin, { fatMin = it }, fatMax, { fatMax = it })
+                if (!candidate.isValid()) {
+                    Text(
+                        "Los mínimos deben estar entre 50 y 100 %, y los máximos entre 100 y 160 %.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = candidate.isValid(), onClick = { onSave(candidate) }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+@Composable
+private fun ToleranceFields(
+    label: String,
+    minimum: String,
+    onMinimumChange: (String) -> Unit,
+    maximum: String,
+    onMaximumChange: (String) -> Unit
+) {
+    Text(label, fontWeight = FontWeight.SemiBold)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = minimum,
+            onValueChange = { onMinimumChange(it.filter(Char::isDigit).take(3)) },
+            label = { Text("Mínimo") },
+            suffix = { Text("%") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = maximum,
+            onValueChange = { onMaximumChange(it.filter(Char::isDigit).take(3)) },
+            label = { Text("Máximo") },
+            suffix = { Text("%") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private fun ratioRange(minimum: Double, maximum: Double) =
+    "${(minimum * 100).roundToInt()}–${(maximum * 100).roundToInt()} %"
+
+@Composable
+private fun CulinaryRulesCard(
+    overrides: List<CulinaryPolicyOverride>,
+    onSave: (CulinaryPolicyOverride) -> Unit,
+    onReset: (String) -> Unit
+) {
+    var editingRole by remember { mutableStateOf<CulinaryRole?>(null) }
+    editingRole?.let { role ->
+        CulinaryPolicyEditorDialog(
+            role = role,
+            override = overrides.firstOrNull { it.culinaryRole == role.name },
+            onDismiss = { editingRole = null },
+            onSave = { onSave(it); editingRole = null },
+            onReset = { onReset(role.name); editingRole = null }
+        )
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 8.dp)) {
+            Text(
+                "Reglas culinarias",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            Text(
+                "Cada función culinaria tiene una política común de cantidades y combinación.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+            HorizontalDivider()
+            CulinaryRole.entries.forEach { role ->
+                val custom = overrides.firstOrNull { it.culinaryRole == role.name }
+                val policy = CulinaryPolicy.policy(role)
+                TextButton(
+                    onClick = { editingRole = role },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                ) {
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                        Text(role.label, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            culinaryPolicySummary(policy),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Start
+                        )
+                    }
+                    if (custom != null) Text("Modificada")
+                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CulinaryPolicyEditorDialog(
+    role: CulinaryRole,
+    override: CulinaryPolicyOverride?,
+    onDismiss: () -> Unit,
+    onSave: (CulinaryPolicyOverride) -> Unit,
+    onReset: () -> Unit
+) {
+    val initial = CulinaryPolicy.policy(role)
+    var preferred by remember(role, override) { mutableStateOf(initial.preferredGrams?.let(::formatDecimal).orEmpty()) }
+    var minimum by remember(role, override) { mutableStateOf(initial.minimumGrams?.let(::formatDecimal).orEmpty()) }
+    var maximum by remember(role, override) { mutableStateOf(initial.maximumGrams?.let(::formatDecimal).orEmpty()) }
+    var standalone by remember(role, override) { mutableStateOf(initial.standaloneAllowed) }
+    val preferredValue = parseDecimal(preferred)
+    val minimumValue = parseDecimal(minimum)
+    val maximumValue = parseDecimal(maximum)
+    val quantitiesValid = preferredValue != null && minimumValue != null && maximumValue != null &&
+        minimumValue > 0.0 && minimumValue <= preferredValue && preferredValue <= maximumValue
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(role.label) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val hardRules = buildList {
+                    if (initial.requiredRoles.isNotEmpty()) add("Requiere: ${initial.requiredRoles.joinToString { it.label }}")
+                    initial.maxPerMeal?.let { add("Máximo por comida: $it") }
+                }
+                hardRules.forEach { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                HorizontalDivider()
+                Text("Rango de uso", fontWeight = FontWeight.SemiBold)
+                NumericField("Cantidad habitual (g)", preferred, { preferred = it }, Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NumericField("Mínimo (g)", minimum, { minimum = it }, Modifier.weight(1f))
+                    NumericField("Máximo (g)", maximum, { maximum = it }, Modifier.weight(1f))
+                }
+                Row(Modifier.fillMaxWidth().clickable { standalone = !standalone }, verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = standalone, onCheckedChange = null)
+                    Text("Puede desempeñar esta función como único elemento de la comida")
+                }
+                if (!quantitiesValid) {
+                    Text("Cumple mínimo ≤ habitual ≤ máximo.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                if (override != null) TextButton(onClick = onReset) { Text("Restaurar regla predeterminada") }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = quantitiesValid, onClick = {
+                onSave(CulinaryPolicyOverride(
+                    culinaryRole = role.name,
+                    preferredGrams = preferredValue,
+                    minimumGrams = minimumValue,
+                    maximumGrams = maximumValue,
+                    standaloneAllowed = standalone
+                ))
+            }) { Text("Guardar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+private fun culinaryPolicySummary(policy: CulinaryRolePolicy): String {
+    val rules = mutableListOf<String>()
+    if (!policy.standaloneAllowed) rules += "No puede ir sola"
+    if (policy.requiredRoles.isNotEmpty()) rules += "Requiere ${policy.requiredRoles.joinToString { it.label }}"
+    policy.maxPerMeal?.let { rules += "Máx. $it por comida" }
+    policy.preferredGrams?.let { preferred ->
+        rules += "${formatDecimal(policy.minimumGrams ?: preferred)}–${formatDecimal(policy.maximumGrams ?: preferred)} g"
+    }
+    return rules.ifEmpty { listOf("Sin reglas especiales") }.joinToString(" · ")
+}
+
+@Composable
+private fun WaistMeasurementHelp() {
+    val uriHandler = LocalUriHandler.current
+    TextButton(
+        onClick = {
+            uriHandler.openUri("https://www.comunidad.madrid/salud/sobrepeso-obesidad")
+        },
+        contentPadding = PaddingValues(horizontal = 0.dp)
+    ) {
+        Text("Cómo medir correctamente la cintura")
+    }
+}
+
+@Composable
+private fun CompactGramField(value: String, onValueChange: (String) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = { raw ->
+                onValueChange(raw.filter { it.isDigit() || it == ',' || it == '.' }.take(6))
+            },
+            modifier = Modifier.width(82.dp),
+            suffix = {
+                Text("g", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true
+        )
+    }
+}
+
+@Composable
+private fun NumericField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { raw ->
+            onValueChange(raw.filter { it.isDigit() || it == ',' || it == '.' }.take(7))
+        },
+        label = { Text(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        singleLine = true,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun <T> SelectorField(
+    label: String,
+    selectedLabel: String,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    onSelect: (T) -> Unit,
+    onClear: (() -> Unit)?
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            if (onClear != null) {
+                DropdownMenuItem(
+                    text = { Text("Usar valor anterior / sin indicar") },
+                    onClick = {
+                        onClear()
+                        expanded = false
+                    }
+                )
+                HorizontalDivider()
+            }
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(optionLabel(option)) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun parseDecimal(value: String): Double? = value.trim().replace(',', '.').toDoubleOrNull()
+
+private fun formatDecimal(value: Double): String =
+    if (value % 1.0 == 0.0) value.toInt().toString() else String.format(java.util.Locale.US, "%.1f", value)
+
+private val spanishLocale: Locale = Locale.forLanguageTag("es-ES")
+
+private fun formatOneDecimal(value: Double): String = String.format(spanishLocale, "%.1f", value)
+
+private fun formatTwoDecimals(value: Double): String = String.format(spanishLocale, "%.2f", value)
+
+private fun formatSignedKcal(value: Double): String = when {
+    value > 0.05 -> "+${formatOneDecimal(value)}"
+    value < -0.05 -> "−${formatOneDecimal(abs(value))}"
+    else -> "0,0"
+}

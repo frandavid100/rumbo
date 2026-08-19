@@ -1,0 +1,964 @@
+terialTheme.typography.titleMedium
+                )
+                Text(
+                    "Marca los tipos de comida en los que aceptarías utilizar este alimento.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                activeMealTypes.forEach { mealType ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selectedMeals = if (mealType in selectedMeals) {
+                                    selectedMeals - mealType
+                                } else {
+                                    selectedMeals + mealType
+                                }
+                            }
+                            .heightIn(min = 48.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = mealType in selectedMeals,
+                            onCheckedChange = null
+                        )
+                        Text(
+                            mealType.pluralAvailabilityLabel(),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+                Button(
+                    onClick = {
+                        planningRules.forEach { onDeletePlanningRule(it.ruleId) }
+                        onSavePlanningRule(
+                            PlanningRule(
+                                itemKind = PlannedItemKind.FOOD,
+                                itemId = food.id,
+                                allowedMealTypes = selectedMeals,
+                                frequency = PlanningFrequency.NORMAL,
+                                preferredGrams = 100.0,
+                                ruleId = planningRules.firstOrNull()?.ruleId
+                                    ?: System.currentTimeMillis()
+                            )
+                        )
+                        planningSheetOpen = false
+                    },
+                    enabled = selectedMeals.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Guardar")
+                }
+                if (isInMenu) {
+                    TextButton(
+                        onClick = {
+                            onRemoveFromMenu()
+                            planningSheetOpen = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Quitar de tu menú",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    Text(
+                        food.name,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones")
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Crear plato con este alimento") },
+                                onClick = {
+                                    menuExpanded = false
+                                    onAddDish()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Editar") },
+                                onClick = {
+                                    menuExpanded = false
+                                    onEdit()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Eliminar") },
+                                onClick = {
+                                    menuExpanded = false
+                                    confirmDelete = true
+                                }
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                ),
+                scrollBehavior = scrollBehavior
+            )
+        },
+        bottomBar = {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp
+            ) {
+                Button(
+                    onClick = {
+                        val currentRule = planningRules.firstOrNull()
+                        val recommendedMeal = repertoireAssessment?.culinaryNeeds
+                            ?.firstOrNull { CulinaryPolicy.addresses(it, food) }
+                            ?.mealType
+                            ?.takeIf { it in activeMealTypes }
+                        selectedMeals = if (currentRule != null) {
+                            currentRule.allowedMealTypes
+                                .filterTo(mutableSetOf()) { it in activeMealTypes }
+                        } else {
+                            setOfNotNull(recommendedMeal)
+                        }
+                        planningSheetOpen = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(16.dp)
+                ) {
+                    if (isInMenu) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (isInMenu) "En tu menú" else "Añadir a tu menú")
+                }
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = innerPadding.calculateTopPadding())
+                .padding(bottom = innerPadding.calculateBottomPadding() + 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            recommendationReason?.let { reason ->
+                Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 16.dp, top = 10.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                "Alimento recomendado",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(reason, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = onDismissRecommendation) {
+                            Icon(Icons.Default.Close, "Dejar de recomendar")
+                        }
+                    }
+                }
+            }
+            Column(
+                Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                listOfNotNull(food.brand, food.subcategory ?: food.family)
+                    .joinToString(" · ")
+                    .takeIf { it.isNotBlank() }
+                    ?.let {
+                        Text(
+                            it,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                CatalogAttributeChipRow(
+                    title = "Comercio",
+                    values = food.retailerValues().sorted(),
+                    label = ::catalogRetailerLabel,
+                    onClick = { onOpenCatalogFilter(it, null, null) }
+                )
+                CatalogAttributeChipRow(
+                    title = "Roles nutricionales",
+                    values = food.nutritionalRoles.sortedBy(::nutritionalRoleLabel),
+                    label = ::nutritionalRoleLabel,
+                    onClick = { onOpenCatalogFilter(null, it, null) }
+                )
+                CatalogAttributeChipRow(
+                    title = "Roles culinarios",
+                    values = food.culinaryRoles.sortedBy(::culinaryRoleLabel),
+                    label = ::culinaryRoleLabel,
+                    onClick = { onOpenCatalogFilter(null, null, it) }
+                )
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                HorizontalDivider()
+                Text(
+                    "Valores por 100 g o 100 ml",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                FoodPrimaryNutritionStrip(food)
+                if (secondaryNutrition.isNotEmpty()) {
+                    Text(
+                        secondaryNutrition.joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                food.legalName?.let {
+                    HorizontalDivider()
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                food.ingredients?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                HorizontalDivider()
+                Text(
+                    unitDescription,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (food.links.isNotEmpty()) {
+                    HorizontalDivider()
+                    food.links.forEachIndexed { index, link ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { uriHandler.openUri(link) }
+                                .padding(vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                if (linkLabel(link).contains("mercadona", ignoreCase = true)) {
+                                    "Ver producto en Mercadona"
+                                } else {
+                                    "Ver fuente: ${linkLabel(link)}"
+                                },
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = "Abrir enlace",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        if (index < food.links.lastIndex) HorizontalDivider()
+                    }
+                }
+                }
+            }
+
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                    Text("En qué platos puedes comerlo", style = MaterialTheme.typography.titleLarge)
+                    HorizontalDivider()
+                    if (containingDishes.isEmpty()) {
+                        Text(
+                            "Todavía no hay ningún plato que contenga este alimento.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        containingDishes.forEachIndexed { index, dish ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onOpenDish(dish.id) }
+                                    .padding(vertical = 10.dp)
+                            ) {
+                                Text(dish.name, Modifier.weight(1f))
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, "Abrir plato")
+                            }
+                            if (index < containingDishes.lastIndex) HorizontalDivider()
+                        }
+                    }
+                    TextButton(onClick = onAddDish) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Crear plato con este alimento")
+                    }
+                }
+
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Alternativas más eficientes", style = MaterialTheme.typography.titleLarge)
+                HorizontalDivider()
+                Text(
+                    "Rumbo los considera más útiles para mejorar tu menú que este alimento.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (moreEfficientFoods.isEmpty()) {
+                    Text(
+                        "No hay alternativas elegibles que Rumbo considere más eficientes.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    moreEfficientFoods.forEachIndexed { index, alternative ->
+                        FoodSuggestionEntry(
+                            suggestion = alternative,
+                            onClick = { onOpenFood(alternative.food.id) },
+                            onDismiss = { onDismissAlternative(alternative.food.id) }
+                        )
+                        if (index < moreEfficientFoods.lastIndex) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UnitDefinitionField(
+    selected: FoodUnitDefinition?,
+    options: List<FoodUnitDefinition>,
+    onSelect: (FoodUnitDefinition) -> Unit,
+    onCreateNew: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded, { expanded = it }) {
+        OutlinedTextField(
+            value = selected?.label.orEmpty(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Elegir una unidad") },
+            placeholder = { Text("Elegir una unidad") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded, { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = { onSelect(option); expanded = false }
+                )
+            }
+            if (options.isNotEmpty()) HorizontalDivider()
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text("Crear nueva unidad") },
+                onClick = { expanded = false; onCreateNew() }
+            )
+        }
+    }
+}
+
+@Composable
+private fun NewFoodUnitDialog(
+    foodName: String,
+    onCreate: (FoodUnitDefinition) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var unitName by rememberSaveable { mutableStateOf("") }
+    var unitPlural by rememberSaveable { mutableStateOf("") }
+    var gender by rememberSaveable { mutableStateOf("MASCULINE") }
+    var error by remember { mutableStateOf<String?>(null) }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Nueva unidad para $foodName", style = MaterialTheme.typography.headlineSmall)
+                OutlinedTextField(
+                    value = unitName,
+                    onValueChange = { unitName = it.take(40) },
+                    label = { Text("Singular") },
+                    placeholder = { Text("vasito, huevo, lata…") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(unitPlural, { unitPlural = it.take(40) }, Modifier.fillMaxWidth(), label = { Text("Plural") }, placeholder = { Text("vasitos, huevos, latas…") }, singleLine = true)
+                SelectorField("Género gramatical", if (gender == "FEMININE") "Femenino" else "Masculino", listOf("MASCULINE", "FEMININE"), { if (it == "FEMININE") "Femenino" else "Masculino" }, { gender = it }, null)
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                Button(onClick = {
+                error = when {
+                    unitName.isBlank() -> "Indica el singular."
+                    unitPlural.isBlank() -> "Indica también el plural."
+                    else -> null
+                }
+                if (error == null) onCreate(FoodUnitDefinition(unitName.trim(), unitPlural.trim(), gender))
+            }, Modifier.fillMaxWidth()) { Text("Crear unidad") }
+                TextButton(onClick = onDismiss, Modifier.fillMaxWidth()) { Text("Cancelar") }
+                Spacer(Modifier.height(16.dp))
+            }
+    }
+}
+
+private fun linkLabel(link: String): String = runCatching {
+    java.net.URI(link).host?.removePrefix("www.")
+}.getOrNull().orEmpty().ifBlank { link }
+
+@Composable
+private fun NutritionLine(label: String, grams: Double?, valueColor: Color = Color.Unspecified) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            grams?.let { "${formatDecimal(it)} g" } ?: "Sin datos",
+            color = if (grams == null) MaterialTheme.colorScheme.onSurfaceVariant else valueColor,
+            fontWeight = if (grams == null) FontWeight.Normal else FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun MetadataLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, modifier = Modifier.padding(start = 16.dp), fontWeight = FontWeight.SemiBold)
+    }
+}
+
+private fun formatNutrient(value: Double?): String =
+    value?.let { "${formatDecimal(it)} g" } ?: "—"
+
+@Composable
+private fun FoodEditorScreen(foods: List<Food>, initial: Food? = null, onSave: (Food) -> Unit) {
+    val isEditing = initial != null
+    var name by rememberSaveable(initial?.id) { mutableStateOf(initial?.name.orEmpty()) }
+    var category by remember(initial?.id) { mutableStateOf(initial?.category ?: FoodCategory.OTHER) }
+    var calories by rememberSaveable(initial?.id) { mutableStateOf(initial?.calories?.let(::formatDecimal).orEmpty()) }
+    var fat by rememberSaveable(initial?.id) { mutableStateOf(initial?.fatGrams?.let(::formatDecimal).orEmpty()) }
+    var carbohydrates by rememberSaveable(initial?.id) {
+        mutableStateOf(initial?.carbohydrateGrams?.let(::formatDecimal).orEmpty())
+    }
+    var protein by rememberSaveable(initial?.id) { mutableStateOf(initial?.proteinGrams?.let(::formatDecimal).orEmpty()) }
+    var fiber by rememberSaveable(initial?.id) { mutableStateOf(initial?.fiberGrams?.let(::formatDecimal).orEmpty()) }
+    var linksText by rememberSaveable(initial?.id) { mutableStateOf(initial?.links?.joinToString("\n").orEmpty()) }
+    var unitName by rememberSaveable(initial?.id) { mutableStateOf(initial?.unitName.orEmpty()) }
+    var unitAmount by rememberSaveable(initial?.id) { mutableStateOf(initial?.unitAmount?.let(::formatDecimal).orEmpty()) }
+    var wholeUnitsOnly by rememberSaveable(initial?.id) { mutableStateOf(initial?.wholeUnitsOnly == true) }
+    var error by rememberSaveable(initial?.id) { mutableStateOf<String?>(null) }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text(
+            if (isEditing) "Editar alimento" else "Nuevo alimento",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Nombre") },
+            singleLine = true
+        )
+        SelectorField(
+            label = "Categoría",
+            selectedLabel = category.label,
+            options = FoodCategory.entries,
+            optionLabel = { it.label },
+            onSelect = { category = it },
+            onClear = null
+        )
+        Text(
+            "Información nutricional por 100 g",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        NumericField("Kilocalorías", calories, { calories = it }, Modifier.fillMaxWidth())
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            NumericField("Grasas (g)", fat, { fat = it }, Modifier.weight(1f))
+            NumericField("Hidratos (g)", carbohydrates, { carbohydrates = it }, Modifier.weight(1f))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            NumericField("Proteínas (g)", protein, { protein = it }, Modifier.weight(1f))
+            NumericField("Fibra (g)", fiber, { fiber = it }, Modifier.weight(1f))
+        }
+        Text(
+            "La fibra puede dejarse vacía si no figura en la etiqueta.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text("Unidades", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        OutlinedTextField(
+            value = unitName,
+            onValueChange = { unitName = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Nombre de la unidad (opcional)") },
+            placeholder = { Text("Vasito, huevo, loncha…") },
+            singleLine = true
+        )
+        NumericField("Gramos o ml por unidad", unitAmount, { unitAmount = it }, Modifier.fillMaxWidth())
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = wholeUnitsOnly,
+                onCheckedChange = { wholeUnitsOnly = it }
+            )
+            Text("Usar solo unidades completas")
+        }
+        OutlinedTextField(
+            value = linksText,
+            onValueChange = { linksText = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Enlaces (uno por línea)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            minLines = 3,
+            maxLines = 6
+        )
+        Text(
+            "Puedes añadir hasta diez páginas del producto o fuentes de información nutricional.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        Button(
+            onClick = {
+                val values = listOf(calories, fat, carbohydrates, protein).map(::parseDecimal)
+                val parsedFiber = fiber.takeIf { it.isNotBlank() }?.let(::parseDecimal)
+                val parsedLinks = linksText.lines().map(String::trim).filter(String::isNotEmpty).distinct()
+                val parsedUnitAmount = unitAmount.takeIf { it.isNotBlank() }?.let(::parseDecimal)
+                error = when {
+                    name.trim().isEmpty() -> "Introduce el nombre del alimento."
+                    name.trim().length > 160 -> "El nombre no puede superar 160 caracteres."
+                    foods.any { it.id != initial?.id && it.name.trim().equals(name.trim(), ignoreCase = true) } ->
+                        "Ya existe un alimento con ese nombre."
+                    values.any { it == null } -> "Completa todos los valores nutricionales con números válidos."
+                    fiber.isNotBlank() && parsedFiber == null -> "La fibra no es un número válido."
+                    values[0]!! !in 0.0..1000.0 -> "Las kilocalorías deben estar entre 0 y 1000."
+                    values.drop(1).any { it!! !in 0.0..100.0 } ->
+                        "Cada nutriente debe estar entre 0 y 100 g por cada 100 g."
+                    parsedFiber != null && parsedFiber !in 0.0..100.0 ->
+                        "La fibra debe estar entre 0 y 100 g por cada 100 g."
+                    unitName.isBlank() != unitAmount.isBlank() ->
+                        "Indica tanto el nombre de la unidad como su equivalencia."
+                    unitName.trim().length > 40 -> "El nombre de la unidad no puede superar 40 caracteres."
+                    unitAmount.isNotBlank() && (parsedUnitAmount == null || parsedUnitAmount !in 0.1..5000.0) ->
+                        "La equivalencia debe estar entre 0,1 y 5000 g o ml."
+                    wholeUnitsOnly && unitName.isBlank() ->
+                        "Define una unidad antes de exigir unidades completas."
+                    parsedLinks.size > 10 -> "Solo se pueden guardar diez enlaces por alimento."
+                    parsedLinks.any { it.length > 500 || (!it.startsWith("https://") && !it.startsWith("http://")) } ->
+                        "Cada enlace debe comenzar por https:// o http://."
+                    else -> null
+                }
+                if (error == null) {
+                    onSave(
+                        Food(
+                            id = initial?.id ?: System.currentTimeMillis(),
+                            name = name.trim(),
+                            category = category,
+                            calories = values[0]!!,
+                            fatGrams = values[1]!!,
+                            carbohydrateGrams = values[2]!!,
+                            proteinGrams = values[3]!!,
+                            fiberGrams = parsedFiber,
+                            links = parsedLinks,
+                            unitName = unitName.trim().ifBlank { null },
+                            unitAmount = parsedUnitAmount,
+                            wholeUnitsOnly = wholeUnitsOnly
+                        )
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text(if (isEditing) "Guardar cambios" else "Añadir alimento") }
+    }
+}
+
+private fun normalizeSearch(value: String): String = java.text.Normalizer
+    .normalize(value.lowercase(Locale.getDefault()), java.text.Normalizer.Form.NFD)
+    .replace("\\p{M}+".toRegex(), "")
+
+private val defaultMealShares: Map<MealType, Double> = MealDistributionPolicy.defaults
+
+private fun loadMealShares(context: android.content.Context): Map<MealType, Double> {
+    val preferences = context.getSharedPreferences("meal_distribution", 0)
+    val loaded = MealType.entries.associateWith { type ->
+        preferences.getFloat(type.name, defaultMealShares.getValue(type).toFloat()).toDouble()
+    }
+    return if (kotlin.math.abs(loaded.values.sum() - 1.0) < 0.001) loaded else defaultMealShares
+}
+
+private fun saveMealShares(context: android.content.Context, shares: Map<MealType, Double>) {
+    context.getSharedPreferences("meal_distribution", 0).edit().apply {
+        shares.forEach { (type, share) -> putFloat(type.name, share.toFloat()) }
+    }.apply()
+}
+
+private fun loadAdjustmentRange(context: android.content.Context): Pair<Double, Double> {
+    val preferences = context.getSharedPreferences("quantity_adjustment", 0)
+    return preferences.getFloat("divisor", 2.0f).toDouble() to
+        preferences.getFloat("multiplier", 1.5f).toDouble()
+}
+
+private fun saveAdjustmentRange(context: android.content.Context, range: Pair<Double, Double>) {
+    context.getSharedPreferences("quantity_adjustment", 0).edit()
+        .putFloat("divisor", range.first.toFloat())
+        .putFloat("multiplier", range.second.toFloat())
+        .apply()
+}
+
+private fun exportBackup(
+    repository: AppRepository,
+    context: android.content.Context
+): String = JSONObject(repository.exportJson()).apply {
+    put("settings", JSONObject().apply {
+        put("mealShares", JSONObject().apply {
+            loadMealShares(context).forEach { (type, share) -> put(type.name, share) }
+        })
+        loadAdjustmentRange(context).let { (divisor, multiplier) ->
+            put("quantityDivisor", divisor)
+            put("quantityMultiplier", multiplier)
+        }
+    })
+}.toString(2)
+
+private fun importBackupSettings(context: android.content.Context, raw: String) {
+    val settings = JSONObject(raw).optJSONObject("settings") ?: return
+    settings.optJSONObject("mealShares")?.let { encoded ->
+        val shares = MealType.entries.associateWith { type ->
+            encoded.optDouble(type.name, defaultMealShares.getValue(type))
+        }
+        if (kotlin.math.abs(shares.values.sum() - 1.0) < 0.001) {
+            saveMealShares(context, shares)
+        }
+    }
+    val divisor = settings.optDouble("quantityDivisor", Double.NaN)
+    val multiplier = settings.optDouble("quantityMultiplier", Double.NaN)
+    if (divisor.isFinite() && divisor > 0.0 && multiplier.isFinite() && multiplier > 0.0) {
+        saveAdjustmentRange(context, divisor to multiplier)
+    }
+}
+
+@Composable
+private fun HelpScreen() {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text(
+            "Cómo funciona Rumbo",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        HelpCard(
+            title = "Prepara tu menú",
+            body = "Añade los alimentos que sueles comprar e indica en qué comidas quieres usarlos. Rumbo combinará esas reglas con tus objetivos nutricionales."
+        )
+        HelpCard(
+            title = "Sigue las recomendaciones",
+            body = "Si todavía no puede crear un menú adecuado, Rumbo te mostrará qué tipo de alimentos necesita. Puedes añadir uno de los recomendados o buscar otro equivalente."
+        )
+        HelpCard(
+            title = "Perfiles y datos",
+            body = "Cada perfil conserva por separado sus mediciones, reglas y menús. Puedes cambiar de perfil desde el avatar y guardar una copia de todos los datos en Ajustes."
+        )
+    }
+}
+
+@Composable
+private fun HelpCard(title: String, body: String) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    adjustmentRange: Pair<Double, Double>,
+    onSaveAdjustmentRange: (Pair<Double, Double>) -> Unit,
+    onExport: () -> Unit,
+    onImport: () -> Unit
+) {
+    var adjustmentDivisor by remember(adjustmentRange) {
+        mutableStateOf(formatDecimal(adjustmentRange.first))
+    }
+    var adjustmentMultiplier by remember(adjustmentRange) {
+        mutableStateOf(formatDecimal(adjustmentRange.second))
+    }
+    var adjustmentError by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text("Opciones", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Ajuste automático de cantidades",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "Estos límites se aplican a todos los elementos que permitas ajustar.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                NumericField("Dividir como máximo entre", adjustmentDivisor, {
+                    adjustmentDivisor = it
+                    adjustmentError = null
+                }, Modifier.fillMaxWidth())
+                NumericField("Multiplicar como máximo por", adjustmentMultiplier, {
+                    adjustmentMultiplier = it
+                    adjustmentError = null
+                }, Modifier.fillMaxWidth())
+                adjustmentError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                OutlinedButton(
+                    onClick = {
+                        val divisor = parseDecimal(adjustmentDivisor)
+                        val multiplier = parseDecimal(adjustmentMultiplier)
+                        adjustmentError = if (
+                            divisor == null || divisor !in 1.0..10.0 ||
+                            multiplier == null || multiplier !in 1.0..10.0
+                        ) "Ambos factores deben estar entre 1 y 10."
+                        else {
+                            onSaveAdjustmentRange(divisor to multiplier)
+                            null
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Guardar límites") }
+            }
+        }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Copia de seguridad",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "La copia incluye todos los perfiles, mediciones y menús.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
+                    Text("Exportar copia")
+                }
+                OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+                    Text("Importar copia")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileScreen(
+    profile: UserProfile?,
+    profiles: List<UserProfile>,
+    isOnboarding: Boolean,
+    startCreating: Boolean = false,
+    mealShares: Map<MealType, Double>,
+    culinaryPolicyOverrides: List<CulinaryPolicyOverride>,
+    nutritionToleranceSettings: NutritionToleranceSettings,
+    onCreate: (UserProfile, Map<MealType, Double>) -> Unit,
+    onSave: (UserProfile) -> Unit,
+    onSwitch: (Long) -> Unit,
+    onDelete: (Long) -> Unit,
+    onSaveCulinaryPolicy: (CulinaryPolicyOverride) -> Unit,
+    onResetCulinaryPolicy: (String) -> Unit,
+    onSaveNutritionTolerances: (NutritionToleranceSettings) -> Unit,
+    onSaveMealShares: (Map<MealType, Double>) -> Unit,
+    onCancelCreate: () -> Unit
+) {
+    var creating by rememberSaveable(profile?.id, startCreating) {
+        mutableStateOf(isOnboarding || startCreating)
+    }
+    val editedProfile = if (creating) null else profile
+    var name by rememberSaveable(editedProfile?.id, creating) { mutableStateOf(editedProfile?.name ?: "") }
+    var height by rememberSaveable(editedProfile?.id, creating) {
+        mutableStateOf(editedProfile?.heightCm?.let(::formatDecimal) ?: "")
+    }
+    var birthYear by rememberSaveable(editedProfile?.id, creating) {
+        mutableStateOf(editedProfile?.birthYear?.toString() ?: "")
+    }
+    var sex by remember(editedProfile?.id, creating) { mutableStateOf(editedProfile?.sex ?: Sex.MALE) }
+    var photoUri by rememberSaveable(editedProfile?.id, creating) { mutableStateOf(editedProfile?.photoUri) }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingDelete by remember { mutableStateOf<UserProfile?>(null) }
+    var mealSizes by remember(editedProfile?.id, creating) {
+        mutableStateOf(MealType.entries.associateWith { type ->
+            when {
+                (mealShares[type] ?: 0.0) <= 0.0 -> "NONE"
+                (mealShares[type] ?: 0.0) >= 0.28 -> "LARGE"
+                (mealShares[type] ?: 0.0) >= 0.15 -> "NORMAL"
+                else -> "SMALL"
+            }
+        })
+    }
+    val context = LocalContext.current
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        photoUri = uri.toString()
+    }
+
+    pendingDelete?.let { selected ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("¿Eliminar el perfil de ${selected.name}?") },
+            text = { Text("Se eliminarán también todas sus mediciones y recomendaciones. Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete(selected.id)
+                    pendingDelete = null
+                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancelar") } }
+        )
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Card(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    if (creating) "Datos personales" else "Datos de ${profile?.name}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                HorizontalDivider()
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ProfileAvatar(
+                        UserProfile(1, name.ifBlank { "Perfil" }, 170.0, 1990, sex, photoUri),
+                        64.dp
+                    )
+                    Column {
+                        TextButton(onClick = { photoPicker.launch(arrayOf("image/*")) }) { Text("Elegir foto") }
+                        if (photoUri != null) TextButton(onClick = { photoUri = null }) { Text("Quitar foto") }
+                    }
+                }
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(30) },
+                    label = { Text("Nombre del perfil") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NumericField("Altura (cm)", height, { height = it }, Modifier.weight(1f))
+                    OutlinedTextField(
+                        value = birthYear,
+                        onValueChange = { birthYear = it.filter(Char::isDigit).take(4) },
+                        label = { Text("Año de nacimiento") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                SelectorField(
+                    label = "Sexo usado para el cálculo",
+                    selectedLabel = sex.label,
+                    options = Sex.entries,
+                    optionLabel = { it.label },
+                    onSelect = { sex = it },
+                    onClear = null
+                )
+            }
+        }
+
+        if (creating) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Distribución de las comidas",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    HorizontalDivider()
+                    Text(
+                        "Indica cómo de grande suele ser cada comida. Las que no hagas se eliminarán del menú.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    MealType.entries.forEach { type ->
+                        SelectorField(
+                            label = type.label,
+                            selectedLabel = when (mealSizes[type]) { "LARGE" -> "Grande"; "NORMAL" -> "Normal"; "NONE" -> "No la hago"; else -> "Pequeña" },
+                            options = listOf("NONE", "SMALL", "NORMAL", "LARGE"),
+                            optionLabel = { when (it) { "LARGE" -> "Grande"; "NORMAL" -> "Normal"; "NONE" -> "No la hago"; else -> "Pequeña" } },
+                            onSelect = { mealSizes = mealSizes + (type to it) },
+                            onClear = null
+                        )
+                    }
+                }
+            }
+        }
+
+        if (!isOnboarding && !creating) {
+            MealDistributionCard(
+                mealShares = mealShares,
+                onSave = onSaveMealShares
+            )
+            NutritionTolerancesCard(
+                settings = nutritionToleranceSettings,
+                onSave = onSaveNutritionTolerances
+            )
+            CulinaryRulesCard(
+                overrides = culinaryPolicyOverrides,
+                onSave = onSaveCulinaryPolicy,
+                onReset = onResetCulinaryPolicy
+            )
+        }
+
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        OutlinedButton(
+            onClick = {
+                val candidate = UserProfile(
+                    id = editedProfile?.
