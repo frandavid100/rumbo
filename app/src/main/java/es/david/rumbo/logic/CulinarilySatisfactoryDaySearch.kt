@@ -29,8 +29,8 @@ data class CulinarilySatisfactoryDaySearchResult(
  * Certified level-3 search.
  *
  * Order is contractually important: revalidate/promote the persisted COMPLETE
- * witness, repair it deterministically, then run a bounded deterministic
- * composition search before falling back to broader COMPLETE generation.
+ * witness, repair it deterministically, then search a few relevant shortlists,
+ * and only afterwards widen to the whole repertoire and seeded generation.
  * Exhausting these bounded searches is SEARCH_INCONCLUSIVE, never a proof that
  * the repertoire lacks a level-3 day.
  */
@@ -103,14 +103,30 @@ object CulinarilySatisfactoryDaySearch {
                     recommendation,
                     mealShares,
                     portionContext
-                )?.let { return success(it) }
+                )?.let { repaired ->
+                    registerComplete(repaired)?.let { return success(it) }
+                }
             }
 
-        // Unlike a sequence of local repairs, this path can change several meal
-        // compositions at once while the persisted COMPLETE witness remains
-        // untouched. That allows temporary internal hypotheses to move away
-        // from the previous macro optimum without violating monotonicity of the
-        // user's certified state.
+        // The small-repertoire composition search is demonstrably more reliable
+        // when a large repertoire contains many interchangeable alternatives.
+        // Shortlisting never weakens the result: the returned day is immediately
+        // revalidated here against the complete rules before it can be certified.
+        CulinaryLevel3ShortlistSearch.find(
+            rules = rules,
+            foodsById = foodsById,
+            dishesById = dishesById,
+            recommendation = recommendation,
+            mealShares = mealShares,
+            baselineCompleteWitness = baselineCompleteWitness,
+            portionContext = portionContext
+        )?.let { shortlisted ->
+            registerComplete(shortlisted)?.let { return success(it) }
+        }
+
+        // Widen to all optional foods only after the targeted searches. This path
+        // can still discover solutions that require an unusual combination not
+        // represented in a shortlist.
         CulinaryLevel3CompositionSearch.find(
             rules = rules,
             foodsById = foodsById,
@@ -118,7 +134,9 @@ object CulinarilySatisfactoryDaySearch {
             recommendation = recommendation,
             mealShares = mealShares,
             portionContext = portionContext
-        )?.let { return success(it) }
+        )?.let { candidate ->
+            registerComplete(candidate)?.let { return success(it) }
+        }
 
         // Fallback generation only widens composition coverage. Do not run the
         // expensive repair for every seed: keep the best complete candidate and
@@ -158,7 +176,9 @@ object CulinarilySatisfactoryDaySearch {
                 recommendation,
                 mealShares,
                 portionContext
-            )?.let { return success(it) }
+            )?.let { repaired ->
+                registerComplete(repaired)?.let { return success(it) }
+            }
         }
 
         return CulinarilySatisfactoryDaySearchResult(
