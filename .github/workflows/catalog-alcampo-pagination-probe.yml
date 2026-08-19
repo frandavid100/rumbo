@@ -1,0 +1,44 @@
+name: Catalog Alcampo pagination probe
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_pagination_probe.py'
+      - '.github/workflows/catalog-alcampo-pagination-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe next-page recipe
+        working-directory: tools/catalog
+        run: python alcampo_pagination_probe.py
+      - name: Persist result
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-pagination-probe/summary.json ]; then
+            cp tools/catalog/alcampo-pagination-probe/summary.json tools/catalog/fixtures/alcampo_pagination_probe_latest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_pagination_probe_latest.json
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo pagination probe"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-pagination-probe
+          path: tools/catalog/alcampo-pagination-probe/
+          retention-days: 7
