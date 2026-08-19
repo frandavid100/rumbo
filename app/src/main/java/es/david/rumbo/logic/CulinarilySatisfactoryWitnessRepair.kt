@@ -20,13 +20,14 @@ import kotlin.math.round
  * Deterministic bounded repair from a certified COMPLETE day to level 3.
  *
  * Every accepted intermediate state remains COMPLETE. The repair changes the
- * smallest local cause first: quantity, optional incoherent source, then an
- * already-available compatible companion. Broad generation remains a later
+ * smallest local cause first, but it may normalize several quantity violations
+ * together when fixing them one by one would merely make the optimiser push a
+ * different occurrence to an extreme. Broad generation remains a later
  * fallback and is never evidence of insufficiency.
  */
 object CulinarilySatisfactoryWitnessRepair {
     private const val BEAM_WIDTH = 48
-    private const val MAX_DEPTH = 7
+    private const val MAX_DEPTH = 8
     private const val MAX_COMPANIONS_PER_ISSUE = 8
 
     fun find(
@@ -125,6 +126,15 @@ object CulinarilySatisfactoryWitnessRepair {
         if (evaluation.satisfactory) return emptyList()
 
         return buildList {
+            normalizeQuantityIssues(
+                witness,
+                evaluation,
+                foodsById,
+                recommendation,
+                mealShares,
+                portionContext
+            )?.let(::add)
+
             evaluation.issues.take(8).forEach { issue ->
                 val mealIndex = witness.meals.indexOfFirst { it.type == issue.mealType }
                 if (mealIndex < 0) return@forEach
@@ -157,8 +167,6 @@ object CulinarilySatisfactoryWitnessRepair {
                         val targetRoles = CulinarySoftPolicy.preferredCompanions(sourceRole)
                         if (targetRoles.isEmpty()) return@forEach
 
-                        // If the source is optional, removal is often the most
-                        // natural fix (e.g. cooking oil in a fruit snack).
                         sourceIndex?.let { index ->
                             val sourceId = originalMeal.items[index].foodId
                             if (!isMandatory(sourceId, originalMeal.type, activeRules)) {
@@ -167,11 +175,14 @@ object CulinarilySatisfactoryWitnessRepair {
                                     add(replaceMeal(witness, mealIndex, originalMeal.copy(items = items)))
                                 }
 
-                                // Preserve nutritional contribution when possible by
-                                // relocating an optional modifier to a meal where its
-                                // preferred vehicle already exists. This is especially
-                                // useful for oil inherited in a fruit snack.
+                                // Preserve the contribution of an optional modifier by
+                                // relocating it to a meal that already has a valid vehicle.
+                                // If the same food is already there, merge the two
+                                // occurrences and rebind its bounds to a satisfactory role
+                                // (e.g. oil can become SAUCE_DRESSING instead of exceeding
+                                // the 15 g COOKING_MEDIUM interval).
                                 val sourceItem = originalMeal.items[index]
+                                val sourceFood = foodsById[sourceId]
                                 val sourceAllowedMeals = activeRules
                                     .filter { it.itemId == sourceId }
                                     .flatMapTo(mutableSetOf()) { it.allowedMealTypes }
@@ -182,29 +193,65 @@ object CulinarilySatisfactoryWitnessRepair {
                                             witness.meals[destinationIndex], witness.day
                                         )
                                         if (destination.type !in sourceAllowedMeals) return@destinationLoop
-                                        if (destination.items.any { it.foodId == sourceId }) return@destinationLoop
-                                        val hasPreferredVehicle = destination.items.any { planned ->
-                                            foodsById[planned.foodId]?.let(CulinaryPolicy::roles)
-                                                ?.any(targetRoles::contains) == true
-                                        } || destination.dishes.any { plannedDish ->
-                                            dishesById[plannedDish.dishId]?.ingredients.orEmpty().any { ingredient ->
-                                                foodsById[ingredient.foodId]?.let(CulinaryPolicy::roles)
-                                                    ?.any(targetRoles::contains) == true
-                                            }
-                                        }
-                                        if (!hasPreferredVehicle) return@destinationLoop
+                                        val presentRoles = rolesPresent(
+                                            destination, sourceId, foodsById, dishesById
+                                        )
+                                        if (targetRoles.none(presentRoles::contains)) return@destinationLoop
 
                                         val sourceWithout = originalMeal.copy(
                                             items = originalMeal.items.toMutableList().also {
                                                 it.removeAt(index)
                                             }
                                         )
+                                        val existingIndex = destination.items.indexOfFirst {
+                                            it.foodId == sourceId
+                                        }
+                                        if (existingIndex >= 0 && sourceFood != null) {
+                                            val existing = destination.items[existingIndex]
+                                            val combinedGrams = existing.grams + sourceItem.grams
+                                            val merged = satisfactoryItemForExactGrams(
+                                                food = sourceFood,
+                                                grams = combinedGrams,
+                                                mealType = destination.type,
+                                                presentRoles = presentRoles,
+                                                recommendation = recommendation,
+                                                mealShares = mealShares,
+                                                portionContext = portionContext
+                                            )
+                                            if (merged != null) {
+                                                val destinationItems = destination.items.toMutableList().also {
+                                                    it[existingIndex] = merged
+                                                }
+                                                val meals = witness.meals.toMutableList()
+                                                meals[mealIndex] = sourceWithout
+                                                meals[destinationIndex] = destination.copy(
+                                                    items = destinationItems
+                                                )
+                                                add(witness.copy(
+                                                    meals = meals,
+                                                    fingerprint = meals.hashCode()
+                                                ))
+                                            }
+                                            return@destinationLoop
+                                        }
+
+                                        val relocated = sourceFood?.let {
+                                            satisfactoryItemForExactGrams(
+                                                food = it,
+                                                grams = sourceItem.grams,
+                                                mealType = destination.type,
+                                                presentRoles = presentRoles,
+                                                recommendation = recommendation,
+                                                mealShares = mealShares,
+                                                portionContext = portionContext
+                                            )
+                                        } ?: sourceItem
                                         val maximum = maximumItems(destination.type)
                                         if (destination.items.size + destination.dishes.size < maximum) {
                                             val meals = witness.meals.toMutableList()
                                             meals[mealIndex] = sourceWithout
                                             meals[destinationIndex] = destination.copy(
-                                                items = destination.items + sourceItem
+                                                items = destination.items + relocated
                                             )
                                             add(witness.copy(meals = meals, fingerprint = meals.hashCode()))
                                         } else {
@@ -215,7 +262,7 @@ object CulinarilySatisfactoryWitnessRepair {
                                                     )
                                                 ) return@replacementLoop
                                                 val destinationItems = destination.items.toMutableList().also {
-                                                    it[replaceIndex] = sourceItem
+                                                    it[replaceIndex] = relocated
                                                 }
                                                 val meals = witness.meals.toMutableList()
                                                 meals[mealIndex] = sourceWithout
@@ -269,12 +316,12 @@ object CulinarilySatisfactoryWitnessRepair {
                                     )
                                 )
                             } else {
-                                originalMeal.items.indices.forEach { replaceIndex ->
+                                originalMeal.items.indices.forEach replacementLoop@ { replaceIndex ->
                                     val replaced = originalMeal.items[replaceIndex].foodId
                                     if (replaced == issue.foodId || isMandatory(
                                             replaced, originalMeal.type, activeRules
                                         )
-                                    ) return@forEach
+                                    ) return@replacementLoop
                                     val items = originalMeal.items.toMutableList().also {
                                         it[replaceIndex] = added
                                     }
@@ -285,10 +332,6 @@ object CulinarilySatisfactoryWitnessRepair {
                     }
 
                     CulinarySatisfactionIssueKind.ROLE_UNRESOLVED -> {
-                        // Legacy/custom roleless foods cannot be made level-3
-                        // satisfactory by inventing a role. An optional one may
-                        // disappear if COMPLETE survives; mandatory ones remain a
-                        // real diagnostic for the user/catalogue.
                         sourceIndex?.let { index ->
                             val sourceId = originalMeal.items[index].foodId
                             if (!isMandatory(sourceId, originalMeal.type, activeRules)) {
@@ -305,6 +348,112 @@ object CulinarilySatisfactoryWitnessRepair {
             }
         }.distinctBy(::stateKey)
     }
+
+    private fun normalizeQuantityIssues(
+        witness: CertifiedDayWitness,
+        evaluation: CulinaryDaySatisfaction,
+        foodsById: Map<Long, Food>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double>,
+        portionContext: PortionContext
+    ): CertifiedDayWitness? {
+        val quantityIssues = evaluation.issues.filter {
+            it.kind == CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE &&
+                it.foodId != null
+        }
+        if (quantityIssues.size < 2) return null
+
+        val meals = witness.meals.map { materialize(it, witness.day) }.toMutableList()
+        var changed = false
+        quantityIssues.forEach { issue ->
+            val mealIndex = meals.indexOfFirst { it.type == issue.mealType }
+            if (mealIndex < 0) return@forEach
+            val meal = meals[mealIndex]
+            val itemIndex = meal.items.indexOfFirst { it.foodId == issue.foodId }
+            if (itemIndex < 0) return@forEach
+            val food = foodsById[meal.items[itemIndex].foodId] ?: return@forEach
+            val grams = meal.items[itemIndex].grams
+            val chosen = issue.roles.map { role ->
+                role to PortionPolicyResolver.resolve(
+                    food,
+                    role,
+                    meal.type,
+                    recommendation,
+                    mealShares,
+                    portionContext
+                )
+            }.minWithOrNull(
+                compareBy<Pair<CulinaryRole, ResolvedPortionPolicy>> {
+                    distanceFromRange(grams, it.second)
+                }.thenByDescending {
+                    meal.type in CulinaryPolicy.policy(it.first).suggestedMealTypes
+                }.thenBy { it.first.ordinal }
+            ) ?: return@forEach
+            val items = meal.items.toMutableList()
+            items[itemIndex] = satisfactoryItem(food.id, chosen.second)
+            meals[mealIndex] = meal.copy(items = items, dayAmounts = emptyList())
+            changed = true
+        }
+        return witness.copy(meals = meals, fingerprint = meals.hashCode()).takeIf { changed }
+    }
+
+    private fun distanceFromRange(grams: Double, policy: ResolvedPortionPolicy): Double = when {
+        grams < policy.satisfactoryMinimum -> policy.satisfactoryMinimum - grams
+        grams > policy.satisfactoryMaximum -> grams - policy.satisfactoryMaximum
+        else -> 0.0
+    }
+
+    private fun rolesPresent(
+        meal: PlannedMeal,
+        excludingFoodId: Long,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): Set<CulinaryRole> = buildSet {
+        meal.items.filterNot { it.foodId == excludingFoodId }.forEach { planned ->
+            foodsById[planned.foodId]?.let(CulinaryPolicy::roles)?.let(::addAll)
+        }
+        meal.dishes.forEach { plannedDish ->
+            dishesById[plannedDish.dishId]?.ingredients.orEmpty().forEach { ingredient ->
+                foodsById[ingredient.foodId]?.let(CulinaryPolicy::roles)?.let(::addAll)
+            }
+        }
+    }
+
+    private fun satisfactoryItemForExactGrams(
+        food: Food,
+        grams: Double,
+        mealType: MealType,
+        presentRoles: Set<CulinaryRole>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double>,
+        portionContext: PortionContext
+    ): PlannedFood? = CulinaryPolicy.roles(food)
+        .sortedBy { it.ordinal }
+        .mapNotNull { role ->
+            val companions = CulinarySoftPolicy.preferredCompanions(role)
+            if (companions.isNotEmpty() && companions.none(presentRoles::contains)) {
+                return@mapNotNull null
+            }
+            val policy = PortionPolicyResolver.resolve(
+                food,
+                role,
+                mealType,
+                recommendation,
+                mealShares,
+                portionContext
+            )
+            policy.takeIf { it.isSatisfactory(grams) }
+        }
+        .firstOrNull()
+        ?.let { policy ->
+            PlannedFood(
+                foodId = food.id,
+                grams = grams,
+                adjustable = true,
+                minimumGrams = policy.satisfactoryMinimum,
+                maximumGrams = policy.satisfactoryMaximum
+            )
+        }
 
     private fun optimizeAndKeepComplete(
         witness: CertifiedDayWitness,
