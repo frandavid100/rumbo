@@ -27,7 +27,6 @@ jobs:
       - run: pip install playwright
       - run: playwright install --with-deps chromium
       - name: Crawl Alcampo network-driven smoke
-        id: crawl
         working-directory: tools/catalog
         shell: bash
         run: |
@@ -47,11 +46,7 @@ jobs:
         working-directory: tools/catalog
         run: |
           code=$(cat alcampo-direct-v4-smoke/exit_code.txt)
-          if [ "$code" = "0" ]; then
-            echo 'passed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'passed=false' >> "$GITHUB_OUTPUT"
-          fi
+          if [ "$code" = "0" ]; then echo 'passed=true' >> "$GITHUB_OUTPUT"; else echo 'passed=false' >> "$GITHUB_OUTPUT"; fi
       - name: Persist smoke summary
         if: always()
         run: |
@@ -60,8 +55,12 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add tools/catalog/fixtures/alcampo_direct_v4_smoke_summary.json
-            git diff --cached --quiet || git commit -m "catalog: persist Alcampo v4 smoke summary"
-            git push origin HEAD:agent/catalog-phase1
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo v4 smoke summary"
+              git fetch origin agent/catalog-phase1
+              git rebase origin/agent/catalog-phase1 || { git rebase --abort; exit 1; }
+              git push origin HEAD:agent/catalog-phase1
+            fi
           fi
       - uses: actions/upload-artifact@v4
         if: always()
@@ -88,7 +87,6 @@ jobs:
       - run: pip install playwright
       - run: playwright install --with-deps chromium
       - name: Crawl complete Alcampo food catalog
-        id: crawl
         working-directory: tools/catalog
         shell: bash
         run: |
@@ -108,18 +106,15 @@ jobs:
           python - <<'PY'
           import hashlib,json,sqlite3
           from pathlib import Path
-          out=Path('alcampo-direct-v4-full')
-          obs=out/'observations.jsonl'; dbp=out/'alcampo_food_catalog.sqlite'
+          out=Path('alcampo-direct-v4-full'); obs=out/'observations.jsonl'; dbp=out/'alcampo_food_catalog.sqlite'
           if not obs.exists() or not dbp.exists(): raise SystemExit(0)
           def sid(sku): return int.from_bytes(hashlib.sha256(f'alcampo-sku:{sku}'.encode()).digest()[:7],'big')
           invalid=[]
           for line in obs.read_text(encoding='utf-8').splitlines():
-              if not line.strip(): continue
-              row=json.loads(line)
-              if row.get('nutrition_status')!='DECLARED_VALID': invalid.append(sid(str(row['sku'])))
-          con=sqlite3.connect(dbp)
-          con.executemany('DELETE FROM nutrition WHERE product_id=?',[(x,) for x in invalid])
-          con.commit(); con.close()
+              if line.strip():
+                  row=json.loads(line)
+                  if row.get('nutrition_status')!='DECLARED_VALID': invalid.append(sid(str(row['sku'])))
+          con=sqlite3.connect(dbp); con.executemany('DELETE FROM nutrition WHERE product_id=?',[(x,) for x in invalid]); con.commit(); con.close()
           print(f'removed_nonvalid_nutrition={len(invalid)}')
           PY
       - name: Classify valid products
@@ -136,19 +131,19 @@ jobs:
           python - <<'PY'
           import json,sqlite3
           from pathlib import Path
-          out=Path('alcampo-direct-v4-full')
-          sp=out/'summary.json'; dbp=out/'alcampo_food_catalog.sqlite'
+          out=Path('alcampo-direct-v4-full'); sp=out/'summary.json'; dbp=out/'alcampo_food_catalog.sqlite'
           if not sp.exists(): raise SystemExit(0)
           report=json.loads(sp.read_text(encoding='utf-8'))
           if dbp.exists():
               con=sqlite3.connect(dbp)
               def q(sql): return con.execute(sql).fetchone()[0]
+              def has(t): return q(f"select count(*) from sqlite_master where type='table' and name='{t}'")>0
               report['classification']={
                 'classified':q('select count(*) from eligibility where classified=1'),
                 'menu_eligible':q('select count(*) from eligibility where menu_eligible=1'),
-                'review_open':q("select count(*) from review_queue where status='OPEN'") if con.execute("select count(*) from sqlite_master where type='table' and name='review_queue'").fetchone()[0] else 0,
-                'nutritional_role_assignments':q('select count(*) from nutritional_role_assignments') if con.execute("select count(*) from sqlite_master where type='table' and name='nutritional_role_assignments'").fetchone()[0] else 0,
-                'culinary_role_assignments':q('select count(*) from culinary_role_assignments') if con.execute("select count(*) from sqlite_master where type='table' and name='culinary_role_assignments'").fetchone()[0] else 0,
+                'review_open':q("select count(*) from review_queue where status='OPEN'") if has('review_queue') else 0,
+                'nutritional_role_assignments':q('select count(*) from nutritional_role_assignments') if has('nutritional_role_assignments') else 0,
+                'culinary_role_assignments':q('select count(*) from culinary_role_assignments') if has('culinary_role_assignments') else 0,
               }
               con.close()
           (out/'final_summary.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -165,8 +160,12 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add tools/catalog/fixtures/alcampo_direct_v4_latest_summary.json
-            git diff --cached --quiet || git commit -m "catalog: persist Alcampo v4 full summary"
-            git push origin HEAD:agent/catalog-phase1
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo v4 full summary"
+              git fetch origin agent/catalog-phase1
+              git rebase origin/agent/catalog-phase1 || { git rebase --abort; exit 1; }
+              git push origin HEAD:agent/catalog-phase1
+            fi
           fi
       - uses: actions/upload-artifact@v4
         if: always()
