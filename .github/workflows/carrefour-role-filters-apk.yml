@@ -41,7 +41,11 @@ jobs:
           test "$(sqlite3 app/src/main/assets/catalog.sqlite "SELECT COUNT(*) FROM retailer_listings WHERE UPPER(retailer)='CARREFOUR';")" -eq 8449
       - uses: gradle/actions/setup-gradle@v4
       - name: Probar y compilar con Carrefour
-        run: ./gradlew test assembleRelease
+        run: |
+          ./gradlew test assembleRelease || {
+            find app/build/test-results -name '*.xml' -type f -exec cat {} \;
+            exit 1
+          }
       - name: Leer versión
         run: echo "RUMBO_VERSION=$(sed -n 's/.*versionName = \"\(.*\)\"/\1/p' app/build.gradle)" >> "$GITHUB_ENV"
       - name: Preparar herramientas de firma
