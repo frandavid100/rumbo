@@ -68,7 +68,14 @@ object CompleteDayWitnessRepair {
             beam.forEach { state ->
                 expand(
                     state, activeRules, foodsById, dishesById, recommendation
-                ).take(MAX_VARIANTS_PER_STATE).forEach variantLoop@ { variant ->
+                )
+                    // Expansion order follows meal order, which previously
+                    // spent the whole budget on breakfast variants. Rank the
+                    // cheap, unoptimised compositions first so every bounded
+                    // pass targets the largest COMPLETE deficit.
+                    .sortedBy { score(it, foodsById, dishesById, recommendation) }
+                    .take(MAX_VARIANTS_PER_STATE)
+                    .forEach variantLoop@ { variant ->
                     if (optimizations >= MAX_OPTIMIZATIONS) return null
                     optimizations += 1
                     val optimized = runCatching {
