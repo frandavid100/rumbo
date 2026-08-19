@@ -96,7 +96,8 @@ object RepertoireEvaluator {
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
         mealShares: Map<MealType, Double> = defaultShares,
-        thresholds: RepertoireThresholds = RepertoireThresholds()
+        thresholds: RepertoireThresholds = RepertoireThresholds(),
+        searchAttempt: Int = 0
     ): RepertoireAssessment {
         val constraints = MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares)
         val activeRules = constraints.activeRules
@@ -140,7 +141,9 @@ object RepertoireEvaluator {
             vegetableGroups, thresholds.adequateVegetableConcepts
         )
 
-        val attempts = seeds.mapNotNull { seed ->
+        val attemptOffset = searchAttempt.coerceAtLeast(0).toLong() * 1_000_003L
+        val attempts = seeds.mapNotNull { baseSeed ->
+            val seed = baseSeed + attemptOffset
             runCatching {
                 seed to WeeklyMenuGenerator.generate(
                     constraints = constraints,
