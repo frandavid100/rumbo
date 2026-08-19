@@ -11,6 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MajorNutritionalRolePolicyTest {
+    // Regression for the complementary-only day observed in profile "Prueba".
     private fun food(id: Long, category: FoodCategory, role: String) = Food(
         id = id, name = role, category = category, calories = 100.0,
         fatGrams = 10.0, carbohydrateGrams = 10.0, proteinGrams = 10.0,
