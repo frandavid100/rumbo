@@ -1,0 +1,31 @@
+name: Catalog Alcampo network probe
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_network_probe.py'
+      - '.github/workflows/catalog-alcampo-network-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: playwright install --with-deps chromium
+      - name: Probe Alcampo network
+        working-directory: tools/catalog
+        run: python alcampo_network_probe.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-network-probe
+          path: tools/catalog/alcampo-network-probe/
+          retention-days: 7
