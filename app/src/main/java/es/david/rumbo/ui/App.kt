@@ -1717,7 +1717,7 @@ private fun HomeScreen(
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
     var repertoireSearchAttempt by rememberSaveable(data.profile?.id) {
-        mutableIntStateOf(0)
+        mutableStateOf(0)
     }
     val repertoireAssessmentKey = remember(
         data.activeProfileId,
