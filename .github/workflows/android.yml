@@ -2,7 +2,7 @@ name: Android
 
 on:
   push:
-    branches: [main, feature/0.12.0-dishes]
+    branches: [main, feature/0.12.0-dishes, agent/level3-culinary-satisfaction]
   pull_request:
     branches: [main]
   workflow_dispatch:
