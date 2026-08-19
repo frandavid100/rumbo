@@ -1,0 +1,98 @@
+name: Catalog Alcampo direct v3
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_direct_catalog_v3.py'
+      - '.github/workflows/catalog-alcampo-direct-v3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alcampo-direct-v3
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      ok: ${{ steps.validate.outputs.ok }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Crawl Alcampo smoke via server HTML
+        working-directory: tools/catalog
+        run: python alcampo_direct_catalog_v3.py --out alcampo-direct-v3-smoke --workers 12 --max-products 120 --min-discovered 1
+      - name: Validate smoke coverage
+        id: validate
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('alcampo-direct-v3-smoke/summary.json'))
+          n=p['counts']['discovered']
+          if n < 50:
+              raise SystemExit(f'smoke discovered only {n}; need >=50')
+          print('ok=true')
+          with open(__import__('os').environ['GITHUB_OUTPUT'],'a') as f: f.write('ok=true\n')
+          PY
+      - name: Persist smoke summary
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-direct-v3-smoke/summary.json ]; then
+            cp tools/catalog/alcampo-direct-v3-smoke/summary.json tools/catalog/fixtures/alcampo_direct_v3_smoke_summary.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_direct_v3_smoke_summary.json
+            git diff --cached --quiet || git commit -m "catalog: persist Alcampo v3 smoke summary"
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-direct-v3-smoke
+          path: tools/catalog/alcampo-direct-v3-smoke/
+          retention-days: 7
+          if-no-files-found: warn
+
+  full:
+    needs: smoke
+    if: needs.smoke.outputs.ok == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Crawl full Alcampo food catalog
+        working-directory: tools/catalog
+        run: python alcampo_direct_catalog_v3.py --out alcampo-direct-v3-full --workers 24 --min-discovered 1000
+      - name: Persist full summary
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-direct-v3-full/summary.json ]; then
+            cp tools/catalog/alcampo-direct-v3-full/summary.json tools/catalog/fixtures/alcampo_direct_v3_latest_summary.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_direct_v3_latest_summary.json
+            git diff --cached --quiet || git commit -m "catalog: persist full Alcampo v3 summary"
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-food-catalog-direct-v3
+          path: tools/catalog/alcampo-direct-v3-full/
+          retention-days: 7
+          if-no-files-found: warn
