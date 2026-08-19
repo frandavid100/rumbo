@@ -68,7 +68,10 @@ object CulinarySatisfactionEvaluator {
         CulinaryRole.SIDE to setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE),
         CulinaryRole.SANDWICH_BASE to setOf(CulinaryRole.SANDWICH_FILLING, CulinaryRole.SPREAD),
         CulinaryRole.CEREAL_BASE to setOf(CulinaryRole.CEREAL_MIX_IN),
-        CulinaryRole.POWDER_BASE to setOf(CulinaryRole.POWDER_MIX_IN)
+        CulinaryRole.POWDER_BASE to setOf(CulinaryRole.POWDER_MIX_IN),
+        CulinaryRole.COOKING_MEDIUM to setOf(
+            CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE
+        )
     )
 
     fun isCulinarilySatisfactory(
