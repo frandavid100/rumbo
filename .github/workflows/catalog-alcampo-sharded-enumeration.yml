@@ -34,10 +34,6 @@ jobs:
           d=json.load(open('tools/catalog/fixtures/alcampo_root_children_latest.json',encoding='utf-8'))
           deny=re.compile(r'\b(vino|vinos|cerveza|cervezas|licor|licores|whisky|whiskey|ron|ginebra|vodka|brandy|cognac|champagne|cava|sidra|vermut|vermouth|sangr[ií]a|espirituosas?|bebidas?\s+alcoh[oó]licas?|perfumer[ií]a|droguer[ií]a|herbolario|control\s+de\s+peso)\b',re.I)
           rows=[];seen=set()
-          # Start from each first-party food root itself. recursive_collect then includes
-          # products listed directly on the root and traverses every addressable child.
-          # This avoids the old duplicated 98-parent traversal and cannot lose products
-          # that appear only on a root listing.
           for root in d.get('roots',[]):
               name=str(root.get('root_label') or '').strip()
               rid=root.get('root_retailer_category_id')
@@ -92,7 +88,7 @@ jobs:
           path: downloaded
       - name: Merge and audit recursive enumeration
         working-directory: tools/catalog
-        run: python alcampo_merge_children.py --downloaded ../../downloaded --out alcampo-sharded-full --min-products 5000
+        run: python alcampo_merge_children.py --downloaded ../../downloaded --out alcampo-sharded-full --min-products 5000 --expected-shards "${{ needs.prepare.outputs.expected_children }}"
       - name: Split first-party product manifest for detail enrichment
         working-directory: tools/catalog
         run: python alcampo_split_detail_batches.py --input alcampo-sharded-full/products.jsonl --out alcampo-detail-inputs --batches 96
