@@ -1,0 +1,28 @@
+name: Level 3 use product basis
+
+on:
+  push:
+    branches: [agent/level3-culinary-satisfaction-v2]
+    paths: [.github/workflows/level3-use-product-basis.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/level3-culinary-satisfaction-v2
+      - run: python scripts/level3_use_product_basis.py
+      - name: Publicar y retirar herramienta temporal
+        run: |
+          rm scripts/level3_use_product_basis.py
+          rm .github/workflows/level3-use-product-basis.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Usar base física del producto en nivel 3"
+          git push origin HEAD:agent/level3-culinary-satisfaction-v2
