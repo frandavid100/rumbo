@@ -1,0 +1,82 @@
+name: Catalog Alcampo direct v6
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_direct_catalog_v6.py'
+      - '.github/workflows/catalog-alcampo-direct-v6.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify API pagination on one food category
+        working-directory: tools/catalog
+        run: python alcampo_direct_catalog_v6.py --out alcampo-direct-v6-smoke --only-root OC100402 --max-pages 2 --workers 1 --min-products 301
+      - name: Persist smoke summary
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-direct-v6-smoke/summary.json ]; then
+            cp tools/catalog/alcampo-direct-v6-smoke/summary.json tools/catalog/fixtures/alcampo_direct_v6_smoke_summary.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_direct_v6_smoke_summary.json
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo direct v6 smoke"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-direct-v6-smoke
+          path: tools/catalog/alcampo-direct-v6-smoke/
+          retention-days: 7
+
+  full:
+    needs: smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Enumerate complete Alcampo food catalogue through first-party API
+        working-directory: tools/catalog
+        run: python alcampo_direct_catalog_v6.py --out alcampo-direct-v6-full --workers 2 --min-products 2000
+      - name: Persist full summary
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-direct-v6-full/summary.json ]; then
+            cp tools/catalog/alcampo-direct-v6-full/summary.json tools/catalog/fixtures/alcampo_direct_v6_latest_summary.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_direct_v6_latest_summary.json
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo direct v6 full summary"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-food-catalog-direct-v6
+          path: tools/catalog/alcampo-direct-v6-full/
+          retention-days: 7
