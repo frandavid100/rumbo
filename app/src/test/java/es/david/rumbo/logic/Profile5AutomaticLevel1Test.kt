@@ -79,7 +79,7 @@ class Profile5AutomaticLevel1Test {
             )
         )
 
-        assertEquals(ConstraintSearchStatus.FEASIBLE, result.searchStatus)
+        assertEquals("Profile 5 assessment: $result", ConstraintSearchStatus.FEASIBLE, result.searchStatus)
         assertNotNull(result.witness)
     }
 }
