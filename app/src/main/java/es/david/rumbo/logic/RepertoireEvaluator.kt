@@ -116,7 +116,42 @@ object RepertoireEvaluator {
                 return assessment
             }
         }
-        return requireNotNull(latest)
+        val inconclusive = requireNotNull(latest)
+        val fallback = ViableDayFallbackSearch.find(
+            rules, foodsById, dishesById, recommendation, mealShares
+        ) ?: return inconclusive
+        return evaluateWitness(
+            inconclusive, fallback, foodsById, dishesById, recommendation,
+            MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares).activeMealTypes
+        )
+    }
+
+    private fun evaluateWitness(
+        baseline: RepertoireAssessment,
+        witness: MenuWitness,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        activeMealTypes: Set<MealType>
+    ): RepertoireAssessment {
+        val assessment = MealPlanEvaluator.assessDay(
+            WeekDay.MONDAY, witness.meals, foodsById, dishesById, recommendation
+        )
+        if (!WeeklyMenuAcceptancePolicy.isDayAcceptable(assessment, activeMealTypes)) {
+            return baseline
+        }
+        val nutrition = assessment.evaluations.associate { evaluation ->
+            evaluation.kind to NutrientCapacity(
+                evaluation.target, evaluation.actual, evaluation.difference, evaluation.fit
+            )
+        }
+        return baseline.copy(
+            status = RepertoireStatus.SUFFICIENT,
+            nutrition = nutrition,
+            acceptableSolutions = maxOf(1, baseline.acceptableSolutions),
+            searchStatus = ConstraintSearchStatus.FEASIBLE,
+            witness = witness
+        )
     }
 
     fun evaluate(
