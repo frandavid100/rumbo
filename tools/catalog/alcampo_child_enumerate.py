@@ -22,6 +22,11 @@ def denied_branch(name: str) -> bool:
     return bool(DENY_BRANCH.search(name or ""))
 
 
+def stable_product_key(product: Product) -> str:
+    """Alcampo's retailerProductId is the stable listing identity across taxonomy nodes."""
+    return f"sku:{product.sku}" if product.sku else f"product:{product.product_id}"
+
+
 def collect_with_fresh_session_retries(label: str, rid: str, attempts: int = 6):
     """Retry a category with a fresh anonymous session when Alcampo leaves a token pending."""
     best_products = []
@@ -63,8 +68,9 @@ def recursive_collect(root_label: str, root_rid: str):
         visited.add(rid)
 
         plist, meta, attempts = collect_with_fresh_session_retries(label, rid)
-        for p in plist:
-            products[p.product_id] = merge(products[p.product_id], p) if p.product_id in products else p
+        for product in plist:
+            key = stable_product_key(product)
+            products[key] = merge(products[key], product) if key in products else product
 
         errors = list(meta.get("errors") or [])
         children = list(meta.get("child_categories") or [])
@@ -129,6 +135,7 @@ def main() -> int:
         "recursive_categories_visited": len(node_audit),
         "unresolved_categories": unresolved,
         "children_without_retailer_category_id": missing_ids,
+        "deduplication_identity": "retailer_sku_else_product_id",
     }]
     summary = write_outputs(a.out, products, root_meta)
     got = summary["counts"]["food_products"]
@@ -148,6 +155,7 @@ def main() -> int:
         "children_without_retailer_category_id": len(missing_ids),
         "unresolved": unresolved,
         "missing_retailer_ids": missing_ids,
+        "deduplication_identity": "retailer_sku_else_product_id",
         "completeness_basis": "recursive_first_party_category_tree_plus_pageToken_exhaustion",
         "source_product_count_is_diagnostic_only": True,
         "ok": ok,
