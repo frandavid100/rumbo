@@ -1,0 +1,47 @@
+name: Catalog Alcampo bundle probe
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_bundle_probe.py'
+      - '.github/workflows/catalog-alcampo-bundle-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe Alcampo JS bundles
+        working-directory: tools/catalog
+        run: python alcampo_bundle_probe.py
+      - name: Persist probe summary
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-bundle-probe/summary.json ]; then
+            cp tools/catalog/alcampo-bundle-probe/summary.json tools/catalog/fixtures/alcampo_bundle_probe_latest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_bundle_probe_latest.json
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo bundle API probe"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-bundle-probe
+          path: tools/catalog/alcampo-bundle-probe/
+          retention-days: 7
