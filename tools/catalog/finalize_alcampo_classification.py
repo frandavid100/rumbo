@@ -138,6 +138,20 @@ def derive_family(name: str, legal: str | None, ingredients: str | None, culinar
     return None
 
 
+def source_category(o: dict) -> str | None:
+    category=o.get("category")
+    if isinstance(category,str) and category.strip(): return category.strip()
+    path=o.get("category_path")
+    if isinstance(path,list):
+        vals=[str(x).strip() for x in path if str(x).strip()]
+        if vals: return vals[-1]
+    roots=o.get("source_roots")
+    if isinstance(roots,list):
+        vals=[str(x).strip() for x in roots if str(x).strip()]
+        if vals: return vals[-1]
+    return None
+
+
 def run(db_path: Path, obs_path: Path):
     obs=observations(obs_path)
     con=sqlite3.connect(db_path); con.executescript(CLASSIFICATION_SCHEMA); con.executescript(EXTRA_SCHEMA)
@@ -153,9 +167,9 @@ def run(db_path: Path, obs_path: Path):
     now=datetime.now(timezone.utc).isoformat()
     for pid,name,legal,ingredients,kcal,protein,carbs,fat,fiber,sku in rows:
         o=obs.get(pid,{})
-        category=o.get("category")
+        category=source_category(o)
         if category:
-            con.execute("INSERT INTO source_taxonomy VALUES(?,?,?)",(pid,category,json.dumps({"retailer":"Alcampo","category":category},ensure_ascii=False)))
+            con.execute("INSERT INTO source_taxonomy VALUES(?,?,?)",(pid,category,json.dumps({"retailer":"Alcampo","category":category,"category_path":o.get("category_path")},ensure_ascii=False)))
         # Re-run classifier with Alcampo's source category as subcategory evidence.
         result=classify(ProductFeatures(name=name,legal_name=legal,ingredients=ingredients,subcategory=category,calories=kcal,protein_g=protein,carbohydrate_g=carbs,fat_g=fat,fiber_g=fiber))
         store_baseline(con,pid,result)
