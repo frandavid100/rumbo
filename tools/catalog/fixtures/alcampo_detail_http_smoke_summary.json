@@ -1,0 +1,17 @@
+{
+  "source": "https://www.compraonline.alcampo.es",
+  "version": "alcampo-detail-http-v1.0",
+  "counts": {
+    "requested": 5,
+    "fetched": 3,
+    "errors": 2,
+    "with_name": 3,
+    "with_gtin": 0,
+    "with_legal_name": 3,
+    "with_ingredients": 3,
+    "declared_valid_nutrition": 3,
+    "declared_incomplete_nutrition": 0,
+    "declared_invalid_nutrition": 0,
+    "downloaded_html_bytes": 1836397
+  }
+}
