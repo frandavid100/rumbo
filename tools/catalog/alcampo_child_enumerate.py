@@ -22,19 +22,27 @@ def denied_branch(name: str) -> bool:
     return bool(DENY_BRANCH.search(name or ""))
 
 
-def collect_with_fresh_session_retries(label: str, rid: str, attempts: int = 4):
+def collect_with_fresh_session_retries(label: str, rid: str, attempts: int = 6):
     """Retry a category with a fresh anonymous session when Alcampo leaves a token pending."""
     best_products = []
     best_meta = None
     for attempt in range(1, attempts + 1):
         products, meta = collect_root(label, rid, 0)
-        if len(products) > len(best_products):
+        # Prefer the attempt that exposed the most products; on a tie prefer the one
+        # that exposed more child taxonomy, because descendants remain independently
+        # addressable even if a later pageToken was transiently pending.
+        score = (len(products), len(meta.get("child_categories") or []))
+        best_score = (
+            len(best_products),
+            len((best_meta or {}).get("child_categories") or []),
+        )
+        if score > best_score:
             best_products = products
             best_meta = meta
         if not meta.get("errors"):
             return products, meta, attempt
         if attempt < attempts:
-            time.sleep(min(0.8 * attempt, 3.0))
+            time.sleep(min(0.8 * attempt, 4.0))
     return best_products, best_meta or meta, attempts
 
 
@@ -74,9 +82,12 @@ def recursive_collect(root_label: str, root_rid: str):
         node_audit.append(audit)
         if errors:
             unresolved.append(audit)
-            # We cannot safely claim that descendants are known if page 1 itself failed.
-            continue
 
+        # Child taxonomy comes from page 1 and is independently addressable. Do not
+        # discard it merely because a later pageToken on the parent remained pending;
+        # traversing descendants both improves coverage and preserves the evidence needed
+        # to diagnose the one unresolved parent node. Completeness still remains false
+        # until every such parent error is cleared.
         for child in children:
             if not isinstance(child, dict):
                 continue
@@ -126,7 +137,7 @@ def main() -> int:
     # completeness denominator for the active regional assortment: direct API traversal
     # can exhaust pageTokens cleanly at a different count. Completeness is therefore
     # defined by exhausting every discovered first-party category node without API errors.
-    ok = not unresolved and not missing_ids and (got > 0 or a.expected == 0)
+    ok = not unresolved and not missing_ids and got > 0
     check = {
         "label": a.label,
         "rid": a.rid,
