@@ -9,7 +9,6 @@ import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
-import es.david.rumbo.model.WeekDay
 
 /** A diagnostic describes the best proven day we inspected; it is not a proof of impossibility. */
 data class CulinarilySatisfactoryDayDiagnostic(
@@ -35,10 +34,6 @@ data class CulinarilySatisfactoryDaySearchResult(
  * repertoire lacks a level-3 day.
  */
 object CulinarilySatisfactoryDaySearch {
-    private val fallbackSeeds = listOf(
-        11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L
-    )
-
     fun find(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
@@ -109,78 +104,11 @@ object CulinarilySatisfactoryDaySearch {
             registerComplete(shortlisted)?.let { return success(it) }
         }
 
-        // If the directed composition search did not solve the case, try a deep
-        // local repair of the previous COMPLETE witness.
-        baseline?.let { source ->
-            CulinarilySatisfactoryWitnessRepair.find(
-                source.copy(level = CertifiedDayLevel.COMPLETE),
-                rules,
-                foodsById,
-                dishesById,
-                recommendation,
-                mealShares,
-                portionContext
-            )?.let { repaired ->
-                registerComplete(repaired)?.let { return success(it) }
-            }
-        }
-
-        // Widen to all optional foods only after the targeted paths. This can
-        // discover unusual combinations absent from the shortlists.
-        CulinaryLevel3CompositionSearch.find(
-            rules = rules,
-            foodsById = foodsById,
-            dishesById = dishesById,
-            recommendation = recommendation,
-            mealShares = mealShares,
-            portionContext = portionContext
-        )?.let { candidate ->
-            registerComplete(candidate)?.let { return success(it) }
-        }
-
-        // Seeded generation is the broadest fallback. Keep its best COMPLETE
-        // candidate and repair only once rather than once per seed.
-        for (seed in fallbackSeeds) {
-            val generated = runCatching {
-                WeeklyMenuGenerator.generate(
-                    currentMeals = emptyList(),
-                    rules = rules,
-                    history = emptyList(),
-                    foodsById = foodsById,
-                    dishesById = dishesById,
-                    recommendation = recommendation,
-                    mealShares = mealShares,
-                    seed = seed,
-                    days = setOf(WeekDay.MONDAY),
-                    objective = MenuGenerationObjective.COMPLETE
-                )
-            }.getOrNull() ?: continue
-
-            val candidate = CertifiedDayWitness(
-                level = CertifiedDayLevel.COMPLETE,
-                seed = seed,
-                day = WeekDay.MONDAY,
-                meals = generated.meals,
-                fingerprint = generated.meals.hashCode()
-            )
-            registerComplete(candidate)?.let { return success(it) }
-        }
-
-        bestWitness?.let { best ->
-            if (baseline?.fingerprint != best.fingerprint) {
-                CulinarilySatisfactoryWitnessRepair.find(
-                    best,
-                    rules,
-                    foodsById,
-                    dishesById,
-                    recommendation,
-                    mealShares,
-                    portionContext
-                )?.let { repaired ->
-                    registerComplete(repaired)?.let { return success(it) }
-                }
-            }
-        }
+        // This method runs automatically from the main screen. Deep repair,
+        // exhaustive composition search and seeded generation previously ran
+        // here in sequence and could occupy a phone for minutes. Exhausting the
+        // directed shortlist is enough for this automatic check; failure stays
+        // SEARCH_INCONCLUSIVE instead of blocking the interface.
 
         return CulinarilySatisfactoryDaySearchResult(
             witness = null,
