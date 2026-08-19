@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures as cf
 import html as htmlmod
+import http.cookiejar
 import json
 import re
 import time
@@ -11,13 +12,13 @@ from dataclasses import asdict, dataclass
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, build_opener
+from urllib.request import Request, build_opener, HTTPCookieProcessor
 
 from nutrition_validation import validate_nutrition
 
 BASE = "https://www.compraonline.alcampo.es"
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/127 Safari/537.36"
-VERSION = "alcampo-detail-http-v1.0"
+VERSION = "alcampo-detail-http-v2.0"
 
 
 class VisibleText(HTMLParser):
@@ -71,6 +72,9 @@ def parse_nutrition(text: str):
     for p in (r"Valor energ[eé]tico\s*\(Kcal\)",r"Valor energ[eé]tico",r"Energ[ií]a"):
         m=re.search(p+r"[^0-9]{0,60}([0-9]+(?:[.,][0-9]+)?)\s*kcal\b",nt,re.I)
         if m: kcal=number(m.group(1)); break
+    basis=None
+    m=re.search(r"(?:por|cada)\s*(100)\s*(g|ml)\b",nt,re.I)
+    if m: basis=f"100_{m.group(2).lower()}"
     return {
         "calories":kcal,
         "fat_g":g((r"Grasas?(?!\s+saturadas)",)),
@@ -78,6 +82,7 @@ def parse_nutrition(text: str):
         "protein_g":g((r"Prote[ií]nas?",)),
         "fiber_g":g((r"Fibra(?:\s+alimentaria)?",)),
         "salt_g":g((r"Sal\b",)),
+        "basis":basis,
     }
 
 
@@ -117,36 +122,47 @@ class Detail:
     fat_g:float|None
     fiber_g:float|None
     salt_g:float|None
+    nutrition_basis:str|None
     nutrition_status:str
     error:str|None
     html_bytes:int=0
 
 
-def fetch_one(sku: str, attempts=5) -> Detail:
+def fetch_one(sku: str, attempts=10) -> Detail:
     url=f"{BASE}/products/x/{urllib.parse.quote(str(sku),safe='')}"
     last=None
+    jar=http.cookiejar.CookieJar()
+    opener=build_opener(HTTPCookieProcessor(jar))
     for attempt in range(1,attempts+1):
-        req=Request(url,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml","Accept-Language":"es-ES,es;q=0.9","Cache-Control":"no-cache"})
+        req=Request(url,headers={
+            "User-Agent":UA,
+            "Accept":"text/html,application/xhtml+xml",
+            "Accept-Language":"es-ES,es;q=0.9",
+            "Cache-Control":"no-cache",
+            "Referer":BASE+"/",
+        })
         try:
-            with build_opener().open(req,timeout=60) as r:
+            with opener.open(req,timeout=60) as r:
                 status=getattr(r,"status",200); final=r.geturl(); raw=r.read(); body=raw.decode("utf-8",errors="replace")
-            if status==202 or "window.gokuProps" in body and len(body)<10000:
-                last=f"WAF_PENDING_{status}"; time.sleep(min(attempt*1.0,5)); continue
+            if status==202 or ("window.gokuProps" in body and len(body)<10000):
+                last=f"WAF_PENDING_{status}"; time.sleep(min(0.8*attempt,7)); continue
             text,name,gtin,legal,ingredients,nt=parse_fields(body)
             if all(nt[k] is not None for k in ("calories","protein_g","carbohydrate_g","fat_g")):
                 vr=validate_nutrition(nt["calories"],nt["protein_g"],nt["carbohydrate_g"],nt["fat_g"],nt["fiber_g"],nt["salt_g"])
                 ns="DECLARED_VALID" if vr.valid else "DECLARED_INVALID:"+",".join(vr.reasons)
             else: ns="DECLARED_INCOMPLETE"
-            return Detail(str(sku),url,final,status,name,gtin,legal,ingredients,nt["calories"],nt["protein_g"],nt["carbohydrate_g"],nt["fat_g"],nt["fiber_g"],nt["salt_g"],ns,None,len(raw))
+            return Detail(str(sku),url,final,status,name,gtin,legal,ingredients,nt["calories"],nt["protein_g"],nt["carbohydrate_g"],nt["fat_g"],nt["fiber_g"],nt["salt_g"],nt.get("basis"),ns,None,len(raw))
         except HTTPError as exc:
             try: preview=exc.read().decode("utf-8",errors="replace")[:200]
             except Exception: preview=""
             last=f"HTTP_{exc.code}:{preview}"
-            if exc.code in (403,408,425,429,500,502,503,504): time.sleep(min(attempt*1.2,6)); continue
+            if exc.code in (403,408,425,429,500,502,503,504): time.sleep(min(attempt*1.2,8)); continue
             break
+        except (URLError, TimeoutError) as exc:
+            last=f"{type(exc).__name__}:{exc}"; time.sleep(min(attempt*1.0,7))
         except Exception as exc:
-            last=f"{type(exc).__name__}:{exc}"; time.sleep(min(attempt*1.0,5))
-    return Detail(str(sku),url,None,None,None,None,None,None,None,None,None,None,None,None,"FETCH_ERROR",last,0)
+            last=f"{type(exc).__name__}:{exc}"; time.sleep(min(attempt*1.0,7))
+    return Detail(str(sku),url,None,None,None,None,None,None,None,None,None,None,None,None,None,"FETCH_ERROR",last,0)
 
 
 def load_skus(path: Path | None, explicit: list[str], limit: int):
@@ -161,23 +177,48 @@ def load_skus(path: Path | None, explicit: list[str], limit: int):
     return skus[:limit] if limit else skus
 
 
-def run(out:Path,skus:list[str],workers:int):
-    out.mkdir(parents=True,exist_ok=True); details=[]; done=0
+def fetch_batch(skus:list[str],workers:int,attempts:int):
+    results=[]
+    def one(s): return fetch_one(s,attempts=attempts)
     with cf.ThreadPoolExecutor(max_workers=max(1,workers)) as ex:
-        for d in ex.map(fetch_one,skus):
-            details.append(d); done+=1
-            if done%25==0 or done==len(skus):
-                valid=sum(x.nutrition_status=="DECLARED_VALID" for x in details); err=sum(x.error is not None for x in details)
-                print(f"progress={done}/{len(skus)} valid={valid} errors={err}",flush=True)
-            time.sleep(0.02)
+        for d in ex.map(one,skus): results.append(d)
+    return results
+
+
+def run(out:Path,skus:list[str],workers:int,retry_rounds:int=2):
+    out.mkdir(parents=True,exist_ok=True)
+    details=fetch_batch(skus,workers,10)
+    for round_no in range(1,retry_rounds+1):
+        failed=[d.sku for d in details if d.error is not None and (d.error.startswith("WAF_PENDING_") or d.error.startswith("HTTP_403") or d.error.startswith("HTTP_429") or "Timeout" in d.error)]
+        if not failed: break
+        print(f"retry_round={round_no} transient_failures={len(failed)}",flush=True)
+        time.sleep(min(2.0*round_no,6.0))
+        retried={d.sku:d for d in fetch_batch(failed,max(1,min(workers,2)),12)}
+        details=[retried.get(d.sku,d) if d.sku in retried else d for d in details]
+    valid=sum(x.nutrition_status=="DECLARED_VALID" for x in details); err=sum(x.error is not None for x in details)
+    print(f"progress={len(details)}/{len(skus)} valid={valid} errors={err}",flush=True)
     with (out/"details.jsonl").open("w",encoding="utf-8") as f:
         for d in details: f.write(json.dumps(asdict(d),ensure_ascii=False)+"\n")
-    counts={"requested":len(skus),"fetched":sum(d.error is None for d in details),"errors":sum(d.error is not None for d in details),"with_name":sum(bool(d.name) for d in details),"with_gtin":sum(bool(d.gtin) for d in details),"with_legal_name":sum(bool(d.legal_name) for d in details),"with_ingredients":sum(bool(d.ingredients) for d in details),"declared_valid_nutrition":sum(d.nutrition_status=="DECLARED_VALID" for d in details),"declared_incomplete_nutrition":sum(d.nutrition_status=="DECLARED_INCOMPLETE" for d in details),"declared_invalid_nutrition":sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),"downloaded_html_bytes":sum(d.html_bytes for d in details)}
+    counts={
+        "requested":len(skus),
+        "fetched":sum(d.error is None for d in details),
+        "errors":sum(d.error is not None for d in details),
+        "with_name":sum(bool(d.name) for d in details),
+        "with_gtin":sum(bool(d.gtin) for d in details),
+        "with_legal_name":sum(bool(d.legal_name) for d in details),
+        "with_ingredients":sum(bool(d.ingredients) for d in details),
+        "with_nutrition_basis":sum(bool(d.nutrition_basis) for d in details),
+        "declared_valid_nutrition":sum(d.nutrition_status=="DECLARED_VALID" for d in details),
+        "declared_incomplete_nutrition":sum(d.nutrition_status=="DECLARED_INCOMPLETE" for d in details),
+        "declared_invalid_nutrition":sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
+        "downloaded_html_bytes":sum(d.html_bytes for d in details),
+    }
     summary={"source":BASE,"version":VERSION,"counts":counts}
-    (out/"summary.json").write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(summary,ensure_ascii=False,indent=2)); return summary
+    (out/"summary.json").write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding="utf-8")
+    print(json.dumps(summary,ensure_ascii=False,indent=2)); return summary
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument("--input",type=Path);p.add_argument("--sku",action="append",default=[]);p.add_argument("--limit",type=int,default=0);p.add_argument("--workers",type=int,default=4);p.add_argument("--out",type=Path,default=Path("alcampo-detail-output"));p.add_argument("--min-valid",type=int,default=0)
-    a=p.parse_args(); skus=load_skus(a.input,a.sku,a.limit); s=run(a.out,skus,a.workers); return 0 if s["counts"]["declared_valid_nutrition"]>=a.min_valid else 2
+    p=argparse.ArgumentParser();p.add_argument("--input",type=Path);p.add_argument("--sku",action="append",default=[]);p.add_argument("--limit",type=int,default=0);p.add_argument("--workers",type=int,default=4);p.add_argument("--retry-rounds",type=int,default=2);p.add_argument("--out",type=Path,default=Path("alcampo-detail-output"));p.add_argument("--min-valid",type=int,default=0)
+    a=p.parse_args(); skus=load_skus(a.input,a.sku,a.limit); s=run(a.out,skus,a.workers,a.retry_rounds); return 0 if s["counts"]["declared_valid_nutrition"]>=a.min_valid else 2
 if __name__=="__main__": raise SystemExit(main())
