@@ -1,0 +1,49 @@
+{
+  "retailer": "ALCAMPO",
+  "source": "https://www.compraonline.alcampo.es",
+  "importer_version": "alcampo-direct-v3.0",
+  "built_at": "2026-08-19T17:24:12.298158+00:00",
+  "discovery": {
+    "root": "https://www.compraonline.alcampo.es/categories",
+    "seed_categories": 9,
+    "categories_visited": 87,
+    "products_discovered": 89,
+    "category_fetch_errors": 15,
+    "examples": [
+      [
+        "https://www.compraonline.alcampo.es/products/alcampo-ecológico-tofu-procedente-de-agricultura-biológica-2-x-200-g/522881",
+        "Veganos"
+      ],
+      [
+        "https://www.compraonline.alcampo.es/products/alpro-bebida-de-almendras-100-vegetal-sin-azúcar-ni-edulcorantes-1-l/38829",
+        "Veganos"
+      ],
+      [
+        "https://www.compraonline.alcampo.es/products/alpro-bebida-de-avellanas-100-vegetal-baja-en-grasas-saturadas-1-l/887087",
+        "Veganos"
+      ],
+      [
+        "https://www.compraonline.alcampo.es/products/alpro-bebida-de-avena-100-vegetal-sin-azúcar-ni-edulcorantes-1-l/766667",
+        "Veganos"
+      ],
+      [
+        "https://www.compraonline.alcampo.es/products/alpro-bebida-de-avena-100-vegetal-sin-azúcares-añadidos-6-x-1-l/649871",
+        "Veganos"
+      ]
+    ],
+    "version": "alcampo-direct-v3.0"
+  },
+  "counts": {
+    "discovered": 89,
+    "fetched": 30,
+    "fetch_errors": 59,
+    "with_name": 30,
+    "with_gtin": 0,
+    "with_ingredients": 0,
+    "with_legal_name": 0,
+    "declared_valid_nutrition": 0,
+    "declared_incomplete_nutrition": 30,
+    "declared_invalid_nutrition": 0
+  },
+  "third_party_product_data": false
+}
