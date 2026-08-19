@@ -20,6 +20,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: catalog-alcampo-complete-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   prepare:
     runs-on: ubuntu-24.04
@@ -98,8 +101,6 @@ jobs:
           code=$?
           set -e
           echo "$code" > alcampo-sharded-full/enumeration_exit_code.txt
-          # Incompleteness is retained in enumeration_report.json, but a useful partial
-          # manifest must continue into detail enrichment instead of being discarded.
           test -s alcampo-sharded-full/products.jsonl
       - name: Split first-party product manifest for detail enrichment
         working-directory: tools/catalog
