@@ -2406,9 +2406,15 @@ private fun repertoireProgressTarget(
         assessment.nutrition[kind]?.let { it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET } == true
     }
     if (deficit != null) {
+        val nutrientLabel = when (deficit.first) {
+            NutrientKind.PROTEIN -> "proteína"
+            NutrientKind.CARBOHYDRATES -> "hidratos"
+            NutrientKind.FAT -> "grasa"
+            NutrientKind.CALORIES -> "calorías"
+        }
         return 0 to RepertoireProgressTarget(
             message = "Tu repertorio básico ya contiene los tipos de alimentos necesarios. " +
-                "El mejor intento sigue dejando ${deficit.first.label().lowercase()} por debajo " +
+                "El mejor intento sigue dejando $nutrientLabel por debajo " +
                 "del objetivo, pero eso es un problema de combinación o cantidades, no una " +
                 "nueva petición de ${nutritionalRoleLabel(deficit.second).lowercase()}."
         )
