@@ -245,9 +245,19 @@ object WeeklyMenuGenerator {
             slot.mealType in it.allowedMealTypes &&
                 it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
         }
-        val maximumItems = when (slot.mealType) {
-            MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
-            else -> 4
+        val maximumItems = when {
+            exploration >= 0.75 -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 1
+                else -> 2
+            }
+            exploration >= 0.50 -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 2
+                else -> 3
+            }
+            else -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
+                else -> 4
+            }
         }
 
         if (!hasCompatibleExclusiveRoles(chosen, foodsById, dishesById)) {
