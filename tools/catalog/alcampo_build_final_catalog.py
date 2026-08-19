@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA_VERSION = 5
-BUILDER_VERSION = "alcampo-first-party-final-v1.0"
+BUILDER_VERSION = "alcampo-first-party-final-v1.1"
 
 SCHEMA = """
 CREATE TABLE catalog_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -71,7 +71,6 @@ def main() -> int:
     p.add_argument("--products", type=Path, required=True)
     p.add_argument("--details", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
-    p.add_argument("--evidence-dir", type=Path, required=True)
     p.add_argument("--context", default="Alcampo online España")
     a = p.parse_args()
 
@@ -79,7 +78,6 @@ def main() -> int:
     details = {str(r.get("sku")): r for r in load_jsonl(a.details) if r.get("sku") is not None}
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.unlink(missing_ok=True)
-    a.evidence_dir.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(a.output)
     con.executescript(SCHEMA)
     now = datetime.now(timezone.utc).isoformat()
@@ -92,6 +90,8 @@ def main() -> int:
         "built_at": now,
         "product_identity_source_policy": "FIRST_PARTY_ALCAMPO_ONLY",
         "nutrition_source_policy": "FIRST_PARTY_ALCAMPO_DECLARED_ONLY",
+        "listing_evidence_stream": str(a.products),
+        "detail_evidence_stream": str(a.details),
     }
     for k, v in metadata.items():
         con.execute("INSERT INTO catalog_metadata VALUES(?,?)", (k, v))
@@ -108,12 +108,9 @@ def main() -> int:
             continue
         pid = stable_id(sku)
         d = details.get(sku) or {}
-        if d:
-            counts["detail_rows"] += 1
-        if d.get("error"):
-            counts["detail_fetch_errors"] += 1
-        if complete_detail_nutrition(d):
-            counts["declared_valid_raw"] += 1
+        if d: counts["detail_rows"] += 1
+        if d.get("error"): counts["detail_fetch_errors"] += 1
+        if complete_detail_nutrition(d): counts["declared_valid_raw"] += 1
         canonical_name = str(d.get("name") or name).strip()
         legal = d.get("legal_name") or None
         ingredients = d.get("ingredients") or None
@@ -138,18 +135,14 @@ def main() -> int:
                 (pid, "front", image, "Alcampo", sku, None, None, 0, None, None, 1, now),
             )
 
-        prod_ev = a.evidence_dir / f"listing-{sku}.json"
-        prod_ev.write_text(json.dumps(product, ensure_ascii=False, sort_keys=True), encoding="utf-8")
         con.execute(
             "INSERT INTO evidence(product_id,source,source_record_id,observed_at,raw_path,raw_sha256,adapter_version,evidence_kind) VALUES(?,?,?,?,?,?,?,?)",
-            (pid, "Alcampo", sku, now, str(prod_ev), sha(product), "alcampo-webproductpagews-v6", "LISTING"),
+            (pid, "Alcampo", sku, now, f"{a.products.name}#sku={sku}", sha(product), "alcampo-webproductpagews-v6", "LISTING"),
         )
         if d:
-            detail_ev = a.evidence_dir / f"detail-{sku}.json"
-            detail_ev.write_text(json.dumps(d, ensure_ascii=False, sort_keys=True), encoding="utf-8")
             con.execute(
                 "INSERT INTO evidence(product_id,source,source_record_id,observed_at,raw_path,raw_sha256,adapter_version,evidence_kind) VALUES(?,?,?,?,?,?,?,?)",
-                (pid, "Alcampo", sku, now, str(detail_ev), sha(d), "alcampo-detail-http-v2", "PRODUCT_DETAIL"),
+                (pid, "Alcampo", sku, now, f"{a.details.name}#sku={sku}", sha(d), "alcampo-detail-http-v2", "PRODUCT_DETAIL"),
             )
 
         usable = False
@@ -173,12 +166,10 @@ def main() -> int:
             reason = "Ficha Alcampo no recuperada"
         else:
             reason = "Falta nutrición declarada comparable"
-        if usable:
-            counts["nutritionally_usable"] += 1
+        if usable: counts["nutritionally_usable"] += 1
         con.execute("INSERT INTO classifications VALUES(?,?,?,?,?)", (pid, "OTHER", "UNKNOWN", 0.0, "pending"))
         con.execute("INSERT INTO eligibility VALUES(?,?,?,?,?,?,?)", (pid, 1, 1, int(usable), 0, 0, reason))
 
-    con.commit()
     for k, v in counts.items():
         con.execute("INSERT OR REPLACE INTO catalog_metadata(key,value) VALUES(?,?)", (f"build_count:{k}", str(v)))
     con.commit()
