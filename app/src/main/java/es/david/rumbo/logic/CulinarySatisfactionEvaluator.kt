@@ -171,6 +171,7 @@ object CulinarySatisfactionEvaluator {
         val eligibleRoles = occurrences.map { occurrence ->
             occurrence.roles.filterTo(linkedSetOf()) { role ->
                 PortionPolicyResolver.resolve(
+                    occurrence.food,
                     role,
                     meal.type,
                     recommendation,
