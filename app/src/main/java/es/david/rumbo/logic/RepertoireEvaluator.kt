@@ -39,7 +39,10 @@ data class CulinaryNeed(
     val kind: CulinaryNeedKind,
     val mealType: MealType,
     val acceptedRoles: Set<CulinaryRole>,
-    val message: String
+    val message: String,
+    val sourceFoodId: Long? = null,
+    val sourceFoodName: String? = null,
+    val sourceRole: CulinaryRole? = null
 )
 
 data class RepertoireAssessment(
@@ -313,24 +316,52 @@ object RepertoireEvaluator {
         )
     }
 
+    /**
+     * Reports a hard companion dependency only when it is unavoidable for one
+     * concrete food in that meal. A multi-role food must not trigger a request
+     * just because one of its possible roles has a dependency if another role
+     * can be used without it.
+     */
     private fun dependencyNeeds(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>
     ): List<CulinaryNeed> = MealType.entries.mapNotNull { mealType ->
-        val mealRules = rules.filter {
+        val entries = rules.filter {
             mealType in it.allowedMealTypes || it.requiredSlots().any { slot -> slot.mealType == mealType }
+        }.mapNotNull { rule ->
+            val food = foodsById[rule.itemId] ?: return@mapNotNull null
+            val roles = CulinaryPolicy.roles(food)
+            if (roles.isEmpty()) null else Triple(rule, food, roles)
         }
-        val roleChoices = mealRules.mapNotNull { rule ->
-            foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
-        }
-        val missing = CulinaryPolicy.missingRequiredRoles(roleChoices)
-        if (missing.isEmpty()) null else CulinaryNeed(
-            CulinaryNeedKind.COMPANION_BASE,
-            mealType,
-            missing,
-            "Falta ${missing.joinToString(" o ") { it.label.lowercase() }} para completar una combinación en " +
-                mealType.label.lowercase() + "."
-        )
+        val availableRoles = entries.flatMapTo(linkedSetOf()) { it.third }
+
+        entries.asSequence().mapNotNull { (_, food, roles) ->
+            val missingByRole = roles.associateWith { role ->
+                CulinaryPolicy.policy(role).requiredRoles - availableRoles
+            }
+            // At least one role can be performed without a missing hard
+            // companion, so no dependency is proven for this food.
+            if (missingByRole.values.any { it.isEmpty() }) return@mapNotNull null
+
+            val cause = missingByRole.entries.minWithOrNull(
+                compareBy<Map.Entry<CulinaryRole, Set<CulinaryRole>>> { it.value.size }
+                    .thenBy { it.key.ordinal }
+            ) ?: return@mapNotNull null
+            val missing = cause.value
+            if (missing.isEmpty()) return@mapNotNull null
+            val role = cause.key
+            val missingLabel = missing.joinToString(" o ") { it.label.lowercase() }
+            CulinaryNeed(
+                kind = CulinaryNeedKind.COMPANION_BASE,
+                mealType = mealType,
+                acceptedRoles = missing,
+                message = "${food.name} está disponible para ${mealType.label.lowercase()} como " +
+                    "${role.label.lowercase()}, pero necesita $missingLabel para formar una combinación válida.",
+                sourceFoodId = food.id,
+                sourceFoodName = food.name,
+                sourceRole = role
+            )
+        }.firstOrNull()
     }
 
     private fun macroCulinaryNeeds(
