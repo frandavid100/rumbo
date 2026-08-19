@@ -146,9 +146,6 @@ object CertifiedDayWitnessEvaluator {
         }
         val availableFruitMeals = availableMeals(FoodCategory.FRUIT)
         val availableVegetableMeals = availableMeals(FoodCategory.VEGETABLE)
-        // Daily COMPLETE search is cheap enough to explore more deterministic
-        // paths than VIABLE. This avoids asking the user for foods from a lower
-        // level merely because a small heuristic sample missed the combination.
         val seeds = listOf(
             11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L, 509L, 607L, 701L, 809L,
             907L, 1009L, 1103L, 1201L, 1301L, 1409L, 1511L, 1601L, 1709L, 1801L,
@@ -185,7 +182,6 @@ object CertifiedDayWitnessEvaluator {
                 availableFruitMeals = availableFruitMeals,
                 availableVegetableMeals = availableVegetableMeals
             )
-            // Lexicographic in practice: first secure both fruit/vegetable slots, then fibre.
             val score = fruitMeals.coerceAtMost(2) * 1_000_000.0 +
                 vegetableMeals.coerceAtMost(2) * 1_000_000.0 +
                 assessment.actual.fiberGrams.coerceAtMost(25.0) * 1_000.0
@@ -196,7 +192,39 @@ object CertifiedDayWitnessEvaluator {
             }
         }
 
-        baselineWitness?.takeIf { it.isStructurallyValid() }?.let(::considerProgressWitness)
+        fun repairedResult(repaired: CertifiedDayWitness): CompleteDaySearchResult {
+            val assessment = MealPlanEvaluator.assessDay(
+                repaired.day, repaired.meals, foodsById, dishesById, recommendation
+            )
+            return CompleteDaySearchResult(
+                witness = repaired,
+                diagnostic = CompleteDayDiagnostic(
+                    fruitMeals = mealsContaining(
+                        repaired.meals, FoodCategory.FRUIT, foodsById, dishesById
+                    ),
+                    vegetableMeals = mealsContaining(
+                        repaired.meals, FoodCategory.VEGETABLE, foodsById, dishesById
+                    ),
+                    fiberGrams = assessment.actual.fiberGrams,
+                    viable = true,
+                    availableFruitMeals = availableFruitMeals,
+                    availableVegetableMeals = availableVegetableMeals
+                ),
+                progressWitness = repaired.copy(level = CertifiedDayLevel.VIABLE)
+            )
+        }
+
+        baselineWitness?.takeIf { it.isStructurallyValid() }?.let { baseline ->
+            considerProgressWitness(baseline)
+            CompleteDayWitnessRepair.find(
+                baseline,
+                rules,
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares
+            )?.let { return repairedResult(it) }
+        }
 
         for (seed in seeds) {
             val generated = runCatching {
@@ -267,37 +295,15 @@ object CertifiedDayWitnessEvaluator {
             }
         }
 
-        val repairBases = listOfNotNull(baselineWitness, bestProgressWitness)
-            .distinctBy { it.fingerprint }
-        for (repairBase in repairBases) {
-            val repaired = CompleteDayWitnessRepair.find(
-                repairBase,
+        bestProgressWitness?.let { progress ->
+            CompleteDayWitnessRepair.find(
+                progress,
                 rules,
                 foodsById,
                 dishesById,
                 recommendation,
                 mealShares
-            ) ?: continue
-            val assessment = MealPlanEvaluator.assessDay(
-                repaired.day, repaired.meals, foodsById, dishesById, recommendation
-            )
-            val diagnostic = CompleteDayDiagnostic(
-                fruitMeals = mealsContaining(
-                    repaired.meals, FoodCategory.FRUIT, foodsById, dishesById
-                ),
-                vegetableMeals = mealsContaining(
-                    repaired.meals, FoodCategory.VEGETABLE, foodsById, dishesById
-                ),
-                fiberGrams = assessment.actual.fiberGrams,
-                viable = true,
-                availableFruitMeals = availableFruitMeals,
-                availableVegetableMeals = availableVegetableMeals
-            )
-            return CompleteDaySearchResult(
-                repaired,
-                diagnostic,
-                repaired.copy(level = CertifiedDayLevel.VIABLE)
-            )
+            )?.let { return repairedResult(it) }
         }
 
         return CompleteDaySearchResult(
