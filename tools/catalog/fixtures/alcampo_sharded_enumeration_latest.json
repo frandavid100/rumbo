@@ -1,0 +1,604 @@
+{
+  "child_categories_seen": 98,
+  "child_categories_failed": 66,
+  "failed": [
+    {
+      "label": "Panadería, Harina y Masas",
+      "rid": "OC1009",
+      "expected_product_count": 533,
+      "required_minimum": 469,
+      "food_products": 446,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Aceite y Vinagre",
+      "rid": "OC18",
+      "expected_product_count": 358,
+      "required_minimum": 315,
+      "food_products": 241,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Helados",
+      "rid": "OC200220184",
+      "expected_product_count": 448,
+      "required_minimum": 394,
+      "food_products": 352,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Galletas",
+      "rid": "OC100805",
+      "expected_product_count": 583,
+      "required_minimum": 513,
+      "food_products": 506,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Carne",
+      "rid": "OC13",
+      "expected_product_count": 1086,
+      "required_minimum": 955,
+      "food_products": 440,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Mermelada, almibares, membrillo",
+      "rid": "OC100802",
+      "expected_product_count": 282,
+      "required_minimum": 248,
+      "food_products": 204,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Aperitivos, aceitunas y frutos secos",
+      "rid": "OC120",
+      "expected_product_count": 964,
+      "required_minimum": 848,
+      "food_products": 681,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Azúcar, miel y otros edulcorantes",
+      "rid": "OCAzucaryedulcorante",
+      "expected_product_count": 148,
+      "required_minimum": 130,
+      "food_products": 106,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Carne",
+      "rid": "OC1202",
+      "expected_product_count": 26,
+      "required_minimum": 22,
+      "food_products": 19,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Sal, Especias y Sazonadores",
+      "rid": "OC611",
+      "expected_product_count": 327,
+      "required_minimum": 287,
+      "food_products": 258,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Margarinas y otros untables",
+      "rid": "OC1607",
+      "expected_product_count": 33,
+      "required_minimum": 29,
+      "food_products": 24,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Conservas cárnicas, platos preparados y almíbares",
+      "rid": "OC1004",
+      "expected_product_count": 415,
+      "required_minimum": 365,
+      "food_products": 297,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Producto Fresco Ecológico",
+      "rid": "OC261120211",
+      "expected_product_count": 160,
+      "required_minimum": 140,
+      "food_products": 137,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Frutas",
+      "rid": "OC1701",
+      "expected_product_count": 281,
+      "required_minimum": 247,
+      "food_products": 172,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Quesos",
+      "rid": "OCQuesos",
+      "expected_product_count": 1068,
+      "required_minimum": 939,
+      "food_products": 795,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Refrescos",
+      "rid": "OC1103",
+      "expected_product_count": 544,
+      "required_minimum": 478,
+      "food_products": 465,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Desayunos Ecológicos",
+      "rid": "OC2611202123",
+      "expected_product_count": 239,
+      "required_minimum": 210,
+      "food_products": 199,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Charcutería",
+      "rid": "OC15",
+      "expected_product_count": 1151,
+      "required_minimum": 1012,
+      "food_products": 830,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Chocolates, Cremas untar y Bombones",
+      "rid": "OC1008",
+      "expected_product_count": 704,
+      "required_minimum": 619,
+      "food_products": 530,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Mantequilla",
+      "rid": "OC1606",
+      "expected_product_count": 64,
+      "required_minimum": 56,
+      "food_products": 44,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Huevos",
+      "rid": "OC1608",
+      "expected_product_count": 50,
+      "required_minimum": 44,
+      "food_products": 37,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Tomate Frito y Salsas",
+      "rid": "OCTomateySalsas",
+      "expected_product_count": 424,
+      "required_minimum": 373,
+      "food_products": 312,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Bebidas ecológicas",
+      "rid": "OC101303",
+      "expected_product_count": 61,
+      "required_minimum": 53,
+      "food_products": 13,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Asados y carnes",
+      "rid": "OC09423",
+      "expected_product_count": 35,
+      "required_minimum": 30,
+      "food_products": 15,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Platos Internacionales",
+      "rid": "OC09421",
+      "expected_product_count": 48,
+      "required_minimum": 42,
+      "food_products": 33,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Empanadas",
+      "rid": "OC09428",
+      "expected_product_count": 28,
+      "required_minimum": 24,
+      "food_products": 16,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Agua, Soda y Gaseosas",
+      "rid": "OC1101",
+      "expected_product_count": 247,
+      "required_minimum": 217,
+      "food_products": 186,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Bollería y Pastelería",
+      "rid": "OC1011",
+      "expected_product_count": 421,
+      "required_minimum": 370,
+      "food_products": 280,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Conservas vegetales",
+      "rid": "OC100401",
+      "expected_product_count": 375,
+      "required_minimum": 330,
+      "food_products": 282,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Zumos con leche",
+      "rid": "OC160403",
+      "expected_product_count": 25,
+      "required_minimum": 22,
+      "food_products": 17,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Preparación Postres",
+      "rid": "OC1007",
+      "expected_product_count": 229,
+      "required_minimum": 201,
+      "food_products": 180,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Cacaos  solubles",
+      "rid": "OC100803017",
+      "expected_product_count": 76,
+      "required_minimum": 66,
+      "food_products": 60,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Tu despensa Ecológica",
+      "rid": "OC2611202121",
+      "expected_product_count": 294,
+      "required_minimum": 258,
+      "food_products": 243,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "San jacobos, nuggets y pollo empanado",
+      "rid": "OCPolloEmpanado",
+      "expected_product_count": 36,
+      "required_minimum": 31,
+      "food_products": 30,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Pescados, mariscos y surimis",
+      "rid": "OC1201",
+      "expected_product_count": 274,
+      "required_minimum": 241,
+      "food_products": 195,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Tintos de verano y sangrías",
+      "rid": "OC11534",
+      "expected_product_count": 48,
+      "required_minimum": 42,
+      "food_products": 11,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Nata",
+      "rid": "OC1605",
+      "expected_product_count": 51,
+      "required_minimum": 44,
+      "food_products": 30,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Pastelería",
+      "rid": "OC1282",
+      "expected_product_count": 395,
+      "required_minimum": 347,
+      "food_products": 92,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Té e Infusiones",
+      "rid": "OC100807",
+      "expected_product_count": 275,
+      "required_minimum": 242,
+      "food_products": 233,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Zumos de Frutas",
+      "rid": "OC1102",
+      "expected_product_count": 305,
+      "required_minimum": 268,
+      "food_products": 200,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Comida Internacional",
+      "rid": "OC9410",
+      "expected_product_count": 349,
+      "required_minimum": 307,
+      "food_products": 278,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Panadería",
+      "rid": "OC1281",
+      "expected_product_count": 270,
+      "required_minimum": 237,
+      "food_products": 110,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Sushi",
+      "rid": "OC140502",
+      "expected_product_count": 38,
+      "required_minimum": 33,
+      "food_products": 17,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Preparado lácteo",
+      "rid": "OCPreparadolacteo",
+      "expected_product_count": 45,
+      "required_minimum": 39,
+      "food_products": 38,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Conservas de pescado",
+      "rid": "OC100402",
+      "expected_product_count": 487,
+      "required_minimum": 428,
+      "food_products": 385,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Verduras y hortalizas",
+      "rid": "OC1702",
+      "expected_product_count": 464,
+      "required_minimum": 408,
+      "food_products": 272,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Golosinas",
+      "rid": "OC100902",
+      "expected_product_count": 417,
+      "required_minimum": 366,
+      "food_products": 266,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Tartas, postres y fruta congelada",
+      "rid": "OC1209",
+      "expected_product_count": 69,
+      "required_minimum": 60,
+      "food_products": 46,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Bebidas Ecológicas",
+      "rid": "OC261120213",
+      "expected_product_count": 171,
+      "required_minimum": 150,
+      "food_products": 101,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Platos preparados congelados",
+      "rid": "OC1205",
+      "expected_product_count": 303,
+      "required_minimum": 266,
+      "food_products": 249,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Gazpachos, salmorejos y cremas",
+      "rid": "OC943",
+      "expected_product_count": 102,
+      "required_minimum": 89,
+      "food_products": 76,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Patatas, croquetas y empanadillas",
+      "rid": "OCCroquetasEmpanadillas",
+      "expected_product_count": 95,
+      "required_minimum": 83,
+      "food_products": 78,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Pescados, mariscos y moluscos",
+      "rid": "OC14",
+      "expected_product_count": 625,
+      "required_minimum": 550,
+      "food_products": 189,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Cafés",
+      "rid": "OC100806",
+      "expected_product_count": 533,
+      "required_minimum": 469,
+      "food_products": 435,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Sopas, Caldos y Cremas",
+      "rid": "OCCaldosycremas",
+      "expected_product_count": 207,
+      "required_minimum": 182,
+      "food_products": 156,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Yogures, Bífidus, L-Casei y productos vegetales y fermentados",
+      "rid": "OC1601",
+      "expected_product_count": 458,
+      "required_minimum": 403,
+      "food_products": 376,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Jamones y paletas",
+      "rid": "OC151001",
+      "expected_product_count": 91,
+      "required_minimum": 80,
+      "food_products": 47,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Leche",
+      "rid": "OC1603",
+      "expected_product_count": 332,
+      "required_minimum": 292,
+      "food_products": 241,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Batidos, horchatas y bebidas frías de café",
+      "rid": "OC1604",
+      "expected_product_count": 138,
+      "required_minimum": 121,
+      "food_products": 105,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Sándwiches, bocadillos y roscas",
+      "rid": "OC2002201853",
+      "expected_product_count": 69,
+      "required_minimum": 60,
+      "food_products": 56,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Productos proteicos",
+      "rid": "OC1612",
+      "expected_product_count": 78,
+      "required_minimum": 68,
+      "food_products": 64,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Ahumados, surimis, anchoas, pulpos y otros",
+      "rid": "OC184",
+      "expected_product_count": 387,
+      "required_minimum": 340,
+      "food_products": 225,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Bebidas Alcohólicas",
+      "rid": "OC1154",
+      "expected_product_count": 395,
+      "required_minimum": 347,
+      "food_products": 8,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Postres",
+      "rid": "OC1602",
+      "expected_product_count": 344,
+      "required_minimum": 302,
+      "food_products": 288,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Otras especialidades",
+      "rid": "OC09427",
+      "expected_product_count": 76,
+      "required_minimum": 66,
+      "food_products": 48,
+      "api_errors": [],
+      "ok": false
+    },
+    {
+      "label": "Arroz y Legumbres",
+      "rid": "OC140",
+      "expected_product_count": 366,
+      "required_minimum": 322,
+      "food_products": 298,
+      "api_errors": [],
+      "ok": false
+    }
+  ],
+  "sum_child_expected_counts": 22744,
+  "unique_products_after_dedup": 13877,
+  "minimum_products": 5000,
+  "complete_enumeration": false
+}
