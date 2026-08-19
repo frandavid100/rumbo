@@ -6,6 +6,7 @@ import html as htmlmod
 import http.cookiejar
 import json
 import re
+import threading
 import time
 import urllib.parse
 from dataclasses import asdict, dataclass
@@ -18,7 +19,8 @@ from nutrition_validation import validate_nutrition
 
 BASE = "https://www.compraonline.alcampo.es"
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/127 Safari/537.36"
-VERSION = "alcampo-detail-http-v2.0"
+VERSION = "alcampo-detail-http-v2.1"
+_TLS = threading.local()
 
 
 class VisibleText(HTMLParser):
@@ -60,7 +62,7 @@ def section(text: str, start_patterns: tuple[str,...], stop_patterns: tuple[str,
 
 
 def parse_nutrition(text: str):
-    nt=section(text,(r"Datos nutricionales?",r"Informaci[oó]n nutricional"),(
+    nt=section(text,(r"Datos nutricionales?",r"Informaci[oó]n nutricional",r"Valores? nutricionales?"),(
         r"\nIngredientes\b",r"\nAl[eé]rgenos\b",r"\nCaracter[ií]sticas\b",r"\nConservaci[oó]n\b",r"\nAlmacenamiento\b",r"\nProductos similares\b",r"\nOpiniones\b"
     ),max_len=12000) or text
     def g(patterns):
@@ -73,8 +75,17 @@ def parse_nutrition(text: str):
         m=re.search(p+r"[^0-9]{0,60}([0-9]+(?:[.,][0-9]+)?)\s*kcal\b",nt,re.I)
         if m: kcal=number(m.group(1)); break
     basis=None
-    m=re.search(r"(?:por|cada)\s*(100)\s*(g|ml)\b",nt,re.I)
-    if m: basis=f"100_{m.group(2).lower()}"
+    # Alcampo uses several equivalent table headings: "por 100 g", "100g" or
+    # a standalone "100 ml" column. Restrict the fallback to the nutrition section
+    # so a pack-size mention elsewhere cannot be mistaken for the declaration basis.
+    for pattern in (
+        r"(?:por|cada)\s*100\s*(g|ml)\b",
+        r"(?:^|\n)\s*100\s*(g|ml)\b",
+        r"\b100\s*(g|ml)\s*(?:\n|$)",
+    ):
+        m=re.search(pattern,nt,re.I)
+        if m:
+            basis=f"100_{m.group(1).lower()}"; break
     return {
         "calories":kcal,
         "fat_g":g((r"Grasas?(?!\s+saturadas)",)),
@@ -128,24 +139,59 @@ class Detail:
     html_bytes:int=0
 
 
+def _new_opener():
+    jar=http.cookiejar.CookieJar()
+    return build_opener(HTTPCookieProcessor(jar))
+
+
+def _thread_opener(reset: bool=False):
+    if reset or not getattr(_TLS,"opener",None):
+        _TLS.opener=_new_opener()
+    return _TLS.opener
+
+
+def _request(opener, url: str, referer: str):
+    req=Request(url,headers={
+        "User-Agent":UA,
+        "Accept":"text/html,application/xhtml+xml",
+        "Accept-Language":"es-ES,es;q=0.9",
+        "Cache-Control":"no-cache",
+        "Referer":referer,
+    })
+    with opener.open(req,timeout=60) as r:
+        status=getattr(r,"status",200); final=r.geturl(); raw=r.read()
+    return status,final,raw,raw.decode("utf-8",errors="replace")
+
+
+def _prime(opener):
+    # A normal first-party navigation establishes the anonymous session cookies used
+    # by CloudFront/AWS WAF. Failure is harmless: the product request remains the source
+    # of truth and will run through the normal retry path.
+    try:
+        status,_,_,body=_request(opener,BASE+"/categories/alimentaci%C3%B3n/OCC10",BASE+"/")
+        return status != 202 and not ("window.gokuProps" in body and len(body)<10000)
+    except Exception:
+        return False
+
+
 def fetch_one(sku: str, attempts=10) -> Detail:
     url=f"{BASE}/products/x/{urllib.parse.quote(str(sku),safe='')}"
     last=None
-    jar=http.cookiejar.CookieJar()
-    opener=build_opener(HTTPCookieProcessor(jar))
+    opener=_thread_opener()
+    if not getattr(_TLS,"primed",False):
+        _TLS.primed=_prime(opener)
+    pending_streak=0
     for attempt in range(1,attempts+1):
-        req=Request(url,headers={
-            "User-Agent":UA,
-            "Accept":"text/html,application/xhtml+xml",
-            "Accept-Language":"es-ES,es;q=0.9",
-            "Cache-Control":"no-cache",
-            "Referer":BASE+"/",
-        })
         try:
-            with opener.open(req,timeout=60) as r:
-                status=getattr(r,"status",200); final=r.geturl(); raw=r.read(); body=raw.decode("utf-8",errors="replace")
+            status,final,raw,body=_request(opener,url,BASE+"/")
             if status==202 or ("window.gokuProps" in body and len(body)<10000):
-                last=f"WAF_PENDING_{status}"; time.sleep(min(0.8*attempt,7)); continue
+                last=f"WAF_PENDING_{status}"; pending_streak+=1
+                # A challenge can become sticky to an anonymous session. After a short
+                # streak, rotate the cookie jar and prime a fresh first-party session.
+                if pending_streak in (3,6):
+                    opener=_thread_opener(reset=True); _TLS.primed=_prime(opener)
+                time.sleep(min(0.8*attempt,7)); continue
+            pending_streak=0
             text,name,gtin,legal,ingredients,nt=parse_fields(body)
             if all(nt[k] is not None for k in ("calories","protein_g","carbohydrate_g","fat_g")):
                 vr=validate_nutrition(nt["calories"],nt["protein_g"],nt["carbohydrate_g"],nt["fat_g"],nt["fiber_g"],nt["salt_g"])
@@ -156,7 +202,10 @@ def fetch_one(sku: str, attempts=10) -> Detail:
             try: preview=exc.read().decode("utf-8",errors="replace")[:200]
             except Exception: preview=""
             last=f"HTTP_{exc.code}:{preview}"
-            if exc.code in (403,408,425,429,500,502,503,504): time.sleep(min(attempt*1.2,8)); continue
+            if exc.code in (403,408,425,429,500,502,503,504):
+                if exc.code in (403,429) and attempt in (3,6):
+                    opener=_thread_opener(reset=True); _TLS.primed=_prime(opener)
+                time.sleep(min(attempt*1.2,8)); continue
             break
         except (URLError, TimeoutError) as exc:
             last=f"{type(exc).__name__}:{exc}"; time.sleep(min(attempt*1.0,7))
