@@ -97,7 +97,7 @@ object RepertoireEvaluator {
         recommendation: Recommendation,
         mealShares: Map<MealType, Double> = defaultShares,
         thresholds: RepertoireThresholds = RepertoireThresholds(),
-        maximumSearchBatches: Int = 12
+        maximumSearchBatches: Int = 48
     ): RepertoireAssessment {
         require(maximumSearchBatches > 0)
         var latest: RepertoireAssessment? = null
