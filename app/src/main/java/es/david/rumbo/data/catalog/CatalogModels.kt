@@ -60,7 +60,8 @@ data class CatalogClassification(
     val classifierVersion: String?,
     val classified: Boolean,
     val status: String?,
-    val roles: List<CatalogRole>
+    val roles: List<CatalogRole>,
+    val portionBasisGrams: Double? = null
 ) {
     val nutritionalRoles: Set<String>
         get() = roles.filter { it.axis == CatalogRoleAxis.NUTRITIONAL }.mapTo(linkedSetOf()) { it.role }
@@ -146,6 +147,7 @@ object CatalogFoodAdapter {
             saltGrams = nutrition.saltGrams,
             retailer = product.listings.map { it.retailer }.distinct().joinToString(", ").takeIf { it.isNotBlank() },
             source = product.provenance.catalogSource ?: nutrition.source,
+            portionBasisGrams = classification.portionBasisGrams,
             nutritionalRoles = classification.nutritionalRoles,
             culinaryRoles = classification.culinaryRoles
         ).takeIf { it.isValid() && it.hasComparableNutrition() }

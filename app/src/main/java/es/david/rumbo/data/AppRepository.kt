@@ -625,7 +625,7 @@ class AppRepository(context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 24)
+        put("schemaVersion", 25)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -723,6 +723,7 @@ class AppRepository(context: Context) {
                 putNullable("unitAmount", food.unitAmount)
                 put("wholeUnitsOnly", food.wholeUnitsOnly)
                 put("unitDivisions", food.unitDivisions)
+                putNullable("portionBasisGrams", food.portionBasisGrams)
                 put("nutritionalRoles", JSONArray(food.nutritionalRoles.toList()))
                 put("culinaryRoles", JSONArray(food.culinaryRoles.toList()))
             })
@@ -1011,6 +1012,8 @@ class AppRepository(context: Context) {
                     unitAmount = item.optionalDouble("unitAmount"),
                     wholeUnitsOnly = item.optBoolean("wholeUnitsOnly", false),
                     unitDivisions = item.optInt("unitDivisions", 1).coerceIn(1, 100),
+                    portionBasisGrams = item.optionalDouble("portionBasisGrams")
+                        ?: baseFoodsById[item.getLong("id")]?.portionBasisGrams,
                     nutritionalRoles = item.optJSONArray("nutritionalRoles")?.let { values ->
                         buildSet { for (i in 0 until values.length()) add(values.getString(i)) }
                     } ?: baseFoodsById[item.getLong("id")]?.nutritionalRoles.orEmpty(),
