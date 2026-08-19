@@ -1,0 +1,42 @@
+{
+  "retailer": "ALCAMPO",
+  "source": "https://www.compraonline.alcampo.es",
+  "importer_version": "alcampo-direct-v4.0",
+  "built_at": "2026-08-19T20:45:29.609221+00:00",
+  "discovery": {
+    "root": "https://www.compraonline.alcampo.es/categories",
+    "seed_categories": 9,
+    "food_root_slugs": [
+      "alimentación",
+      "comida-preparada",
+      "congelados",
+      "desayuno-y-merienda",
+      "frescos",
+      "leche-huevos-lácteos-yogures-y-bebidas-vegetales",
+      "sin-gluten-sin-lactosa-nutrición-deportiva-y-funcional",
+      "supermercado-ecológico",
+      "veganos"
+    ],
+    "categories_visited": 120,
+    "category_errors": 0,
+    "tiny_category_pages": 114,
+    "products_discovered": 142,
+    "discovery_mode": "first_party_server_html_links",
+    "error_examples": [],
+    "version": "alcampo-direct-v5.0"
+  },
+  "counts": {
+    "discovered": 40,
+    "identified": 40,
+    "with_product_url": 40,
+    "with_gtin": 0,
+    "with_ingredients": 0,
+    "with_legal_name": 0,
+    "with_image": 0,
+    "declared_valid_nutrition": 0,
+    "declared_incomplete_nutrition": 40,
+    "declared_invalid_nutrition": 0,
+    "detail_errors": 0
+  },
+  "third_party_product_data": false
+}
