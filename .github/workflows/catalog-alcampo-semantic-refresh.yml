@@ -1,0 +1,81 @@
+name: Catalog Alcampo semantic review refresh
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/manual/alcampo_semantic_reviews.jsonl'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-semantic-refresh-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Find latest completed complete-pipeline snapshot
+        id: base
+        run: |
+          run_id=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/catalog-alcampo-sharded-enumeration.yml/runs?branch=agent/catalog-phase1&status=completed&per_page=30" \
+            --jq '.workflow_runs[] | select(.conclusion=="success") | .id' | head -n 1)
+          if [ -z "$run_id" ]; then
+            echo "No successful Alcampo base snapshot exists yet" >&2
+            exit 2
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download latest canonical snapshot
+        run: |
+          mkdir -p alcampo-reviewed
+          gh run download "${{ steps.base.outputs.run_id }}" -n alcampo-food-catalog-classified-snapshot -D alcampo-reviewed
+          test -s alcampo-reviewed/alcampo_catalog.sqlite
+          test -s alcampo-reviewed/source_products.jsonl
+      - name: Apply persisted semantic model reviews
+        working-directory: tools/catalog
+        run: python alcampo_semantic_gate.py ../../alcampo-reviewed/alcampo_catalog.sqlite --reviews manual/alcampo_semantic_reviews.jsonl
+      - name: Prepare next review batch
+        working-directory: tools/catalog
+        run: |
+          python alcampo_prepare_semantic_review_v2.py ../../alcampo-reviewed/alcampo_catalog.sqlite \
+            --observations ../../alcampo-reviewed/source_products.jsonl \
+            --reviews manual/alcampo_semantic_reviews.jsonl \
+            --output ../../alcampo-reviewed/semantic_review_next.jsonl \
+            --progress ../../alcampo-reviewed/semantic_review_progress.json \
+            --limit 500
+      - name: Re-export reviewed snapshot
+        working-directory: tools/catalog
+        run: |
+          args=(../../alcampo-reviewed/alcampo_catalog.sqlite --jsonl ../../alcampo-reviewed/alcampo_catalog.jsonl --summary ../../alcampo-reviewed/summary.json)
+          if [ -f ../../alcampo-reviewed/detail_merge_summary.json ]; then args+=(--detail-summary ../../alcampo-reviewed/detail_merge_summary.json); fi
+          if [ -f ../../alcampo-reviewed/enumeration_report.json ]; then args+=(--enumeration-report ../../alcampo-reviewed/enumeration_report.json); fi
+          python alcampo_export_final.py "${args[@]}"
+      - name: Persist reviewed coverage and next queue
+        run: |
+          cp alcampo-reviewed/summary.json tools/catalog/fixtures/alcampo_final_summary_latest.json
+          cp alcampo-reviewed/semantic_review_next.jsonl tools/catalog/fixtures/alcampo_semantic_review_next.jsonl
+          cp alcampo-reviewed/semantic_review_progress.json tools/catalog/fixtures/alcampo_semantic_review_progress_latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_final_summary_latest.json \
+                  tools/catalog/fixtures/alcampo_semantic_review_next.jsonl \
+                  tools/catalog/fixtures/alcampo_semantic_review_progress_latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist reviewed Alcampo semantic progress"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-food-catalog-classified-snapshot-reviewed
+          path: alcampo-reviewed/
+          retention-days: 14
