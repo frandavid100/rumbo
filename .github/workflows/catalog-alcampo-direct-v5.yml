@@ -5,6 +5,7 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - 'tools/catalog/alcampo_direct_catalog_v5.py'
+      - 'tools/catalog/finalize_alcampo_classification.py'
       - '.github/workflows/catalog-alcampo-direct-v5.yml'
   workflow_dispatch:
 
@@ -117,12 +118,15 @@ jobs:
           con=sqlite3.connect(dbp); con.executemany('DELETE FROM nutrition WHERE product_id=?',[(x,) for x in invalid]); con.commit(); con.close()
           print(f'removed_nonvalid_nutrition={len(invalid)}')
           PY
-      - name: Baseline classification
+      - name: Apply auditable manual classification policy
         if: always()
         working-directory: tools/catalog
         run: |
-          if [ -f alcampo-direct-v5-full/alcampo_food_catalog.sqlite ]; then
-            python classify_catalog.py alcampo-direct-v5-full/alcampo_food_catalog.sqlite | tee alcampo-direct-v5-full/classification_report.json
+          if [ -f alcampo-direct-v5-full/alcampo_food_catalog.sqlite ] && [ -f alcampo-direct-v5-full/observations.jsonl ]; then
+            python finalize_alcampo_classification.py \
+              alcampo-direct-v5-full/alcampo_food_catalog.sqlite \
+              alcampo-direct-v5-full/observations.jsonl \
+              | tee alcampo-direct-v5-full/classification_report.json
           fi
       - name: Summarize coverage
         if: always()
@@ -139,9 +143,12 @@ jobs:
               def q(s): return con.execute(s).fetchone()[0]
               def has(t): return q(f"select count(*) from sqlite_master where type='table' and name='{t}'")>0
               report['classification']={
+                  'nutritionally_usable':q('select count(*) from eligibility where nutritionally_usable=1'),
                   'classified':q('select count(*) from eligibility where classified=1'),
                   'menu_eligible':q('select count(*) from eligibility where menu_eligible=1'),
                   'review_open':q("select count(*) from review_queue where status='OPEN'") if has('review_queue') else 0,
+                  'food_family_assigned':q('select count(*) from food_family_assignments') if has('food_family_assignments') else 0,
+                  'portion_basis_assigned':q('select count(*) from portion_basis') if has('portion_basis') else 0,
                   'nutritional_role_assignments':q('select count(*) from nutritional_role_assignments') if has('nutritional_role_assignments') else 0,
                   'culinary_role_assignments':q('select count(*) from culinary_role_assignments') if has('culinary_role_assignments') else 0,
               }
