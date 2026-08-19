@@ -1,0 +1,99 @@
+{
+  "retailer": "ALCAMPO",
+  "source": "https://www.compraonline.alcampo.es",
+  "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
+  "importer_version": "alcampo-direct-v6.0",
+  "built_at": "2026-08-19T19:49:29.227076+00:00",
+  "roots": [
+    {
+      "label": "OC100402",
+      "retailer_category_id": "OC100402",
+      "pages": 1,
+      "unique_decorated_products": 300,
+      "errors": [
+        "HTTPError:HTTP Error 400: "
+      ],
+      "child_categories": [
+        {
+          "name": "Atún",
+          "categoryId": "ac507389-74f5-4d98-b3a9-bb2549ad647f",
+          "retailerCategoryId": "OCConservasAtun",
+          "productCount": 105
+        },
+        {
+          "name": "Bonito y ventresca",
+          "categoryId": "71284bbe-9525-47a1-8839-9c5e28e13b50",
+          "retailerCategoryId": "OC100402004",
+          "productCount": 62
+        },
+        {
+          "name": "Mejillones",
+          "categoryId": "1f26b492-0ae2-4ea4-9942-616fdacb7cf5",
+          "retailerCategoryId": "OC100402010",
+          "productCount": 51
+        },
+        {
+          "name": "Agujas, sardinas y sardinillas",
+          "categoryId": "1d167a82-a07e-49d7-83f7-95b0a0ac7025",
+          "retailerCategoryId": "OC100402005",
+          "productCount": 49
+        },
+        {
+          "name": "Anchoas y boquerones",
+          "categoryId": "f99967aa-787d-49e2-9ce7-f707c9ff1639",
+          "retailerCategoryId": "OC100402007",
+          "productCount": 3
+        },
+        {
+          "name": "Caballa y melva",
+          "categoryId": "18a0f427-4311-498b-9963-796c24b28c56",
+          "retailerCategoryId": "OC100402006",
+          "productCount": 26
+        },
+        {
+          "name": "Berberechos",
+          "categoryId": "de5f6b06-76fc-4a10-a5c6-7d02cf588ce6",
+          "retailerCategoryId": "OC100402011",
+          "productCount": 15
+        },
+        {
+          "name": "Almejas Navajas y Zamburiñas",
+          "categoryId": "2d920c7f-6d59-43bb-9b2e-0d5b3106e8a0",
+          "retailerCategoryId": "OC100402012",
+          "productCount": 16
+        },
+        {
+          "name": "Calamares Pulpo Chipirones Sepia",
+          "categoryId": "3cd7a5c0-feff-4ec3-abb2-7cf401e9fcc0",
+          "retailerCategoryId": "OCConservasCalamares",
+          "productCount": 38
+        },
+        {
+          "name": "Otras conservas de pescado",
+          "categoryId": "9daca6ca-5c4b-4df5-9c38-0810ba43156a",
+          "retailerCategoryId": "OCOtrasConservasPescado",
+          "productCount": 21
+        },
+        {
+          "name": "Conservas Auchan Collection",
+          "categoryId": "44876106-e1f2-4c69-a25a-bec9e1656ab3",
+          "retailerCategoryId": "OCConauchan",
+          "productCount": 20
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "unique_products_before_filter": 300,
+    "food_products": 300,
+    "excluded_alcohol": 0,
+    "with_sku": 300,
+    "with_name": 300,
+    "with_brand": 300,
+    "with_pack_size": 300,
+    "with_image": 300,
+    "with_product_url": 0,
+    "available": 299
+  },
+  "third_party_product_data": false
+}
