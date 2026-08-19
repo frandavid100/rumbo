@@ -3,13 +3,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA_VERSION = 5
-BUILDER_VERSION = "alcampo-first-party-final-v1.1"
+BUILDER_VERSION = "alcampo-first-party-final-v1.2"
 
 SCHEMA = """
 CREATE TABLE catalog_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -44,19 +43,13 @@ def sha(row: dict) -> str:
 
 
 def nutrition_basis(detail: dict, product: dict) -> tuple[str | None, float, str | None]:
+    del product
     basis = str(detail.get("nutrition_basis") or "").lower()
     if basis in {"100_g", "100_ml"}:
         return basis, 0.99, "detail.explicit_basis"
-    unit = str(product.get("unit_price_unit") or "").upper()
-    if "PER_1KG" in unit or "PER_KG" in unit:
-        return "100_g", 0.97, "listing.unit_price_per_kg"
-    if "PER_1L" in unit or "PER_L" in unit:
-        return "100_ml", 0.97, "listing.unit_price_per_l"
-    pack = str(product.get("pack_size") or "").lower().replace(" ", "")
-    if re.search(r"\d+(?:[.,]\d+)?(?:kg|g|gr)\b", pack):
-        return "100_g", 0.94, "listing.pack_mass"
-    if re.search(r"\d+(?:[.,]\d+)?(?:ml|cl|dl|l)\b", pack):
-        return "100_ml", 0.94, "listing.pack_volume"
+    # Pack size and unit-price units do not establish the basis of the nutrition
+    # declaration. If Alcampo's own nutrition table does not expose a comparable basis,
+    # keep the product out of NUTRITIONALLY_USABLE rather than infer one.
     return None, 0.0, None
 
 
@@ -90,6 +83,7 @@ def main() -> int:
         "built_at": now,
         "product_identity_source_policy": "FIRST_PARTY_ALCAMPO_ONLY",
         "nutrition_source_policy": "FIRST_PARTY_ALCAMPO_DECLARED_ONLY",
+        "nutrition_basis_policy": "EXPLICIT_ALCAMPO_DETAIL_ONLY",
         "listing_evidence_stream": str(a.products),
         "detail_evidence_stream": str(a.details),
     }
@@ -142,7 +136,7 @@ def main() -> int:
         if d:
             con.execute(
                 "INSERT INTO evidence(product_id,source,source_record_id,observed_at,raw_path,raw_sha256,adapter_version,evidence_kind) VALUES(?,?,?,?,?,?,?,?)",
-                (pid, "Alcampo", sku, now, f"{a.details.name}#sku={sku}", sha(d), "alcampo-detail-http-v2", "PRODUCT_DETAIL"),
+                (pid, "Alcampo", sku, now, f"{a.details.name}#sku={sku}", sha(d), "alcampo-detail-http-v2.1", "PRODUCT_DETAIL"),
             )
 
         usable = False
