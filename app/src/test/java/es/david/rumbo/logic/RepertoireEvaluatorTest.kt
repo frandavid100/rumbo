@@ -213,6 +213,26 @@ class RepertoireEvaluatorTest {
     }
 
     @Test
+    fun retryUsesASeparateBoundedSearchWithoutChangingTheContract() {
+        val completeMeal = food(
+            22, "Comida completa", FoodCategory.OTHER,
+            2000.0, 140.0, 220.0, 65.0
+        )
+        val first = RepertoireEvaluator.evaluate(
+            listOf(rule(completeMeal.id)), mapOf(completeMeal.id to completeMeal),
+            emptyMap(), recommendation, lunchOnly, searchAttempt = 0
+        )
+        val retry = RepertoireEvaluator.evaluate(
+            listOf(rule(completeMeal.id)), mapOf(completeMeal.id to completeMeal),
+            emptyMap(), recommendation, lunchOnly, searchAttempt = 1
+        )
+
+        assertEquals(first.searchStatus, retry.searchStatus)
+        assertEquals(first.status, retry.status)
+        assertTrue(first.witness?.seed != retry.witness?.seed)
+    }
+
+    @Test
     fun profileTwoHasEnoughLeanProteinWithoutAddingMoreFoods() {
         val ids = setOf(
             42L, 37L, 48L, 36L, 34L, 39L, 44L, 17L, 22L, 11L,
