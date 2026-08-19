@@ -258,6 +258,22 @@ object WeeklyMenuGenerator {
         }
 
         while (chosen.size < maximumItems) {
+            // A valid day can require deliberately sparse meals so that the
+            // daily macro budget is available where the repertoire is most
+            // efficient. The old greedy loop only stopped when every further
+            // item worsened the *meal* target; consequently it almost never
+            // explored witnesses such as a single snack followed by a larger
+            // protein serving at dinner. Keep the deterministic greedy path,
+            // but let exploratory candidates stop at any already valid
+            // partial composition. The full-day scorer still decides whether
+            // that sparse composition is useful.
+            if (
+                chosen.isNotEmpty() &&
+                !hasUnmetDependency(chosen, foodsById, dishesById) &&
+                exploration > 0.0 &&
+                random.nextDouble() < 0.15 + exploration * 0.35
+            ) break
+
             var candidates = eligible.filter { candidate ->
                 chosen.none { it.sameItem(candidate) || it.overlaps(candidate, dishesById) } &&
                     !(candidate.itemKind == PlannedItemKind.DISH &&
