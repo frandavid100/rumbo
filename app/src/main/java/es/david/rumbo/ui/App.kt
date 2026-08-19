@@ -1672,10 +1672,6 @@ private object RepertoireAssessmentMemory {
         assessment = newAssessment
     }
 
-    fun clear() {
-        key = null
-        assessment = null
-    }
 }
 
 @Composable
@@ -1716,9 +1712,6 @@ private fun HomeScreen(
     val goal = effectiveGoal.goal
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
-    var repertoireSearchAttempt by rememberSaveable(data.profile?.id) {
-        mutableStateOf(0)
-    }
     val repertoireAssessmentKey = remember(
         data.activeProfileId,
         data.activeProfileData?.planningRules,
@@ -1727,8 +1720,7 @@ private fun HomeScreen(
         recommendation,
         mealShares,
         data.activeProfileData?.culinaryPolicyOverrides,
-        data.activeProfileData?.nutritionToleranceSettings,
-        repertoireSearchAttempt
+        data.activeProfileData?.nutritionToleranceSettings
     ) {
         RepertoireAssessmentCacheKey(
             profileId = data.activeProfileId,
@@ -1743,24 +1735,22 @@ private fun HomeScreen(
                 ?.nutritionToleranceSettings.hashCode()
         )
     }
-    val cachedRepertoireAssessment = remember(repertoireAssessmentKey, repertoireSearchAttempt) {
+    val cachedRepertoireAssessment = remember(repertoireAssessmentKey) {
         RepertoireAssessmentMemory.get(repertoireAssessmentKey)
     }
     val repertoireAssessment by produceState<RepertoireAssessment?>(
         initialValue = cachedRepertoireAssessment,
-        repertoireAssessmentKey,
-        repertoireSearchAttempt
+        repertoireAssessmentKey
     ) {
         if (cachedRepertoireAssessment == null) {
             value = recommendation?.let { target ->
                 withContext(Dispatchers.Default) {
-                    RepertoireEvaluator.evaluate(
+                    RepertoireEvaluator.evaluateAutomatically(
                         rules = data.activeProfileData?.planningRules.orEmpty(),
                         foodsById = foodsById,
                         dishesById = dishesById,
                         recommendation = target,
-                        mealShares = mealShares,
-                        searchAttempt = repertoireSearchAttempt
+                        mealShares = mealShares
                     )
                 }.also { assessment ->
                     RepertoireAssessmentMemory.put(repertoireAssessmentKey, assessment)
@@ -2185,11 +2175,7 @@ private fun HomeScreen(
                     foods = data.foods,
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
-                    onOpenSearch = onOpenProgressSearch,
-                    onRetrySearch = {
-                        RepertoireAssessmentMemory.clear()
-                        repertoireSearchAttempt += 1
-                    }
+                    onOpenSearch = onOpenProgressSearch
                 )
             }
         }
@@ -2214,8 +2200,7 @@ private data class RepertoireProgressTarget(
     val buttonLabel: String? = null,
     val nutritionalRole: String? = null,
     val culinaryRole: String? = null,
-    val mealType: MealType? = null,
-    val retrySearch: Boolean = false
+    val mealType: MealType? = null
 )
 
 private data class RepertoireRoleMilestone(
@@ -2433,8 +2418,7 @@ private fun repertoireProgressTarget(
                 "El mejor intento sigue dejando $nutrientLabel por debajo " +
                 "del objetivo, pero eso es un problema de combinación o cantidades, no una " +
                 "nueva petición de ${nutritionalRoleLabel(deficit.second).lowercase()}.",
-            buttonLabel = "Volver a analizar",
-            retrySearch = true
+            buttonLabel = null
         )
     }
 
@@ -2491,8 +2475,7 @@ private fun RepertoireProgressCard(
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>,
-    onOpenSearch: (String?, String?, MealType?) -> Unit,
-    onRetrySearch: () -> Unit
+    onOpenSearch: (String?, String?, MealType?) -> Unit
 ) {
     val (level, target) = remember(
         assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
@@ -2525,8 +2508,7 @@ private fun RepertoireProgressCard(
                 target.buttonLabel?.let { label ->
                     FilledTonalButton(
                         onClick = {
-                            if (target.retrySearch) onRetrySearch()
-                            else onOpenSearch(
+                            onOpenSearch(
                                 target.nutritionalRole,
                                 target.culinaryRole,
                                 target.mealType
