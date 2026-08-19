@@ -1,0 +1,175 @@
+name: Catalog Alcampo direct v5
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_direct_catalog_v5.py'
+      - '.github/workflows/catalog-alcampo-direct-v5.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      passed: ${{ steps.evaluate.outputs.passed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: playwright install --with-deps chromium
+      - name: Discover and sample Alcampo
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set +e
+          python alcampo_direct_catalog_v5.py \
+            --out alcampo-direct-v5-smoke \
+            --workers 6 \
+            --max-categories 120 \
+            --max-products 40 \
+            --min-discovered 500 \
+            --min-valid-nutrition 5
+          code=$?
+          echo "$code" > alcampo-direct-v5-smoke/exit_code.txt
+          exit 0
+      - name: Evaluate smoke
+        id: evaluate
+        working-directory: tools/catalog
+        run: |
+          code=$(cat alcampo-direct-v5-smoke/exit_code.txt)
+          if [ "$code" = "0" ]; then echo 'passed=true' >> "$GITHUB_OUTPUT"; else echo 'passed=false' >> "$GITHUB_OUTPUT"; fi
+      - name: Persist smoke summary
+        if: always()
+        continue-on-error: true
+        run: |
+          test -f tools/catalog/alcampo-direct-v5-smoke/summary.json || exit 0
+          cp tools/catalog/alcampo-direct-v5-smoke/summary.json tools/catalog/fixtures/alcampo_direct_v5_smoke_summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_direct_v5_smoke_summary.json
+          git diff --cached --quiet && exit 0
+          git commit -m "catalog: persist Alcampo v5 smoke summary"
+          git fetch origin agent/catalog-phase1
+          git rebase origin/agent/catalog-phase1
+          git push origin HEAD:agent/catalog-phase1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-direct-v5-smoke
+          path: tools/catalog/alcampo-direct-v5-smoke/
+          retention-days: 7
+      - name: Enforce smoke
+        if: steps.evaluate.outputs.passed != 'true'
+        run: exit 2
+
+  full:
+    needs: smoke
+    if: needs.smoke.outputs.passed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: playwright install --with-deps chromium
+      - name: Build complete Alcampo catalog
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set +e
+          python alcampo_direct_catalog_v5.py \
+            --out alcampo-direct-v5-full \
+            --workers 10 \
+            --max-categories 1400 \
+            --min-discovered 2500 \
+            --min-valid-nutrition 500
+          code=$?
+          echo "$code" > alcampo-direct-v5-full/exit_code.txt
+          exit 0
+      - name: Remove unvalidated nutrition
+        if: always()
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import hashlib,json,sqlite3
+          from pathlib import Path
+          out=Path('alcampo-direct-v5-full'); obs=out/'observations.jsonl'; dbp=out/'alcampo_food_catalog.sqlite'
+          if not obs.exists() or not dbp.exists(): raise SystemExit(0)
+          def sid(sku): return int.from_bytes(hashlib.sha256(f'alcampo-sku:{sku}'.encode()).digest()[:7],'big')
+          invalid=[]
+          for line in obs.read_text(encoding='utf-8').splitlines():
+              if line.strip():
+                  row=json.loads(line)
+                  if row.get('nutrition_status')!='DECLARED_VALID': invalid.append(sid(str(row['sku'])))
+          con=sqlite3.connect(dbp); con.executemany('DELETE FROM nutrition WHERE product_id=?',[(x,) for x in invalid]); con.commit(); con.close()
+          print(f'removed_nonvalid_nutrition={len(invalid)}')
+          PY
+      - name: Baseline classification
+        if: always()
+        working-directory: tools/catalog
+        run: |
+          if [ -f alcampo-direct-v5-full/alcampo_food_catalog.sqlite ]; then
+            python classify_catalog.py alcampo-direct-v5-full/alcampo_food_catalog.sqlite | tee alcampo-direct-v5-full/classification_report.json
+          fi
+      - name: Summarize coverage
+        if: always()
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json,sqlite3
+          from pathlib import Path
+          out=Path('alcampo-direct-v5-full'); sp=out/'summary.json'; dbp=out/'alcampo_food_catalog.sqlite'
+          if not sp.exists(): raise SystemExit(0)
+          report=json.loads(sp.read_text(encoding='utf-8'))
+          if dbp.exists():
+              con=sqlite3.connect(dbp)
+              def q(s): return con.execute(s).fetchone()[0]
+              def has(t): return q(f"select count(*) from sqlite_master where type='table' and name='{t}'")>0
+              report['classification']={
+                  'classified':q('select count(*) from eligibility where classified=1'),
+                  'menu_eligible':q('select count(*) from eligibility where menu_eligible=1'),
+                  'review_open':q("select count(*) from review_queue where status='OPEN'") if has('review_queue') else 0,
+                  'nutritional_role_assignments':q('select count(*) from nutritional_role_assignments') if has('nutritional_role_assignments') else 0,
+                  'culinary_role_assignments':q('select count(*) from culinary_role_assignments') if has('culinary_role_assignments') else 0,
+              }
+              con.close()
+          (out/'final_summary.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - name: Persist full summary
+        if: always()
+        continue-on-error: true
+        run: |
+          src=tools/catalog/alcampo-direct-v5-full/final_summary.json
+          test -f "$src" || src=tools/catalog/alcampo-direct-v5-full/summary.json
+          test -f "$src" || exit 0
+          cp "$src" tools/catalog/fixtures/alcampo_direct_v5_latest_summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_direct_v5_latest_summary.json
+          git diff --cached --quiet && exit 0
+          git commit -m "catalog: persist Alcampo v5 full summary"
+          git fetch origin agent/catalog-phase1
+          git rebase origin/agent/catalog-phase1
+          git push origin HEAD:agent/catalog-phase1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-food-catalog-direct-v5
+          path: tools/catalog/alcampo-direct-v5-full/
+          retention-days: 7
+      - name: Enforce full thresholds
+        working-directory: tools/catalog
+        run: test "$(cat alcampo-direct-v5-full/exit_code.txt)" = "0"
