@@ -188,6 +188,46 @@ class RepertoireEvaluatorTest {
     }
 
     @Test
+    fun existingBreakfastToppingSuppressesFalseFatComplementNeed() {
+        val topping = food(
+            21, "Topping graso", FoodCategory.FAT,
+            1000.0, 80.0, 100.0, 0.1
+        ).copy(culinaryRoles = legacyCulinaryRoles("TOPPING"))
+        val result = RepertoireEvaluator.evaluate(
+            rules = listOf(rule(topping.id).copy(
+                allowedMealTypes = setOf(MealType.BREAKFAST),
+                preferredGrams = 100.0,
+                minimumFactor = 1.0,
+                maximumFactor = 1.0
+            )),
+            foodsById = mapOf(topping.id to topping),
+            dishesById = emptyMap(),
+            recommendation = recommendation,
+            mealShares = MealType.entries.associateWith {
+                if (it == MealType.BREAKFAST) 1.0 else 0.0
+            }
+        )
+
+        assertTrue(result.nutrition.getValue(NutrientKind.FAT).deviation < 0.0)
+        assertTrue(result.culinaryNeeds.none { it.kind == CulinaryNeedKind.FAT_COMPLEMENT })
+    }
+
+    @Test
+    fun automaticSearchContinuesAcrossSeparateBatches() {
+        val completeMeal = food(
+            22, "Comida completa", FoodCategory.OTHER,
+            2000.0, 140.0, 220.0, 65.0
+        )
+        val result = RepertoireEvaluator.evaluateAutomatically(
+            listOf(rule(completeMeal.id)), mapOf(completeMeal.id to completeMeal),
+            emptyMap(), recommendation, lunchOnly, maximumSearchBatches = 2
+        )
+
+        assertEquals(ConstraintSearchStatus.FEASIBLE, result.searchStatus)
+        assertTrue(result.witness != null)
+    }
+
+    @Test
     fun profileTwoHasEnoughLeanProteinWithoutAddingMoreFoods() {
         val ids = setOf(
             42L, 37L, 48L, 36L, 34L, 39L, 44L, 17L, 22L, 11L,

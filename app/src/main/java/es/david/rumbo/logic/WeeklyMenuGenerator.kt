@@ -614,17 +614,23 @@ object WeeklyMenuGenerator {
         val carbohydrateDeficit = if (carbohydrates < carbohydrateTarget) {
             squared(carbohydrates, carbohydrateTarget)
         } else 0.0
+        val carbohydrateExcess = if (carbohydrates > carbohydrateTarget) {
+            squared(carbohydrates, carbohydrateTarget)
+        } else 0.0
         val fatTarget = recommendation.fatGrams * share
+        val fatDeficit = if (fat < fatTarget) {
+            squared(fat, fatTarget)
+        } else 0.0
         val fatExcess = if (fat > fatTarget) {
             squared(fat, fatTarget)
         } else 0.0
-        // A meal should roughly occupy its chosen energy share, but it need
-        // not reproduce the complete daily macro ratio. Deficits in protein
-        // and carbohydrates and excess fat still matter here: once a poor
-        // composition fills all four positions, quantity optimisation cannot
-        // replace it with the missing culinary role.
+        // Composition selection must protect protein before filling the meal
+        // with energy from carbohydrates. Quantity optimisation can resize
+        // selected foods, but it cannot replace a carbohydrate-heavy choice
+        // after all positions are occupied.
         return squared(calories, recommendation.calories * share) * 5.0 +
-            proteinDeficit * 1.5 + carbohydrateDeficit * 2.0 + fatExcess * 4.0
+            proteinDeficit * 6.0 + carbohydrateDeficit * 1.5 +
+            carbohydrateExcess * 5.0 + fatDeficit + fatExcess * 4.0
     }
 
     private fun chooseRule(
