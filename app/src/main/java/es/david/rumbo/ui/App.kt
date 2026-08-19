@@ -210,6 +210,8 @@ import es.david.rumbo.logic.CulinarySatisfactionEvaluator
 import es.david.rumbo.logic.CulinarySatisfactionIssueKind
 import es.david.rumbo.logic.CulinarilySatisfactoryDayDiagnostic
 import es.david.rumbo.logic.CulinarilySatisfactoryDaySearch
+import es.david.rumbo.logic.InitialRepertoireGate
+import es.david.rumbo.logic.InitialRepertoireGateResult
 import es.david.rumbo.model.ActivityLevel
 import es.david.rumbo.model.CertifiedDayLevel
 import es.david.rumbo.model.CertifiedDayWitness
@@ -1712,6 +1714,17 @@ private fun HomeScreen(
     val goal = effectiveGoal.goal
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
+    val initialRepertoireGate = remember(
+        data.activeProfileData?.planningRules,
+        foodsById,
+        data.activeProfileData?.repertoireFoodIds
+    ) {
+        InitialRepertoireGate.evaluate(
+            data.activeProfileData?.planningRules.orEmpty(),
+            foodsById,
+            data.activeProfileData?.repertoireFoodIds.orEmpty()
+        )
+    }
     val repertoireAssessmentKey = remember(
         data.activeProfileId,
         data.activeProfileData?.planningRules,
@@ -1735,14 +1748,19 @@ private fun HomeScreen(
                 ?.nutritionToleranceSettings.hashCode()
         )
     }
-    val cachedRepertoireAssessment = remember(repertoireAssessmentKey) {
-        RepertoireAssessmentMemory.get(repertoireAssessmentKey)
+    val cachedRepertoireAssessment = remember(repertoireAssessmentKey, initialRepertoireGate) {
+        if (initialRepertoireGate.isSatisfied) {
+            RepertoireAssessmentMemory.get(repertoireAssessmentKey)
+        } else null
     }
     val repertoireAssessment by produceState<RepertoireAssessment?>(
         initialValue = cachedRepertoireAssessment,
-        repertoireAssessmentKey
+        repertoireAssessmentKey,
+        initialRepertoireGate
     ) {
-        if (cachedRepertoireAssessment == null) {
+        if (!initialRepertoireGate.isSatisfied) {
+            value = null
+        } else if (cachedRepertoireAssessment == null) {
             value = recommendation?.let { target ->
                 withContext(Dispatchers.Default) {
                     RepertoireEvaluator.evaluateAutomatically(
@@ -2164,6 +2182,7 @@ private fun HomeScreen(
         if (recommendation != null) {
             item {
                 RepertoireProgressCard(
+                    initialGate = initialRepertoireGate,
                     assessment = repertoireAssessment,
                     hasCertifiedViableDay = hasCertifiedViableDay,
                     hasCertifiedCompleteDay = hasCertifiedCompleteDay,
@@ -2203,23 +2222,8 @@ private data class RepertoireProgressTarget(
     val mealType: MealType? = null
 )
 
-private data class RepertoireRoleMilestone(
-    val role: String,
-    val target: Int,
-    val singular: String,
-    val plural: String
-)
-
-private val initialRepertoireRoleMilestones = listOf(
-    RepertoireRoleMilestone("PRIMARY_PROTEIN", 3, "proteína principal", "proteínas principales"),
-    RepertoireRoleMilestone("COMPLEMENTARY_PROTEIN", 3, "proteína complementaria", "proteínas complementarias"),
-    RepertoireRoleMilestone("PRIMARY_CARBOHYDRATE", 3, "hidrato principal", "hidratos principales"),
-    RepertoireRoleMilestone("COMPLEMENTARY_CARBOHYDRATE", 3, "hidrato complementario", "hidratos complementarios"),
-    RepertoireRoleMilestone("CONCENTRATED_FAT", 1, "grasa concentrada", "grasas concentradas"),
-    RepertoireRoleMilestone("COMPLEMENTARY_FAT", 3, "grasa complementaria", "grasas complementarias")
-)
-
 private fun repertoireProgressTarget(
+    initialGate: InitialRepertoireGateResult,
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
     hasCertifiedCompleteDay: Boolean,
@@ -2232,6 +2236,17 @@ private fun repertoireProgressTarget(
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>
 ): Pair<Int, RepertoireProgressTarget> {
+    initialGate.nextMissing?.let { requirement ->
+        val noun = if (requirement.missing == 1) requirement.singular else requirement.plural
+        val coverage = if (requirement.minimumMealsPerFood >= 2) {
+            " Cada una debe estar permitida en al menos ${requirement.minimumMealsPerFood} comidas."
+        } else ""
+        return 0 to RepertoireProgressTarget(
+            message = "Antes de calcular el primer día, completa ${requirement.plural}.$coverage",
+            buttonLabel = "Añadir ${requirement.missing} $noun",
+            nutritionalRole = requirement.role
+        )
+    }
     if (assessment == null) {
         return 0 to RepertoireProgressTarget(
             "Estamos analizando tus alimentos para encontrar el siguiente paso."
@@ -2364,29 +2379,6 @@ private fun repertoireProgressTarget(
         )
     }
 
-    val activeConfiguredIds = planningRules.asSequence()
-        .filter {
-            it.itemKind == PlannedItemKind.FOOD && it.isActive &&
-                it.frequency != PlanningFrequency.NEVER
-        }
-        .map { it.itemId }
-        .toSet()
-        .intersect(repertoireFoodIds)
-    val configuredFoods = foods.filter { it.id in activeConfiguredIds }
-
-    initialRepertoireRoleMilestones.forEach { milestone ->
-        val current = configuredFoods.count { milestone.role in it.nutritionalRoles }
-        val missing = (milestone.target - current).coerceAtLeast(0)
-        if (missing > 0) {
-            val noun = if (missing == 1) milestone.singular else milestone.plural
-            return 0 to RepertoireProgressTarget(
-                message = "Para poder crear un menú viable, el siguiente paso es cubrir ${milestone.plural} en tu repertorio.",
-                buttonLabel = "Añadir $missing $noun",
-                nutritionalRole = milestone.role
-            )
-        }
-    }
-
     assessment.culinaryNeeds.firstOrNull()?.let { need ->
         val role = need.acceptedRoles.firstOrNull()
         if (role != null) {
@@ -2464,6 +2456,7 @@ private fun RepertoireLevelMilestones(currentLevel: Int) {
 
 @Composable
 private fun RepertoireProgressCard(
+    initialGate: InitialRepertoireGateResult,
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
     hasCertifiedCompleteDay: Boolean,
@@ -2478,12 +2471,12 @@ private fun RepertoireProgressCard(
     onOpenSearch: (String?, String?, MealType?) -> Unit
 ) {
     val (level, target) = remember(
-        assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
+        initialGate, assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
         completeDayDiagnostic, hasCertifiedCulinaryDay, isSearchingCulinaryDay,
         culinaryDayDiagnostic, foods, repertoireFoodIds, planningRules
     ) {
         repertoireProgressTarget(
-            assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
+            initialGate, assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
             completeDayDiagnostic, hasCertifiedCulinaryDay, isSearchingCulinaryDay,
             culinaryDayDiagnostic, foods, repertoireFoodIds, planningRules
         )
