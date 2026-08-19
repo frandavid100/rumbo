@@ -266,6 +266,40 @@ object CertifiedDayWitnessEvaluator {
                 }
             }
         }
+
+        val repairBases = listOfNotNull(baselineWitness, bestProgressWitness)
+            .distinctBy { it.fingerprint }
+        for (repairBase in repairBases) {
+            val repaired = CompleteDayWitnessRepair.find(
+                repairBase,
+                rules,
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares
+            ) ?: continue
+            val assessment = MealPlanEvaluator.assessDay(
+                repaired.day, repaired.meals, foodsById, dishesById, recommendation
+            )
+            val diagnostic = CompleteDayDiagnostic(
+                fruitMeals = mealsContaining(
+                    repaired.meals, FoodCategory.FRUIT, foodsById, dishesById
+                ),
+                vegetableMeals = mealsContaining(
+                    repaired.meals, FoodCategory.VEGETABLE, foodsById, dishesById
+                ),
+                fiberGrams = assessment.actual.fiberGrams,
+                viable = true,
+                availableFruitMeals = availableFruitMeals,
+                availableVegetableMeals = availableVegetableMeals
+            )
+            return CompleteDaySearchResult(
+                repaired,
+                diagnostic,
+                repaired.copy(level = CertifiedDayLevel.VIABLE)
+            )
+        }
+
         return CompleteDaySearchResult(
             null,
             bestAttemptDiagnostic ?: bestDiagnostic,
