@@ -62,18 +62,6 @@ object CulinarySatisfactionEvaluator {
         val role: CulinaryRole
     )
 
-    private val preferAnyOf: Map<CulinaryRole, Set<CulinaryRole>> = mapOf(
-        CulinaryRole.PLATE_CENTER to setOf(CulinaryRole.PLATE_BASE, CulinaryRole.SIDE),
-        CulinaryRole.PLATE_BASE to setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.SIDE),
-        CulinaryRole.SIDE to setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE),
-        CulinaryRole.SANDWICH_BASE to setOf(CulinaryRole.SANDWICH_FILLING, CulinaryRole.SPREAD),
-        CulinaryRole.CEREAL_BASE to setOf(CulinaryRole.CEREAL_MIX_IN),
-        CulinaryRole.POWDER_BASE to setOf(CulinaryRole.POWDER_MIX_IN),
-        CulinaryRole.COOKING_MEDIUM to setOf(
-            CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE
-        )
-    )
-
     fun isCulinarilySatisfactory(
         witness: CertifiedDayWitness,
         rules: List<PlanningRule>,
@@ -307,8 +295,8 @@ object CulinarySatisfactionEvaluator {
     ): List<Pair<Assignment, Set<CulinaryRole>>> {
         val present = assignments.mapTo(mutableSetOf()) { it.role }
         return assignments.mapNotNull { assignment ->
-            val targets = preferAnyOf[assignment.role] ?: return@mapNotNull null
-            (assignment to targets).takeIf { targets.none(present::contains) }
+            val targets = CulinarySoftPolicy.preferredCompanions(assignment.role)
+            (assignment to targets).takeIf { targets.isNotEmpty() && targets.none(present::contains) }
         }
     }
 
