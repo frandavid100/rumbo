@@ -10,6 +10,7 @@ import es.david.rumbo.model.PlannedMeal
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
+import es.david.rumbo.model.WeekDay
 
 /**
  * Result of the feasibility search performed for a repertoire.
@@ -96,9 +97,6 @@ data class MenuConstraintModel(
                         )
                     }
 
-                    // This is a proof, not a search heuristic. For every mandatory item,
-                    // check whether at least one of its possible culinary uses can satisfy
-                    // its required companion using the rules available in this meal.
                     val allChoices = mealRules.mapNotNull { rule ->
                         foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
                     }
@@ -147,7 +145,8 @@ fun WeeklyMenuGenerator.generate(
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
     recommendation: Recommendation,
-    seed: Long = 11L
+    seed: Long = 11L,
+    days: Set<WeekDay> = WeekDay.entries.toSet()
 ): GeneratedWeeklyMenu {
     require(constraints.structuralViolations.isEmpty()) {
         constraints.structuralViolations.joinToString(" ") { it.message }
@@ -160,7 +159,8 @@ fun WeeklyMenuGenerator.generate(
         dishesById = dishesById,
         recommendation = recommendation,
         mealShares = constraints.mealShares,
-        seed = seed
+        seed = seed,
+        days = days
     )
 }
 
@@ -169,12 +169,17 @@ fun MenuWitness.reproduce(
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
     recommendation: Recommendation
-): GeneratedWeeklyMenu = WeeklyMenuGenerator.generate(
-    constraints = constraints,
-    currentMeals = emptyList(),
-    history = emptyList(),
-    foodsById = foodsById,
-    dishesById = dishesById,
-    recommendation = recommendation,
-    seed = seed
-)
+): GeneratedWeeklyMenu {
+    val witnessDays = meals.flatMapTo(mutableSetOf()) { it.days }
+    require(witnessDays.isNotEmpty()) { "El testigo no contiene ningún día." }
+    return WeeklyMenuGenerator.generate(
+        constraints = constraints,
+        currentMeals = emptyList(),
+        history = emptyList(),
+        foodsById = foodsById,
+        dishesById = dishesById,
+        recommendation = recommendation,
+        seed = seed,
+        days = witnessDays
+    )
+}

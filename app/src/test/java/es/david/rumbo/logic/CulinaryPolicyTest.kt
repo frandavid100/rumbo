@@ -82,6 +82,22 @@ class CulinaryPolicyTest {
         assertEquals(15.0, result.preferredGrams * result.maximumFactor, 0.001)
     }
 
+    @Test
+    fun vegetableSidePortionWinsOverToppingInMainMeals() {
+        val vegetable = food(setOf("SIDE", "TOPPING"))
+        val input = PlanningRule(
+            itemKind = PlannedItemKind.FOOD,
+            itemId = vegetable.id,
+            allowedMealTypes = setOf(es.david.rumbo.model.MealType.LUNCH, es.david.rumbo.model.MealType.DINNER),
+            frequency = PlanningFrequency.NORMAL,
+            preferredGrams = 100.0
+        )
+        val result = CulinaryPolicy.applyPortion(input, vegetable)
+        assertEquals(150.0, result.preferredGrams, 0.001)
+        assertEquals(50.0, result.preferredGrams * result.minimumFactor, 0.001)
+        assertEquals(300.0, result.preferredGrams * result.maximumFactor, 0.001)
+    }
+
     private fun food(roles: Set<String>) = Food(
         id = 1L,
         name = "fixture",

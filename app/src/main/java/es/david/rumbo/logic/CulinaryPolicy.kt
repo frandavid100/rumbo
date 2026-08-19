@@ -120,21 +120,36 @@ object CulinaryPolicy {
 
     fun roles(food: Food): Set<CulinaryRole> = food.culinaryRoles.mapNotNullTo(linkedSetOf(), ::parseRole)
 
-    private fun portionRole(food: Food): CulinaryRole? = roles(food).minByOrNull { role ->
-        when (role) {
-            CulinaryRole.COOKING_MEDIUM, CulinaryRole.SEASONING, CulinaryRole.TOPPING,
-            CulinaryRole.SAUCE_DRESSING, CulinaryRole.SPREAD, CulinaryRole.BINDER,
-            CulinaryRole.COATING -> 0
-            CulinaryRole.CEREAL_MIX_IN, CulinaryRole.POWDER_MIX_IN,
-            CulinaryRole.SANDWICH_FILLING -> 1
-            CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE -> 2
-            CulinaryRole.STANDALONE, CulinaryRole.BEVERAGE, CulinaryRole.DESSERT,
-            CulinaryRole.CEREAL_BASE, CulinaryRole.POWDER_BASE, CulinaryRole.SANDWICH_BASE -> 3
+    private fun portionRole(rule: PlanningRule, food: Food): CulinaryRole? {
+        val available = roles(food)
+        if (available.isEmpty()) return null
+
+        // A SIDE+TOPPING product used at lunch/dinner is normally functioning as
+        // an accompaniment, not as a garnish. Keep every other multi-role choice
+        // on the historic priority for now so this fix does not change unrelated
+        // repertoire behaviour while explicit per-occurrence role assignment is built.
+        if (
+            CulinaryRole.SIDE in available &&
+            CulinaryRole.TOPPING in available &&
+            rule.allowedMealTypes.any { it == MealType.LUNCH || it == MealType.DINNER }
+        ) return CulinaryRole.SIDE
+
+        return available.minByOrNull { role ->
+            when (role) {
+                CulinaryRole.COOKING_MEDIUM, CulinaryRole.SEASONING, CulinaryRole.TOPPING,
+                CulinaryRole.SAUCE_DRESSING, CulinaryRole.SPREAD, CulinaryRole.BINDER,
+                CulinaryRole.COATING -> 0
+                CulinaryRole.CEREAL_MIX_IN, CulinaryRole.POWDER_MIX_IN,
+                CulinaryRole.SANDWICH_FILLING -> 1
+                CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE -> 2
+                CulinaryRole.STANDALONE, CulinaryRole.BEVERAGE, CulinaryRole.DESSERT,
+                CulinaryRole.CEREAL_BASE, CulinaryRole.POWDER_BASE, CulinaryRole.SANDWICH_BASE -> 3
+            }
         }
     }
 
     fun applyPortion(rule: PlanningRule, food: Food): PlanningRule {
-        val role = portionRole(food) ?: return rule
+        val role = portionRole(rule, food) ?: return rule
         val p = policy(role)
         val preferred = p.preferredGrams ?: return rule
         val minimum = p.minimumGrams ?: preferred

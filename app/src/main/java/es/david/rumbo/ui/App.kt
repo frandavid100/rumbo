@@ -205,7 +205,10 @@ import es.david.rumbo.logic.PlanningConflictException
 import es.david.rumbo.logic.CulinaryPolicy
 import es.david.rumbo.logic.CulinaryRole
 import es.david.rumbo.logic.CulinaryRolePolicy
+import es.david.rumbo.logic.CertifiedDayWitnessEvaluator
 import es.david.rumbo.model.ActivityLevel
+import es.david.rumbo.model.CertifiedDayLevel
+import es.david.rumbo.model.CertifiedDayWitness
 import es.david.rumbo.model.AppData
 import es.david.rumbo.model.BodyAssessment
 import es.david.rumbo.model.DietCompliance
@@ -258,7 +261,7 @@ private fun Card(
     modifier: Modifier = Modifier,
     shape: Shape = CardDefaults.shape,
     colors: CardColors = CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        containerColor = MaterialTheme.colorScheme.surface
     ),
     elevation: CardElevation = CardDefaults.cardElevation(),
     border: BorderStroke? = null,
@@ -324,6 +327,12 @@ fun RumboApp(repository: AppRepository) {
     var catalogSearchRequest by remember { mutableStateOf(0) }
     var catalogSearchOverlayOpen by remember { mutableStateOf(false) }
     var catalogSearchMealTypeName by rememberSaveable { mutableStateOf<String?>(null) }
+    var catalogSearchReturnPending by rememberSaveable { mutableStateOf(false) }
+    var catalogSearchOriginScreenName by rememberSaveable { mutableStateOf<String?>(null) }
+    var catalogSearchOriginFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var catalogSearchSavedQuery by rememberSaveable { mutableStateOf("") }
+    var catalogSearchSavedScrollIndex by rememberSaveable { mutableStateOf(0) }
+    var catalogSearchSavedScrollOffset by rememberSaveable { mutableStateOf(0) }
     val catalogSearchMealType = catalogSearchMealTypeName?.let {
         runCatching { MealType.valueOf(it) }.getOrNull()
     }
@@ -445,6 +454,14 @@ fun RumboApp(repository: AppRepository) {
                 destination
             }
             screen in setOf(Screen.ADD_DISH, Screen.DISH_DETAIL) -> Screen.HOME.name
+            screen == Screen.FOOD_DETAIL && catalogSearchReturnPending -> {
+                catalogSearchReturnPending = false
+                if (catalogSearchOriginScreenName == Screen.FOOD_DETAIL.name) {
+                    selectedFoodId = catalogSearchOriginFoodId
+                }
+                catalogSearchOverlayOpen = true
+                catalogSearchOriginScreenName ?: Screen.HOME.name
+            }
             screen == Screen.FOOD_DETAIL && foodNavigationStack.isNotEmpty() -> {
                 selectedFoodId = foodNavigationStack.last()
                 foodNavigationStack = foodNavigationStack.dropLast(1)
@@ -730,11 +747,13 @@ fun RumboApp(repository: AppRepository) {
                         }
                     },
                     onOpenProfile = {
+                        screenStateHolder.removeState(Screen.PROFILE.name)
                         createProfileOnOpen = false
                         accountChildReturn = true
                         screenName = Screen.PROFILE.name
                     },
                     onAddProfile = {
+                        screenStateHolder.removeState(Screen.PROFILE.name)
                         createProfileOnOpen = true
                         accountChildReturn = true
                         screenName = Screen.PROFILE.name
@@ -790,11 +809,23 @@ fun RumboApp(repository: AppRepository) {
                         catalogSearchRequest += 1
                         screenName = Screen.HOME.name
                     },
+                    onSaveCertifiedDayWitness = {
+                        data = repository.saveCertifiedDayWitness(it)
+                    },
+                    onClearCertifiedDayWitness = {
+                        data = repository.clearCertifiedDayWitness(it)
+                    },
                     onOpenProgressSearch = { nutritionalRole, culinaryRole, mealType ->
                         catalogRetailerFilter = null
                         catalogNutritionalRoleFilter = nutritionalRole
                         catalogCulinaryRoleFilter = culinaryRole
                         catalogSearchMealTypeName = mealType?.name
+                        catalogSearchOriginScreenName = Screen.HOME.name
+                        catalogSearchOriginFoodId = null
+                        catalogSearchReturnPending = false
+                        catalogSearchSavedQuery = ""
+                        catalogSearchSavedScrollIndex = 0
+                        catalogSearchSavedScrollOffset = 0
                         catalogSearchOverlayOpen = true
                     },
                     onOpenFood = { foodId, reason ->
@@ -1143,6 +1174,12 @@ fun RumboApp(repository: AppRepository) {
                                 catalogNutritionalRoleFilter = nutritionalRole
                                 catalogCulinaryRoleFilter = culinaryRole
                                 catalogSearchMealTypeName = null
+                                catalogSearchOriginScreenName = Screen.FOOD_DETAIL.name
+                                catalogSearchOriginFoodId = selectedFoodId
+                                catalogSearchReturnPending = false
+                                catalogSearchSavedQuery = ""
+                                catalogSearchSavedScrollIndex = 0
+                                catalogSearchSavedScrollOffset = 0
                                 catalogSearchOverlayOpen = true
                             },
                             onOpenFood = {
@@ -1324,10 +1361,42 @@ fun RumboApp(repository: AppRepository) {
         val catalogOverlayListState = rememberLazyListState()
         val catalogOverlayScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
         var catalogOverlayMessage by remember { mutableStateOf<String?>(null) }
-        var catalogOverlaySuppressKeyboard by remember { mutableStateOf(false) }
+        var catalogOverlaySuppressKeyboard by remember { mutableStateOf(true) }
+        LaunchedEffect(Unit) {
+            if (catalogSearchSavedQuery.isNotEmpty()) {
+                catalogOverlayTextState.setTextAndPlaceCursorAtEnd(catalogSearchSavedQuery)
+            }
+            if (catalogSearchSavedScrollIndex > 0 || catalogSearchSavedScrollOffset > 0) {
+                catalogOverlayListState.scrollToItem(
+                    catalogSearchSavedScrollIndex,
+                    catalogSearchSavedScrollOffset
+                )
+            }
+        }
+        val closeCatalogOverlay = {
+            catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
+            catalogOverlayMessage = null
+            catalogSearchReturnPending = false
+            catalogSearchSavedQuery = ""
+            catalogSearchSavedScrollIndex = 0
+            catalogSearchSavedScrollOffset = 0
+            if (catalogSearchOriginScreenName == Screen.FOOD_DETAIL.name) {
+                selectedFoodId = catalogSearchOriginFoodId
+            }
+            screenName = catalogSearchOriginScreenName ?: Screen.HOME.name
+            catalogSearchOriginScreenName = null
+            catalogSearchOriginFoodId = null
+            catalogSearchOverlayOpen = false
+        }
+        BackHandler(enabled = true) { closeCatalogOverlay() }
+        LaunchedEffect(catalogOverlaySearchState.targetValue) {
+            if (catalogOverlaySearchState.targetValue == SearchBarValue.Collapsed) {
+                closeCatalogOverlay()
+            }
+        }
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+            color = MaterialTheme.colorScheme.surface
         ) {
             HomeCatalogSearch(
                 foods = data.foods,
@@ -1353,19 +1422,12 @@ fun RumboApp(repository: AppRepository) {
                 suppressRestoredKeyboard = catalogOverlaySuppressKeyboard,
                 onRestoredKeyboardSuppressed = { catalogOverlaySuppressKeyboard = false },
                 scrollBehavior = catalogOverlayScrollBehavior,
-                onCloseSearch = {
-                    catalogOverlayTextState.setTextAndPlaceCursorAtEnd("")
-                    catalogOverlayMessage = null
-                    catalogSearchOverlayOpen = false
-                },
+                onCloseSearch = closeCatalogOverlay,
                 onOpenFood = { foodId ->
-                    selectedFoodId?.let { current ->
-                        if (screenName == Screen.FOOD_DETAIL.name && current != foodId) {
-                            foodNavigationStack = foodNavigationStack + current
-                            foodRecommendationReasonStack = foodRecommendationReasonStack +
-                                selectedFoodRecommendationReason.orEmpty()
-                        }
-                    }
+                    catalogSearchSavedQuery = catalogOverlayTextState.text.toString()
+                    catalogSearchSavedScrollIndex = catalogOverlayListState.firstVisibleItemIndex
+                    catalogSearchSavedScrollOffset = catalogOverlayListState.firstVisibleItemScrollOffset
+                    catalogSearchReturnPending = true
                     selectedFoodId = foodId
                     selectedFoodRecommendationReason = null
                     catalogSearchOverlayOpen = false
@@ -1630,6 +1692,8 @@ private fun HomeScreen(
     onDismissFoodSuggestion: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     onOpenFoods: () -> Unit,
+    onSaveCertifiedDayWitness: (CertifiedDayWitness) -> Unit,
+    onClearCertifiedDayWitness: (CertifiedDayLevel) -> Unit,
     onOpenProgressSearch: (String?, String?, MealType?) -> Unit,
     onAddMissingMeal: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
@@ -1698,7 +1762,108 @@ private fun HomeScreen(
             }
         }
     }
-    val menuReady = currentMenuAcceptable ||
+    val savedViableWitness = data.activeProfileData?.certifiedDayWitnesses
+        ?.firstOrNull { it.level == CertifiedDayLevel.VIABLE }
+    val savedViableWitnessValid = remember(
+        savedViableWitness,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        recommendation != null && savedViableWitness != null &&
+            CertifiedDayWitnessEvaluator.isViable(
+                witness = savedViableWitness,
+                rules = data.activeProfileData?.planningRules.orEmpty(),
+                foodsById = foodsById,
+                dishesById = dishesById,
+                recommendation = recommendation,
+                mealShares = mealShares
+            )
+    }
+    val freshViableWitness = remember(repertoireAssessment) {
+        repertoireAssessment?.witness?.let(CertifiedDayWitnessEvaluator::fromMenuWitness)
+    }
+    val hasCertifiedViableDay = savedViableWitnessValid ||
+        (freshViableWitness != null && repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE)
+    val savedCompleteWitness = data.activeProfileData?.certifiedDayWitnesses
+        ?.firstOrNull { it.level == CertifiedDayLevel.COMPLETE }
+    val savedCompleteWitnessValid = remember(
+        savedCompleteWitness,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        recommendation != null && savedCompleteWitness != null &&
+            CertifiedDayWitnessEvaluator.isComplete(
+                savedCompleteWitness,
+                data.activeProfileData?.planningRules.orEmpty(),
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares
+            )
+    }
+    val completeDaySearch by produceState<CertifiedDayWitnessEvaluator.CompleteDaySearchResult?>(
+        initialValue = null,
+        hasCertifiedViableDay,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares
+    ) {
+        value = if (hasCertifiedViableDay && recommendation != null && !savedCompleteWitnessValid) {
+            withContext(Dispatchers.Default) {
+                CertifiedDayWitnessEvaluator.findCompleteDay(
+                    data.activeProfileData?.planningRules.orEmpty(),
+                    foodsById,
+                    dishesById,
+                    recommendation,
+                    mealShares,
+                    baselineWitness = savedViableWitness?.takeIf { savedViableWitnessValid }
+                )
+            }
+        } else null
+    }
+    val freshCompleteWitness = completeDaySearch?.witness
+    val completeDayDiagnostic = completeDaySearch?.diagnostic
+    val completeProgressWitness = completeDaySearch?.progressWitness
+    LaunchedEffect(
+        savedViableWitness, savedViableWitnessValid, freshViableWitness,
+        repertoireAssessment?.searchStatus
+    ) {
+        when {
+            savedViableWitnessValid -> Unit
+            freshViableWitness != null &&
+                repertoireAssessment?.searchStatus == ConstraintSearchStatus.FEASIBLE ->
+                onSaveCertifiedDayWitness(freshViableWitness)
+            savedViableWitness != null -> onClearCertifiedDayWitness(CertifiedDayLevel.VIABLE)
+        }
+    }
+    LaunchedEffect(savedCompleteWitness, savedCompleteWitnessValid, freshCompleteWitness) {
+        when {
+            savedCompleteWitnessValid -> Unit
+            freshCompleteWitness != null -> onSaveCertifiedDayWitness(freshCompleteWitness!!)
+            savedCompleteWitness != null -> onClearCertifiedDayWitness(CertifiedDayLevel.COMPLETE)
+        }
+    }
+    LaunchedEffect(completeProgressWitness, savedViableWitness?.fingerprint) {
+        val progress = completeProgressWitness
+        if (progress != null && progress.fingerprint != savedViableWitness?.fingerprint) {
+            onSaveCertifiedDayWitness(progress.copy(level = CertifiedDayLevel.VIABLE))
+        }
+    }
+    val hasCertifiedCompleteDay = savedCompleteWitnessValid || freshCompleteWitness != null
+
+    val menuReady = currentMenuAcceptable || hasCertifiedViableDay ||
         repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
         repertoireAssessment?.status == RepertoireStatus.ROBUST
     val foodSuggestions = remember(
@@ -1936,6 +2101,9 @@ private fun HomeScreen(
             item {
                 RepertoireProgressCard(
                     assessment = repertoireAssessment,
+                    hasCertifiedViableDay = hasCertifiedViableDay,
+                    hasCertifiedCompleteDay = hasCertifiedCompleteDay,
+                    completeDayDiagnostic = completeDayDiagnostic,
                     foods = data.foods,
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
@@ -1994,6 +2162,9 @@ private val initialRepertoireRoleMilestones = listOf(
 
 private fun repertoireProgressTarget(
     assessment: RepertoireAssessment?,
+    hasCertifiedViableDay: Boolean,
+    hasCertifiedCompleteDay: Boolean,
+    completeDayDiagnostic: CertifiedDayWitnessEvaluator.CompleteDayDiagnostic?,
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>
@@ -2001,7 +2172,13 @@ private fun repertoireProgressTarget(
     if (assessment == null) {
         return 0 to RepertoireProgressTarget("Estamos analizando tus alimentos para encontrar el siguiente paso.")
     }
-    if (assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
+    if (hasCertifiedCompleteDay) {
+        return 2 to RepertoireProgressTarget(
+            "Nivel 2 conseguido: Rumbo ha encontrado y guardado un día completo que, además de ser viable, incluye fruta en al menos dos comidas, verdura en al menos dos comidas y 25 g o más de fibra."
+        )
+    }
+
+    if (hasCertifiedViableDay || assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
         val missingVegetables = (3 - assessment.vegetableConcepts).coerceAtLeast(0)
         if (missingVegetables > 0) {
             val noun = if (missingVegetables == 1) "verdura diferente" else "verduras diferentes"
@@ -2020,8 +2197,50 @@ private fun repertoireProgressTarget(
                 nutritionalRole = "FRUIT"
             )
         }
+        completeDayDiagnostic?.let { diagnostic ->
+            if (diagnostic.fruitMeals < 2 && diagnostic.availableFruitMeals < 2) {
+                return 1 to RepertoireProgressTarget(
+                    message = "Con la configuración actual solo hay fruta disponible para ${diagnostic.availableFruitMeals} ${if (diagnostic.availableFruitMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar fruta en dos comidas distintas.",
+                    buttonLabel = "Añadir otra fruta",
+                    nutritionalRole = "FRUIT"
+                )
+            }
+            if (diagnostic.vegetableMeals < 2 && diagnostic.availableVegetableMeals < 2) {
+                return 1 to RepertoireProgressTarget(
+                    message = "Con la configuración actual solo hay verdura disponible para ${diagnostic.availableVegetableMeals} ${if (diagnostic.availableVegetableMeals == 1) "comida" else "comidas"}. Para alcanzar el nivel 2 necesitamos poder colocar verdura en dos comidas distintas.",
+                    buttonLabel = "Añadir otra verdura",
+                    nutritionalRole = "VEGETABLE"
+                )
+            }
+            if (diagnostic.fiberGrams < 25.0) {
+                return 1 to RepertoireProgressTarget(
+                    message = "Rumbo ya ha encontrado un día viable con al menos ${formatOneDecimal(diagnostic.fiberGrams)} g de fibra. Para el nivel 2 necesitamos 25 g. Añade una opción rica en fibra para ampliar las combinaciones sin perder ese progreso.",
+                    buttonLabel = "Añadir verdura rica en fibra",
+                    nutritionalRole = "VEGETABLE"
+                )
+            }
+            if (!diagnostic.viable) {
+                val limitingLabel = when (diagnostic.limitingNutrient) {
+                    NutrientKind.PROTEIN -> "proteína"
+                    NutrientKind.CARBOHYDRATES -> "hidratos"
+                    NutrientKind.FAT -> "grasa"
+                    NutrientKind.CALORIES -> "calorías"
+                    null -> "los objetivos nutricionales"
+                }
+                val direction = when {
+                    (diagnostic.limitingDifference ?: 0.0) > 0.0 -> "por encima"
+                    (diagnostic.limitingDifference ?: 0.0) < 0.0 -> "por debajo"
+                    else -> "fuera"
+                }
+                return 1 to RepertoireProgressTarget(
+                    message = "Rumbo ya dispone de los alimentos necesarios para el nivel 2: consigue colocar fruta, verdura y fibra suficientes. El mejor intento deja $limitingLabel $direction del objetivo, así que el problema ahora es encontrar una combinación compatible con los alimentos que ya tienes; no necesitas volver a añadir alimentos de los requisitos del nivel 1."
+                )
+            }
+        }
         return 1 to RepertoireProgressTarget(
-            "Nivel 1 conseguido: tu repertorio permite crear un menú viable. Ya tienes cubierta la variedad básica de fruta y verdura; los demás criterios del nivel 2 se evaluarán al completar el motor de menú completo."
+            message = "Rumbo todavía no ha encontrado un día completo. Añade una opción adicional de fruta o verdura para ampliar las combinaciones posibles.",
+            buttonLabel = "Añadir otra verdura",
+            nutritionalRole = "VEGETABLE"
         )
     }
 
@@ -2119,13 +2338,22 @@ private fun RepertoireLevelMilestones(currentLevel: Int) {
 @Composable
 private fun RepertoireProgressCard(
     assessment: RepertoireAssessment?,
+    hasCertifiedViableDay: Boolean,
+    hasCertifiedCompleteDay: Boolean,
+    completeDayDiagnostic: CertifiedDayWitnessEvaluator.CompleteDayDiagnostic?,
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>,
     onOpenSearch: (String?, String?, MealType?) -> Unit
 ) {
-    val (level, target) = remember(assessment, foods, repertoireFoodIds, planningRules) {
-        repertoireProgressTarget(assessment, foods, repertoireFoodIds, planningRules)
+    val (level, target) = remember(
+        assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, completeDayDiagnostic,
+        foods, repertoireFoodIds, planningRules
+    ) {
+        repertoireProgressTarget(
+            assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, completeDayDiagnostic,
+            foods, repertoireFoodIds, planningRules
+        )
     }
     val title = when (level) {
         0 -> "Nivel 0 · Preparando un menú viable"
@@ -6775,6 +7003,7 @@ private fun nutritionalRoleEfficiency(food: Food, role: String): Double? {
         "PRIMARY_PROTEIN", "COMPLEMENTARY_PROTEIN" -> food.proteinGrams
         "PRIMARY_CARBOHYDRATE", "COMPLEMENTARY_CARBOHYDRATE" -> food.carbohydrateGrams
         "CONCENTRATED_FAT", "COMPLEMENTARY_FAT" -> food.fatGrams
+        "VEGETABLE", "FRUIT" -> food.fiberGrams
         else -> null
     } ?: return null
     return grams * 100.0 / calories
@@ -6856,6 +7085,7 @@ private fun HomeCatalogSearch(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
+    var suppressNextExpandedKeyboard by remember { mutableStateOf(state.targetValue == SearchBarValue.Collapsed) }
     val query = textFieldState.text.toString()
     val normalized = normalizeSearch(query)
     val searchContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
@@ -6965,7 +7195,16 @@ private fun HomeCatalogSearch(
     }
 
     LaunchedEffect(state.targetValue) {
+        if (state.targetValue == SearchBarValue.Expanded && suppressNextExpandedKeyboard) {
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            delay(300)
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+            suppressNextExpandedKeyboard = false
+        }
         if (state.targetValue == SearchBarValue.Collapsed) {
+            suppressNextExpandedKeyboard = true
             focusManager.clearFocus(force = true)
             keyboard?.hide()
             if (textFieldState.text.isNotEmpty()) textFieldState.setTextAndPlaceCursorAtEnd("")

@@ -260,6 +260,26 @@ object WeeklyMenuAcceptancePolicy {
         settings = value.takeIf { it.isValid() } ?: NutritionToleranceSettings()
     }
 
+    fun isDayAcceptable(
+        assessment: PlanNutritionAssessment,
+        activeMealTypes: Set<MealType> = MealType.entries.toSet()
+    ): Boolean {
+        if (!assessment.actual.isComplete ||
+            activeMealTypes.any { it in assessment.missingMealTypes }
+        ) return false
+
+        fun ratio(actual: Double, target: Double) = actual / target.coerceAtLeast(1.0)
+        val tolerance = settings
+        return ratio(assessment.actual.calories, assessment.target.calories) in
+            tolerance.caloriesMinimum..tolerance.caloriesMaximum &&
+            ratio(assessment.actual.proteinGrams, assessment.target.proteinGrams) in
+                tolerance.proteinMinimum..tolerance.proteinMaximum &&
+            ratio(assessment.actual.carbohydrateGrams, assessment.target.carbohydrateGrams) in
+                tolerance.carbohydratesMinimum..tolerance.carbohydratesMaximum &&
+            ratio(assessment.actual.fatGrams, assessment.target.fatGrams) in
+                tolerance.fatMinimum..tolerance.fatMaximum
+    }
+
     fun isAcceptable(
         assessments: List<PlanNutritionAssessment>,
         activeMealTypes: Set<MealType> = MealType.entries.toSet()

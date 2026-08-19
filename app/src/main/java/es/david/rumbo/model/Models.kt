@@ -503,6 +503,25 @@ data class Measurement(
     val recommendation: Recommendation? = null
 )
 
+enum class CertifiedDayLevel {
+    VIABLE,
+    COMPLETE,
+    CULINARILY_SATISFACTORY
+}
+
+data class CertifiedDayWitness(
+    val level: CertifiedDayLevel,
+    val seed: Long,
+    val day: WeekDay,
+    val meals: List<PlannedMeal>,
+    val fingerprint: Int = meals.hashCode()
+) {
+    fun isStructurallyValid(): Boolean =
+        meals.isNotEmpty() &&
+            meals.all { meal -> meal.isValid() && meal.days == setOf(day) } &&
+            meals.map { it.type }.distinct().size == meals.size
+}
+
 data class ProfileData(
     val profile: UserProfile,
     val measurements: List<Measurement> = emptyList(),
@@ -514,7 +533,8 @@ data class ProfileData(
     val dismissedSuggestionFoodIds: Set<Long> = emptySet(),
     val culinaryPolicyOverrides: List<CulinaryPolicyOverride> = emptyList(),
     val nutritionToleranceSettings: NutritionToleranceSettings = NutritionToleranceSettings(),
-    val mealShares: Map<MealType, Double>? = null
+    val mealShares: Map<MealType, Double>? = null,
+    val certifiedDayWitnesses: List<CertifiedDayWitness> = emptyList()
 )
 
 data class AppData(

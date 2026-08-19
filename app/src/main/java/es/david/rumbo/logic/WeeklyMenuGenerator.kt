@@ -42,6 +42,8 @@ data class NutritionDeviation(
 
 class PlanningConflictException(message: String) : IllegalArgumentException(message)
 
+enum class MenuGenerationObjective { VIABLE, COMPLETE }
+
 object WeeklyMenuGenerator {
     private const val CANDIDATE_WEEKS = 8
     private const val HISTORY_GENERATIONS = 8
@@ -54,8 +56,11 @@ object WeeklyMenuGenerator {
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
         mealShares: Map<MealType, Double> = defaultMealShares,
-        seed: Long = 11L
+        seed: Long = 11L,
+        days: Set<WeekDay> = WeekDay.entries.toSet(),
+        objective: MenuGenerationObjective = MenuGenerationObjective.VIABLE
     ): GeneratedWeeklyMenu {
+        require(days.isNotEmpty()) { "Indica al menos un día para generar." }
         val foodRules = rules.filter {
             it.itemKind == PlannedItemKind.FOOD && it.isActive
         }
@@ -93,6 +98,7 @@ object WeeklyMenuGenerator {
             )
         }
         val fixedBySlot = resolveFixedSlots(foodRules, usableDishes)
+            .filterKeys { it.day in days }
 
         val generatedTypes = MealType.entries.filter { type ->
             (mealShares[type] ?: defaultMealShares.getValue(type)) > 0.0 &&
@@ -101,7 +107,7 @@ object WeeklyMenuGenerator {
         }.toSet()
         require(generatedTypes.isNotEmpty()) { "Indica al menos una comida en las reglas del menú." }
 
-        val slots = WeekDay.entries.flatMap { day ->
+        val slots = WeekDay.entries.filter(days::contains).flatMap { day ->
             generatedTypes.map { type -> PlanningSlot(day, type) }
         }
         slots.forEach { slot ->
@@ -153,7 +159,8 @@ object WeeklyMenuGenerator {
                     dishesById = dishesById,
                     recommendation = recommendation,
                     mealShare = mealShares[slot.mealType] ?: defaultMealShares.getValue(slot.mealType),
-                    exploration = exploration
+                    exploration = exploration,
+                    objective = objective
                 )
             }
             val generated = assignments.map { (slot, assignedRules) ->
@@ -161,11 +168,12 @@ object WeeklyMenuGenerator {
             }
             val optimized = MealQuantityOptimizer.optimize(
                 preserved + generated, foodsById, dishesById, recommendation,
+                days = days,
                 mealShares = mealShares
             ).meals
             val score = score(
                 optimized, assignments, recent, foodsById, dishesById, recommendation,
-                mealShares
+                mealShares, days, objective
             )
             if (score < bestScore) {
                 bestScore = score
@@ -195,7 +203,7 @@ object WeeklyMenuGenerator {
             meals = generatedMeals,
             history = newHistory,
             generation = generation,
-            diagnostics = WeekDay.entries.map { day ->
+            diagnostics = WeekDay.entries.filter(days::contains).map { day ->
                 deviation(day, MealPlanEvaluator.assessDay(
                     day, generatedMeals, foodsById, dishesById, recommendation
                 ))
@@ -229,7 +237,8 @@ object WeeklyMenuGenerator {
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
         mealShare: Double,
-        exploration: Double
+        exploration: Double,
+        objective: MenuGenerationObjective
     ): List<PlanningRule> {
         val chosen = fixed.distinctBy { it.itemKind to it.itemId }.toMutableList()
         val eligible = rules.filter {
@@ -256,7 +265,37 @@ object WeeklyMenuGenerator {
                     hasCompatibleExclusiveRoles(chosen + candidate, foodsById, dishesById)
             }
             if (candidates.isEmpty()) break
-            if (chosen.isEmpty() && candidates.any { it.itemKind == PlannedItemKind.DISH }) {
+
+            // COMPLETE is not just a scoring preference. While the day still
+            // needs fruit/vegetable coverage, reserve a slot for a compatible
+            // candidate that can satisfy the missing category. Otherwise the
+            // generic macro composition may fill all positions first and make
+            // COMPLETE impossible even when the repertoire has suitable foods.
+            if (objective == MenuGenerationObjective.COMPLETE) {
+                fun needsCategory(category: es.david.rumbo.model.FoodCategory): Boolean {
+                    if (chosen.any { it.containsCategory(category, foodsById, dishesById) }) return false
+                    val previousMeals = assigned.entries.count { (assignedSlot, assignedRules) ->
+                        assignedSlot.day == slot.day && assignedRules.any {
+                            it.containsCategory(category, foodsById, dishesById)
+                        }
+                    }
+                    return previousMeals < 2
+                }
+                val pendingCategories = listOf(
+                    es.david.rumbo.model.FoodCategory.FRUIT,
+                    es.david.rumbo.model.FoodCategory.VEGETABLE
+                ).filter(::needsCategory)
+                val requiredCandidates = candidates.filter { candidate ->
+                    pendingCategories.any { category ->
+                        candidate.containsCategory(category, foodsById, dishesById)
+                    }
+                }
+                if (requiredCandidates.isNotEmpty()) {
+                    candidates = requiredCandidates
+                } else if (chosen.isEmpty() && candidates.any { it.itemKind == PlannedItemKind.DISH }) {
+                    candidates = candidates.filter { it.itemKind == PlannedItemKind.DISH }
+                }
+            } else if (chosen.isEmpty() && candidates.any { it.itemKind == PlannedItemKind.DISH }) {
                 candidates = candidates.filter { it.itemKind == PlannedItemKind.DISH }
             }
 
@@ -279,8 +318,25 @@ object WeeklyMenuGenerator {
                     it.vector(slot, foodsById, dishesById).calories
                 }
                 val calorieCeiling = recommendation.calories * mealShare * 1.10
+                fun categoryNeeded(category: es.david.rumbo.model.FoodCategory): Boolean {
+                    if (objective != MenuGenerationObjective.COMPLETE) return false
+                    val alreadyInThisMeal = chosen.any {
+                        it.containsCategory(category, foodsById, dishesById)
+                    }
+                    if (alreadyInThisMeal) return false
+                    val previousMeals = assigned.entries.count { (assignedSlot, assignedRules) ->
+                        assignedSlot.day == slot.day && assignedRules.any {
+                            it.containsCategory(category, foodsById, dishesById)
+                        }
+                    }
+                    return previousMeals < 2 && addition.any {
+                        it.containsCategory(category, foodsById, dishesById)
+                    }
+                }
+                val completeUseful = categoryNeeded(es.david.rumbo.model.FoodCategory.FRUIT) ||
+                    categoryNeeded(es.david.rumbo.model.FoodCategory.VEGETABLE)
                 if (chosen.isNotEmpty() &&
-                    (nutritionalImprovement <= 0.01 || minimumCalories > calorieCeiling)
+                    ((nutritionalImprovement <= 0.01 && !completeUseful) || minimumCalories > calorieCeiling)
                 ) {
                     return@mapNotNull null
                 }
@@ -299,7 +355,21 @@ object WeeklyMenuGenerator {
                     }
                 ) 0.12 else 0.0
                 val penalty = weeklyCount * 0.10 + recentCount * 0.025
-                val baseScore = nutritionalImprovement + frequencyBonus + varietyBonus - penalty
+                val completeBonus = if (objective == MenuGenerationObjective.COMPLETE) {
+                    val dayAssigned = assigned.filterKeys { it.day == slot.day }.values
+                    fun bonus(category: es.david.rumbo.model.FoodCategory): Double {
+                        val currentHas = chosen.any { it.containsCategory(category, foodsById, dishesById) }
+                        val previousCount = dayAssigned.count { assignedRules ->
+                            assignedRules.any { it.containsCategory(category, foodsById, dishesById) }
+                        }
+                        return if (!currentHas && previousCount < 2 && addition.any {
+                                it.containsCategory(category, foodsById, dishesById)
+                            }) 8.0 else 0.0
+                    }
+                    bonus(es.david.rumbo.model.FoodCategory.FRUIT) +
+                        bonus(es.david.rumbo.model.FoodCategory.VEGETABLE)
+                } else 0.0
+                val baseScore = nutritionalImprovement + frequencyBonus + varietyBonus + completeBonus - penalty
                 // Gumbel noise samples different rankings without turning the
                 // choice into an unstructured shuffle. The best result is
                 // still selected by the full weekly nutrition score.
@@ -601,13 +671,16 @@ object WeeklyMenuGenerator {
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
-        mealShares: Map<MealType, Double>
+        mealShares: Map<MealType, Double>,
+        days: Set<WeekDay>,
+        objective: MenuGenerationObjective
     ): Double {
-        val daily = WeekDay.entries.map {
+        val orderedDays = WeekDay.entries.filter(days::contains)
+        val daily = orderedDays.map {
             MealPlanEvaluator.assessDay(it, meals, foodsById, dishesById, recommendation)
         }
         val deviations = daily.mapIndexed { index, assessment ->
-            deviation(WeekDay.entries[index], assessment)
+            deviation(orderedDays[index], assessment)
         }
         // The weekly result is decisive. Daily fit remains a secondary
         // quality objective, so one imperfect day cannot outweigh a clearly
@@ -650,7 +723,27 @@ object WeeklyMenuGenerator {
         val recentPenalty = allRules.sumOf { rule ->
             history.count { it.itemKind == rule.itemKind && it.itemId == rule.itemId } * 0.15
         }
-        return nutritional + mealBalancePenalty * 10.0 + compositionPenalty +
+        val completePenalty = if (objective == MenuGenerationObjective.COMPLETE) {
+            orderedDays.sumOf { day ->
+                val dayMeals = meals.filter { day in it.days }
+                fun count(category: es.david.rumbo.model.FoodCategory): Int = dayMeals.count { meal ->
+                    meal.items.any { foodsById[it.foodId]?.category == category } ||
+                        meal.dishes.any { plannedDish ->
+                            dishesById[plannedDish.dishId]?.ingredients?.any {
+                                foodsById[it.foodId]?.category == category
+                            } == true
+                        }
+                }
+                val actual = MealPlanEvaluator.assessDay(
+                    day, meals, foodsById, dishesById, recommendation
+                ).actual
+                val missingFruit = (2 - count(es.david.rumbo.model.FoodCategory.FRUIT)).coerceAtLeast(0)
+                val missingVegetable = (2 - count(es.david.rumbo.model.FoodCategory.VEGETABLE)).coerceAtLeast(0)
+                val missingFiberRatio = ((25.0 - actual.fiberGrams).coerceAtLeast(0.0) / 25.0)
+                (missingFruit + missingVegetable) * 250_000.0 + missingFiberRatio * 100_000.0
+            }
+        } else 0.0
+        return nutritional + completePenalty + mealBalancePenalty * 10.0 + compositionPenalty +
             quantityPenalty + varietyPenalty + recentPenalty
     }
 
@@ -721,6 +814,18 @@ object WeeklyMenuGenerator {
                 )
             }
         )
+    }
+
+
+    private fun PlanningRule.containsCategory(
+        category: es.david.rumbo.model.FoodCategory,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>
+    ): Boolean = when (itemKind) {
+        PlannedItemKind.FOOD -> foodsById[itemId]?.category == category
+        PlannedItemKind.DISH -> dishesById[itemId]?.ingredients?.any {
+            foodsById[it.foodId]?.category == category
+        } == true
     }
 
     private fun PlanningRule.sameItem(other: PlanningRule): Boolean =

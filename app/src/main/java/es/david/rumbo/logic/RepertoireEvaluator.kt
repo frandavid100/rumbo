@@ -129,7 +129,8 @@ object RepertoireEvaluator {
                     foodsById = foodsById,
                     dishesById = dishesById,
                     recommendation = recommendation,
-                    seed = seed
+                    seed = seed,
+                    days = setOf(WeekDay.MONDAY)
                 )
             }.getOrNull()
         }
@@ -151,9 +152,11 @@ object RepertoireEvaluator {
         }
 
         val ranked = attempts.map { (seed, generated) ->
-            val assessments = WeekDay.entries.map { day ->
-                MealPlanEvaluator.assessDay(day, generated.meals, foodsById, dishesById, recommendation)
-            }
+            val assessments = listOf(
+                MealPlanEvaluator.assessDay(
+                    WeekDay.MONDAY, generated.meals, foodsById, dishesById, recommendation
+                )
+            )
             val evaluations = assessments.flatMap { it.evaluations }
             Candidate(
                 seed = seed,
@@ -169,7 +172,9 @@ object RepertoireEvaluator {
         val best = ranked.first()
         val activeMealTypes = coverage.mapTo(mutableSetOf()) { it.mealType }
         val acceptable = ranked.filter {
-            WeeklyMenuAcceptancePolicy.isAcceptable(it.assessments, activeMealTypes)
+            WeeklyMenuAcceptancePolicy.isDayAcceptable(
+                it.assessments.single(), activeMealTypes
+            )
         }
         val distinctAcceptable = acceptable.distinctBy { it.fingerprint }
         val average = averageNutrition(best.assessments)

@@ -3,12 +3,14 @@ package es.david.rumbo.ui
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 
 private val AppBackground = Color(0xFFFFF5F3)
@@ -66,6 +68,29 @@ private val DarkColors = darkColorScheme(
 )
 
 
+
+private fun ColorScheme.deeperLightSurfaces(): ColorScheme {
+    val sourceLow = surfaceContainerLow
+    val sourceContainer = surfaceContainer
+    val sourceHigh = surfaceContainerHigh
+    val sourceHighest = surfaceContainerHighest
+    val pageTone = lerp(sourceContainer, sourceLow, 0.22f)
+    val cardTone = lerp(sourceLow, surfaceContainerLowest, 0.28f)
+    return copy(
+        // Preserve Android's dynamic hue/chroma. Page is softly tinted; cards
+        // are visibly but gently lighter. Keep the highest token untouched so
+        // the search bar retains the system-derived tone it had before.
+        background = pageTone,
+        surface = cardTone,
+        surfaceVariant = pageTone,
+        surfaceContainerLowest = surfaceContainerLowest,
+        surfaceContainerLow = sourceLow,
+        surfaceContainer = sourceContainer,
+        surfaceContainerHigh = sourceHigh,
+        surfaceContainerHighest = sourceHighest
+    )
+}
+
 @Composable
 fun RumboTheme(content: @Composable () -> Unit) {
     val darkTheme = isSystemInDarkTheme()
@@ -74,9 +99,9 @@ fun RumboTheme(content: @Composable () -> Unit) {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && darkTheme ->
             dynamicDarkColorScheme(context)
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            dynamicLightColorScheme(context)
+            dynamicLightColorScheme(context).deeperLightSurfaces()
         darkTheme -> DarkColors
-        else -> LightColors
+        else -> LightColors.deeperLightSurfaces()
     }
     MaterialTheme(
         colorScheme = colors,
