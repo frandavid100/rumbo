@@ -34,13 +34,16 @@ jobs:
           d=json.load(open('tools/catalog/fixtures/alcampo_root_children_latest.json',encoding='utf-8'))
           deny=re.compile(r'\b(vino|vinos|cerveza|cervezas|licor|licores|whisky|whiskey|ron|ginebra|vodka|brandy|cognac|champagne|cava|sidra|vermut|vermouth|sangr[ií]a|espirituosas?|bebidas?\s+alcoh[oó]licas?|perfumer[ií]a|droguer[ií]a|herbolario|control\s+de\s+peso)\b',re.I)
           rows=[];seen=set()
+          # Start from each first-party food root itself. recursive_collect then includes
+          # products listed directly on the root and traverses every addressable child.
+          # This avoids the old duplicated 98-parent traversal and cannot lose products
+          # that appear only on a root listing.
           for root in d.get('roots',[]):
-              for c in root.get('children',[]):
-                  name=c.get('name') or ''; rid=c.get('retailerCategoryId')
-                  if not rid or deny.search(name): continue
-                  if rid in seen: continue
-                  seen.add(rid)
-                  rows.append({'label':name,'rid':rid,'expected':int(c.get('productCount') or 0)})
+              name=str(root.get('root_label') or '').strip()
+              rid=root.get('root_retailer_category_id')
+              if not rid or deny.search(name) or rid in seen: continue
+              seen.add(rid)
+              rows.append({'label':name or rid,'rid':rid,'expected':0})
           print('matrix='+json.dumps({'include':rows},ensure_ascii=False,separators=(',',':')))
           print('expected_children='+str(len(rows)))
           print('detail_matrix='+json.dumps({'include':[{'batch':f'{i:03d}'} for i in range(96)]},separators=(',',':')))
@@ -50,10 +53,10 @@ jobs:
     needs: prepare
     strategy:
       fail-fast: false
-      max-parallel: 8
+      max-parallel: 4
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,7 +64,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Enumerate one first-party Alcampo category tree
+      - name: Enumerate one complete first-party Alcampo root tree
         working-directory: tools/catalog
         run: python alcampo_child_enumerate.py --label "${{ matrix.label }}" --rid "${{ matrix.rid }}" --expected "${{ matrix.expected }}" --out "alcampo-child-${{ matrix.rid }}"
       - uses: actions/upload-artifact@v4
