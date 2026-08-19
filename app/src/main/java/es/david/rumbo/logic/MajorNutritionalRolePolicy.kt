@@ -58,5 +58,21 @@ object MajorNutritionalRolePolicy {
         meals: List<PlannedMeal>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>
-    ): Boolean = presentRoles(meals, foodsById, dishesById).containsAll(requiredRoles)
+    ): Boolean {
+        val referencedFoods = buildList {
+            meals.forEach { meal ->
+                meal.items.mapNotNullTo(this) { foodsById[it.foodId] }
+                meal.dishes.forEach { plannedDish ->
+                    dishesById[plannedDish.dishId]?.ingredients.orEmpty()
+                        .mapNotNullTo(this) { foodsById[it.foodId] }
+                }
+            }
+        }
+        // Persisted user foods and old unit fixtures predate nutritionalRoles.
+        // Preserve those witnesses until migration; once any referenced product
+        // uses the explicit taxonomy, only explicit main roles can certify it.
+        if (referencedFoods.none { it.nutritionalRoles.isNotEmpty() }) return true
+        val explicitRoles = referencedFoods.flatMapTo(linkedSetOf()) { it.nutritionalRoles }
+        return explicitRoles.containsAll(requiredRoles)
+    }
 }
