@@ -1,0 +1,77 @@
+name: Catalog Alcampo root children
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_root_children.py'
+      - '.github/workflows/catalog-alcampo-root-children.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  root:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: 'Frescos', rid: 'OC2112' }
+          - { label: 'Leche, Huevos, Lácteos, Yogures y Bebidas vegetales', rid: 'OC16' }
+          - { label: 'Alimentación', rid: 'OCC10' }
+          - { label: 'Desayuno y Merienda', rid: 'OC10' }
+          - { label: 'Congelados', rid: 'OC200220183' }
+          - { label: 'Comida Preparada', rid: 'OC20022018' }
+          - { label: 'Supermercado Ecológico', rid: 'OC26112021' }
+          - { label: 'Bebidas', rid: 'OCC11' }
+          - { label: 'Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional', rid: 'OCSINGSINL' }
+          - { label: 'Veganos', rid: 'OC09112021' }
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Discover immediate children with isolated runner
+        working-directory: tools/catalog
+        run: python alcampo_root_children.py --label "${{ matrix.label }}" --rid "${{ matrix.rid }}" --out "alcampo-root-${{ matrix.rid }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-root-${{ matrix.rid }}
+          path: tools/catalog/alcampo-root-${{ matrix.rid }}/summary.json
+          retention-days: 7
+  merge:
+    needs: root
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alcampo-root-*
+          path: downloaded
+      - name: Merge root category tree
+        run: |
+          python - <<'PY'
+          import glob,json,pathlib
+          rows=[]
+          for p in glob.glob('downloaded/**/summary.json',recursive=True):
+              try: rows.append(json.load(open(p,encoding='utf-8')))
+              except Exception: pass
+          payload={'roots':rows,'root_count':len(rows),'children':sum(len(r.get('children',[])) for r in rows),'child_product_count_sum':sum(r.get('child_product_count_sum',0) for r in rows)}
+          path=pathlib.Path('tools/catalog/fixtures/alcampo_root_children_latest.json');path.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(payload,ensure_ascii=False,indent=2))
+          if len(rows)<8: raise SystemExit(2)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_root_children_latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist isolated Alcampo root category tree"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
