@@ -66,27 +66,30 @@ class AraKnownLevel3WitnessTest {
             items = entries.map { (foodId, grams) -> PlannedFood(foodId, grams, false) }
         )
 
+        // Deliberately keep a small numerical margin from both the contextual
+        // portion boundaries and the day macro tolerances. This is a constructive
+        // feasibility witness, not a test of floating-point boundary equality.
         val meals = listOf(
             meal(1L, MealType.BREAKFAST,
-                4359402894918143880L to 73.7,
-                4713451237391941996L to 73.7,
-                5427737837577403981L to 147.4),
+                4359402894918143880L to 73.69,
+                4713451237391941996L to 73.69,
+                5427737837577403981L to 147.37),
             meal(2L, MealType.MORNING_SNACK,
-                4824921464295006360L to 20.0,
-                5863259172627146722L to 147.4),
+                4824921464295006360L to 20.01,
+                5863259172627146722L to 147.37),
             meal(3L, MealType.LUNCH,
-                4494907683069959481L to 97.4,
-                5065604127361444435L to 45.8,
-                5751811545638569543L to 211.5,
-                4042487276430228545L to 8.9),
+                4494907683069959481L to 97.38,
+                5065604127361444435L to 45.76,
+                5751811545638569543L to 211.45,
+                4042487276430228545L to 9.30),
             meal(4L, MealType.AFTERNOON_SNACK,
-                4824921464295006360L to 20.0,
-                5863259172627146722L to 147.4),
+                4824921464295006360L to 20.01,
+                5863259172627146722L to 147.37),
             meal(5L, MealType.DINNER,
-                4108023238282100017L to 210.3,
-                5138918923368881607L to 239.7,
-                4912645548334196354L to 133.6,
-                4042487276430228545L to 15.0)
+                4108023238282100017L to 201.67,
+                5138918923368881607L to 239.65,
+                4912645548334196354L to 139.53,
+                4042487276430228545L to 14.99)
         )
 
         val complete = CertifiedDayWitness(
