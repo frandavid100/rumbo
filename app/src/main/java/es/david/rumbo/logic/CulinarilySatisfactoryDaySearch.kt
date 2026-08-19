@@ -213,17 +213,49 @@ object CulinarilySatisfactoryDaySearch {
         evaluation.issues
             .filter { it.kind == CulinarySatisfactionIssueKind.SOFT_RELATION_UNSATISFIED }
             .forEach { issue ->
-                val targetSets = issue.roles
-                    .map(CulinarySoftPolicy::preferredCompanions)
-                    .filter { it.isNotEmpty() }
-                targetSets.forEach { targets ->
-                    val hasAny = activeRules.any { rule ->
-                        issue.mealType in rule.allowedMealTypes &&
-                            foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
-                                ?.any(targets::contains) == true
-                    }
-                    if (hasAny) availableCompanion = true else unavailable += targets
+                val issueRole = issue.roles.singleOrNull() ?: return@forEach
+                val targets = CulinarySoftPolicy.preferredCompanions(issueRole)
+                if (targets.isEmpty()) return@forEach
+
+                val hasAny = activeRules.any { rule ->
+                    issue.mealType in rule.allowedMealTypes &&
+                        foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
+                            ?.any(targets::contains) == true
                 }
+                if (hasAny) {
+                    availableCompanion = true
+                    return@forEach
+                }
+
+                // A failed bounded search is not proof that the repertoire lacks
+                // a companion. We only expose an unavailable role as actionable
+                // when the source occurrence itself is unavoidable in this meal
+                // and every culinary role it can perform has a non-empty soft
+                // companion requirement. Optional or multi-purpose foods can be
+                // omitted/reassigned by another valid composition, so asking the
+                // user to add food would be a false inference.
+                val sourceId = issue.foodId ?: return@forEach
+                val sourceFood = foodsById[sourceId] ?: return@forEach
+                val sourceMandatory = activeRules.any { rule ->
+                    rule.itemId == sourceId &&
+                        rule.frequency == PlanningFrequency.ALWAYS &&
+                        issue.mealType in rule.allowedMealTypes
+                }
+                if (!sourceMandatory) return@forEach
+
+                val sourceRoles = CulinaryPolicy.roles(sourceFood)
+                if (sourceRoles.isEmpty()) return@forEach
+                val requiredTargetSets = sourceRoles.map(CulinarySoftPolicy::preferredCompanions)
+                if (requiredTargetSets.any { it.isEmpty() }) return@forEach
+                val union = requiredTargetSets.flatten().toSet()
+                val anySourceRoleCanBeSatisfied = requiredTargetSets.any { roleTargets ->
+                    activeRules.any { rule ->
+                        issue.mealType in rule.allowedMealTypes && rule.itemId != sourceId &&
+                            foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
+                                ?.any(roleTargets::contains) == true
+                    }
+                }
+                if (!anySourceRoleCanBeSatisfied) unavailable += union
             }
 
         return CulinarilySatisfactoryDayDiagnostic(
