@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REVIEW_VERSION = "alcampo-semantic-review-v1"
+PROPOSAL_POLICY = "alcampo-automatic-proposal-2026-08-20.v1"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS semantic_model_reviews(
@@ -54,6 +55,27 @@ def set_origin(con: sqlite3.Connection, table: str, pid: int, origin: str) -> No
         con.execute(f"UPDATE {table} SET origin=? WHERE product_id=?", (origin, pid))
 
 
+def normalize_proposal_provenance(con: sqlite3.Connection) -> None:
+    # The deterministic classifier and type policies are useful proposals, but they are
+    # not manual/model review. Remove historical naming that could overstate provenance.
+    for table in (
+        "culinary_types", "nutritional_role_assignments", "culinary_role_assignments",
+        "food_family_assignments", "portion_basis",
+    ):
+        if not table_exists(con, table):
+            continue
+        cols = {r[1] for r in con.execute(f"PRAGMA table_info({table})")}
+        if "origin" in cols:
+            con.execute(
+                f"UPDATE {table} SET origin='AUTOMATIC_PROPOSAL' "
+                "WHERE origin IN ('AUTOMATIC','MANUAL_POLICY')"
+            )
+    if table_exists(con, "manual_classification_audit"):
+        # Entries produced by deterministic rules are not manual reviews. Semantic review
+        # is recorded separately in semantic_model_reviews with the full model decision.
+        con.execute("DELETE FROM manual_classification_audit")
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("database", type=Path)
@@ -64,6 +86,7 @@ def main() -> int:
     con = sqlite3.connect(a.database)
     con.executescript(SCHEMA)
     con.execute("DELETE FROM semantic_model_reviews")
+    normalize_proposal_provenance(con)
 
     # Automatic classification is a proposal only. Nothing becomes CLASSIFIED or
     # MENU_ELIGIBLE until a persisted semantic model review accepts that proposal.
@@ -101,8 +124,8 @@ def main() -> int:
         )
 
         if decision == "ACCEPT" and accepts and nutrition_ok:
-            # Corrections require an explicit structured applier. Until that exists,
-            # ACCEPT with corrections is safe only when the proposal itself is accepted.
+            # Corrections require an explicit structured applier. ACCEPT is therefore
+            # eligibility-bearing only when the persisted decision accepts the proposal.
             con.execute(
                 "UPDATE eligibility SET classified=1,menu_eligible=1,reason=NULL WHERE product_id=?",
                 (pid,),
@@ -128,9 +151,15 @@ def main() -> int:
             )
             review += 1
 
-    con.execute("INSERT OR REPLACE INTO catalog_metadata(key,value) VALUES('semantic_review_policy',?)", (REVIEW_VERSION,))
-    con.execute("INSERT OR REPLACE INTO catalog_metadata(key,value) VALUES('semantic_reviews_loaded',?)", (str(len(reviews)),))
-    con.execute("INSERT OR REPLACE INTO catalog_metadata(key,value) VALUES('semantic_reviews_accepted',?)", (str(accepted),))
+    for key, value in {
+        "classification_policy_version": PROPOSAL_POLICY + "+" + REVIEW_VERSION,
+        "automatic_proposal_policy": PROPOSAL_POLICY,
+        "semantic_review_policy": REVIEW_VERSION,
+        "semantic_reviews_loaded": str(len(reviews)),
+        "semantic_reviews_accepted": str(accepted),
+        "classification_claim_policy": "AUTOMATIC_PROPOSAL_IS_NOT_CLASSIFIED_UNTIL_MODEL_SEMANTIC_REVIEW",
+    }.items():
+        con.execute("INSERT OR REPLACE INTO catalog_metadata(key,value) VALUES(?,?)", (key, value))
     con.commit()
 
     report = {
@@ -143,6 +172,7 @@ def main() -> int:
         "classified_after_semantic_gate": con.execute("SELECT count(*) FROM eligibility WHERE classified=1").fetchone()[0],
         "menu_eligible_after_semantic_gate": con.execute("SELECT count(*) FROM eligibility WHERE menu_eligible=1").fetchone()[0],
         "semantic_review_required": True,
+        "automatic_proposals_are_not_manual": True,
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
     con.close()
