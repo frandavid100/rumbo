@@ -1,0 +1,104 @@
+name: Catalog Alcampo sharded enumeration
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_child_enumerate.py'
+      - 'tools/catalog/alcampo_merge_children.py'
+      - '.github/workflows/catalog-alcampo-sharded-enumeration.yml'
+      - 'tools/catalog/fixtures/alcampo_root_children_latest.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      expected_children: ${{ steps.matrix.outputs.expected_children }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - id: matrix
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json,re
+          d=json.load(open('tools/catalog/fixtures/alcampo_root_children_latest.json',encoding='utf-8'))
+          deny=re.compile(r'\b(vino|vinos|cerveza|cervezas|licor|licores|champagne|cava|sidra|sangr[ií]a|alcoh[oó]l|perfumer[ií]a|droguer[ií]a|herbolario|control de peso)\b',re.I)
+          rows=[];seen=set()
+          for root in d.get('roots',[]):
+              for c in root.get('children',[]):
+                  name=c.get('name') or ''; rid=c.get('retailerCategoryId')
+                  if not rid or deny.search(name): continue
+                  # Keep each retailer category once; overlaps across special collections are deduplicated later by product UUID.
+                  if rid in seen: continue
+                  seen.add(rid)
+                  rows.append({'label':name,'rid':rid,'expected':int(c.get('productCount') or 0)})
+          print('matrix='+json.dumps({'include':rows},ensure_ascii=False,separators=(',',':')))
+          print('expected_children='+str(len(rows)))
+          PY
+  enumerate:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Enumerate one first-party Alcampo category
+        working-directory: tools/catalog
+        run: python alcampo_child_enumerate.py --label "${{ matrix.label }}" --rid "${{ matrix.rid }}" --expected "${{ matrix.expected }}" --out "alcampo-child-${{ matrix.rid }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-child-${{ matrix.rid }}
+          path: tools/catalog/alcampo-child-${{ matrix.rid }}/
+          retention-days: 7
+  merge:
+    needs: [prepare, enumerate]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alcampo-child-*
+          path: downloaded
+      - name: Merge and audit enumeration
+        working-directory: tools/catalog
+        run: python alcampo_merge_children.py --downloaded ../../downloaded --out alcampo-sharded-full --min-products 5000
+      - name: Persist enumeration result
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-sharded-full/enumeration_report.json ]; then
+            cp tools/catalog/alcampo-sharded-full/enumeration_report.json tools/catalog/fixtures/alcampo_sharded_enumeration_latest.json
+            cp tools/catalog/alcampo-sharded-full/summary.json tools/catalog/fixtures/alcampo_sharded_catalog_summary_latest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_sharded_enumeration_latest.json tools/catalog/fixtures/alcampo_sharded_catalog_summary_latest.json
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist sharded Alcampo enumeration summary"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-food-catalog-sharded-enumeration
+          path: tools/catalog/alcampo-sharded-full/
+          retention-days: 7
