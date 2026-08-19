@@ -81,4 +81,32 @@ class CertifiedDayWitnessCompleteTest {
         assertTrue(result.diagnostic != null)
     }
 
+    @Test
+    fun completeSearchStopsImmediatelyWhenRequiredCategoriesCannotCoverTwoMeals() {
+        val protein = food(9, FoodCategory.PROTEIN, 0.0)
+        val rules = listOf(
+            PlanningRule(
+                itemKind = PlannedItemKind.FOOD,
+                itemId = protein.id,
+                allowedMealTypes = mealTypes.toSet(),
+                frequency = PlanningFrequency.NORMAL,
+                preferredGrams = 100.0,
+                minimumFactor = 0.5,
+                maximumFactor = 1.5
+            )
+        )
+
+        val result = CertifiedDayWitnessEvaluator.findCompleteDay(
+            rules,
+            mapOf(protein.id to protein),
+            emptyMap(),
+            target,
+            MealDistributionPolicy.defaults
+        )
+
+        assertTrue(result.witness == null)
+        assertTrue(result.diagnostic?.availableFruitMeals == 0)
+        assertTrue(result.diagnostic?.availableVegetableMeals == 0)
+    }
+
 }

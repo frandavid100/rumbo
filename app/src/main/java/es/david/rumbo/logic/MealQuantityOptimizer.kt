@@ -133,6 +133,43 @@ object MealQuantityOptimizer {
                 }
             }
 
+            // Viability is a daily property. A second, global-only coordinate
+            // pass is required because the meal-shape and habitual-portion
+            // regularisers above can otherwise trap the optimiser in a neat
+            // looking but nutritionally invalid local optimum. This occurs in
+            // real repertoires where breakfast has few choices and dinner must
+            // compensate with a larger protein portion. The first pass still
+            // supplies the pleasant starting point; this pass only moves away
+            // from it when the daily nutritional objective improves.
+            repeat(24) {
+                variables.forEachIndexed { index, variable ->
+                    val withoutCurrent = actual - variable.perGram * amounts[index]
+                    fun dailyScore(amount: Double): Double =
+                        score(withoutCurrent + variable.perGram * amount, target)
+
+                    var low = variable.minimum
+                    var high = variable.maximum
+                    repeat(28) {
+                        val left = low + (high - low) / 3.0
+                        val right = high - (high - low) / 3.0
+                        if (dailyScore(left) <= dailyScore(right)) high = right else low = left
+                    }
+                    val continuousBest = ((low + high) / 2.0)
+                        .coerceIn(variable.minimum, variable.maximum)
+                    val best = variable.step?.let { step ->
+                        val first = ceil(variable.minimum / step).toLong()
+                        val last = floor(variable.maximum / step).toLong()
+                        if (first > last) continuousBest else {
+                            val center = round(continuousBest / step).toLong().coerceIn(first, last)
+                            ((center - 2)..(center + 2)).filter { it in first..last }
+                                .minByOrNull { dailyScore(it * step) }!! * step
+                        }
+                    } ?: continuousBest
+                    amounts[index] = best
+                    actual = withoutCurrent + variable.perGram * best
+                }
+            }
+
             val rounded = amounts.mapIndexed { index, amount ->
                 variables[index].step?.let { step -> round(amount / step) * step }
                     ?: round(amount)

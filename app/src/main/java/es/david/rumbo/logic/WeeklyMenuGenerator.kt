@@ -245,9 +245,19 @@ object WeeklyMenuGenerator {
             slot.mealType in it.allowedMealTypes &&
                 it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
         }
-        val maximumItems = when (slot.mealType) {
-            MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
-            else -> 4
+        val maximumItems = when {
+            exploration >= 0.75 -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 1
+                else -> 2
+            }
+            exploration >= 0.50 -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 2
+                else -> 3
+            }
+            else -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
+                else -> 4
+            }
         }
 
         if (!hasCompatibleExclusiveRoles(chosen, foodsById, dishesById)) {
@@ -258,6 +268,22 @@ object WeeklyMenuGenerator {
         }
 
         while (chosen.size < maximumItems) {
+            // A valid day can require deliberately sparse meals so that the
+            // daily macro budget is available where the repertoire is most
+            // efficient. The old greedy loop only stopped when every further
+            // item worsened the *meal* target; consequently it almost never
+            // explored witnesses such as a single snack followed by a larger
+            // protein serving at dinner. Keep the deterministic greedy path,
+            // but let exploratory candidates stop at any already valid
+            // partial composition. The full-day scorer still decides whether
+            // that sparse composition is useful.
+            if (
+                chosen.isNotEmpty() &&
+                !hasUnmetDependency(chosen, foodsById, dishesById) &&
+                exploration > 0.0 &&
+                random.nextDouble() < 0.15 + exploration * 0.35
+            ) break
+
             var candidates = eligible.filter { candidate ->
                 chosen.none { it.sameItem(candidate) || it.overlaps(candidate, dishesById) } &&
                     !(candidate.itemKind == PlannedItemKind.DISH &&
@@ -614,17 +640,23 @@ object WeeklyMenuGenerator {
         val carbohydrateDeficit = if (carbohydrates < carbohydrateTarget) {
             squared(carbohydrates, carbohydrateTarget)
         } else 0.0
+        val carbohydrateExcess = if (carbohydrates > carbohydrateTarget) {
+            squared(carbohydrates, carbohydrateTarget)
+        } else 0.0
         val fatTarget = recommendation.fatGrams * share
+        val fatDeficit = if (fat < fatTarget) {
+            squared(fat, fatTarget)
+        } else 0.0
         val fatExcess = if (fat > fatTarget) {
             squared(fat, fatTarget)
         } else 0.0
-        // A meal should roughly occupy its chosen energy share, but it need
-        // not reproduce the complete daily macro ratio. Deficits in protein
-        // and carbohydrates and excess fat still matter here: once a poor
-        // composition fills all four positions, quantity optimisation cannot
-        // replace it with the missing culinary role.
+        // Composition selection must protect protein before filling the meal
+        // with energy from carbohydrates. Quantity optimisation can resize
+        // selected foods, but it cannot replace a carbohydrate-heavy choice
+        // after all positions are occupied.
         return squared(calories, recommendation.calories * share) * 5.0 +
-            proteinDeficit * 1.5 + carbohydrateDeficit * 2.0 + fatExcess * 4.0
+            proteinDeficit * 6.0 + carbohydrateDeficit * 1.5 +
+            carbohydrateExcess * 5.0 + fatDeficit + fatExcess * 4.0
     }
 
     private fun chooseRule(

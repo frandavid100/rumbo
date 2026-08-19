@@ -1,0 +1,950 @@
+.actual.isComplete) return "Faltan datos nutricionales para valorar el menú completo."
+    val names = listOf("calorías", "proteína", "hidratos", "grasa")
+    val outside = assessment.evaluations.withIndex().filter { it.value.fit == TargetFit.OUTSIDE }
+    val below = outside.filter { it.value.difference < 0.0 }.map { names[it.index] }
+    val above = outside.filter { it.value.difference > 0.0 }.map { names[it.index] }
+    if (below.isEmpty() && above.isEmpty()) return "El menú del día está bien ajustado a tus objetivos."
+    return buildList {
+        if (below.isNotEmpty()) add("Por debajo del objetivo: ${below.joinToString()}.")
+        if (above.isNotEmpty()) add("Por encima del objetivo: ${above.joinToString()}.")
+    }.joinToString(" ")
+}
+
+
+private fun recommendationFocus(
+    assessment: RepertoireAssessment,
+    resolved: Set<EfficientNutrient> = emptySet()
+): EfficientNutrient? {
+    val deficitPriority = listOf(
+        NutrientKind.PROTEIN to EfficientNutrient.PROTEIN,
+        NutrientKind.CARBOHYDRATES to EfficientNutrient.CARBOHYDRATES,
+        NutrientKind.FAT to EfficientNutrient.FAT
+    )
+    val deficits = deficitPriority
+        .mapNotNull { (kind, nutrient) ->
+            assessment.nutrition[kind]?.takeIf {
+                it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET
+            }?.let { capacity ->
+                nutrient to (-capacity.deviation / capacity.target.coerceAtLeast(1.0))
+            }
+        }
+    val deficit = deficits.filterNot { it.first in resolved }.maxByOrNull { it.second }?.first
+        ?: deficits.maxByOrNull { it.second }?.first
+    if (deficit != null) return deficit
+    val fallbackPriority = listOf(
+        EfficientNutrient.PROTEIN,
+        EfficientNutrient.CARBOHYDRATES,
+        EfficientNutrient.FAT,
+        EfficientNutrient.FIBER
+    )
+    return fallbackPriority.firstOrNull { it !in resolved } ?: fallbackPriority.first()
+}
+
+private fun relaxedRecommendationFocusMessage(focus: EfficientNutrient?): String? = when (focus) {
+    EfficientNutrient.PROTEIN -> "Añade alimentos que ayuden a completar la proteína del menú."
+    EfficientNutrient.CARBOHYDRATES -> "Añade alimentos que ayuden a completar los hidratos del menú."
+    EfficientNutrient.FAT -> "Añade alimentos que ayuden a completar las grasas del menú."
+    EfficientNutrient.FIBER -> "Añade alimentos que ayuden a completar la fibra del menú."
+    null -> null
+}
+
+private fun RepertoireAssessment.hasDeficit(nutrient: EfficientNutrient): Boolean {
+    val kind = when (nutrient) {
+        EfficientNutrient.PROTEIN -> NutrientKind.PROTEIN
+        EfficientNutrient.CARBOHYDRATES -> NutrientKind.CARBOHYDRATES
+        EfficientNutrient.FAT -> NutrientKind.FAT
+        EfficientNutrient.FIBER -> return false
+    }
+    return nutrition[kind]?.let {
+        it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET
+    } == true
+}
+
+private fun recommendationFocusMessage(
+    focus: EfficientNutrient?,
+    assessment: RepertoireAssessment
+): String? {
+    val fatExcess = assessment.nutrition[NutrientKind.FAT]?.let {
+        it.deviation > 0.0 && it.fit != TargetFit.ON_TARGET
+    } == true
+    return when (focus) {
+        EfficientNutrient.PROTEIN -> if (fatExcess) {
+            "Añade alimentos que aporten proteína con poca grasa."
+        } else {
+            "Añade alimentos que aporten proteína de forma eficiente."
+        }
+        EfficientNutrient.CARBOHYDRATES -> if (fatExcess) {
+            "Añade alimentos que aporten hidratos con poca grasa."
+        } else {
+            "Añade alimentos que aporten hidratos de forma eficiente."
+        }
+        EfficientNutrient.FAT ->
+            "Añade alimentos que aporten grasas de forma eficiente."
+        EfficientNutrient.FIBER ->
+            "Añade alimentos ricos en fibra."
+        null -> null
+    }
+}
+
+private fun optionalRecommendationFocusMessage(focus: EfficientNutrient?): String = when (focus) {
+    EfficientNutrient.PROTEIN -> "Puedes ampliar tus fuentes eficientes de proteína."
+    EfficientNutrient.CARBOHYDRATES -> "Puedes ampliar tus fuentes eficientes de hidratos."
+    EfficientNutrient.FAT -> "Puedes ampliar tus fuentes eficientes de grasas."
+    EfficientNutrient.FIBER -> "Puedes ampliar tus fuentes de fibra."
+    null -> "Puedes ampliar la variedad de tus alimentos."
+}
+
+private fun repertoireActionMessages(
+    assessment: RepertoireAssessment,
+    rules: List<PlanningRule>,
+    foodsById: Map<Long, Food>
+): List<String> {
+    if (assessment.culinaryNeeds.isNotEmpty()) {
+        return assessment.culinaryNeeds.map { it.message }.distinct().take(3)
+    }
+    val activeRules = rules.filter {
+        it.isActive && it.itemKind == PlannedItemKind.FOOD &&
+            foodsById[it.itemId]?.hasComparableNutrition() == true
+    }
+    val activeMeals = assessment.coverage.map { it.mealType }
+    val nutrientSpecs = listOf(
+        Triple(NutrientKind.PROTEIN, EfficientNutrient.PROTEIN, "proteína"),
+        Triple(NutrientKind.CARBOHYDRATES, EfficientNutrient.CARBOHYDRATES, "hidratos"),
+        Triple(NutrientKind.FAT, EfficientNutrient.FAT, "grasas")
+    )
+    val deficits = nutrientSpecs.filter { (kind, _, _) ->
+        assessment.nutrition[kind]?.let {
+            it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET
+        } == true
+    }
+    val excesses = nutrientSpecs.filter { (kind, _, _) ->
+        assessment.nutrition[kind]?.let {
+            it.deviation > 0.0 && it.fit != TargetFit.ON_TARGET
+        } == true
+    }
+    val messages = mutableListOf<String>()
+
+    if (activeRules.isEmpty()) {
+        return assessment.limitingFactors.distinct().take(3)
+    }
+    val deficitLabels = deficits.map { it.third }
+    if (deficitLabels.isNotEmpty()) {
+        val fatExcess = excesses.any { it.first == NutrientKind.FAT }
+        messages += if (fatExcess) {
+            "Necesitas alternativas que aporten " +
+                naturalListText(deficitLabels) + " con menos grasa."
+        } else {
+            "Necesitas más fuentes eficientes de " +
+                naturalListText(deficitLabels) + "."
+        }
+    }
+
+    val forcedRules = activeRules.any { it.frequency == PlanningFrequency.ALWAYS }
+    if (excesses.isNotEmpty() && (deficits.isEmpty() || forcedRules)) {
+        val excessLabels = excesses.map { it.third }
+        val deficitLabels = deficits.map { it.third }
+        messages += when {
+            forcedRules && deficitLabels.isNotEmpty() ->
+                "Las reglas actuales hacen que el menú supere " +
+                    naturalListText(excessLabels) + " antes de alcanzar " +
+                    naturalListText(deficitLabels) + ". Revisa los alimentos marcados " +
+                    "como «Todos los días»."
+            deficitLabels.isNotEmpty() ->
+                "Las opciones actuales hacen que el menú supere " +
+                    naturalListText(excessLabels) + " antes de alcanzar " +
+                    naturalListText(deficitLabels) + "."
+            else ->
+                "Las opciones actuales hacen que el menú supere " +
+                    naturalListText(excessLabels) + "."
+        }
+    }
+
+    if (messages.isEmpty()) {
+        assessment.coverage.filter { it.alternatives == 0 }.forEach {
+            messages += "No tienes alimentos asignados a ${it.mealType.label.lowercase()}."
+        }
+    }
+    if (messages.isEmpty()) messages += assessment.limitingFactors
+    return messages.distinct().take(3)
+}
+
+private fun mealListText(meals: List<MealType>): String =
+    naturalListText(meals.distinct().map { it.label.lowercase() })
+
+private fun naturalListText(values: List<String>): String = when (values.size) {
+    0 -> ""
+    1 -> values.first()
+    2 -> values.joinToString(" y ")
+    else -> values.dropLast(1).joinToString(", ") + " y " + values.last()
+}
+
+private fun isAcceptableWeeklyMenu(
+    meals: List<PlannedMeal>,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    recommendation: Recommendation,
+    mealShares: Map<MealType, Double>
+): Boolean {
+    if (meals.isEmpty()) return false
+    val assessments = WeekDay.entries.map { day ->
+        MealPlanEvaluator.assessDay(day, meals, foodsById, dishesById, recommendation)
+    }
+    val activeMealTypes = mealShares.filterValues { it > 0.0 }.keys
+    return WeeklyMenuAcceptancePolicy.isAcceptable(assessments, activeMealTypes) &&
+        WeeklyMenuGenerator.isCulinarilyValid(meals, foodsById, dishesById)
+}
+
+private fun weeklyAssessmentText(assessment: PlanNutritionAssessment?): String {
+    if (assessment == null) return "Añade una medición para poder valorar este menú."
+    if (!assessment.actual.isComplete) return "Faltan datos nutricionales para valorar el menú completo."
+    val names = listOf("calorías", "proteína", "hidratos", "grasa")
+    val outside = assessment.evaluations.withIndex().filter { it.value.fit == TargetFit.OUTSIDE }
+    val below = outside.filter { it.value.difference < 0.0 }.map { names[it.index] }
+    val above = outside.filter { it.value.difference > 0.0 }.map { names[it.index] }
+    if (below.isEmpty() && above.isEmpty()) return "El menú semanal está bien ajustado a tus objetivos."
+    return buildList {
+        if (below.isNotEmpty()) add("Por debajo del objetivo semanal: ${below.joinToString()}.")
+        if (above.isNotEmpty()) add("Por encima del objetivo semanal: ${above.joinToString()}.")
+    }.joinToString(" ")
+}
+
+@Composable
+private fun ShoppingListScreen(
+    data: AppData,
+    week: PlanWeek,
+    onWeekChange: (PlanWeek) -> Unit,
+    showWeekSelector: Boolean = true,
+    onBack: () -> Unit
+) {
+    val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
+    val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
+    val meals = data.activeProfileData?.plannedMeals.orEmpty().filter { it.planWeek == week }
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(topAppBarState)
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            TopAppBar(
+                title = { Text("Lista de la compra") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
+                    }
+                },
+                scrollBehavior = scrollBehavior
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding()),
+            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (showWeekSelector) {
+                item {
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        listOf(PlanWeek.CURRENT to "Esta semana", PlanWeek.NEXT to "La que viene").forEachIndexed { index, (value, label) ->
+                            SegmentedButton(
+                                selected = week == value,
+                                onClick = { onWeekChange(value) },
+                                shape = SegmentedButtonDefaults.itemShape(index, 2)
+                            ) { Text(label) }
+                        }
+                    }
+                }
+            }
+            item {
+                HomeShoppingSection(
+                    meals = meals,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    profileId = data.profile?.id,
+                    onOpenFoods = {}
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeShoppingSection(
+    meals: List<PlannedMeal>,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    profileId: Long?,
+    onOpenFoods: () -> Unit
+) {
+    val amounts = remember(meals, dishesById) {
+        MealPlanEvaluator.weeklyFoodAmounts(meals, dishesById)
+    }
+    val entries = remember(amounts, foodsById) {
+        amounts.mapNotNull { (foodId, grams) -> foodsById[foodId]?.let { it to grams } }
+            .sortedBy { it.first.name.lowercase() }
+    }
+    val context = LocalContext.current
+    val shoppingPreferences = remember { context.getSharedPreferences("shopping_state", 0) }
+    val preferenceKey = "available_foods_${profileId ?: 0L}"
+    var availableFoodIds by remember(profileId) {
+        mutableStateOf(
+            shoppingPreferences.getStringSet(preferenceKey, emptySet())
+                .orEmpty()
+                .mapNotNull(String::toLongOrNull)
+        )
+    }
+    fun saveAvailableFoods(updated: List<Long>) {
+        availableFoodIds = updated
+        shoppingPreferences.edit()
+            .putStringSet(preferenceKey, updated.map(Long::toString).toSet())
+            .apply()
+    }
+    val neededEntries = entries.filterNot { (food, _) -> food.id in availableFoodIds }
+    val purchasedEntries = entries.filter { (food, _) -> food.id in availableFoodIds }
+
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (neededEntries.isEmpty() && entries.isEmpty()) {
+            Text(
+                "El plan todavía no contiene alimentos.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            neededEntries.forEachIndexed { index, (food, grams) ->
+                HomeShoppingEntry(
+                    food = food,
+                    grams = grams,
+                    checked = false,
+                    onCheckedChange = { isChecked ->
+                        if (isChecked) saveAvailableFoods(availableFoodIds + food.id)
+                    }
+                )
+                if (index < neededEntries.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+            }
+        }
+        if (purchasedEntries.isNotEmpty()) {
+            Text(
+                "Ya comprado",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            purchasedEntries.forEachIndexed { index, (food, grams) ->
+                HomeShoppingEntry(
+                    food = food,
+                    grams = grams,
+                    checked = true,
+                    onCheckedChange = { isChecked ->
+                        if (!isChecked) saveAvailableFoods(availableFoodIds - food.id)
+                    }
+                )
+                if (index < purchasedEntries.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeShoppingEntry(
+    food: Food,
+    grams: Double,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                food.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                foodAmountLabel(food, grams),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+private fun foodAmountLabel(food: Food, grams: Double): String {
+    val unitAmount = food.unitAmount
+    val unitName = food.unitName
+    if (unitAmount == null || unitAmount <= 0.0 || unitName.isNullOrBlank()) {
+        return "${formatDecimal(grams)} g"
+    }
+    val units = grams / unitAmount
+    val plural = food.unitPlural?.takeIf { it.isNotBlank() } ?: "${unitName}s"
+    val halves = (units * 2).roundToInt()
+    val natural = when {
+        abs(units - 0.5) < 0.01 -> if (food.unitGender == "FEMININE") "media $unitName" else "medio $unitName"
+        abs(units - 1.0) < 0.01 -> "1 $unitName"
+        halves > 2 && halves % 2 == 1 -> "${halves / 2} $unitName y ${if (food.unitGender == "FEMININE") "media" else "medio"}"
+        abs(units - units.roundToInt()) < 0.01 -> "${units.roundToInt()} $plural"
+        else -> "${formatDecimal(units)} $plural"
+    }
+    return "$natural · ${formatDecimal(grams)} g"
+}
+
+@Composable
+private fun BodyIndicator(
+    label: String,
+    value: String
+) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    }
+}
+
+private data class RiskBand(val start: Double, val end: Double, val color: Color)
+
+@Composable
+private fun ProgressChart(
+    points: List<Pair<LocalDate, Double>>,
+    minimum: Double,
+    maximum: Double,
+    bands: List<RiskBand>,
+    thresholds: List<Pair<Double, String>>
+) {
+    val lineColor = MaterialTheme.colorScheme.primary
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val labelSize = with(LocalDensity.current) { 11.sp.toPx() }
+    Canvas(Modifier.fillMaxWidth().height(118.dp)) {
+        val top = 6.dp.toPx()
+        val bottom = size.height - 6.dp.toPx()
+        val left = 8.dp.toPx()
+        val right = size.width - 48.dp.toPx()
+        val valueRange = maximum - minimum
+        fun yFor(value: Double): Float = bottom -
+            ((value - minimum) / valueRange).coerceIn(0.0, 1.0).toFloat() * (bottom - top)
+        fun stopFor(value: Double): Float =
+            (1.0 - (value - minimum) / valueRange).coerceIn(0.0, 1.0).toFloat()
+
+        val topBand = bands.maxByOrNull { it.end }
+        val bottomBand = bands.minByOrNull { it.start }
+        val gradientStops = buildList {
+            topBand?.let { add(0f to it.color.copy(alpha = 0.38f)) }
+            bands.sortedByDescending { (it.start + it.end) / 2.0 }.forEach { band ->
+                add(stopFor((band.start + band.end) / 2.0) to band.color.copy(alpha = 0.38f))
+            }
+            bottomBand?.let { add(1f to it.color.copy(alpha = 0.38f)) }
+        }.distinctBy { it.first }.sortedBy { it.first }
+        val gradient = Brush.verticalGradient(
+            *gradientStops.toTypedArray(),
+            startY = top,
+            endY = bottom
+        )
+        drawRoundRect(
+            brush = gradient,
+            topLeft = Offset(0f, top),
+            size = Size(size.width, bottom - top),
+            cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx())
+        )
+
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = labelColor.toArgb()
+            textSize = labelSize
+            textAlign = android.graphics.Paint.Align.RIGHT
+            typeface = android.graphics.Typeface.create(
+                android.graphics.Typeface.DEFAULT,
+                android.graphics.Typeface.BOLD
+            )
+        }
+        thresholds.forEach { (threshold, label) ->
+            val y = yFor(threshold)
+            drawLine(
+                labelColor.copy(alpha = 0.28f),
+                Offset(0f, y),
+                Offset(size.width, y),
+                strokeWidth = 1.dp.toPx()
+            )
+            drawContext.canvas.nativeCanvas.drawText(label, size.width - 6.dp.toPx(), y - 4.dp.toPx(), paint)
+        }
+
+        if (points.isNotEmpty()) {
+            val firstDay = points.minOf { it.first }.toEpochDay()
+            val lastDay = points.maxOf { it.first }.toEpochDay()
+            val dayRange = (lastDay - firstDay).coerceAtLeast(1L)
+            val offsets = points.map { (date, value) ->
+                val x = if (points.size == 1) {
+                    (left + right) / 2f
+                } else {
+                    left + ((date.toEpochDay() - firstDay).toFloat() / dayRange.toFloat()) * (right - left)
+                }
+                Offset(x, yFor(value))
+            }
+            offsets.zipWithNext().forEach { (start, end) ->
+                drawLine(lineColor, start, end, strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round)
+            }
+            offsets.forEach { point ->
+                drawCircle(lineColor, radius = 3.5.dp.toPx(), center = point)
+            }
+        }
+    }
+    if (points.isNotEmpty()) {
+        val first = points.first().first.format(DateTimeFormatter.ofPattern("dd/MM/yy"))
+        val last = points.last().first.format(DateTimeFormatter.ofPattern("dd/MM/yy"))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(first, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (last != first) {
+                Text(last, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendedGoalSection(recommendation: RecommendedGoal) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "Objetivo recomendado",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            recommendation.goal.label,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            recommendation.explanation,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun GoalSection(
+    goal: WeightGoal,
+    onGoalChange: (WeightGoal) -> Unit,
+    onExplain: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SelectorField(
+            label = "Objetivo elegido",
+            selectedLabel = goal.label,
+            options = WeightGoal.entries,
+            optionLabel = { it.label },
+            onSelect = onGoalChange,
+            onClear = null
+        )
+        TextButton(onClick = onExplain) { Text("Entender los objetivos") }
+    }
+}
+
+@Composable
+private fun RecommendationSection(
+    recommendation: es.david.rumbo.model.Recommendation,
+    onExplain: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                recommendation.calories.toString(),
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("kcal/día", modifier = Modifier.padding(bottom = 8.dp))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            MacroValue(
+                "Proteína",
+                recommendation.proteinGrams,
+                foodCategoryColor(FoodCategory.PROTEIN)
+            )
+            MacroValue(
+                "Hidratos",
+                recommendation.carbohydrateGrams,
+                foodCategoryColor(FoodCategory.CARBOHYDRATE)
+            )
+            MacroValue(
+                "Grasa",
+                recommendation.fatGrams,
+                foodCategoryColor(FoodCategory.FAT)
+            )
+        }
+        if (recommendation.calculation != null) {
+            TextButton(onClick = onExplain) {
+                Text("Entender esta recomendación")
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalExplanationScreen(data: AppData) {
+    val goal = RecommendationEngine.effectiveValues(data.measurements).goal
+    val assessment = data.profile?.let { RecommendationEngine.assessGoal(it, data.measurements) }
+    val recommended = data.profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
+
+    LazyColumn(
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Text("Entender los objetivos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        }
+        item {
+            NarrativeSection(
+                title = "Objetivo recomendado: ${recommended?.goal?.label ?: "—"}",
+                body = recommended?.explanation
+                    ?: "Todavía no hay suficientes datos corporales para proponer un objetivo."
+            )
+        }
+        item {
+            NarrativeSection(
+                title = "Objetivo elegido: ${goal.label}",
+                body = assessment?.let { "${it.headline}. ${it.explanation}" }
+                    ?: "Este objetivo se utilizará para orientar la recomendación energética."
+            )
+        }
+        item {
+            NarrativeSection(
+                title = "Qué cambia al elegir un objetivo",
+                body = "El objetivo indica la dirección y la velocidad prudente que debe intentar favorecer la recomendación: perder peso, mantenerlo o ganarlo. No promete por sí solo perder grasa o ganar músculo; para eso también importan el entrenamiento, la proteína, el descanso y la constancia."
+            )
+        }
+        item {
+            NarrativeSection(
+                title = "Por qué no siempre se aplica literalmente",
+                body = "Rumbo contrasta la elección con el IMC, la relación cintura/altura y la evolución registrada. Si perder o ganar peso no parece razonable con esos indicadores, limita el ajuste o recomienda mantener y observar en vez de producir una dieta potencialmente perjudicial."
+            )
+        }
+        item {
+            Text(
+                "Cada cambio de objetivo queda fechado. Las recomendaciones anteriores conservan el objetivo que estaba vigente cuando se calcularon.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlainNarrativeSection(title: String, body: String) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+private const val NICE_BODY_ASSESSMENT_URL =
+    "https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-overweight-obesity-and-central-adiposity"
+private const val NHS_WEIGHT_LOSS_RATE_URL =
+    "https://www.nhs.uk/live-well/healthy-weight/managing-your-weight/tips-to-help-you-lose-weight/"
+private const val MIFFLIN_ST_JEOR_URL =
+    "https://pubmed.ncbi.nlm.nih.gov/2305711/"
+private const val ENERGY_BALANCE_MODEL_URL =
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3859816/"
+private const val PROTEIN_META_ANALYSIS_URL =
+    "https://pubmed.ncbi.nlm.nih.gov/28698222/"
+
+private fun bmiExplanation(bmi: Double): String {
+    val interpretation = when {
+        bmi < 18.5 ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, por debajo del intervalo habitual. Esto puede indicar que tu peso es bajo para tu altura."
+        bmi < 25.0 ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, dentro del intervalo habitual. Tu peso y tu altura guardan una proporción adecuada según este indicador."
+        bmi < 30.0 ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, un poco por encima del intervalo habitual."
+        bmi < 35.0 ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, claramente por encima del intervalo habitual."
+        else ->
+            "Tu IMC es ${formatOneDecimal(bmi)}, bastante por encima del intervalo habitual."
+    }
+    return "El IMC relaciona tu peso con tu altura y sirve para estimar si ambos están proporcionados. " +
+        interpretation +
+        " Es solo una referencia, porque no distingue entre grasa y músculo, así que conviene interpretarlo junto con tu cintura."
+}
+
+private fun waistToHeightExplanation(ratio: Double, heightCm: Double?): String {
+    val percentage = formatDecimal(ratio * 100.0)
+    val interpretation = when {
+        ratio < 0.40 ->
+            "Tu cintura equivale al $percentage % de tu altura, por debajo del intervalo habitual. Este resultado debe interpretarse junto con tu peso y tu IMC."
+        ratio < 0.50 ->
+            "Tu cintura equivale al $percentage % de tu altura y se encuentra dentro de la referencia recomendada."
+        ratio < 0.60 ->
+            "Tu cintura equivale al $percentage % de tu altura, ligeramente por encima de la referencia recomendada."
+        else ->
+            "Tu cintura equivale al $percentage % de tu altura, claramente por encima de la referencia recomendada."
+    }
+    val target = if (ratio >= 0.50 && heightCm != null) {
+        " Lo ideal es que mida menos de la mitad de tu altura; en tu caso, menos de ${formatOneDecimal(heightCm / 2.0)} cm."
+    } else {
+        ""
+    }
+    return "Este índice compara el tamaño de tu cintura con tu altura y ayuda a estimar la grasa acumulada alrededor del abdomen. " +
+        interpretation + target
+}
+
+private fun combinedBodyExplanation(bmi: Double, ratio: Double): String = when {
+    bmi >= 35.0 ->
+        "La prioridad debería ser una pérdida de peso gradual y sostenida. Con un IMC de este nivel, la cintura aporta poca información adicional para decidir el objetivo, aunque sigue siendo útil para seguir el progreso. Puede ser recomendable contar también con supervisión sanitaria."
+    bmi < 18.5 && ratio < 0.50 ->
+        "Tu prioridad debería ser ganar peso de forma gradual, procurando que una parte importante sea músculo. Para ello conviene comer algo más, tomar suficiente proteína y entrenar fuerza con regularidad. No parece adecuado reducir calorías."
+    bmi < 18.5 ->
+        "Aunque tu cintura es elevada, perder más peso podría no ser conveniente. Lo más adecuado sería mejorar la composición corporal: mantener o aumentar ligeramente las calorías, tomar suficiente proteína y entrenar fuerza. Es una combinación poco habitual y merece interpretarse con cautela."
+    bmi < 25.0 && ratio < 0.50 ->
+        "Tus resultados no señalan la necesidad de cambiar de peso. Mantenerlo mientras conservas una alimentación adecuada y cierta actividad física sería un objetivo razonable. Si quieres mejorar la composición corporal, puedes hacerlo mediante fuerza y suficiente proteína sin reducir calorías."
+    bmi < 25.0 && ratio < 0.60 ->
+        "Tu peso no necesita bajar mucho, pero sí sería conveniente reducir la cintura. Lo más adecuado sería perder grasa lentamente mientras mantienes o aumentas el músculo, con un ajuste calórico pequeño, suficiente proteína y entrenamiento de fuerza. La cintura será más informativa que el peso para valorar el progreso."
+    bmi < 25.0 ->
+        "Aunque tu peso total está dentro del intervalo habitual, la acumulación abdominal es elevada. Reducir la cintura debería ser la prioridad, mediante una pérdida moderada de grasa, actividad física regular y entrenamiento de fuerza para conservar músculo."
+    ratio < 0.50 ->
+        "Tienes más peso del habitual, pero sin una acumulación abdominal elevada. Si entrenas fuerza y tomas suficiente proteína, parte de ese peso podría ser músculo y sería razonable priorizar una pérdida lenta o la recomposición corporal. Si no es así, una reducción gradual de peso probablemente mejoraría tu situación."
+    ratio < 0.60 ->
+        "Lo más adecuado sería perder grasa de forma gradual, procurando conservar el músculo. Para ello conviene combinar un déficit calórico moderado con suficiente proteína, entrenamiento de fuerza y actividad física regular. Deberían disminuir tanto el peso como la cintura."
+    else ->
+        "La prioridad debería ser reducir de forma gradual el peso y, especialmente, la cintura. Conviene evitar objetivos extremos y combinar una alimentación con déficit moderado, suficiente proteína, entrenamiento de fuerza y actividad aeróbica regular."
+}
+
+@Composable
+private fun BodyExplanationScreen(
+    data: AppData,
+    onOpenMeasurement: (Long) -> Unit
+) {
+    val profile = data.profile
+    val assessment = profile?.let { RecommendationEngine.assessBody(it, data.measurements) }
+    val recommendedGoal = profile?.let { RecommendationEngine.recommendGoal(it, data.measurements) }
+    val latest = data.measurements.maxWithOrNull(compareBy<Measurement> { it.date }.thenBy { it.id })
+    val recommendation = latest?.recommendation
+    val calculation = recommendation?.calculation
+    val uriHandler = LocalUriHandler.current
+    val ordered = data.measurements.sortedWith(compareBy<Measurement> { it.date }.thenBy { it.id })
+    val heightM = profile?.heightCm?.div(100.0)
+    val bmiPoints = if (heightM == null) emptyList() else ordered.mapNotNull { item ->
+        item.weightKg?.let { item.date to it / heightM.pow(2) }
+    }
+    val waistPoints = if (profile == null) emptyList() else ordered.mapNotNull { item ->
+        item.waistCm?.let { item.date to it / profile.heightCm }
+    }
+
+    LazyColumn(
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        assessment?.bmi?.let { bmi ->
+            item {
+                BodyIndicator(
+                    label = "IMC",
+                    value = formatOneDecimal(bmi)
+                )
+                ProgressChart(
+                    points = bmiPoints,
+                    minimum = 15.0,
+                    maximum = 40.0,
+                    bands = listOf(
+                        RiskBand(15.0, 18.5, Color(0xFFE57373)),
+                        RiskBand(18.5, 25.0, Color(0xFF66BB6A)),
+                        RiskBand(25.0, 30.0, Color(0xFFFFCA4B)),
+                        RiskBand(30.0, 40.0, Color(0xFFE57373))
+                    ),
+                    thresholds = listOf(18.5 to "18,5", 25.0 to "25", 30.0 to "30")
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    bmiExplanation(bmi),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                TextButton(
+                    onClick = { uriHandler.openUri(NICE_BODY_ASSESSMENT_URL) },
+                    contentPadding = PaddingValues(0.dp)
+                ) { Text("Fuente: criterios de NICE sobre el IMC") }
+            }
+        }
+        assessment?.waistToHeightRatio?.let { ratio ->
+            item {
+                BodyIndicator(
+                    label = "Cintura / altura",
+                    value = formatTwoDecimals(ratio)
+                )
+                ProgressChart(
+                    points = waistPoints,
+                    minimum = 0.35,
+                    maximum = 0.70,
+                    bands = listOf(
+                        RiskBand(0.35, 0.40, Color(0xFFFFCA4B)),
+                        RiskBand(0.40, 0.50, Color(0xFF66BB6A)),
+                        RiskBand(0.50, 0.60, Color(0xFFFFCA4B)),
+                        RiskBand(0.60, 0.70, Color(0xFFE57373))
+                    ),
+                    thresholds = listOf(0.40 to "0,40", 0.50 to "0,50", 0.60 to "0,60")
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    waistToHeightExplanation(ratio, profile.heightCm),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                TextButton(
+                    onClick = { uriHandler.openUri(NICE_BODY_ASSESSMENT_URL) },
+                    contentPadding = PaddingValues(0.dp)
+                ) { Text("Fuente: criterios de NICE sobre cintura y altura") }
+            }
+        }
+        if (assessment?.bmi != null && assessment.waistToHeightRatio != null) {
+            item {
+                Text(
+                    "Nuestra recomendación",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    combinedBodyExplanation(assessment.bmi, assessment.waistToHeightRatio),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                recommendedGoal?.let { result ->
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        result.explanation,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (result.goal in setOf(WeightGoal.LOSE_SLOWLY, WeightGoal.LOSE_FASTER)) {
+                        TextButton(
+                            onClick = { uriHandler.openUri(NHS_WEIGHT_LOSS_RATE_URL) },
+                            contentPadding = PaddingValues(0.dp)
+                        ) { Text("Referencia: ritmo gradual recomendado por el NHS") }
+                    }
+                }
+
+                if (recommendation != null && calculation != null) {
+                    val requestedRate = calculation.goalAdjustmentCalories * 7.0 / 7700.0
+                    val goalBasedCalories =
+                        calculation.maintenanceCalories + calculation.goalAdjustmentCalories
+                    val goalCalculation = when {
+                        abs(requestedRate) < 0.0001 ->
+                            "Como el objetivo es mantener el peso, no aplicamos déficit ni superávit y tomamos como referencia las ${formatOneDecimal(calculation.maintenanceCalories)} kcal con las que estimamos que mantendrías el peso."
+                        requestedRate < 0.0 ->
+                            "Para perder ${formatOneDecimal(abs(requestedRate))} kg por semana necesitas un déficit aproximado de ${formatOneDecimal(abs(calculation.goalAdjustmentCalories))} kcal diarias. Lo restamos a las ${formatOneDecimal(calculation.maintenanceCalories)} kcal de mantenimiento y obtenemos ${formatOneDecimal(goalBasedCalories)} kcal."
+                        else ->
+                            "Para ganar ${formatOneDecimal(requestedRate)} kg por semana necesitas un superávit aproximado de ${formatOneDecimal(calculation.goalAdjustmentCalories)} kcal diarias. Lo añadimos a las ${formatOneDecimal(calculation.maintenanceCalories)} kcal de mantenimiento y obtenemos ${formatOneDecimal(goalBasedCalories)} kcal."
+                    }
+                    val adjustments = buildList {
+                        calculation.goalSafetyExplanation?.let {
+                            add(it.replaceFirstChar(Char::uppercaseChar) + ".")
+                        }
+                        calculation.energyLimitExplanation?.let {
+                            add(
+                                it.replaceFirstChar(Char::uppercaseChar) +
+                                    " y modifica el cálculo en ${formatSignedKcal(calculation.energyLimitAdjustmentCalories)} kcal."
+                            )
+                        }
+                        if (abs(calculation.historyAdjustmentCalories) >= 0.05) {
+                            add(
+                                calculation.historyExplanation.replaceFirstChar(Char::uppercaseChar) +
+                                    "; por eso aplica ${formatSignedKcal(calculation.historyAdjustmentCalories)} kcal."
+                            )
+                        } else {
+                            add(calculation.historyExplanation.replaceFirstChar(Char::uppercaseChar) + ".")
+                        }
+                        calculation.previousLimitExplanation?.let {
+                            add(it.replaceFirstChar(Char::uppercaseChar) + ".")
+                        }
+                    }.joinToString(" ")
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Según tu peso, altura, edad y sexo, Mifflin–St Jeor estima un gasto de ${formatOneDecimal(calculation.restingCalories)} kcal al día en reposo. Al incorporar tu actividad «${calculation.activity.label.lowercase()}», estimamos un mantenimiento de ${formatOneDecimal(calculation.maintenanceCalories)} kcal.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "$goalCalculation",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "$adjustments Tras los ajustes obtenemos ${formatOneDecimal(calculation.beforeRoundingCalories)} kcal y redondeamos al múltiplo de 25 más cercano: ${recommendation.calories} kcal al día.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    TextButton(
+                        onClick = { uriHandler.openUri(MIFFLIN_ST_JEOR_URL) },
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("Referencia: fórmula de Mifflin–St Jeor") }
+                    TextButton(
+                        onClick = { uriHandler.openUri(ENERGY_BALANCE_MODEL_URL) },
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("Referencia: déficit energético y cambio de peso") }
+
+                    val calculationHeightM = calculation.heightCm / 100.0
+                    val proteinReferenceWeight =
+                        minOf(calculation.weightKg, 30.0 * calculationHeightM.pow(2))
+                    val proteinContext = when {
+                        calculation.goalAdjustmentCalories < 0.0 ->
+                            "Priorizamos ${recommendation.proteinGrams} g de proteína para ayudar a conservar músculo durante la pérdida de grasa."
+                        calculation.goalAdjustmentCalories > 0.0 ->
+                            "Priorizamos ${recommendation.proteinGrams} g de proteína para favorecer que parte del peso ganado sea músculo, especialmente si entrenas fuerza."
+                        else ->
+                            "Priorizamos ${recommendation.proteinGrams} g de proteína para facilitar el mantenimiento y desarrollo muscular."
+                    }
+                    val referenceWeightText =
+                        if (proteinReferenceWeight < calculation.weightKg - 0.05) {
+                            " Para calcularla usamos un peso de referencia de ${formatOneDecimal(proteinReferenceWeight)} kg, porque hacerlo sobre todo tu peso actual produciría una cifra innecesariamente alta."
+                        } else {
+                            ""
+                        }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        buildAnnotatedString {
+                            val marker = "${recommendation.proteinGrams} g de proteína"
+                            val parts = proteinContext.split(marker, limit = 2)
+                            append(parts.first())
+                            withStyle(
+                                SpanStyle(
+                                    color = foodCategoryColor(FoodCategory.PROTEIN),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            ) { append(marker) }
+                            if (parts.size > 1) append(parts[1])
+                            append(referenceWeightText)
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Mo
