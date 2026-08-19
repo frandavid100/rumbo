@@ -245,9 +245,19 @@ object WeeklyMenuGenerator {
             slot.mealType in it.allowedMealTypes &&
                 it.frequency != PlanningFrequency.NEVER && it.frequency != PlanningFrequency.ALWAYS
         }
-        val maximumItems = when (slot.mealType) {
-            MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
-            else -> 4
+        val maximumItems = when {
+            exploration >= 0.75 -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 1
+                else -> 2
+            }
+            exploration >= 0.50 -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 2
+                else -> 3
+            }
+            else -> when (slot.mealType) {
+                MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK -> 3
+                else -> 4
+            }
         }
 
         if (!hasCompatibleExclusiveRoles(chosen, foodsById, dishesById)) {
@@ -258,6 +268,22 @@ object WeeklyMenuGenerator {
         }
 
         while (chosen.size < maximumItems) {
+            // A valid day can require deliberately sparse meals so that the
+            // daily macro budget is available where the repertoire is most
+            // efficient. The old greedy loop only stopped when every further
+            // item worsened the *meal* target; consequently it almost never
+            // explored witnesses such as a single snack followed by a larger
+            // protein serving at dinner. Keep the deterministic greedy path,
+            // but let exploratory candidates stop at any already valid
+            // partial composition. The full-day scorer still decides whether
+            // that sparse composition is useful.
+            if (
+                chosen.isNotEmpty() &&
+                !hasUnmetDependency(chosen, foodsById, dishesById) &&
+                exploration > 0.0 &&
+                random.nextDouble() < 0.15 + exploration * 0.35
+            ) break
+
             var candidates = eligible.filter { candidate ->
                 chosen.none { it.sameItem(candidate) || it.overlaps(candidate, dishesById) } &&
                     !(candidate.itemKind == PlannedItemKind.DISH &&
@@ -265,6 +291,34 @@ object WeeklyMenuGenerator {
                     hasCompatibleExclusiveRoles(chosen + candidate, foodsById, dishesById)
             }
             if (candidates.isEmpty()) break
+
+            // Build the day's nutritional skeleton before considering
+            // complementary foods. Lunch and dinner prioritise a primary
+            // protein; the remaining main roles are reserved as soon as a
+            // compatible candidate is available. This makes the generator
+            // search inside the certifiable space instead of repairing a
+            // macro-perfect but structurally empty day afterwards.
+            val dayRules = assigned.filterKeys { it.day == slot.day }.values.flatten() + chosen
+            val presentMajorRoles = dayRules.flatMapTo(linkedSetOf()) {
+                MajorNutritionalRolePolicy.roles(it, foodsById, dishesById)
+            }
+            val missingMajorRoles = MajorNutritionalRolePolicy.requiredRoles - presentMajorRoles
+            val roleToReserve = when {
+                slot.mealType in setOf(MealType.LUNCH, MealType.DINNER) &&
+                    MajorNutritionalRolePolicy.PRIMARY_PROTEIN in missingMajorRoles ->
+                    MajorNutritionalRolePolicy.PRIMARY_PROTEIN
+                else -> missingMajorRoles.firstOrNull { missingRole ->
+                    candidates.any {
+                        missingRole in MajorNutritionalRolePolicy.roles(it, foodsById, dishesById)
+                    }
+                }
+            }
+            if (roleToReserve != null) {
+                val structuralCandidates = candidates.filter {
+                    roleToReserve in MajorNutritionalRolePolicy.roles(it, foodsById, dishesById)
+                }
+                if (structuralCandidates.isNotEmpty()) candidates = structuralCandidates
+            }
 
             // COMPLETE is not just a scoring preference. While the day still
             // needs fruit/vegetable coverage, reserve a slot for a compatible
@@ -749,7 +803,13 @@ object WeeklyMenuGenerator {
                 (missingFruit + missingVegetable) * 250_000.0 + missingFiberRatio * 100_000.0
             }
         } else 0.0
-        return nutritional + completePenalty + mealBalancePenalty * 10.0 + compositionPenalty +
+        val missingMajorRolePenalty = orderedDays.sumOf { day ->
+            if (MajorNutritionalRolePolicy.hasAllRequiredRoles(
+                    meals.filter { day in it.days }, foodsById, dishesById
+                )) 0.0 else 1_000_000_000.0
+        }
+        return nutritional + completePenalty + missingMajorRolePenalty +
+            mealBalancePenalty * 10.0 + compositionPenalty +
             quantityPenalty + varietyPenalty + recentPenalty
     }
 
