@@ -7,6 +7,10 @@ package es.david.rumbo.logic
 object CulinarySoftPolicy {
     const val POLICY_VERSION = 1
 
+    private val plateVehicleRoles = setOf(
+        CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE
+    )
+
     private val preferAnyOf: Map<CulinaryRole, Set<CulinaryRole>> = mapOf(
         CulinaryRole.PLATE_CENTER to setOf(CulinaryRole.PLATE_BASE, CulinaryRole.SIDE),
         CulinaryRole.PLATE_BASE to setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.SIDE),
@@ -14,9 +18,8 @@ object CulinarySoftPolicy {
         CulinaryRole.SANDWICH_BASE to setOf(CulinaryRole.SANDWICH_FILLING, CulinaryRole.SPREAD),
         CulinaryRole.CEREAL_BASE to setOf(CulinaryRole.CEREAL_MIX_IN),
         CulinaryRole.POWDER_BASE to setOf(CulinaryRole.POWDER_MIX_IN),
-        CulinaryRole.COOKING_MEDIUM to setOf(
-            CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE
-        )
+        CulinaryRole.COOKING_MEDIUM to plateVehicleRoles,
+        CulinaryRole.SAUCE_DRESSING to plateVehicleRoles
     )
 
     fun preferredCompanions(role: CulinaryRole): Set<CulinaryRole> =
