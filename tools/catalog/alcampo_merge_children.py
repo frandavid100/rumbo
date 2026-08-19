@@ -8,6 +8,10 @@ from pathlib import Path
 from alcampo_direct_catalog_v6 import Product, merge, write_outputs
 
 
+def stable_product_key(product: Product) -> str:
+    return f"sku:{product.sku}" if product.sku else f"product:{product.product_id}"
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--downloaded", type=Path, required=True)
@@ -24,13 +28,16 @@ def main() -> int:
         except Exception:
             pass
 
+    rows_seen = 0
     for pp in glob.glob(str(a.downloaded / "**/products.jsonl"), recursive=True):
         for line in open(pp, encoding="utf-8"):
             if not line.strip():
                 continue
             row = json.loads(line)
             obj = Product(**row)
-            products[obj.product_id] = merge(products[obj.product_id], obj) if obj.product_id in products else obj
+            rows_seen += 1
+            key = stable_product_key(obj)
+            products[key] = merge(products[key], obj) if key in products else obj
 
     merged = write_outputs(a.out, list(products.values()), checks)
     failed = [c for c in checks if not c.get("ok")]
@@ -44,7 +51,7 @@ def main() -> int:
     # completeness denominator. The authoritative completeness condition is that every
     # scheduled first-party root shard produced an audit, and every recursively discovered
     # category node exhausted its own pageToken chain without API errors or unaddressable
-    # children, followed by global UUID deduplication.
+    # children, followed by global listing-identity deduplication.
     complete = (
         bool(checks)
         and missing_shards == 0
@@ -64,9 +71,11 @@ def main() -> int:
         "api_error_categories": api_error_categories,
         "children_without_retailer_category_id": missing_id_categories,
         "source_reported_product_count_sum_diagnostic_only": source_reported_sum,
+        "product_rows_before_global_dedup": rows_seen,
         "unique_products_after_dedup": merged["counts"]["food_products"],
+        "deduplication_identity": "retailer_sku_else_product_id",
         "minimum_products_sanity_floor": a.min_products,
-        "completeness_basis": "all_scheduled_root_shards_plus_recursive_first_party_category_tree_plus_pageToken_exhaustion_then_uuid_dedup",
+        "completeness_basis": "all_scheduled_root_shards_plus_recursive_first_party_category_tree_plus_pageToken_exhaustion_then_listing_identity_dedup",
         "complete_enumeration": complete,
     }
     (a.out / "enumeration_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
