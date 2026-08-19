@@ -1,0 +1,204 @@
+{
+  "retailer": "ALCAMPO",
+  "source": "https://www.compraonline.alcampo.es",
+  "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
+  "importer_version": "alcampo-direct-v8.0",
+  "built_at": "2026-08-19T19:58:31.519265+00:00",
+  "roots": [
+    {
+      "label": "Frescos",
+      "retailer_category_id": "OC2112",
+      "pages": 6,
+      "unique_decorated_products": 1800,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [
+        {
+          "name": "Frutas",
+          "categoryId": "25fd70b8-959e-4633-b14a-0cee7cd3669a",
+          "retailerCategoryId": "OC1701",
+          "productCount": 281
+        },
+        {
+          "name": "Verduras y hortalizas",
+          "categoryId": "aed1da10-51e1-443c-8951-f83f69243176",
+          "retailerCategoryId": "OC1702",
+          "productCount": 464
+        },
+        {
+          "name": "Carne",
+          "categoryId": "d6245e0b-4824-46bc-8cea-2bbaa407348b",
+          "retailerCategoryId": "OC13",
+          "productCount": 1086
+        },
+        {
+          "name": "Pescados, mariscos y moluscos",
+          "categoryId": "bede7557-66ae-458b-b666-4447bcf1bd78",
+          "retailerCategoryId": "OC14",
+          "productCount": 625
+        },
+        {
+          "name": "Ahumados, surimis, anchoas, pulpos y otros",
+          "categoryId": "7f7f5afb-e7b1-48e6-aaa6-395c745deea7",
+          "retailerCategoryId": "OC184",
+          "productCount": 387
+        },
+        {
+          "name": "Charcutería",
+          "categoryId": "0211b0a1-a2bd-4ca9-be19-5aa23fe1f145",
+          "retailerCategoryId": "OC15",
+          "productCount": 1151
+        },
+        {
+          "name": "Jamones y paletas",
+          "categoryId": "3bb9b948-9d75-4044-806d-acbb009b14c5",
+          "retailerCategoryId": "OC151001",
+          "productCount": 91
+        },
+        {
+          "name": "Quesos",
+          "categoryId": "8fda6b46-6a31-4af7-b2e7-90c5f4bbd4bb",
+          "retailerCategoryId": "OCQuesos",
+          "productCount": 1068
+        },
+        {
+          "name": "Panadería",
+          "categoryId": "3933c3bf-7c66-4a4c-ab79-adc31ff32515",
+          "retailerCategoryId": "OC1281",
+          "productCount": 270
+        },
+        {
+          "name": "Pastelería",
+          "categoryId": "b45325ac-e731-4af7-aa32-16eb583d311e",
+          "retailerCategoryId": "OC1282",
+          "productCount": 395
+        }
+      ],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+      "retailer_category_id": "OC16",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Alimentación",
+      "retailer_category_id": "OCC10",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Desayuno y Merienda",
+      "retailer_category_id": "OC10",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Congelados",
+      "retailer_category_id": "OC200220183",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Comida Preparada",
+      "retailer_category_id": "OC20022018",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Supermercado Ecológico",
+      "retailer_category_id": "OC26112021",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Bebidas",
+      "retailer_category_id": "OCC11",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+      "retailer_category_id": "OCSINGSINL",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    },
+    {
+      "label": "Veganos",
+      "retailer_category_id": "OC09112021",
+      "pages": 0,
+      "unique_decorated_products": 0,
+      "errors": [
+        "RuntimeError:catalogue page pending status=202"
+      ],
+      "child_categories": [],
+      "pagination_session_cookies": true,
+      "pending_page_retries": true
+    }
+  ],
+  "counts": {
+    "unique_products_before_filter": 1800,
+    "food_products": 1799,
+    "excluded_alcohol": 1,
+    "with_sku": 1799,
+    "with_name": 1799,
+    "with_brand": 1799,
+    "with_pack_size": 1761,
+    "with_image": 1799,
+    "with_product_url": 0,
+    "available": 1780
+  },
+  "third_party_product_data": false,
+  "pagination": "cookie_bound_pageToken_with_202_retry"
+}
