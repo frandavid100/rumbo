@@ -1,0 +1,30 @@
+{
+  "retailer": "ALCAMPO",
+  "source": "https://www.compraonline.alcampo.es",
+  "importer_version": "alcampo-direct-v4.0",
+  "built_at": "2026-08-19T19:28:49.491746+00:00",
+  "discovery": {
+    "root": "https://www.compraonline.alcampo.es/categories",
+    "seed_categories": 9,
+    "categories_visited": 9,
+    "category_errors": 0,
+    "products_discovered": 0,
+    "api_json_responses": 4,
+    "api_parse_errors": 0,
+    "version": "alcampo-direct-v4.0"
+  },
+  "counts": {
+    "discovered": 0,
+    "identified": 0,
+    "with_product_url": 0,
+    "with_gtin": 0,
+    "with_ingredients": 0,
+    "with_legal_name": 0,
+    "with_image": 0,
+    "declared_valid_nutrition": 0,
+    "declared_incomplete_nutrition": 0,
+    "declared_invalid_nutrition": 0,
+    "detail_errors": 0
+  },
+  "third_party_product_data": false
+}
