@@ -1,0 +1,40 @@
+{
+  "source": "https://www.compraonline.alcampo.es",
+  "observed_at": "2026-08-19T19:19:08Z",
+  "evidence": "GitHub Actions run 32291944176, artifact alcampo-network-probe-v2",
+  "region_id": "ac90d761-9d58-4918-a37d-dd14e1ce384a",
+  "recipes": [
+    {
+      "method": "GET",
+      "url": "https://www.compraonline.alcampo.es/api/search/v1/redirects/active?regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a"
+    },
+    {
+      "method": "GET",
+      "url": "https://www.compraonline.alcampo.es/api/search/v1/suggestions/primary?searchTerm=&limit=20000&regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a"
+    },
+    {
+      "method": "PUT",
+      "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/products",
+      "body_shape": ["product-uuid", "product-uuid"],
+      "response_shape": {
+        "products": [
+          {
+            "productId": "uuid",
+            "retailerProductId": "retailer SKU",
+            "name": "string",
+            "brand": "string",
+            "packSizeDescription": "string",
+            "available": true,
+            "alcohol": false,
+            "categoryPath": ["category", "subcategory"]
+          }
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "The product hydration endpoint is first-party Alcampo and accepts a JSON array of internal product UUIDs via PUT.",
+    "Its response exposes retailerProductId, name, brand, availability, alcohol flag, categoryPath, price and first-party image metadata.",
+    "No third-party product data is used."
+  ]
+}
