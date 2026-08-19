@@ -1,0 +1,514 @@
+{
+  "endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
+  "category": "OC100402",
+  "success": true,
+  "results": [
+    {
+      "variant": "minimal",
+      "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=true&retailerCategoryId=OC100402",
+      "status": 200,
+      "content_type": "application/json",
+      "body_length": 3504406,
+      "json_type": "dict",
+      "shape": {
+        "productGroups": [
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          },
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          }
+        ],
+        "metadata": {
+          "nextPageToken": "1374531c-9560-48fb-a282-b13f259d743b"
+        },
+        "additionalPageInfo": {
+          "categories": [
+            {
+              "categoryId": "ac507389-74f5-4d98-b3a9-bb2549ad647f",
+              "retailerCategoryId": "OCConservasAtun"
+            },
+            {
+              "categoryId": "71284bbe-9525-47a1-8839-9c5e28e13b50",
+              "retailerCategoryId": "OC100402004"
+            },
+            {
+              "categoryId": "1f26b492-0ae2-4ea4-9942-616fdacb7cf5",
+              "retailerCategoryId": "OC100402010"
+            }
+          ],
+          "breadcrumb": [
+            {
+              "categoryId": "dc4ac5ed-f53e-4f6d-b2fd-8de2aa8e723c",
+              "retailerCategoryId": "OCC10"
+            },
+            {
+              "categoryId": "38f872e5-a996-4080-bf7b-3840317e144d",
+              "retailerCategoryId": "OC100402"
+            }
+          ],
+          "sortOptions": [
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      "approx_product_mentions": 300,
+      "top_keys": [
+        "productGroups",
+        "metadata",
+        "additionalPageInfo",
+        "missedPromotions"
+      ]
+    },
+    {
+      "variant": "tag_repeat",
+      "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=true&retailerCategoryId=OC100402&tag=web&tag=category-item",
+      "status": 200,
+      "content_type": "application/json",
+      "body_length": 3494065,
+      "json_type": "dict",
+      "shape": {
+        "productGroups": [
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          },
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          },
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          }
+        ],
+        "metadata": {
+          "nextPageToken": "bedd7c99-2b64-47fc-9d5e-d8568a59012b"
+        },
+        "additionalPageInfo": {
+          "categories": [
+            {
+              "categoryId": "ac507389-74f5-4d98-b3a9-bb2549ad647f",
+              "retailerCategoryId": "OCConservasAtun"
+            },
+            {
+              "categoryId": "71284bbe-9525-47a1-8839-9c5e28e13b50",
+              "retailerCategoryId": "OC100402004"
+            },
+            {
+              "categoryId": "1f26b492-0ae2-4ea4-9942-616fdacb7cf5",
+              "retailerCategoryId": "OC100402010"
+            }
+          ],
+          "breadcrumb": [
+            {
+              "categoryId": "dc4ac5ed-f53e-4f6d-b2fd-8de2aa8e723c",
+              "retailerCategoryId": "OCC10"
+            },
+            {
+              "categoryId": "38f872e5-a996-4080-bf7b-3840317e144d",
+              "retailerCategoryId": "OC100402"
+            }
+          ],
+          "sortOptions": [
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      "approx_product_mentions": 300,
+      "top_keys": [
+        "productGroups",
+        "metadata",
+        "additionalPageInfo",
+        "missedPromotions"
+      ]
+    },
+    {
+      "variant": "tag_indices",
+      "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=true&retailerCategoryId=OC100402&tag%5B0%5D=web&tag%5B1%5D=category-item",
+      "status": 200,
+      "content_type": "application/json",
+      "body_length": 3504406,
+      "json_type": "dict",
+      "shape": {
+        "productGroups": [
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          },
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          }
+        ],
+        "metadata": {
+          "nextPageToken": "0896ac86-b071-4abb-8b0c-42c29c32e293"
+        },
+        "additionalPageInfo": {
+          "categories": [
+            {
+              "categoryId": "ac507389-74f5-4d98-b3a9-bb2549ad647f",
+              "retailerCategoryId": "OCConservasAtun"
+            },
+            {
+              "categoryId": "71284bbe-9525-47a1-8839-9c5e28e13b50",
+              "retailerCategoryId": "OC100402004"
+            },
+            {
+              "categoryId": "1f26b492-0ae2-4ea4-9942-616fdacb7cf5",
+              "retailerCategoryId": "OC100402010"
+            }
+          ],
+          "breadcrumb": [
+            {
+              "categoryId": "dc4ac5ed-f53e-4f6d-b2fd-8de2aa8e723c",
+              "retailerCategoryId": "OCC10"
+            },
+            {
+              "categoryId": "38f872e5-a996-4080-bf7b-3840317e144d",
+              "retailerCategoryId": "OC100402"
+            }
+          ],
+          "sortOptions": [
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      "approx_product_mentions": 300,
+      "top_keys": [
+        "productGroups",
+        "metadata",
+        "additionalPageInfo",
+        "missedPromotions"
+      ]
+    },
+    {
+      "variant": "tag_comma",
+      "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=true&retailerCategoryId=OC100402&tag=web%2Ccategory-item",
+      "status": 200,
+      "content_type": "application/json",
+      "body_length": 3494065,
+      "json_type": "dict",
+      "shape": {
+        "productGroups": [
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          },
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          },
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          }
+        ],
+        "metadata": {
+          "nextPageToken": "c4a53297-011a-434d-bc8b-eb9cf742a37c"
+        },
+        "additionalPageInfo": {
+          "categories": [
+            {
+              "categoryId": "ac507389-74f5-4d98-b3a9-bb2549ad647f",
+              "retailerCategoryId": "OCConservasAtun"
+            },
+            {
+              "categoryId": "71284bbe-9525-47a1-8839-9c5e28e13b50",
+              "retailerCategoryId": "OC100402004"
+            },
+            {
+              "categoryId": "1f26b492-0ae2-4ea4-9942-616fdacb7cf5",
+              "retailerCategoryId": "OC100402010"
+            }
+          ],
+          "breadcrumb": [
+            {
+              "categoryId": "dc4ac5ed-f53e-4f6d-b2fd-8de2aa8e723c",
+              "retailerCategoryId": "OCC10"
+            },
+            {
+              "categoryId": "38f872e5-a996-4080-bf7b-3840317e144d",
+              "retailerCategoryId": "OC100402"
+            }
+          ],
+          "sortOptions": [
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      "approx_product_mentions": 300,
+      "top_keys": [
+        "productGroups",
+        "metadata",
+        "additionalPageInfo",
+        "missedPromotions"
+      ]
+    },
+    {
+      "variant": "decorate_100",
+      "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=100&maxPageSize=300&includeAdditionalPageInfo=true&retailerCategoryId=OC100402",
+      "status": 200,
+      "content_type": "application/json",
+      "body_length": 1133426,
+      "json_type": "dict",
+      "shape": {
+        "productGroups": [
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          },
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": [
+              "d4697cfa-1cea-4fcc-b023-66fdc5e6546d",
+              "c29fc415-4acf-41f4-8ef2-b96be9afd019",
+              "34142e6a-0637-4b63-9101-fa448ba4541e"
+            ]
+          }
+        ],
+        "metadata": {
+          "nextPageToken": "0f05de62-c7af-4b07-97e7-5308c1eee4bd"
+        },
+        "additionalPageInfo": {
+          "categories": [
+            {
+              "categoryId": "ac507389-74f5-4d98-b3a9-bb2549ad647f",
+              "retailerCategoryId": "OCConservasAtun"
+            },
+            {
+              "categoryId": "71284bbe-9525-47a1-8839-9c5e28e13b50",
+              "retailerCategoryId": "OC100402004"
+            },
+            {
+              "categoryId": "1f26b492-0ae2-4ea4-9942-616fdacb7cf5",
+              "retailerCategoryId": "OC100402010"
+            }
+          ],
+          "breadcrumb": [
+            {
+              "categoryId": "dc4ac5ed-f53e-4f6d-b2fd-8de2aa8e723c",
+              "retailerCategoryId": "OCC10"
+            },
+            {
+              "categoryId": "38f872e5-a996-4080-bf7b-3840317e144d",
+              "retailerCategoryId": "OC100402"
+            }
+          ],
+          "sortOptions": [
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      "approx_product_mentions": 300,
+      "top_keys": [
+        "productGroups",
+        "metadata",
+        "additionalPageInfo",
+        "missedPromotions"
+      ]
+    },
+    {
+      "variant": "decorate_20",
+      "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=20&maxPageSize=300&includeAdditionalPageInfo=true&retailerCategoryId=OC100402",
+      "status": 200,
+      "content_type": "application/json",
+      "body_length": 247687,
+      "json_type": "dict",
+      "shape": {
+        "productGroups": [
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": []
+          },
+          {
+            "decoratedProducts": [
+              {},
+              {},
+              {}
+            ],
+            "otherProductIds": [
+              "87f438b5-ebd9-4757-9f67-bfb60d5b3268",
+              "4f38442d-9571-4a17-b916-2061ee8bdb46",
+              "fe120532-08a3-4e8a-8129-6e5b28e150c4"
+            ]
+          }
+        ],
+        "metadata": {
+          "nextPageToken": "f394e79b-b305-4ce6-b684-574066bdb271"
+        },
+        "additionalPageInfo": {
+          "categories": [
+            {
+              "categoryId": "ac507389-74f5-4d98-b3a9-bb2549ad647f",
+              "retailerCategoryId": "OCConservasAtun"
+            },
+            {
+              "categoryId": "71284bbe-9525-47a1-8839-9c5e28e13b50",
+              "retailerCategoryId": "OC100402004"
+            },
+            {
+              "categoryId": "1f26b492-0ae2-4ea4-9942-616fdacb7cf5",
+              "retailerCategoryId": "OC100402010"
+            }
+          ],
+          "breadcrumb": [
+            {
+              "categoryId": "dc4ac5ed-f53e-4f6d-b2fd-8de2aa8e723c",
+              "retailerCategoryId": "OCC10"
+            },
+            {
+              "categoryId": "38f872e5-a996-4080-bf7b-3840317e144d",
+              "retailerCategoryId": "OC100402"
+            }
+          ],
+          "sortOptions": [
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      "approx_product_mentions": 300,
+      "top_keys": [
+        "productGroups",
+        "metadata",
+        "additionalPageInfo",
+        "missedPromotions"
+      ]
+    },
+    {
+      "variant": "no_decorate",
+      "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=0&maxPageSize=300&includeAdditionalPageInfo=true&retailerCategoryId=OC100402",
+      "status": 200,
+      "content_type": "application/json",
+      "body_length": 23305,
+      "json_type": "dict",
+      "shape": {
+        "productGroups": [
+          {
+            "decoratedProducts": [],
+            "otherProductIds": [
+              "8e12728b-8500-4d6e-9860-d34ba3ab1368",
+              "16bbdbaa-db67-48bd-8042-5612dc4f1b4b",
+              "8a0cd0ae-eb69-47c0-a4bc-947987b1fa15"
+            ]
+          },
+          {
+            "decoratedProducts": [],
+            "otherProductIds": [
+              "6d7c8355-b53c-4ac9-854d-cc887235fc58",
+              "3b5122de-8905-48fb-a03a-8691fcc75da3",
+              "b3e7acad-5fc2-4733-956c-ee45028cd0e6"
+            ]
+          }
+        ],
+        "metadata": {
+          "nextPageToken": "68ee02f3-adcf-4baa-b4e5-fd4502762d8a"
+        },
+        "additionalPageInfo": {
+          "categories": [
+            {
+              "categoryId": "ac507389-74f5-4d98-b3a9-bb2549ad647f",
+              "retailerCategoryId": "OCConservasAtun"
+            },
+            {
+              "categoryId": "71284bbe-9525-47a1-8839-9c5e28e13b50",
+              "retailerCategoryId": "OC100402004"
+            },
+            {
+              "categoryId": "1f26b492-0ae2-4ea4-9942-616fdacb7cf5",
+              "retailerCategoryId": "OC100402010"
+            }
+          ],
+          "breadcrumb": [
+            {
+              "categoryId": "dc4ac5ed-f53e-4f6d-b2fd-8de2aa8e723c",
+              "retailerCategoryId": "OCC10"
+            },
+            {
+              "categoryId": "38f872e5-a996-4080-bf7b-3840317e144d",
+              "retailerCategoryId": "OC100402"
+            }
+          ],
+          "sortOptions": [
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      "approx_product_mentions": 300,
+      "top_keys": [
+        "productGroups",
+        "metadata",
+        "additionalPageInfo",
+        "missedPromotions"
+      ]
+    }
+  ]
+}
