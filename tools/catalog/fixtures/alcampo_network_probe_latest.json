@@ -1,0 +1,105 @@
+[
+  {
+    "kind": "request",
+    "url": "https://www.compraonline.alcampo.es/static/no-products-filtered-page-23afbNBt.js"
+  },
+  {
+    "kind": "request",
+    "url": "https://www.compraonline.alcampo.es/static/product-listing-structured-data-DwJEDOse.js"
+  },
+  {
+    "kind": "request",
+    "url": "https://www.compraonline.alcampo.es/static/no-products-page-BY62RhYF.js"
+  },
+  {
+    "kind": "request",
+    "url": "https://www.compraonline.alcampo.es/static/catalogue-page-product-list-B2Sggq3G.js"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.compraonline.alcampo.es/static/no-products-filtered-page-23afbNBt.js",
+    "status": 200,
+    "content_type": "application/javascript"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.compraonline.alcampo.es/static/no-products-page-BY62RhYF.js",
+    "status": 200,
+    "content_type": "application/javascript"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.compraonline.alcampo.es/static/product-listing-structured-data-DwJEDOse.js",
+    "status": 200,
+    "content_type": "application/javascript"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.compraonline.alcampo.es/static/catalogue-page-product-list-B2Sggq3G.js",
+    "status": 200,
+    "content_type": "application/javascript"
+  },
+  {
+    "kind": "request",
+    "url": "https://www.compraonline.alcampo.es/api/search/v1/redirects/active?regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a"
+  },
+  {
+    "kind": "request",
+    "url": "https://www.compraonline.alcampo.es/api/search/v1/suggestions/primary?searchTerm=&limit=20000&regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a"
+  },
+  {
+    "kind": "request",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/products"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.compraonline.alcampo.es/api/search/v1/redirects/active?regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a",
+    "status": 200,
+    "content_type": "application/json;charset=utf-8",
+    "body_preview": "[{\"searchTerm\":\"sin gluten\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"gluten free\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"apto celiacos\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"celíacos\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"alérgico al gluten\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"apto celíacos\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"intolerante al gluten\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"alergico al gluten\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"celiacos\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC101204\"},{\"searchTerm\":\"micro ondas\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC2409\"},{\"searchTerm\":\"microndas\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC2409\"},{\"searchTerm\":\"microondas\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC2409\"},{\"searchTerm\":\"tablet pulgadas wifi\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC89075\"},{\"searchTerm\":\"tablets\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC89075\"},{\"searchTerm\":\"chupete\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC180404\"},{\"searchTerm\":\"chupetes\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC180404\"},{\"searchTerm\":\"mordedores\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC180404\"},{\"searchTerm\":\"macbook\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC8906\"},{\"searchTerm\":\"mcbook\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC8906\"},{\"searchTerm\":\"mascotas\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC062\"},{\"searchTerm\":\"fruta fresca\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC1701\"},{\"searchTerm\":\"fruta\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC1701\"},{\"searchTerm\":\"frutas\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC1701\"},{\"searchTerm\":\"vinos blancos\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC1152\"},{\"searchTerm\":\"vino blanco\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC1152\"},{\"searchTerm\":\"ganchos\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC57050302\"},{\"searchTerm\":\"gancho\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC57050302\"},{\"searchTerm\":\"pijama bebe\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC425\"},{\"searchTerm\":\"pijama recién nacido\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC425\"},{\"searchTerm\":\"pijama para recién nacidos\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC425\"},{\"searchTerm\":\"pijamas para bebes\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC425\"},{\"searchTerm\":\"encendido\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC5706065\"},{\"searchTerm\":\"carbón\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC5706065\"},{\"searchTerm\":\"carbon\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC5706065\"},{\"searchTerm\":\"pescado\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC1401\"},{\"searchTerm\":\"pescado fresco\",\"targetPath\":\"https://compraonline.alcampo.es/categories/~/OC1401\"},{\"searchTerm\":\"zumo\",\"targetPath\":\"https://www.compraonline.alcampo.es/campaign/category?retailerId=OC1102\"},{\"searchTerm\":\"zumos\",\"targetPath\":\"https://www.comp"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.compraonline.alcampo.es/api/search/v1/suggestions/primary?searchTerm=&limit=20000&regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a",
+    "status": 200,
+    "content_type": "application/json;charset=utf-8",
+    "body_preview": "[\"papelería y vuelta cole\",\"menaje de cocina\",\"textil hogar\",\"barbacoas\",\"agua\",\"cervezas\",\"frutas y verduras\",\"juguetes\",\"yogures\",\"pollo\",\"papel higienico\",\"café\",\"galletas\",\"helados\",\"gazpachos\",\"bronceadores\",\"playa\",\"patatas\",\"papel higiénico\",\"tomate\",\"queso\",\"pan\",\"pasta\",\"atun\",\"coca cola\",\"pizza\",\"queso lonchas\",\"zanahoria\",\"patatas fritas\",\"lechuga\",\"pavo\",\"yogur griego\",\"bolsas basura\",\"salchichas\",\"papel de cocina\",\"aguacate\",\"carne picada\",\"cebollas\",\"aceite oliva\",\"pepino\",\"lejia\",\"bacon\",\"fuet\",\"pechuga pollo\",\"macarrones\",\"garbanzos\",\"tomate triturado\",\"cereales\",\"kefir\",\"hamburguesa\",\"gel de ducha\",\"aceite\",\"lentejas\",\"chocolate\",\"coca cola zero\",\"detergente\",\"salmon\",\"chorizo\",\"lavavajillas\",\"pimiento\",\"agua con gas\",\"sal\",\"servilletas papel\",\"jamon york\",\"suavizante ropa\",\"queso fresco\",\"aquarius\",\"ketchup\",\"ensalada\",\"leche semidesnatada sin lactosa\",\"jamon\",\"champiñones\",\"limones\",\"huevos camperos\",\"aire acondicionado portátil\",\"ajo\",\"fregasuelos\",\"estropajo\",\"cerveza mahou\",\"pimientos\",\"alpro\",\"manzana\",\"calabacín\",\"pan hamburguesa\",\"limon\",\"cocacola\",\"guisantes\",\"harina\",\"detergente líquido lavadora\",\"arandanos\",\"snack\",\"smileat\",\"hielo\",\"azucar blanco\",\"maiz dulce\",\"fairy\",\"pasta dientes\",\"mermelada\",\"toallitas\",\"queso rayado\",\"pechuga de pavo\",\"productos sin gluten\",\"atun aceite oliva\",\"mejillones\",\"aceitunas sin hueso\",\"arroz largo\",\"patata\",\"pimiento rojo\",\"leche asturiana\",\"brocoli\",\"nestea\",\"rollo de cocina\",\"champu\",\"vinagre limpieza\",\"tomate cherry\",\"desodorante\",\"judias verdes\",\"nueces\",\"pan rallado\",\"pescado congelado\",\"queso cottage\",\"papel aluminio\",\"frutas frescas\",\"merluza\",\"nata\",\"espinacas\",\"pan bimbo\",\"garbanzos cocidos\",\"yogur natural\",\"suavizante\",\"lomo\",\"agua mineral\",\"mozzarella\",\"zanahorias\",\"ajos\",\"aceite de oliva virgen extra 5l\",\"nata cocinar\",\"fresas\",\"natillas\",\"fanta naranja\",\"nachos\",\"avena\",\"huevo\",\"fregona\",\"caldo de pollo\",\"mostaza\",\"heura\",\"guacamole\",\"vegano\",\"kiwi\",\"pan integral\",\"gelatina\",\"horchata\",\"manzanas\",\"esparragos\",\"melocoton\",\"cerveza estrella galicia\",\"patatas congeladas\",\"tinto de verano\",\"puerro\",\"toallitas humedas\",\"compresas\",\"pizzas\",\"cafe molido natural\",\"magdalenas\",\"jamon cocido\",\"pasta de dientes\",\"ternera\",\"zumo naranja\",\"queso untar\",\"picos\",\"calabaza\",\"leche semidesnatada auchan\",\"coca cola zero zero\",\"platos preparados\",\"leche desnatada sin lactosa\",\"perejil\",\"sardinas\",\"chocolate negro\",\"lavavajillas pastillas\",\"mozarella\",\"naranjas\",\"arroz basmati\",\"jabon de manos\",\"bolsas congelacion\",\"mortadela\",\"pimiento verde\",\"tortitas\",\"atun al natural\",\"cervezas sin alcohol\",\"agua bezoya\",\"sanytol\",\"almendras\",\"pan de molde integral\",\"verdura congelada\",\"pan tostado\",\"pate\",\"palomitas\",\"kh7\",\"tomates frescos\",\"alubias\",\"burrata\",\"pepinillos\",\"arroz redondo\",\"chuches\",\"queso crema\",\"tortilla\",\"piña\",\"caballa\",\"yogurt griego\",\"monster\",\"quinoa\",\"colacao\",\"mahonesa\",\"jamon serrano lonchas\",\"leche avena\",\"soja\",\"cafe capsula\",\"fideos\",\"berenjena\",\"galletas chocolate\",\"banana\",\"margarina\",\"potitos\",\"tonica\",\"nesquik\",\"yogures danone\",\"salchichon\",\"pescados frescos\",\"suavizante lavadora\",\"berberechos\",\"atún\",\"jamón york\",\"masa pizza\",\"arroz integral\",\"queso feta\",\"mango\",\"harina de trigo\",\"lasaña\",\"auchan\",\"nocilla\",\"zumo\",\"helados tarrina\",\"vino blanco cocinar\",\"actimel\",\"uvas\",\"gel\",\"pan perrito\",\"arena gato\",\"fanta\",\"nectarina\",\"papel film\",\"cilantro\",\"vino tinto\",\"lentejas cocidas\",\"oregano\",\"tofu\",\"cola\",\"detergente lavadora\",\"leche condensada\",\"limpiador baño\",\"pipas\",\"contramuslos pollo\",\"platano canarias\",\"huevos xl\",\"agua solan de cabras\",\"fuze tea\",\"galletas maria\",\"croissants\",\"especias\",\"salchichas frankfurt\",\"pesto\",\"spaguetti\",\"tortilla patata\",\"filetes de pollo\",\"hamburguesas\",\"nuggets\",\"papel horno\",\"gafas eclipse\",\"ajo en polvo\",\"friegasuelos\",\"carretilla\",\"bicarbonato\",\"yogur proteina\",\"aceite de oliva\",\"fanta limon\",\"sprite\",\"sanitol\",\"merluza congelada\",\"vegan\",\"bolleria desayuno\",\"bolsas de basura\",\"cebolla congelada\",\"pañuelos\",\"pasta in"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/products",
+    "status": 200,
+    "content_type": "application/json;charset=utf-8",
+    "body_preview": "{\"products\":[{\"productId\":\"f7e44473-e475-4fec-b4c8-86ef9f25a6c0\",\"retailerProductId\":\"86103\",\"type\":\"REGULAR\",\"name\":\"CARBONELL Aceite de oliva virgen extra 100% Hojiblanca botella de cristal de 750 ml.\",\"brand\":\"CARBONELL\",\"packSizeDescription\":\"750ml\",\"price\":{\"amount\":\"8.10\",\"currency\":\"EUR\"},\"unitPrice\":{\"price\":{\"amount\":\"10.80\",\"currency\":\"EUR\"},\"unit\":\"fop.price.per.litre\",\"unitName\":\"PER_LITRE\"},\"available\":true,\"isVerifiedPurchase\":false,\"quantityInBasket\":0,\"maxQuantityReached\":false,\"taxCodesDisplayNames\":[],\"imageConfig\":{\"availableFormats\":[\"jpg\",\"webp\"],\"availableResolutions\":[\"100x100\",\"150x150\",\"200x200\",\"300x300\",\"350x350\",\"410x410\",\"500x500\",\"640x640\",\"800x800\",\"960x960\",\"1120x1120\",\"1280x1280\"]},\"image\":{\"src\":\"https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/300x300.jpg\",\"description\":\"CARBONELL Aceite de oliva virgen extra 100% Hojiblanca botella de cristal de 750 ml.\",\"fopSrcset\":\"https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/100x100.webp 100w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/150x150.webp 150w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/200x200.webp 200w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/300x300.webp 300w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/350x350.webp 350w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/410x410.webp 410w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/500x500.webp 500w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/100x100.jpg 100w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/150x150.jpg 150w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/200x200.jpg 200w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/300x300.jpg 300w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/350x350.jpg 350w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/410x410.jpg 410w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/500x500.jpg 500w\",\"bopSrcset\":\"https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/300x300.webp 300w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/500x500.webp 500w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/640x640.webp 640w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/800x800.webp 800w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/960x960.webp 960w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/1120x1120.webp 1120w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12/5edf26c5-0893-451c-b0fc-9c0c34cd2109/1280x1280.webp 1280w, https://www.compraonline.alcampo.es/images-v3/37ea0506-72ec-4543-93c8-a77bb916ec12"
+  },
+  {
+    "kind": "request",
+    "url": "https://pagead2.googlesyndication.com/pagead/conversion/836520295/?random=1787161090615&cv=11&fst=1787161090615&fmt=8&bg=ffffff&guid=ON&async=1&en=conversion&gtm=45be68i0v9104327235z89106690763za20gzb9106690763zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fcategories%2Falimentaci%25C3%25B3n%2FOCC10&rcb=9&label=qgCpCJi__J8cEOeS8Y4D&frm=0&tiba=Alimentaci%C3%B3n%20-%20Categor%C3%ADas%20-%20Alcampo%20supermercado%20online&bttype=purchase&value=0&hn=www.googleadservices.com&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&_tu=CA&category=acrcp_v1_512&ept=6"
+  },
+  {
+    "kind": "response",
+    "url": "https://pagead2.googlesyndication.com/pagead/conversion/836520295/?random=1787161090615&cv=11&fst=1787161090615&fmt=8&bg=ffffff&guid=ON&async=1&en=conversion&gtm=45be68i0v9104327235z89106690763za20gzb9106690763zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fcategories%2Falimentaci%25C3%25B3n%2FOCC10&rcb=9&label=qgCpCJi__J8cEOeS8Y4D&frm=0&tiba=Alimentaci%C3%B3n%20-%20Categor%C3%ADas%20-%20Alcampo%20supermercado%20online&bttype=purchase&value=0&hn=www.googleadservices.com&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&_tu=CA&category=acrcp_v1_512&ept=6",
+    "status": 204,
+    "content_type": "text/html; charset=UTF-8"
+  },
+  {
+    "kind": "request",
+    "url": "https://tau.collect.igodigital.com/c2/100030151/track_page_view?payload=%7B%22category%22%3A%22Alimentaci%C3%B3n%2C%20Conservas%20de%20pescado%2C%20At%C3%BAn%22%2C%22title%22%3A%22Alimentaci%C3%B3n%20-%20Categor%C3%ADas%20-%20Alcampo%20supermercado%20online%22%2C%22url%22%3A%22https%3A%2F%2Fwww.compraonline.alcampo.es%2Fcategories%2Falimentaci%25C3%25B3n%2FOCC10%22%2C%22referrer%22%3A%22%22%2C%22user_info%22%3A%7B%22email%22%3A%228c75bccb78f55418682f0eca3884d7b97b97a46d312341a3ce68bffac2171b62ade53736bef2c499559c5dce4776386b14879b9c52fd7f3d908171631791eed9%22%7D%7D"
+  },
+  {
+    "kind": "request",
+    "url": "https://pagead2.googlesyndication.com/pagead/conversion/16955749051/?random=1787161090845&cv=11&fst=1787161090845&fmt=8&bg=ffffff&guid=ON&async=1&en=conversion&gtm=45be68i0v9217236499z89106690763za20gzb9106690763zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fcategories%2Falimentaci%25C3%25B3n%2FOCC10&rcb=8&label=Ul88COmE_Z8cELvlkJU_&frm=0&tiba=Alimentaci%C3%B3n%20-%20Categor%C3%ADas%20-%20Alcampo%20supermercado%20online&bttype=purchase&value=0&hn=www.googleadservices.com&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&_tu=CA&category=acrcp_v1_512&ept=6"
+  },
+  {
+    "kind": "response",
+    "url": "https://pagead2.googlesyndication.com/pagead/conversion/16955749051/?random=1787161090845&cv=11&fst=1787161090845&fmt=8&bg=ffffff&guid=ON&async=1&en=conversion&gtm=45be68i0v9217236499z89106690763za20gzb9106690763zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fcategories%2Falimentaci%25C3%25B3n%2FOCC10&rcb=8&label=Ul88COmE_Z8cELvlkJU_&frm=0&tiba=Alimentaci%C3%B3n%20-%20Categor%C3%ADas%20-%20Alcampo%20supermercado%20online&bttype=purchase&value=0&hn=www.googleadservices.com&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&_tu=CA&category=acrcp_v1_512&ept=6",
+    "status": 204,
+    "content_type": "text/html; charset=UTF-8"
+  },
+  {
+    "kind": "response",
+    "url": "https://tau.collect.igodigital.com/c2/100030151/track_page_view?payload=%7B%22category%22%3A%22Alimentaci%C3%B3n%2C%20Conservas%20de%20pescado%2C%20At%C3%BAn%22%2C%22title%22%3A%22Alimentaci%C3%B3n%20-%20Categor%C3%ADas%20-%20Alcampo%20supermercado%20online%22%2C%22url%22%3A%22https%3A%2F%2Fwww.compraonline.alcampo.es%2Fcategories%2Falimentaci%25C3%25B3n%2FOCC10%22%2C%22referrer%22%3A%22%22%2C%22user_info%22%3A%7B%22email%22%3A%228c75bccb78f55418682f0eca3884d7b97b97a46d312341a3ce68bffac2171b62ade53736bef2c499559c5dce4776386b14879b9c52fd7f3d908171631791eed9%22%7D%7D",
+    "status": 200,
+    "content_type": "image/gif"
+  }
+]
