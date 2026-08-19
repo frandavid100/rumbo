@@ -1,0 +1,29 @@
+name: Level 3 portion basis migration
+
+on:
+  push:
+    branches: [agent/level3-culinary-satisfaction-v2]
+    paths: [.github/workflows/level3-portion-basis-migration.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/level3-culinary-satisfaction-v2
+      - name: Aplicar migración
+        run: python scripts/level3_portion_basis_migration.py
+      - name: Retirar herramienta temporal y publicar cambio
+        run: |
+          rm scripts/level3_portion_basis_migration.py
+          rm .github/workflows/level3-portion-basis-migration.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Incorporar base física de porción al modelo"
+          git push origin HEAD:agent/level3-culinary-satisfaction-v2
