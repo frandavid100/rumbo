@@ -1711,15 +1711,6 @@ private fun HomeScreen(
     val goal = effectiveGoal.goal
     val foodsById = remember(data.foods) { data.foods.associateBy { it.id } }
     val dishesById = remember(data.dishes) { data.dishes.associateBy { it.id } }
-    val meals = data.activeProfileData?.plannedMeals.orEmpty()
-        .filter { it.planWeek == PlanWeek.CURRENT }
-    val currentMenuAcceptable = remember(
-        meals, foodsById, dishesById, recommendation, mealShares
-    ) {
-        recommendation?.let {
-            isAcceptableWeeklyMenu(meals, foodsById, dishesById, it, mealShares)
-        } == true
-    }
     val repertoireAssessmentKey = remember(
         data.activeProfileId,
         data.activeProfileData?.planningRules,
@@ -1930,9 +1921,14 @@ private fun HomeScreen(
     }
     val hasCertifiedCulinaryDay = savedCulinaryWitnessValid || freshCulinaryWitness != null
 
-    val menuReady = currentMenuAcceptable || hasCertifiedViableDay ||
-        repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
-        repertoireAssessment?.status == RepertoireStatus.ROBUST
+    val displayedCertifiedWitness = when {
+        savedCulinaryWitnessValid -> savedCulinaryWitness
+        freshCulinaryWitness != null -> freshCulinaryWitness
+        savedCompleteWitnessValid -> savedCompleteWitness
+        freshCompleteWitness != null -> freshCompleteWitness
+        savedViableWitnessValid -> savedViableWitness
+        else -> freshViableWitness
+    }
     val foodSuggestions = remember(
         data.foods,
         data.activeProfileData?.repertoireFoodIds,
@@ -2182,25 +2178,16 @@ private fun HomeScreen(
                 )
             }
         }
-        if (recommendation != null) {
+        if (recommendation != null && displayedCertifiedWitness != null) {
             item {
-                if (menuReady) {
-                    WeeklyHomeMenuSection(
-                        meals = meals,
-                        foodsById = foodsById,
-                        dishesById = dishesById,
-                        recommendation = recommendation,
-                        sectionTitle = "Tu menú de esta semana",
-                        onOpenNextWeek = onOpenNextWeek,
-                        onOpenCurrentShoppingList = onOpenCurrentShoppingList,
-                        onRegenerateWeek = onRegenerateWeek,
-                        isGeneratingMenu = isGeneratingMenu,
-                        onOpenMeal = onOpenMeal,
-                        onOpenFood = openFood,
-                        onOpenDish = onOpenDish,
-                        onApplyAdjustedMeals = onApplyAdjustedMeals
-                    )
-                }
+                CertifiedDayWitnessSection(
+                    witness = displayedCertifiedWitness,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = recommendation,
+                    onOpenFood = openFood,
+                    onOpenDish = onOpenDish
+                )
             }
         }
         }
@@ -3025,6 +3012,111 @@ private fun NutritionGoalMetric(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1
         )
+    }
+}
+
+@Composable
+private fun CertifiedDayWitnessSection(
+    witness: CertifiedDayWitness,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    recommendation: Recommendation,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit
+) {
+    val levelTitle = when (witness.level) {
+        CertifiedDayLevel.VIABLE -> "Tu día viable"
+        CertifiedDayLevel.COMPLETE -> "Tu día completo"
+        CertifiedDayLevel.CULINARILY_SATISFACTORY -> "Tu día satisfactorio"
+    }
+    val explanation = when (witness.level) {
+        CertifiedDayLevel.VIABLE ->
+            "Rumbo ha certificado que este día puede cubrir tus objetivos básicos. " +
+                "Seguiremos mejorándolo para completar fruta, verdura y fibra."
+        CertifiedDayLevel.COMPLETE ->
+            "Rumbo ha certificado que este día también cubre fruta, verdura y fibra. " +
+                "Seguiremos ajustando sus combinaciones y cantidades."
+        CertifiedDayLevel.CULINARILY_SATISFACTORY ->
+            "Rumbo ha certificado que este día es nutricionalmente completo y " +
+                "culinariamente satisfactorio."
+    }
+    val assessment = MealPlanEvaluator.assessDay(
+        witness.day,
+        witness.meals,
+        foodsById,
+        dishesById,
+        recommendation
+    )
+    val meals = witness.meals.sortedBy { it.type.ordinal }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Tu día testigo", style = MaterialTheme.typography.titleLarge)
+        Card(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(levelTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    explanation,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                meals.forEachIndexed { index, meal ->
+                    val entries = meal.dishes.mapNotNull { planned ->
+                        dishesById[planned.dishId]?.let { dish ->
+                            MenuItemLine(
+                                dish.id,
+                                true,
+                                dish.name,
+                                meal.resolvedGrams(planned, witness.day),
+                                dish.dominantCategory(foodsById)
+                            )
+                        }
+                    } + meal.items.mapNotNull { planned ->
+                        foodsById[planned.foodId]?.let { food ->
+                            MenuItemLine(
+                                food.id,
+                                false,
+                                food.name,
+                                meal.resolvedGrams(planned, witness.day),
+                                food.category
+                            )
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text(
+                            meal.type.label,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        entries.forEach { entry ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
+                                },
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                SmallFoodCategoryBadge(entry.category)
+                                Text(entry.name, modifier = Modifier.weight(1f))
+                                Text(
+                                    "${formatDecimal(entry.grams)} g",
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.End
+                                )
+                            }
+                        }
+                    }
+                    if (index < meals.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                TodayNutritionSummary(assessment)
+            }
+        }
     }
 }
 
@@ -5126,7 +5218,7 @@ private fun PlanningRuleCards(
                 itemKind,
                 itemId,
                 activeMealTypes,
-                frequency = PlanningFrequency.OCCASIONAL,
+                frequency = PlanningFrequency.NORMAL,
                 preferredGrams = defaultGrams,
                 ruleId = System.currentTimeMillis()
             ),
@@ -5536,13 +5628,6 @@ private fun PlanningRuleDialog(
     var meals by remember(initial, activeMealTypes) {
         mutableStateOf(initial.allowedMealTypes.intersect(activeMealTypes))
     }
-    var frequency by remember(initial) {
-        mutableStateOf(when (initial.frequency) {
-            PlanningFrequency.ALWAYS -> PlanningFrequency.ALWAYS
-            PlanningFrequency.OCCASIONAL -> PlanningFrequency.OCCASIONAL
-            else -> PlanningFrequency.NORMAL
-        })
-    }
     var error by remember { mutableStateOf<String?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -5550,22 +5635,11 @@ private fun PlanningRuleDialog(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(name, style = MaterialTheme.typography.headlineSmall)
-            SelectorField(
-                label = "Frecuencia",
-                selectedLabel = frequency.label,
-                options = listOf(
-                    PlanningFrequency.OCCASIONAL,
-                    PlanningFrequency.NORMAL,
-                    PlanningFrequency.FREQUENT,
-                    PlanningFrequency.ALWAYS
-                ),
-                optionLabel = { it.label }, onSelect = { frequency = it }, onClear = null
-            )
             MultiSelectField(
-                label = "Comidas",
+                label = "¿En qué comidas puede aparecer?",
                 options = MealType.entries.filter { it in activeMealTypes },
                 selected = meals,
-                optionLabel = { it.label },
+                optionLabel = { it.pluralAvailabilityLabel() },
                 onSelectedChange = { meals = it }
             )
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -5574,7 +5648,7 @@ private fun PlanningRuleDialog(
                     allowedMealTypes = meals,
                     allowedDays = WeekDay.entries.toSet(),
                     fixedSlots = emptySet(),
-                    frequency = frequency,
+                    frequency = PlanningFrequency.NORMAL,
                     preferredGrams = 100.0,
                     minimumFactor = 0.1,
                     maximumFactor = 5.0
@@ -8616,6 +8690,14 @@ private val defaultUnitDefinitions = listOf(
     FoodUnitDefinition("rebanada", "rebanadas", "FEMININE")
 )
 
+private fun MealType.pluralAvailabilityLabel(): String = when (this) {
+    MealType.BREAKFAST -> "En los desayunos"
+    MealType.MORNING_SNACK -> "En los almuerzos"
+    MealType.LUNCH -> "En las comidas"
+    MealType.AFTERNOON_SNACK -> "En las meriendas"
+    MealType.DINNER -> "En las cenas"
+}
+
 @Composable
 private fun CatalogAttributeChipRow(
     title: String,
@@ -8681,10 +8763,6 @@ private fun FoodDetailScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     var planningSheetOpen by remember { mutableStateOf(false) }
     val planningSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var frequencyExpanded by remember { mutableStateOf(false) }
-    var selectedFrequency by remember(food.id) {
-        mutableStateOf(PlanningFrequency.NORMAL)
-    }
     var selectedMeals by remember(food.id) {
         mutableStateOf(emptySet<MealType>())
     }
@@ -8766,47 +8844,20 @@ private fun FoodDetailScreen(
                     if (isInMenu) "En tu menú" else "Añadir a tu menú",
                     style = MaterialTheme.typography.headlineSmall
                 )
-                ExposedDropdownMenuBox(
-                    expanded = frequencyExpanded,
-                    onExpandedChange = { frequencyExpanded = !frequencyExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = selectedFrequency.label,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Frecuencia") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(frequencyExpanded)
-                        },
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = frequencyExpanded,
-                        onDismissRequest = { frequencyExpanded = false }
-                    ) {
-                        listOf(
-                            PlanningFrequency.NEVER,
-                            PlanningFrequency.OCCASIONAL,
-                            PlanningFrequency.NORMAL,
-                            PlanningFrequency.FREQUENT,
-                            PlanningFrequency.ALWAYS
-                        ).forEach { frequency ->
-                            DropdownMenuItem(
-                                text = { Text(frequency.label) },
-                                onClick = {
-                                    selectedFrequency = frequency
-                                    frequencyExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-                Text("Comidas", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "¿En qué comidas puede aparecer?",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    "Marca los tipos de comida en los que aceptarías utilizar este alimento.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 activeMealTypes.forEach { mealType ->
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .clickable(enabled = selectedFrequency != PlanningFrequency.NEVER) {
+                            .clickable {
                                 selectedMeals = if (mealType in selectedMeals) {
                                     selectedMeals - mealType
                                 } else {
@@ -8818,10 +8869,12 @@ private fun FoodDetailScreen(
                     ) {
                         Checkbox(
                             checked = mealType in selectedMeals,
-                            onCheckedChange = null,
-                            enabled = selectedFrequency != PlanningFrequency.NEVER
+                            onCheckedChange = null
                         )
-                        Text(mealType.label, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            mealType.pluralAvailabilityLabel(),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
                 }
                 Button(
@@ -8831,10 +8884,8 @@ private fun FoodDetailScreen(
                             PlanningRule(
                                 itemKind = PlannedItemKind.FOOD,
                                 itemId = food.id,
-                                allowedMealTypes = if (
-                                    selectedFrequency == PlanningFrequency.NEVER
-                                ) activeMealTypes else selectedMeals,
-                                frequency = selectedFrequency,
+                                allowedMealTypes = selectedMeals,
+                                frequency = PlanningFrequency.NORMAL,
                                 preferredGrams = 100.0,
                                 ruleId = planningRules.firstOrNull()?.ruleId
                                     ?: System.currentTimeMillis()
@@ -8842,8 +8893,7 @@ private fun FoodDetailScreen(
                         )
                         planningSheetOpen = false
                     },
-                    enabled = selectedFrequency == PlanningFrequency.NEVER ||
-                        selectedMeals.isNotEmpty(),
+                    enabled = selectedMeals.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Guardar")
@@ -8934,8 +8984,6 @@ private fun FoodDetailScreen(
                 Button(
                     onClick = {
                         val currentRule = planningRules.firstOrNull()
-                        selectedFrequency = currentRule?.frequency
-                            ?: PlanningFrequency.NORMAL
                         val recommendedMeal = repertoireAssessment?.culinaryNeeds
                             ?.firstOrNull { CulinaryPolicy.addresses(it, food) }
                             ?.mealType
