@@ -15,7 +15,7 @@ from alcampo_direct_catalog_v6 import (
     Product, map_product, merge, write_outputs,
 )
 
-VERSION = "alcampo-direct-v8.0"
+VERSION = "alcampo-direct-v8.1"
 
 
 class ApiSession:
@@ -24,7 +24,7 @@ class ApiSession:
         self.jar = http.cookiejar.CookieJar()
         self.opener = build_opener(HTTPCookieProcessor(self.jar))
 
-    def json(self, url: str, timeout: int = 90, attempts: int = 12):
+    def json(self, url: str, timeout: int = 90, attempts: int = 20):
         last = None
         for attempt in range(1, attempts + 1):
             req = Request(url, headers={
@@ -39,6 +39,8 @@ class ApiSession:
                     status = getattr(r, "status", 200)
                     body = r.read().decode("utf-8", errors="replace")
                 # The service uses 202/empty while a pageToken result is being prepared.
+                # Keep the same cookie-bound session and token long enough for the async
+                # catalogue page to materialise before abandoning the category attempt.
                 if status == 202 or not body.strip():
                     last = RuntimeError(f"catalogue page pending status={status}")
                     time.sleep(min(0.35 * attempt, 3.0))
