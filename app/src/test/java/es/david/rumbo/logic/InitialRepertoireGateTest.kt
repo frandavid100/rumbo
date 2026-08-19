@@ -21,7 +21,8 @@ class InitialRepertoireGateTest {
     private fun rule(id: Long, vararg meals: MealType) = PlanningRule(
         itemKind = PlannedItemKind.FOOD,
         itemId = id,
-        allowedMealTypes = meals.toSet()
+        allowedMealTypes = meals.toSet(),
+        preferredGrams = 100.0
     )
 
     @Test
