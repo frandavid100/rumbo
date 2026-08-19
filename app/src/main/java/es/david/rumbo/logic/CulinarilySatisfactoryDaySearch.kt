@@ -28,11 +28,11 @@ data class CulinarilySatisfactoryDaySearchResult(
 /**
  * Certified level-3 search.
  *
- * Order is contractually important: revalidate/promote the persisted COMPLETE
- * witness, repair it deterministically, then search a few relevant shortlists,
- * and only afterwards widen to the whole repertoire and seeded generation.
- * Exhausting these bounded searches is SEARCH_INCONCLUSIVE, never a proof that
- * the repertoire lacks a level-3 day.
+ * Revalidation is always first. A directed deterministic shortlist search then
+ * tests nearby/representative compositions without touching the persisted
+ * COMPLETE witness. Expensive deep repair and broad generation are fallbacks.
+ * Exhausting bounded searches is SEARCH_INCONCLUSIVE, never evidence that the
+ * repertoire lacks a level-3 day.
  */
 object CulinarilySatisfactoryDaySearch {
     private val fallbackSeeds = listOf(
@@ -91,42 +91,42 @@ object CulinarilySatisfactoryDaySearch {
             return null
         }
 
-        baselineCompleteWitness
-            ?.takeIf { it.isStructurallyValid() }
-            ?.let { baseline ->
-                registerComplete(baseline)?.let { return success(it) }
-                CulinarilySatisfactoryWitnessRepair.find(
-                    baseline.copy(level = CertifiedDayLevel.COMPLETE),
-                    rules,
-                    foodsById,
-                    dishesById,
-                    recommendation,
-                    mealShares,
-                    portionContext
-                )?.let { repaired ->
-                    registerComplete(repaired)?.let { return success(it) }
-                }
-            }
+        val baseline = baselineCompleteWitness?.takeIf { it.isStructurallyValid() }
+        baseline?.let { registerComplete(it)?.let { witness -> return success(witness) } }
 
-        // The small-repertoire composition search is demonstrably more reliable
-        // when a large repertoire contains many interchangeable alternatives.
-        // Shortlisting never weakens the result: the returned day is immediately
-        // revalidated here against the complete rules before it can be certified.
+        // First search small deterministic subsets. This does not mutate or
+        // replace the saved COMPLETE witness. Any candidate is immediately
+        // revalidated against the full rules before certification.
         CulinaryLevel3ShortlistSearch.find(
             rules = rules,
             foodsById = foodsById,
             dishesById = dishesById,
             recommendation = recommendation,
             mealShares = mealShares,
-            baselineCompleteWitness = baselineCompleteWitness,
+            baselineCompleteWitness = baseline,
             portionContext = portionContext
         )?.let { shortlisted ->
             registerComplete(shortlisted)?.let { return success(it) }
         }
 
-        // Widen to all optional foods only after the targeted searches. This path
-        // can still discover solutions that require an unusual combination not
-        // represented in a shortlist.
+        // If the directed composition search did not solve the case, try a deep
+        // local repair of the previous COMPLETE witness.
+        baseline?.let { source ->
+            CulinarilySatisfactoryWitnessRepair.find(
+                source.copy(level = CertifiedDayLevel.COMPLETE),
+                rules,
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares,
+                portionContext
+            )?.let { repaired ->
+                registerComplete(repaired)?.let { return success(it) }
+            }
+        }
+
+        // Widen to all optional foods only after the targeted paths. This can
+        // discover unusual combinations absent from the shortlists.
         CulinaryLevel3CompositionSearch.find(
             rules = rules,
             foodsById = foodsById,
@@ -138,9 +138,8 @@ object CulinarilySatisfactoryDaySearch {
             registerComplete(candidate)?.let { return success(it) }
         }
 
-        // Fallback generation only widens composition coverage. Do not run the
-        // expensive repair for every seed: keep the best complete candidate and
-        // repair it once at the end.
+        // Seeded generation is the broadest fallback. Keep its best COMPLETE
+        // candidate and repair only once rather than once per seed.
         for (seed in fallbackSeeds) {
             val generated = runCatching {
                 WeeklyMenuGenerator.generate(
@@ -168,16 +167,18 @@ object CulinarilySatisfactoryDaySearch {
         }
 
         bestWitness?.let { best ->
-            CulinarilySatisfactoryWitnessRepair.find(
-                best,
-                rules,
-                foodsById,
-                dishesById,
-                recommendation,
-                mealShares,
-                portionContext
-            )?.let { repaired ->
-                registerComplete(repaired)?.let { return success(it) }
+            if (baseline?.fingerprint != best.fingerprint) {
+                CulinarilySatisfactoryWitnessRepair.find(
+                    best,
+                    rules,
+                    foodsById,
+                    dishesById,
+                    recommendation,
+                    mealShares,
+                    portionContext
+                )?.let { repaired ->
+                    registerComplete(repaired)?.let { return success(it) }
+                }
             }
         }
 
