@@ -1,0 +1,47 @@
+name: Catalog Alcampo detail API probe
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_detail_network_probe.py'
+      - '.github/workflows/catalog-alcampo-detail-network-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: playwright install --with-deps chromium
+      - name: Probe product-detail APIs
+        working-directory: tools/catalog
+        run: python alcampo_detail_network_probe.py
+      - name: Persist detail API probe
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-detail-network-probe/interesting.json ]; then
+            cp tools/catalog/alcampo-detail-network-probe/interesting.json tools/catalog/fixtures/alcampo_detail_network_latest.json
+            cp tools/catalog/alcampo-detail-network-probe/summary.json tools/catalog/fixtures/alcampo_detail_network_summary_latest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_detail_network_latest.json tools/catalog/fixtures/alcampo_detail_network_summary_latest.json
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo detail API probe"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-detail-network-probe
+          path: tools/catalog/alcampo-detail-network-probe/
+          retention-days: 7
