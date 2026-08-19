@@ -165,11 +165,10 @@ object CertifiedDayWitnessEvaluator {
                 )
             )
         }
-        val seeds = listOf(
-            11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L, 509L, 607L, 701L, 809L,
-            907L, 1009L, 1103L, 1201L, 1301L, 1409L, 1511L, 1601L, 1709L, 1801L,
-            1901L, 2003L, 2111L, 2203L, 2309L, 2411L, 2503L, 2609L, 2707L, 2801L
-        )
+        // This runs automatically from the main screen. A bounded pair of
+        // deterministic attempts complements witness repair without turning a
+        // UI progression check into an exhaustive search.
+        val seeds = listOf(11L, 37L)
         var bestDiagnostic: CompleteDayDiagnostic? = null
         var bestProgressWitness: CertifiedDayWitness? = null
         var bestScore = Double.NEGATIVE_INFINITY

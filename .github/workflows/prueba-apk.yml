@@ -41,12 +41,12 @@ jobs:
           RUMBO_SIGNING_PASSWORD: ${{ secrets.RUMBO_SIGNING_PASSWORD }}
         run: |
           printf '%s' "$RUMBO_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/rumbo-release.jks"
-          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-0.77.5-carrefour-aligned.apk"
-          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$RUMBO_SIGNING_PASSWORD" --key-pass "pass:$RUMBO_SIGNING_PASSWORD" --out build/signed/Rumbo-0.77.5-carrefour.apk "$RUNNER_TEMP/Rumbo-0.77.5-carrefour-aligned.apk"
-          build/signing-tools/apksigner verify --verbose --print-certs build/signed/Rumbo-0.77.5-carrefour.apk
+          build/signing-tools/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/Rumbo-0.77.6-carrefour-aligned.apk"
+          build/signing-tools/apksigner sign --ks "$RUNNER_TEMP/rumbo-release.jks" --ks-key-alias rumbo --ks-pass "pass:$RUMBO_SIGNING_PASSWORD" --key-pass "pass:$RUMBO_SIGNING_PASSWORD" --out build/signed/Rumbo-0.77.6-carrefour.apk "$RUNNER_TEMP/Rumbo-0.77.6-carrefour-aligned.apk"
+          build/signing-tools/apksigner verify --verbose --print-certs build/signed/Rumbo-0.77.6-carrefour.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: rumbo-0.77.5-carrefour-complete-short-circuit
-          path: build/signed/Rumbo-0.77.5-carrefour.apk
+          name: rumbo-0.77.6-carrefour-bounded-complete-search
+          path: build/signed/Rumbo-0.77.6-carrefour.apk
           if-no-files-found: error
           retention-days: 7

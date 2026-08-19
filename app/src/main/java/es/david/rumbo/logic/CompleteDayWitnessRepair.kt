@@ -22,9 +22,11 @@ import es.david.rumbo.model.Recommendation
  * and culinary validator.
  */
 object CompleteDayWitnessRepair {
-    private const val BEAM_WIDTH = 40
-    private const val MAX_DEPTH = 5
-    private const val MAX_CANDIDATES_PER_MEAL = 6
+    private const val BEAM_WIDTH = 4
+    private const val MAX_DEPTH = 4
+    private const val MAX_CANDIDATES_PER_MEAL = 2
+    private const val MAX_VARIANTS_PER_STATE = 4
+    private const val MAX_OPTIMIZATIONS = 24
 
     fun find(
         baseline: CertifiedDayWitness,
@@ -48,6 +50,7 @@ object CompleteDayWitnessRepair {
         }
 
         var beam = listOf(start)
+        var optimizations = 0
         repeat(MAX_DEPTH + 1) { depth ->
             beam.forEach { state ->
                 val complete = state.copy(
@@ -65,7 +68,9 @@ object CompleteDayWitnessRepair {
             beam.forEach { state ->
                 expand(
                     state, activeRules, foodsById, dishesById, recommendation
-                ).forEach variantLoop@ { variant ->
+                ).take(MAX_VARIANTS_PER_STATE).forEach variantLoop@ { variant ->
+                    if (optimizations >= MAX_OPTIMIZATIONS) return null
+                    optimizations += 1
                     val optimized = runCatching {
                         MealQuantityOptimizer.optimize(
                             variant.meals,
