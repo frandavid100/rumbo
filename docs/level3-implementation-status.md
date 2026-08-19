@@ -11,7 +11,9 @@ Implementado:
 - evaluación `CULINARILY_SATISFACTORY` sobre un día `COMPLETE`;
 - conjunto dorado de comidas;
 - reparación determinista incremental `COMPLETE → CULINARILY_SATISFACTORY`;
-- exploración de fallback que conserva `SEARCH_INCONCLUSIVE` como estado no probatorio;
+- reubicación de auxiliares opcionales —por ejemplo aceite heredado en una merienda— hacia comidas donde exista un vehículo culinario compatible, conservando su contribución nutricional cuando sea posible;
+- exploración de fallback acotada: se repara el testigo persistido, se exploran candidatos y solo se repara en profundidad el mejor candidato adicional;
+- `SEARCH_INCONCLUSIVE` se conserva como estado no probatorio;
 - persistencia/revalidación del testigo de nivel 3 en la pantalla principal;
 - estado explícito de búsqueda para los niveles 2 y 3, sin CTA prescriptivo mientras la búsqueda está en curso;
 - eliminación del fallback genérico «Añadir otra verdura» cuando la búsqueda de nivel 2 solo es inconclusa;
@@ -19,7 +21,7 @@ Implementado:
 
 Pendiente antes de cerrar el PR:
 
-- CI completa de la integración de interfaz y de la regresión de Ara;
+- CI completa de la integración de interfaz y de la regresión de Ara tras la reubicación de auxiliares;
 - añadir/validar la regresión del perfil 3 si Ara supera el contrato;
 - revisar los diagnósticos resultantes y recalibrar únicamente donde los casos reales aporten evidencia;
 - generar APK de prueba y validar el comportamiento visible.
