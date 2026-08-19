@@ -206,6 +206,10 @@ import es.david.rumbo.logic.CulinaryPolicy
 import es.david.rumbo.logic.CulinaryRole
 import es.david.rumbo.logic.CulinaryRolePolicy
 import es.david.rumbo.logic.CertifiedDayWitnessEvaluator
+import es.david.rumbo.logic.CulinarySatisfactionEvaluator
+import es.david.rumbo.logic.CulinarySatisfactionIssueKind
+import es.david.rumbo.logic.CulinarilySatisfactoryDayDiagnostic
+import es.david.rumbo.logic.CulinarilySatisfactoryDaySearch
 import es.david.rumbo.model.ActivityLevel
 import es.david.rumbo.model.CertifiedDayLevel
 import es.david.rumbo.model.CertifiedDayWitness
@@ -1836,6 +1840,8 @@ private fun HomeScreen(
     val freshCompleteWitness = completeDaySearch?.witness
     val completeDayDiagnostic = completeDaySearch?.diagnostic
     val completeProgressWitness = completeDaySearch?.progressWitness
+    val isSearchingCompleteDay = hasCertifiedViableDay && recommendation != null &&
+        !savedCompleteWitnessValid && completeDaySearch == null
     LaunchedEffect(
         savedViableWitness, savedViableWitnessValid, freshViableWitness,
         repertoireAssessment?.searchStatus
@@ -1862,6 +1868,67 @@ private fun HomeScreen(
         }
     }
     val hasCertifiedCompleteDay = savedCompleteWitnessValid || freshCompleteWitness != null
+    val savedCulinaryWitness = data.activeProfileData?.certifiedDayWitnesses
+        ?.firstOrNull { it.level == CertifiedDayLevel.CULINARILY_SATISFACTORY }
+    val savedCulinaryWitnessValid = remember(
+        savedCulinaryWitness,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares,
+        data.activeProfileData?.culinaryPolicyOverrides,
+        data.activeProfileData?.nutritionToleranceSettings
+    ) {
+        recommendation != null && savedCulinaryWitness != null &&
+            CulinarySatisfactionEvaluator.isCulinarilySatisfactory(
+                savedCulinaryWitness,
+                data.activeProfileData?.planningRules.orEmpty(),
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares
+            )
+    }
+    val baselineCompleteWitness = savedCompleteWitness?.takeIf { savedCompleteWitnessValid }
+        ?: freshCompleteWitness
+    val culinaryDaySearch by produceState<es.david.rumbo.logic.CulinarilySatisfactoryDaySearchResult?>(
+        initialValue = null,
+        hasCertifiedCompleteDay,
+        savedCulinaryWitnessValid,
+        baselineCompleteWitness?.fingerprint,
+        data.activeProfileData?.planningRules,
+        foodsById,
+        dishesById,
+        recommendation,
+        mealShares
+    ) {
+        value = if (hasCertifiedCompleteDay && recommendation != null && !savedCulinaryWitnessValid) {
+            withContext(Dispatchers.Default) {
+                CulinarilySatisfactoryDaySearch.find(
+                    rules = data.activeProfileData?.planningRules.orEmpty(),
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = recommendation,
+                    mealShares = mealShares,
+                    baselineCompleteWitness = baselineCompleteWitness
+                )
+            }
+        } else null
+    }
+    val freshCulinaryWitness = culinaryDaySearch?.witness
+    val culinaryDayDiagnostic = culinaryDaySearch?.diagnostic
+    val isSearchingCulinaryDay = hasCertifiedCompleteDay && recommendation != null &&
+        !savedCulinaryWitnessValid && culinaryDaySearch == null
+    LaunchedEffect(savedCulinaryWitness, savedCulinaryWitnessValid, freshCulinaryWitness) {
+        when {
+            savedCulinaryWitnessValid -> Unit
+            freshCulinaryWitness != null -> onSaveCertifiedDayWitness(freshCulinaryWitness)
+            savedCulinaryWitness != null ->
+                onClearCertifiedDayWitness(CertifiedDayLevel.CULINARILY_SATISFACTORY)
+        }
+    }
+    val hasCertifiedCulinaryDay = savedCulinaryWitnessValid || freshCulinaryWitness != null
 
     val menuReady = currentMenuAcceptable || hasCertifiedViableDay ||
         repertoireAssessment?.status == RepertoireStatus.SUFFICIENT ||
@@ -2103,7 +2170,11 @@ private fun HomeScreen(
                     assessment = repertoireAssessment,
                     hasCertifiedViableDay = hasCertifiedViableDay,
                     hasCertifiedCompleteDay = hasCertifiedCompleteDay,
+                    isSearchingCompleteDay = isSearchingCompleteDay,
                     completeDayDiagnostic = completeDayDiagnostic,
+                    hasCertifiedCulinaryDay = hasCertifiedCulinaryDay,
+                    isSearchingCulinaryDay = isSearchingCulinaryDay,
+                    culinaryDayDiagnostic = culinaryDayDiagnostic,
                     foods = data.foods,
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
@@ -2164,21 +2235,84 @@ private fun repertoireProgressTarget(
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
     hasCertifiedCompleteDay: Boolean,
+    isSearchingCompleteDay: Boolean,
     completeDayDiagnostic: CertifiedDayWitnessEvaluator.CompleteDayDiagnostic?,
+    hasCertifiedCulinaryDay: Boolean,
+    isSearchingCulinaryDay: Boolean,
+    culinaryDayDiagnostic: CulinarilySatisfactoryDayDiagnostic?,
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>
 ): Pair<Int, RepertoireProgressTarget> {
     if (assessment == null) {
-        return 0 to RepertoireProgressTarget("Estamos analizando tus alimentos para encontrar el siguiente paso.")
+        return 0 to RepertoireProgressTarget(
+            "Estamos analizando tus alimentos para encontrar el siguiente paso."
+        )
     }
+
+    if (hasCertifiedCulinaryDay) {
+        return 3 to RepertoireProgressTarget(
+            "Nivel 3 conseguido: Rumbo ha encontrado y guardado un día completo cuyas combinaciones y cantidades son culinariamente satisfactorias."
+        )
+    }
+
     if (hasCertifiedCompleteDay) {
+        if (isSearchingCulinaryDay) {
+            return 2 to RepertoireProgressTarget(
+                "Nivel 2 conseguido. Rumbo está buscando si tus alimentos actuales permiten también un día culinariamente satisfactorio…"
+            )
+        }
+        culinaryDayDiagnostic?.let { diagnostic ->
+            val roleless = diagnostic.issues.firstOrNull {
+                it.kind == CulinarySatisfactionIssueKind.ROLE_UNRESOLVED
+            }
+            if (roleless != null) {
+                return 2 to RepertoireProgressTarget(
+                    "Nivel 2 conseguido. Para certificar el nivel 3 hay al menos un alimento sin una clasificación culinaria suficiente (${roleless.foodName ?: "alimento sin clasificar"}). No necesitas añadir otro alimento: hay que resolver esa clasificación o encontrar una composición que no lo necesite."
+                )
+            }
+            val quantity = diagnostic.issues.firstOrNull {
+                it.kind == CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE
+            }
+            if (quantity != null) {
+                return 2 to RepertoireProgressTarget(
+                    "Nivel 2 conseguido. El mejor día encontrado todavía necesita una cantidad culinariamente extrema de ${quantity.foodName ?: "uno de tus alimentos"}. Rumbo seguirá tratando esto como un problema de combinación y ajuste, no como prueba de que te falten alimentos."
+                )
+            }
+            val soft = diagnostic.issues.firstOrNull {
+                it.kind == CulinarySatisfactionIssueKind.SOFT_RELATION_UNSATISFIED
+            }
+            if (soft != null) {
+                if (diagnostic.compatibleCompanionAlreadyAvailable) {
+                    return 2 to RepertoireProgressTarget(
+                        "Nivel 2 conseguido. Ya tienes en tu repertorio alimentos capaces de completar la combinación culinaria pendiente en ${soft.mealType.label.lowercase()}, pero la búsqueda acotada todavía no ha encontrado una composición completa compatible. No necesitas añadir otro alimento equivalente."
+                    )
+                }
+                val missingRole = diagnostic.unavailablePreferredRoles.sortedBy { it.ordinal }.firstOrNull()
+                if (missingRole != null) {
+                    return 2 to RepertoireProgressTarget(
+                        message = "Nivel 2 conseguido. Para ampliar las combinaciones capaces de alcanzar el nivel 3 falta una opción que pueda funcionar como ${missingRole.label.lowercase()} en ${soft.mealType.label.lowercase()}.",
+                        buttonLabel = "Añadir ${missingRole.label.lowercase()}",
+                        culinaryRole = missingRole.name,
+                        mealType = soft.mealType
+                    )
+                }
+            }
+            return 2 to RepertoireProgressTarget(
+                "Nivel 2 conseguido. La búsqueda acotada todavía no ha podido certificar un día culinariamente satisfactorio. Esto no demuestra que te falten alimentos."
+            )
+        }
         return 2 to RepertoireProgressTarget(
-            "Nivel 2 conseguido: Rumbo ha encontrado y guardado un día completo que, además de ser viable, incluye fruta en al menos dos comidas, verdura en al menos dos comidas y 25 g o más de fibra."
+            "Nivel 2 conseguido: Rumbo ha encontrado y guardado un día completo."
         )
     }
 
     if (hasCertifiedViableDay || assessment.searchStatus == ConstraintSearchStatus.FEASIBLE) {
+        if (isSearchingCompleteDay) {
+            return 1 to RepertoireProgressTarget(
+                "Nivel 1 conseguido. Rumbo está buscando si tus alimentos actuales permiten también un día completo…"
+            )
+        }
         val missingVegetables = (3 - assessment.vegetableConcepts).coerceAtLeast(0)
         if (missingVegetables > 0) {
             val noun = if (missingVegetables == 1) "verdura diferente" else "verduras diferentes"
@@ -2238,9 +2372,7 @@ private fun repertoireProgressTarget(
             }
         }
         return 1 to RepertoireProgressTarget(
-            message = "Rumbo todavía no ha encontrado un día completo. Añade una opción adicional de fruta o verdura para ampliar las combinaciones posibles.",
-            buttonLabel = "Añadir otra verdura",
-            nutritionalRole = "VEGETABLE"
+            "La búsqueda acotada todavía no ha podido demostrar un día completo. Esto no demuestra que te falten alimentos y Rumbo no te pedirá añadirlos por ese motivo."
         )
     }
 
@@ -2340,19 +2472,25 @@ private fun RepertoireProgressCard(
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
     hasCertifiedCompleteDay: Boolean,
+    isSearchingCompleteDay: Boolean,
     completeDayDiagnostic: CertifiedDayWitnessEvaluator.CompleteDayDiagnostic?,
+    hasCertifiedCulinaryDay: Boolean,
+    isSearchingCulinaryDay: Boolean,
+    culinaryDayDiagnostic: CulinarilySatisfactoryDayDiagnostic?,
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>,
     onOpenSearch: (String?, String?, MealType?) -> Unit
 ) {
     val (level, target) = remember(
-        assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, completeDayDiagnostic,
-        foods, repertoireFoodIds, planningRules
+        assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
+        completeDayDiagnostic, hasCertifiedCulinaryDay, isSearchingCulinaryDay,
+        culinaryDayDiagnostic, foods, repertoireFoodIds, planningRules
     ) {
         repertoireProgressTarget(
-            assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, completeDayDiagnostic,
-            foods, repertoireFoodIds, planningRules
+            assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
+            completeDayDiagnostic, hasCertifiedCulinaryDay, isSearchingCulinaryDay,
+            culinaryDayDiagnostic, foods, repertoireFoodIds, planningRules
         )
     }
     val title = when (level) {

@@ -40,6 +40,33 @@ class CertifiedDayWitnessAraRegressionTest {
         ruleId = id
     )
 
+    private val portionBasisById = mapOf(
+        5751811545638569543L to 150.0,
+        5304878835083443904L to 150.0,
+        5138918923368881607L to 170.0,
+        4713451237391941996L to 150.0,
+        5998252704584821415L to 100.0,
+        4912645548334196354L to 100.0,
+        5065604127361444435L to 80.0,
+        4374284991780745501L to 80.0,
+        4530255594904942386L to 250.0,
+        5427737837577403981L to 250.0,
+        4824921464295006360L to 30.0,
+        5863259172627146722L to 250.0,
+        4042487276430228545L to 10.0,
+        4927534216171556707L to 200.0,
+        4108023238282100017L to 200.0,
+        5409764689805397597L to 200.0,
+        4359402894918143880L to 150.0,
+        4373007081554746702L to 80.0,
+        5412212443169419885L to 200.0,
+        5803238462349753934L to 200.0,
+        4494907683069959481L to 200.0,
+        5466605370625528297L to 200.0,
+        4825073144419713243L to 200.0,
+        5273024687756059532L to 200.0
+    )
+
     private val foods = listOf(
         food(5751811545638569543L, FoodCategory.PROTEIN, 74.0, 17.0, 0.5, 0.5, null, setOf("PLATE_CENTER", "SANDWICH_FILLING")),
         food(5304878835083443904L, FoodCategory.PROTEIN, 82.0, 16.0, 2.2, 1.0, 0.0, setOf("PLATE_CENTER", "SANDWICH_FILLING")),
@@ -65,7 +92,9 @@ class CertifiedDayWitnessAraRegressionTest {
         food(5466605370625528297L, FoodCategory.VEGETABLE, 30.0, 1.5, 5.4, 0.0, 1.4, setOf("SIDE", "TOPPING")),
         food(4825073144419713243L, FoodCategory.VEGETABLE, 77.0, 2.4, 11.0, 1.8, 2.9, setOf("SIDE", "TOPPING")),
         food(5273024687756059532L, FoodCategory.VEGETABLE, 15.0, 1.4, 1.6, 0.0, 1.7, setOf("SIDE", "TOPPING"))
-    ).associateBy { it.id }
+    ).map { food ->
+        food.copy(portionBasisGrams = portionBasisById[food.id])
+    }.associateBy { it.id }
 
     private val rules = listOf(
         rule(5751811545638569543L, setOf(MealType.LUNCH, MealType.DINNER)),
@@ -220,4 +249,35 @@ class CertifiedDayWitnessAraRegressionTest {
             )
         )
     }
+    @Test
+    fun araCanAdvanceFromHerCertifiedCompleteDayTowardLevel3WithoutFalseInsufficiency() {
+        val complete = CertifiedDayWitnessEvaluator.findCompleteDay(
+            rules = rules,
+            foodsById = foods,
+            dishesById = emptyMap(),
+            recommendation = target,
+            mealShares = MealDistributionPolicy.defaults,
+            baselineWitness = baseline
+        ).witness
+        assertNotNull(complete)
+
+        val result = CulinarilySatisfactoryDaySearch.find(
+            rules = rules,
+            foodsById = foods,
+            dishesById = emptyMap(),
+            recommendation = target,
+            mealShares = MealDistributionPolicy.defaults,
+            baselineCompleteWitness = complete
+        )
+        val detail = result.diagnostic?.issues?.joinToString(" | ") { issue ->
+            "${issue.mealType}:${issue.kind}:${issue.foodName}:${issue.roles.joinToString()}"
+        }.orEmpty()
+        assertNotNull("Ara no alcanzó nivel 3. Diagnóstico: $detail", result.witness)
+        assertTrue(
+            CulinarySatisfactionEvaluator.isCulinarilySatisfactory(
+                result.witness!!, rules, foods, emptyMap(), target, MealDistributionPolicy.defaults
+            )
+        )
+    }
+
 }

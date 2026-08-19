@@ -56,6 +56,21 @@ class CatalogFoodAdapterTest {
     }
 
     @Test
+    fun physicalPortionBasisCrossesCatalogueBoundaryWithoutBecomingARole() {
+        val product = product(
+            id = "carrefour:arroz-bomba-sos-1-kg-carrefour",
+            name = "Arroz bomba Sos 1 kg.",
+            nutritionalRoles = setOf("PRIMARY_CARBOHYDRATE"),
+            culinaryRoles = setOf("PLATE_BASE"),
+            nutrition = completeNutrition(354.0, 7.0, 78.0, 1.0),
+            portionBasisGrams = 80.0
+        )
+        val food = CatalogFoodAdapter.toFood(product)!!
+        assertEquals(80.0, food.portionBasisGrams!!, 0.001)
+        assertEquals(setOf("PLATE_BASE"), food.culinaryRoles)
+    }
+
+    @Test
     fun menuEligibleLabelCannotBypassMissingCoreNutrition() {
         val incomplete = product(
             id = "carrefour:producto-incompleto",
@@ -104,7 +119,8 @@ class CatalogFoodAdapterTest {
         nutritionalRoles: Set<String>,
         culinaryRoles: Set<String>,
         nutrition: CatalogNutrition?,
-        eligibility: CatalogEligibility = CatalogEligibility.MENU_ELIGIBLE
+        eligibility: CatalogEligibility = CatalogEligibility.MENU_ELIGIBLE,
+        portionBasisGrams: Double? = null
     ): CatalogProduct {
         val roles = nutritionalRoles.map {
             CatalogRole(CatalogRoleAxis.NUTRITIONAL, it, 1.0, "test")
@@ -137,7 +153,8 @@ class CatalogFoodAdapterTest {
                 classifierVersion = "test",
                 classified = eligibility == CatalogEligibility.MENU_ELIGIBLE,
                 status = eligibility.name,
-                roles = roles
+                roles = roles,
+                portionBasisGrams = portionBasisGrams
             ),
             eligibility = eligibility
         )

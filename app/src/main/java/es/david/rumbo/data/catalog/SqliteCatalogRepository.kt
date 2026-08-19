@@ -192,9 +192,15 @@ class SqliteCatalogRepository(
                 }
             }
         }
+        val portionExpression = when {
+            database.hasColumn("classifications", "portion_basis_grams") -> "portion_basis_grams"
+            database.hasColumn("classifications", "preferred_grams") -> "preferred_grams"
+            else -> "NULL"
+        }
         return database.rawQuery(
             """
-                SELECT classifier_version, classified, status
+                SELECT classifier_version, classified, status,
+                       $portionExpression AS portion_basis_grams
                 FROM classifications WHERE product_id = ?
             """.trimIndent(),
             arrayOf(productId)
@@ -203,7 +209,8 @@ class SqliteCatalogRepository(
                 classifierVersion = cursor.string("classifier_version"),
                 classified = cursor.intOrNull("classified") == 1,
                 status = cursor.string("status"),
-                roles = roles
+                roles = roles,
+                portionBasisGrams = cursor.doubleOrNull("portion_basis_grams")
             )
         }
     }
@@ -293,6 +300,15 @@ private fun readMetadata(database: SQLiteDatabase): Map<String, String> = databa
 }
 
 private fun placeholders(size: Int): String = List(size) { "?" }.joinToString(",")
+
+private fun SQLiteDatabase.hasColumn(table: String, column: String): Boolean =
+    rawQuery("PRAGMA table_info($table)", null).use { cursor ->
+        val nameIndex = cursor.getColumnIndexOrThrow("name")
+        while (cursor.moveToNext()) {
+            if (cursor.getString(nameIndex) == column) return@use true
+        }
+        false
+    }
 
 private fun Cursor.string(column: String): String? {
     val index = getColumnIndexOrThrow(column)

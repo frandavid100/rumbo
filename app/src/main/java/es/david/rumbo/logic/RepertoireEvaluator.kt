@@ -39,13 +39,22 @@ data class CulinaryNeed(
     val kind: CulinaryNeedKind,
     val mealType: MealType,
     val acceptedRoles: Set<CulinaryRole>,
-    val message: String
+    val message: String,
+    val sourceFoodId: Long? = null,
+    val sourceFoodName: String? = null,
+    val sourceRole: CulinaryRole? = null
 )
 
 data class RepertoireAssessment(
     val status: RepertoireStatus,
     val nutrition: Map<NutrientKind, NutrientCapacity>,
     val coverage: List<MealCoverage>,
+    /**
+     * Compatibility values for the legacy progress card. Since COMPLETE no
+     * longer requires N distinct concepts, non-structural evaluations expose at
+     * least the old UI threshold so those obsolete gates cannot become hidden
+     * certification rules. Use raw*Concepts for the actual repertoire counts.
+     */
     val fruitConcepts: Int,
     val vegetableConcepts: Int,
     val acceptableSolutions: Int,
@@ -56,7 +65,9 @@ data class RepertoireAssessment(
     val culinaryNeeds: List<CulinaryNeed> = emptyList(),
     val searchStatus: ConstraintSearchStatus = ConstraintSearchStatus.SEARCH_INCONCLUSIVE,
     val witness: MenuWitness? = null,
-    val constraintViolations: List<ConstraintViolation> = emptyList()
+    val constraintViolations: List<ConstraintViolation> = emptyList(),
+    val rawFruitConcepts: Int = fruitConcepts,
+    val rawVegetableConcepts: Int = vegetableConcepts
 )
 
 data class RepertoireMetrics(
@@ -120,6 +131,15 @@ object RepertoireEvaluator {
             )
         }
 
+        // COMPLETE is based on fruit/vegetable presence in distinct meals, not
+        // on a count of different concepts. The old card still reads these two
+        // fields, so neutralise that compatibility-only gate once structural
+        // validity is established. Actual counts remain in raw*Concepts.
+        val compatibilityFruitGroups = maxOf(fruitGroups, thresholds.adequateFruitConcepts)
+        val compatibilityVegetableGroups = maxOf(
+            vegetableGroups, thresholds.adequateVegetableConcepts
+        )
+
         val attempts = seeds.mapNotNull { seed ->
             runCatching {
                 seed to WeeklyMenuGenerator.generate(
@@ -138,8 +158,10 @@ object RepertoireEvaluator {
             return emptyAssessment(
                 recommendation = recommendation,
                 coverage = coverage,
-                fruit = fruitGroups,
-                vegetables = vegetableGroups,
+                fruit = compatibilityFruitGroups,
+                vegetables = compatibilityVegetableGroups,
+                rawFruit = fruitGroups,
+                rawVegetables = vegetableGroups,
                 foods = activeFoods,
                 factors = listOf(
                     "La búsqueda no encontró un menú testigo; no se ha demostrado que el repertorio sea insuficiente."
@@ -205,8 +227,8 @@ object RepertoireEvaluator {
             status = status,
             nutrition = nutrition,
             coverage = coverage,
-            fruitConcepts = fruitGroups,
-            vegetableConcepts = vegetableGroups,
+            fruitConcepts = compatibilityFruitGroups,
+            vegetableConcepts = compatibilityVegetableGroups,
             acceptableSolutions = distinctAcceptable.size,
             limitingFactors = factors,
             suggestions = suggestions,
@@ -221,7 +243,9 @@ object RepertoireEvaluator {
             } else {
                 ConstraintSearchStatus.FEASIBLE
             },
-            witness = witnessCandidate?.let { MenuWitness(it.seed, it.meals) }
+            witness = witnessCandidate?.let { MenuWitness(it.seed, it.meals) },
+            rawFruitConcepts = fruitGroups,
+            rawVegetableConcepts = vegetableGroups
         )
     }
 
@@ -281,7 +305,9 @@ object RepertoireEvaluator {
         inactiveFoods: List<Food>,
         culinaryNeeds: List<CulinaryNeed> = emptyList(),
         searchStatus: ConstraintSearchStatus = ConstraintSearchStatus.INSUFFICIENT,
-        constraintViolations: List<ConstraintViolation> = emptyList()
+        constraintViolations: List<ConstraintViolation> = emptyList(),
+        rawFruit: Int = fruit,
+        rawVegetables: Int = vegetables
     ): RepertoireAssessment {
         val target = MealPlanEvaluator.dailyTarget(recommendation)
         val nutrition = mapOf(
@@ -290,7 +316,7 @@ object RepertoireEvaluator {
             NutrientKind.CARBOHYDRATES to NutrientCapacity(target.carbohydrateGrams, 0.0, -target.carbohydrateGrams, TargetFit.OUTSIDE),
             NutrientKind.FAT to NutrientCapacity(target.fatGrams, 0.0, -target.fatGrams, TargetFit.OUTSIDE)
         )
-        val suggestions = suggestionsFor(nutrition, fruit, vegetables)
+        val suggestions = suggestionsFor(nutrition, rawFruit, rawVegetables)
         return RepertoireAssessment(
             status = RepertoireStatus.INSUFFICIENT,
             nutrition = nutrition,
@@ -309,28 +335,58 @@ object RepertoireEvaluator {
             culinaryNeeds = culinaryNeeds,
             searchStatus = searchStatus,
             witness = null,
-            constraintViolations = constraintViolations
+            constraintViolations = constraintViolations,
+            rawFruitConcepts = rawFruit,
+            rawVegetableConcepts = rawVegetables
         )
     }
 
+    /**
+     * Reports a hard companion dependency only when it is unavoidable for one
+     * concrete food in that meal. A multi-role food must not trigger a request
+     * just because one of its possible roles has a dependency if another role
+     * can be used without it.
+     */
     private fun dependencyNeeds(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>
     ): List<CulinaryNeed> = MealType.entries.mapNotNull { mealType ->
-        val mealRules = rules.filter {
+        val entries = rules.filter {
             mealType in it.allowedMealTypes || it.requiredSlots().any { slot -> slot.mealType == mealType }
+        }.mapNotNull { rule ->
+            val food = foodsById[rule.itemId] ?: return@mapNotNull null
+            val roles = CulinaryPolicy.roles(food)
+            if (roles.isEmpty()) null else Triple(rule, food, roles)
         }
-        val roleChoices = mealRules.mapNotNull { rule ->
-            foodsById[rule.itemId]?.let(CulinaryPolicy::roles)
-        }
-        val missing = CulinaryPolicy.missingRequiredRoles(roleChoices)
-        if (missing.isEmpty()) null else CulinaryNeed(
-            CulinaryNeedKind.COMPANION_BASE,
-            mealType,
-            missing,
-            "Falta ${missing.joinToString(" o ") { it.label.lowercase() }} para completar una combinación en " +
-                mealType.label.lowercase() + "."
-        )
+        val availableRoles = entries.flatMapTo(linkedSetOf()) { it.third }
+
+        entries.asSequence().mapNotNull { (_, food, roles) ->
+            val missingByRole = roles.associateWith { role ->
+                CulinaryPolicy.policy(role).requiredRoles - availableRoles
+            }
+            // At least one role can be performed without a missing hard
+            // companion, so no dependency is proven for this food.
+            if (missingByRole.values.any { it.isEmpty() }) return@mapNotNull null
+
+            val cause = missingByRole.entries.minWithOrNull(
+                compareBy<Map.Entry<CulinaryRole, Set<CulinaryRole>>> { it.value.size }
+                    .thenBy { it.key.ordinal }
+            ) ?: return@mapNotNull null
+            val missing = cause.value
+            if (missing.isEmpty()) return@mapNotNull null
+            val role = cause.key
+            val missingLabel = missing.joinToString(" o ") { it.label.lowercase() }
+            CulinaryNeed(
+                kind = CulinaryNeedKind.COMPANION_BASE,
+                mealType = mealType,
+                acceptedRoles = missing,
+                message = "${food.name} está disponible para ${mealType.label.lowercase()} como " +
+                    "${role.label.lowercase()}, pero necesita $missingLabel para formar una combinación válida.",
+                sourceFoodId = food.id,
+                sourceFoodName = food.name,
+                sourceRole = role
+            )
+        }.firstOrNull()
     }
 
     private fun macroCulinaryNeeds(
