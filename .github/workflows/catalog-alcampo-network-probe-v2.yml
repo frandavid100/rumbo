@@ -14,7 +14,7 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,17 +27,20 @@ jobs:
       - name: Probe Alcampo API payloads
         working-directory: tools/catalog
         run: python alcampo_network_probe_v2.py
-      - name: Persist compact API summary
+      - name: Persist API diagnostics
         if: always()
         run: |
           if [ -f tools/catalog/alcampo-network-probe-v2/summary.json ]; then
             cp tools/catalog/alcampo-network-probe-v2/summary.json tools/catalog/fixtures/alcampo_network_probe_v2_latest.json
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add tools/catalog/fixtures/alcampo_network_probe_v2_latest.json
-            git diff --cached --quiet || git commit -m "catalog: persist Alcampo API payload probe"
-            git push origin HEAD:agent/catalog-phase1
           fi
+          if [ -f tools/catalog/alcampo-network-probe-v2/recipes.json ]; then
+            cp tools/catalog/alcampo-network-probe-v2/recipes.json tools/catalog/fixtures/alcampo_network_recipes_v2_latest.json
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_network_probe_v2_latest.json tools/catalog/fixtures/alcampo_network_recipes_v2_latest.json 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "catalog: persist Alcampo API payload probe v2"
+          git push origin HEAD:agent/catalog-phase1
       - uses: actions/upload-artifact@v4
         if: always()
         with:
