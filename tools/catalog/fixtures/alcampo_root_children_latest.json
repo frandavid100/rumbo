@@ -1,0 +1,957 @@
+{
+  "roots": [
+    {
+      "root_label": "Bebidas",
+      "root_retailer_category_id": "OCC11",
+      "children": [
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Refrescos",
+          "categoryId": "8eb88de4-e89e-4c86-9bcc-2dd5145a2ea7",
+          "retailerCategoryId": "OC1103",
+          "productCount": 544
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Bebidas energéticas",
+          "categoryId": "2e689ab9-04cf-4ef9-a085-901c6b6b5b74",
+          "retailerCategoryId": "OC110311",
+          "productCount": 72
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Agua, Soda y Gaseosas",
+          "categoryId": "2ce186ea-fcbe-4881-ad4f-8d046fc658f5",
+          "retailerCategoryId": "OC1101",
+          "productCount": 247
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Tintos de verano y sangrías",
+          "categoryId": "7c399d9b-5d15-46ca-85dd-92416a1a6952",
+          "retailerCategoryId": "OC11534",
+          "productCount": 48
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Zumos de Frutas",
+          "categoryId": "be5b67ab-80e9-4cc0-8ea6-1803f32838a5",
+          "retailerCategoryId": "OC1102",
+          "productCount": 305
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Cervezas",
+          "categoryId": "4d9268f8-30a7-4766-a0f4-60b8341e99be",
+          "retailerCategoryId": "OC1107",
+          "productCount": 542
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Vino Tinto",
+          "categoryId": "f73c26b4-7a5d-48ce-b59c-8641b6a54ab0",
+          "retailerCategoryId": "OC1151",
+          "productCount": 849
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Vino Blanco",
+          "categoryId": "f42e4c3e-dabd-4cc8-b2ed-0e60e03673fd",
+          "retailerCategoryId": "OC1152",
+          "productCount": 425
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Vino rosados, frizzantes, dulces y olorosos",
+          "categoryId": "491e0fe9-e278-4951-92b2-4c3203b59045",
+          "retailerCategoryId": "OC1153",
+          "productCount": 443
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Champagne Cavas y Sidras",
+          "categoryId": "be6ddf31-821c-4867-96a9-ca3767646a56",
+          "retailerCategoryId": "OC1156",
+          "productCount": 231
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Bebidas Alcohólicas",
+          "categoryId": "06fdca83-0c12-4150-a27a-6cd1dbdb0207",
+          "retailerCategoryId": "OC1154",
+          "productCount": 395
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Licores",
+          "categoryId": "995da662-2ce1-4816-854e-ade4544a4a42",
+          "retailerCategoryId": "OC1155",
+          "productCount": 273
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Vinos y bebidas sin alcohol",
+          "categoryId": "d56f6cc1-b74f-4bfe-8259-e3782932847e",
+          "retailerCategoryId": "OC25042023",
+          "productCount": 72
+        },
+        {
+          "root_label": "Bebidas",
+          "root_retailer_category_id": "OCC11",
+          "name": "Bebidas ecológicas",
+          "categoryId": "3117d19a-695a-4c3b-abc3-39178cdb206e",
+          "retailerCategoryId": "OC101303",
+          "productCount": 61
+        }
+      ],
+      "child_product_count_sum": 4507
+    },
+    {
+      "root_label": "Frescos",
+      "root_retailer_category_id": "OC2112",
+      "children": [
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Frutas",
+          "categoryId": "25fd70b8-959e-4633-b14a-0cee7cd3669a",
+          "retailerCategoryId": "OC1701",
+          "productCount": 281
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Verduras y hortalizas",
+          "categoryId": "aed1da10-51e1-443c-8951-f83f69243176",
+          "retailerCategoryId": "OC1702",
+          "productCount": 464
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Carne",
+          "categoryId": "d6245e0b-4824-46bc-8cea-2bbaa407348b",
+          "retailerCategoryId": "OC13",
+          "productCount": 1086
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Pescados, mariscos y moluscos",
+          "categoryId": "bede7557-66ae-458b-b666-4447bcf1bd78",
+          "retailerCategoryId": "OC14",
+          "productCount": 625
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Ahumados, surimis, anchoas, pulpos y otros",
+          "categoryId": "7f7f5afb-e7b1-48e6-aaa6-395c745deea7",
+          "retailerCategoryId": "OC184",
+          "productCount": 387
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Charcutería",
+          "categoryId": "0211b0a1-a2bd-4ca9-be19-5aa23fe1f145",
+          "retailerCategoryId": "OC15",
+          "productCount": 1151
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Jamones y paletas",
+          "categoryId": "3bb9b948-9d75-4044-806d-acbb009b14c5",
+          "retailerCategoryId": "OC151001",
+          "productCount": 91
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Quesos",
+          "categoryId": "8fda6b46-6a31-4af7-b2e7-90c5f4bbd4bb",
+          "retailerCategoryId": "OCQuesos",
+          "productCount": 1068
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Panadería",
+          "categoryId": "3933c3bf-7c66-4a4c-ab79-adc31ff32515",
+          "retailerCategoryId": "OC1281",
+          "productCount": 270
+        },
+        {
+          "root_label": "Frescos",
+          "root_retailer_category_id": "OC2112",
+          "name": "Pastelería",
+          "categoryId": "b45325ac-e731-4af7-aa32-16eb583d311e",
+          "retailerCategoryId": "OC1282",
+          "productCount": 395
+        }
+      ],
+      "child_product_count_sum": 5818
+    },
+    {
+      "root_label": "Congelados",
+      "root_retailer_category_id": "OC200220183",
+      "children": [
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Pescados, mariscos y surimis",
+          "categoryId": "d84a4726-042c-4413-a1f6-80a0ece54104",
+          "retailerCategoryId": "OC1201",
+          "productCount": 274
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Helados",
+          "categoryId": "652ff206-86b6-4cad-9651-38402084abad",
+          "retailerCategoryId": "OC200220184",
+          "productCount": 448
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Verduras Congeladas",
+          "categoryId": "642d6394-704c-49bb-98aa-586e7cfbbcf7",
+          "retailerCategoryId": "OC1203",
+          "productCount": 111
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Platos preparados congelados",
+          "categoryId": "011beb6e-b850-4363-8d73-0103ae09f615",
+          "retailerCategoryId": "OC1205",
+          "productCount": 303
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Patatas, croquetas y empanadillas",
+          "categoryId": "091221cf-84e2-469b-9768-0f8daf0ee070",
+          "retailerCategoryId": "OCCroquetasEmpanadillas",
+          "productCount": 95
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "San jacobos, nuggets y pollo empanado",
+          "categoryId": "fdbda2fa-2dcc-4386-9229-6303dc002308",
+          "retailerCategoryId": "OCPolloEmpanado",
+          "productCount": 36
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Carne",
+          "categoryId": "cd177ee2-3036-45e6-a06f-3c5839ce6e16",
+          "retailerCategoryId": "OC1202",
+          "productCount": 26
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Repostería, hielo y bolsas isotérmicas",
+          "categoryId": "839f0118-ede8-47d8-a783-7c6e46202e64",
+          "retailerCategoryId": "OC1207",
+          "productCount": 21
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Tartas, postres y fruta congelada",
+          "categoryId": "a33dadc7-74b9-4c9f-bad4-30facc449865",
+          "retailerCategoryId": "OC1209",
+          "productCount": 69
+        },
+        {
+          "root_label": "Congelados",
+          "root_retailer_category_id": "OC200220183",
+          "name": "Esenciales para tu freidora de aire",
+          "categoryId": "a045ee0c-1b8b-4eda-abe5-c10b52f39874",
+          "retailerCategoryId": "OCconfreiaire",
+          "productCount": 126
+        }
+      ],
+      "child_product_count_sum": 1509
+    },
+    {
+      "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+      "root_retailer_category_id": "OCSINGSINL",
+      "children": [
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Sin Gluten apto Celíacos",
+          "categoryId": "4696b239-f10a-47f9-8177-f79e236cefb7",
+          "retailerCategoryId": "OC101204",
+          "productCount": 256
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Productos sin lactosa",
+          "categoryId": "2ab6190e-cc93-4678-b6a4-dbe52b8d0802",
+          "retailerCategoryId": "OC7",
+          "productCount": 45
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Nutrición deportiva",
+          "categoryId": "50a76940-0e89-420d-aef7-584403f2bfb0",
+          "retailerCategoryId": "OC12",
+          "productCount": 150
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Alimentos y Bebidas funcionales",
+          "categoryId": "9856b7bc-45b4-4306-b086-70950a89c92e",
+          "retailerCategoryId": "OCA1B1C1",
+          "productCount": 64
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Complementos Naturales y Herbolario",
+          "categoryId": "93c944ef-0cbc-4b77-b9a8-1029d79baaa1",
+          "retailerCategoryId": "OC101210",
+          "productCount": 203
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Semillas y otros cereales",
+          "categoryId": "5cbbdf5e-d6fc-4770-ba2b-a64732d1d487",
+          "retailerCategoryId": "OC10120102",
+          "productCount": 21
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Dietéticos Control de peso",
+          "categoryId": "32e4a0fc-d909-448f-b345-4b625a29ab7c",
+          "retailerCategoryId": "OC101208",
+          "productCount": 48
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Dietéticos Clásicos",
+          "categoryId": "59d8f2b7-d0c3-4460-8a8c-560181268389",
+          "retailerCategoryId": "OC111982",
+          "productCount": 8
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Dietéticos Sin Azúcares añadidos",
+          "categoryId": "07232ad6-12d0-497a-b4a1-5d3445efc3c6",
+          "retailerCategoryId": "OC111984",
+          "productCount": 4
+        },
+        {
+          "root_label": "Sin Gluten / Sin Lactosa, Nutrición deportiva y Funcional",
+          "root_retailer_category_id": "OCSINGSINL",
+          "name": "Tortitas",
+          "categoryId": "5cf84c60-2609-42b2-bf74-c35ead756805",
+          "retailerCategoryId": "OC101203",
+          "productCount": 58
+        }
+      ],
+      "child_product_count_sum": 857
+    },
+    {
+      "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+      "root_retailer_category_id": "OC16",
+      "children": [
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Leche",
+          "categoryId": "48c34870-c5a3-46c9-870b-590c66fe8848",
+          "retailerCategoryId": "OC1603",
+          "productCount": 332
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Bebidas vegetales",
+          "categoryId": "f14cc519-de84-4d4d-a264-a0e726301290",
+          "retailerCategoryId": "OC1609",
+          "productCount": 176
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Preparado lácteo",
+          "categoryId": "46a16e03-091e-4ddd-b617-c9758a81d56f",
+          "retailerCategoryId": "OCPreparadolacteo",
+          "productCount": 45
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Huevos",
+          "categoryId": "23c47a04-857d-4d28-9768-7622fdcafd16",
+          "retailerCategoryId": "OC1608",
+          "productCount": 50
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Yogures, Bífidus, L-Casei y productos vegetales y fermentados",
+          "categoryId": "978c072d-5441-4380-8b90-51d90e100dfe",
+          "retailerCategoryId": "OC1601",
+          "productCount": 458
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Postres",
+          "categoryId": "6ece27a2-0311-42e2-bb0f-9693ce28959b",
+          "retailerCategoryId": "OC1602",
+          "productCount": 344
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Mantequilla",
+          "categoryId": "284b4c3b-33dc-4f0f-9713-d327ca2277b3",
+          "retailerCategoryId": "OC1606",
+          "productCount": 64
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Margarinas y otros untables",
+          "categoryId": "29304309-cbeb-41a7-b64e-8c4826c806fb",
+          "retailerCategoryId": "OC1607",
+          "productCount": 33
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Nata",
+          "categoryId": "bf0c15c3-6009-469b-8372-3f149f956746",
+          "retailerCategoryId": "OC1605",
+          "productCount": 51
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Batidos, horchatas y bebidas frías de café",
+          "categoryId": "f7f4c8d7-8132-446f-8963-ba5697dc7c31",
+          "retailerCategoryId": "OC1604",
+          "productCount": 138
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Zumos con leche",
+          "categoryId": "9ace4eda-69ed-4ad4-8b93-4157314b4bf0",
+          "retailerCategoryId": "OC160403",
+          "productCount": 25
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Leche condensada, polvo y evaporada",
+          "categoryId": "a5af685d-6356-49a2-b858-8dff0f2c1ac6",
+          "retailerCategoryId": "OC160316",
+          "productCount": 15
+        },
+        {
+          "root_label": "Leche, Huevos, Lácteos, Yogures y Bebidas vegetales",
+          "root_retailer_category_id": "OC16",
+          "name": "Productos proteicos",
+          "categoryId": "c9f16f3b-c9ba-4777-a14e-4b8b146faf7b",
+          "retailerCategoryId": "OC1612",
+          "productCount": 78
+        }
+      ],
+      "child_product_count_sum": 1809
+    },
+    {
+      "root_label": "Veganos",
+      "root_retailer_category_id": "OC09112021",
+      "children": [
+        {
+          "root_label": "Veganos",
+          "root_retailer_category_id": "OC09112021",
+          "name": "Bebidas veganas",
+          "categoryId": "bc0bf3f0-1330-4976-b3e0-116598736e83",
+          "retailerCategoryId": "OC091120212",
+          "productCount": 71
+        },
+        {
+          "root_label": "Veganos",
+          "root_retailer_category_id": "OC09112021",
+          "name": "Vino Vegano",
+          "categoryId": "be5d4aa2-5293-444a-b4ff-c0fff7214143",
+          "retailerCategoryId": "OC0911202126",
+          "productCount": 43
+        },
+        {
+          "root_label": "Veganos",
+          "root_retailer_category_id": "OC09112021",
+          "name": "Proteina vegana",
+          "categoryId": "57af9825-b688-42c1-b845-98f91352c616",
+          "retailerCategoryId": "OC091120211",
+          "productCount": 46
+        },
+        {
+          "root_label": "Veganos",
+          "root_retailer_category_id": "OC09112021",
+          "name": "Alimentación vegana",
+          "categoryId": "1b08db07-6ba1-4f9b-8cff-c6d31106a1c6",
+          "retailerCategoryId": "OC091120215",
+          "productCount": 51
+        }
+      ],
+      "child_product_count_sum": 211
+    },
+    {
+      "root_label": "Alimentación",
+      "root_retailer_category_id": "OCC10",
+      "children": [
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Conservas de pescado",
+          "categoryId": "38f872e5-a996-4080-bf7b-3840317e144d",
+          "retailerCategoryId": "OC100402",
+          "productCount": 487
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Conservas vegetales",
+          "categoryId": "cf752880-3fec-44e1-9646-bb4fcbb81b98",
+          "retailerCategoryId": "OC100401",
+          "productCount": 375
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Conservas cárnicas, platos preparados y almíbares",
+          "categoryId": "6c2c4150-6ac3-4694-9b0c-f19b89503810",
+          "retailerCategoryId": "OC1004",
+          "productCount": 415
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Aceite y Vinagre",
+          "categoryId": "01ea53da-4b67-429d-b53a-bb73e52aa94c",
+          "retailerCategoryId": "OC18",
+          "productCount": 358
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Sal, Especias y Sazonadores",
+          "categoryId": "d333ce03-c1f0-4bf4-aeb9-76c9a30195a6",
+          "retailerCategoryId": "OC611",
+          "productCount": 327
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Aperitivos, aceitunas y frutos secos",
+          "categoryId": "52647eb6-f7ad-4f4c-9c7d-52345a184cd7",
+          "retailerCategoryId": "OC120",
+          "productCount": 964
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Tomate Frito y Salsas",
+          "categoryId": "31213cb7-03be-48fc-9146-30315dc8527e",
+          "retailerCategoryId": "OCTomateySalsas",
+          "productCount": 424
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Arroz y Legumbres",
+          "categoryId": "35af38e3-08c3-48c8-b327-5ebe6f194af6",
+          "retailerCategoryId": "OC140",
+          "productCount": 366
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Pasta alimenticia",
+          "categoryId": "55a04f9f-d931-477c-9fb0-bc2ba9aa9377",
+          "retailerCategoryId": "OC100501",
+          "productCount": 277
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Sopas, Caldos y Cremas",
+          "categoryId": "18ac1cc8-465f-4487-909f-41c4a36e014b",
+          "retailerCategoryId": "OCCaldosycremas",
+          "productCount": 207
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Panadería, Harina y Masas",
+          "categoryId": "d775b1c5-ed4b-4d3b-9cc6-a0202f0cbae7",
+          "retailerCategoryId": "OC1009",
+          "productCount": 533
+        },
+        {
+          "root_label": "Alimentación",
+          "root_retailer_category_id": "OCC10",
+          "name": "Comida Internacional",
+          "categoryId": "5c8131f7-f019-49d8-8ff3-d670ca95efd2",
+          "retailerCategoryId": "OC9410",
+          "productCount": 349
+        }
+      ],
+      "child_product_count_sum": 5082
+    },
+    {
+      "root_label": "Desayuno y Merienda",
+      "root_retailer_category_id": "OC10",
+      "children": [
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Turrones",
+          "categoryId": "53b881e1-9d20-4929-a310-615beecc235f",
+          "retailerCategoryId": "OCTURRONES",
+          "productCount": 3
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Cafés",
+          "categoryId": "4afb1824-9d15-48f8-b757-99dc766476dc",
+          "retailerCategoryId": "OC100806",
+          "productCount": 533
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Galletas",
+          "categoryId": "805a7710-0b97-4675-9f42-efcc697bfd1b",
+          "retailerCategoryId": "OC100805",
+          "productCount": 583
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Chocolates, Cremas untar y Bombones",
+          "categoryId": "607985e0-6feb-46d9-95e5-f7b77ff1b70d",
+          "retailerCategoryId": "OC1008",
+          "productCount": 704
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Bollería y Pastelería",
+          "categoryId": "88f85ec4-99cc-4fd2-afd9-3add83f109d2",
+          "retailerCategoryId": "OC1011",
+          "productCount": 421
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Cereales y Barritas",
+          "categoryId": "e36034d6-cc30-407e-8eed-91b9dd5cb895",
+          "retailerCategoryId": "OC100804",
+          "productCount": 273
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Cacaos  solubles",
+          "categoryId": "ef601777-9142-4314-b404-ae288da185d7",
+          "retailerCategoryId": "OC100803017",
+          "productCount": 76
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Azúcar, miel y otros edulcorantes",
+          "categoryId": "9d21b894-3d9e-4855-9ab9-9a8c8201c9a0",
+          "retailerCategoryId": "OCAzucaryedulcorante",
+          "productCount": 148
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Té e Infusiones",
+          "categoryId": "82f2ab71-e53e-4c52-8213-0e0393816929",
+          "retailerCategoryId": "OC100807",
+          "productCount": 275
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Mermelada, almibares, membrillo",
+          "categoryId": "3a58a68c-7b9d-4007-a4f7-af1e2944977b",
+          "retailerCategoryId": "OC100802",
+          "productCount": 282
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Golosinas",
+          "categoryId": "706ec7e0-fc64-49c1-954a-f2051e66b31e",
+          "retailerCategoryId": "OC100902",
+          "productCount": 417
+        },
+        {
+          "root_label": "Desayuno y Merienda",
+          "root_retailer_category_id": "OC10",
+          "name": "Preparación Postres",
+          "categoryId": "91ec2ff1-66ad-49a2-9299-ee85015aca5b",
+          "retailerCategoryId": "OC1007",
+          "productCount": 229
+        }
+      ],
+      "child_product_count_sum": 3944
+    },
+    {
+      "root_label": "Comida Preparada",
+      "root_retailer_category_id": "OC20022018",
+      "children": [
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Sushi",
+          "categoryId": "c8ce1d87-183d-47a7-962b-8eb101b918c0",
+          "retailerCategoryId": "OC140502",
+          "productCount": 38
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Pizzas",
+          "categoryId": "0eb5949b-c455-4f96-84a7-ce84da24c84e",
+          "retailerCategoryId": "OC941",
+          "productCount": 202
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Gazpachos, salmorejos y cremas",
+          "categoryId": "47dc3da6-4ae5-401d-b677-6bc4b931620b",
+          "retailerCategoryId": "OC943",
+          "productCount": 102
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Tortillas de patata",
+          "categoryId": "246ce889-5224-4099-8637-565f95507235",
+          "retailerCategoryId": "OC09426",
+          "productCount": 17
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Arroces y pastas",
+          "categoryId": "046f4f07-d1b8-4d0c-a0a3-8fe6aebcf336",
+          "retailerCategoryId": "OC2002201852",
+          "productCount": 94
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Otras especialidades",
+          "categoryId": "6f0f603b-832e-4714-9e34-15a86ace89e0",
+          "retailerCategoryId": "OC09427",
+          "productCount": 76
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Hummus, guacamole y otros",
+          "categoryId": "649beeff-76ed-4920-ac7b-85fd195bd228",
+          "retailerCategoryId": "OC090820181",
+          "productCount": 23
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Platos Internacionales",
+          "categoryId": "364acf44-6b90-4bb6-ad5b-c8c8661ea8b4",
+          "retailerCategoryId": "OC09421",
+          "productCount": 48
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Masas y bases",
+          "categoryId": "9c1d741d-6d7e-430a-aa36-6f165152f273",
+          "retailerCategoryId": "OC0943",
+          "productCount": 35
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Alimentos vegetarianos",
+          "categoryId": "410a25d0-1857-4ea2-8c3c-61aa06216491",
+          "retailerCategoryId": "OC09441",
+          "productCount": 83
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Sándwiches, bocadillos y roscas",
+          "categoryId": "2a77c63d-4737-44d1-b66c-b866a33b1218",
+          "retailerCategoryId": "OC2002201853",
+          "productCount": 69
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Asados y carnes",
+          "categoryId": "c986267d-60e0-4033-8c7d-daaadb6a55d4",
+          "retailerCategoryId": "OC09423",
+          "productCount": 35
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Ensaladas refrigeradas",
+          "categoryId": "5d4261ed-b7d3-4413-b37b-e0fe04379291",
+          "retailerCategoryId": "OC9421",
+          "productCount": 34
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Empanadas",
+          "categoryId": "a8106555-1fab-4e57-b823-be0421c2bf96",
+          "retailerCategoryId": "OC09428",
+          "productCount": 28
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Esenciales para tu freidora de aire",
+          "categoryId": "db9a94a4-435b-48bc-83e3-5fad105617bc",
+          "retailerCategoryId": "OCcpfreiaire",
+          "productCount": 26
+        },
+        {
+          "root_label": "Comida Preparada",
+          "root_retailer_category_id": "OC20022018",
+          "name": "Platos preparados en conserva",
+          "categoryId": "88b546a0-e526-40a1-932f-961290a256dc",
+          "retailerCategoryId": "OC100404B",
+          "productCount": 145
+        }
+      ],
+      "child_product_count_sum": 1055
+    },
+    {
+      "root_label": "Supermercado Ecológico",
+      "root_retailer_category_id": "OC26112021",
+      "children": [
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Producto Fresco Ecológico",
+          "categoryId": "354fd0fc-3d6f-4059-921c-db2e9865060f",
+          "retailerCategoryId": "OC261120211",
+          "productCount": 160
+        },
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Lácteos y Huevos de producción ecológica",
+          "categoryId": "0625aa54-b6e5-4175-b69c-5d9d9c22897b",
+          "retailerCategoryId": "OC2611202122",
+          "productCount": 68
+        },
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Tu despensa Ecológica",
+          "categoryId": "12d4bf6f-acfd-4e8b-bcb5-a653590e8a7d",
+          "retailerCategoryId": "OC2611202121",
+          "productCount": 294
+        },
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Desayunos Ecológicos",
+          "categoryId": "847c534a-e9f2-4f0f-8eea-459c25eb5358",
+          "retailerCategoryId": "OC2611202123",
+          "productCount": 239
+        },
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Bebidas Ecológicas",
+          "categoryId": "e631d794-0f57-4c17-8736-feeb962050b6",
+          "retailerCategoryId": "OC261120213",
+          "productCount": 171
+        },
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Alimentación infantil ecológica",
+          "categoryId": "bc659a78-18ff-4d62-9ee3-3b0d3984b8b3",
+          "retailerCategoryId": "OC200520206",
+          "productCount": 129
+        },
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Perfumería Ecológica",
+          "categoryId": "356e9a23-1d7c-4b6e-bbec-d93ad41dd8ce",
+          "retailerCategoryId": "OC261120216",
+          "productCount": 34
+        },
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Comercio Justo",
+          "categoryId": "5faff6ff-6027-4484-b9c4-c300bcb17973",
+          "retailerCategoryId": "OC01062020",
+          "productCount": 20
+        },
+        {
+          "root_label": "Supermercado Ecológico",
+          "root_retailer_category_id": "OC26112021",
+          "name": "Droguería Ecológica y sostenible",
+          "categoryId": "0b3a42c6-3a17-43ea-8aab-7cf19966bfdc",
+          "retailerCategoryId": "OC117020418",
+          "productCount": 27
+        }
+      ],
+      "child_product_count_sum": 1142
+    }
+  ],
+  "root_count": 10,
+  "children": 110,
+  "child_product_count_sum": 25934
+}
