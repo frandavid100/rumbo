@@ -42,7 +42,9 @@ object PortionPolicyResolver {
 
     private val generalAdult = mapOf(
         CulinaryRole.PLATE_CENTER to Calibration(75.0, 225.0, 0.35, 0.75, 1.35),
-        CulinaryRole.PLATE_BASE to Calibration(75.0, 220.0, 0.50, 0.70, 1.50),
+        // PLATE_BASE is stored in product grams. For dry rice/pasta the current
+        // catalogue therefore uses dry, not cooked, weight.
+        CulinaryRole.PLATE_BASE to Calibration(50.0, 120.0, 0.50, 0.70, 1.50),
         CulinaryRole.SIDE to Calibration(75.0, 250.0, 0.15, 0.85, 1.25),
         CulinaryRole.TOPPING to Calibration(5.0, 40.0, 0.00, 1.00, 1.00),
         CulinaryRole.SAUCE_DRESSING to Calibration(10.0, 60.0, 0.10, 0.85, 1.15),
