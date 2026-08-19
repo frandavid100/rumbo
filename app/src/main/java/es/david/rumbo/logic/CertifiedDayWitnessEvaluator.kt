@@ -77,6 +77,11 @@ object CertifiedDayWitnessEvaluator {
             }
         }
 
+        // Macro compliance alone is not a viable food structure. Complementary
+        // foods may tune quantities, but cannot replace the three daily anchors.
+        if (!MajorNutritionalRolePolicy.hasAllRequiredRoles(meals, foodsById, dishesById)) {
+            return false
+        }
         if (!WeeklyMenuGenerator.isCulinarilyValid(meals, foodsById, dishesById)) return false
         val assessment = MealPlanEvaluator.assessDay(
             witness.day, meals, foodsById, dishesById, recommendation
@@ -146,11 +151,29 @@ object CertifiedDayWitnessEvaluator {
         }
         val availableFruitMeals = availableMeals(FoodCategory.FRUIT)
         val availableVegetableMeals = availableMeals(FoodCategory.VEGETABLE)
-        val seeds = listOf(
-            11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L, 509L, 607L, 701L, 809L,
-            907L, 1009L, 1103L, 1201L, 1301L, 1409L, 1511L, 1601L, 1709L, 1801L,
-            1901L, 2003L, 2111L, 2203L, 2309L, 2411L, 2503L, 2609L, 2707L, 2801L
-        )
+        // COMPLETE requires fruit and vegetables in two distinct meals. When
+        // the active repertoire cannot place either category that often, no
+        // amount of stochastic generation or quantity optimisation can find a
+        // witness. Return the structural diagnostic immediately so the UI can
+        // offer the corresponding add-food action instead of displaying an
+        // unbounded-looking search state.
+        if (availableFruitMeals < 2 || availableVegetableMeals < 2) {
+            return CompleteDaySearchResult(
+                witness = null,
+                diagnostic = CompleteDayDiagnostic(
+                    fruitMeals = 0,
+                    vegetableMeals = 0,
+                    fiberGrams = 0.0,
+                    viable = false,
+                    availableFruitMeals = availableFruitMeals,
+                    availableVegetableMeals = availableVegetableMeals
+                )
+            )
+        }
+        // This runs automatically from the main screen. A bounded pair of
+        // deterministic attempts complements witness repair without turning a
+        // UI progression check into an exhaustive search.
+        val seeds = listOf(11L, 37L)
         var bestDiagnostic: CompleteDayDiagnostic? = null
         var bestProgressWitness: CertifiedDayWitness? = null
         var bestScore = Double.NEGATIVE_INFINITY

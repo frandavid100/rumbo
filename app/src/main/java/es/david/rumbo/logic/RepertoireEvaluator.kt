@@ -90,13 +90,81 @@ object RepertoireEvaluator {
     private val seeds = listOf(11L, 37L, 89L)
     private val defaultShares = MealDistributionPolicy.defaults
 
+    fun evaluateAutomatically(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double> = defaultShares,
+        thresholds: RepertoireThresholds = RepertoireThresholds(),
+        maximumSearchBatches: Int = 48
+    ): RepertoireAssessment {
+        require(maximumSearchBatches > 0)
+        var latest: RepertoireAssessment? = null
+        repeat(maximumSearchBatches) { searchAttempt ->
+            val assessment = evaluate(
+                rules = rules,
+                foodsById = foodsById,
+                dishesById = dishesById,
+                recommendation = recommendation,
+                mealShares = mealShares,
+                thresholds = thresholds,
+                searchAttempt = searchAttempt
+            )
+            latest = assessment
+            if (assessment.searchStatus != ConstraintSearchStatus.SEARCH_INCONCLUSIVE) {
+                return assessment
+            }
+        }
+        val inconclusive = requireNotNull(latest)
+        val fallback = ViableDayFallbackSearch.find(
+            rules, foodsById, dishesById, recommendation, mealShares
+        ) ?: return inconclusive
+        return evaluateWitness(
+            inconclusive, fallback, foodsById, dishesById, recommendation,
+            MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares).activeMealTypes
+        )
+    }
+
+    private fun evaluateWitness(
+        baseline: RepertoireAssessment,
+        witness: MenuWitness,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        activeMealTypes: Set<MealType>
+    ): RepertoireAssessment {
+        val assessment = MealPlanEvaluator.assessDay(
+            WeekDay.MONDAY, witness.meals, foodsById, dishesById, recommendation
+        )
+        if (!WeeklyMenuAcceptancePolicy.isDayAcceptable(assessment, activeMealTypes)) {
+            return baseline
+        }
+        if (!MajorNutritionalRolePolicy.hasAllRequiredRoles(witness.meals, foodsById, dishesById)) {
+            return baseline
+        }
+        val nutrition = assessment.evaluations.associate { evaluation ->
+            evaluation.kind to NutrientCapacity(
+                evaluation.target, evaluation.actual, evaluation.difference, evaluation.fit
+            )
+        }
+        return baseline.copy(
+            status = RepertoireStatus.SUFFICIENT,
+            nutrition = nutrition,
+            acceptableSolutions = maxOf(1, baseline.acceptableSolutions),
+            searchStatus = ConstraintSearchStatus.FEASIBLE,
+            witness = witness
+        )
+    }
+
     fun evaluate(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
         dishesById: Map<Long, Dish>,
         recommendation: Recommendation,
         mealShares: Map<MealType, Double> = defaultShares,
-        thresholds: RepertoireThresholds = RepertoireThresholds()
+        thresholds: RepertoireThresholds = RepertoireThresholds(),
+        searchAttempt: Int = 0
     ): RepertoireAssessment {
         val constraints = MenuConstraintModel.fromLegacyData(rules, foodsById, mealShares)
         val activeRules = constraints.activeRules
@@ -140,7 +208,9 @@ object RepertoireEvaluator {
             vegetableGroups, thresholds.adequateVegetableConcepts
         )
 
-        val attempts = seeds.mapNotNull { seed ->
+        val attemptOffset = searchAttempt.coerceAtLeast(0).toLong() * 1_000_003L
+        val attempts = seeds.mapNotNull { baseSeed ->
+            val seed = baseSeed + attemptOffset
             runCatching {
                 seed to WeeklyMenuGenerator.generate(
                     constraints = constraints,
@@ -196,6 +266,8 @@ object RepertoireEvaluator {
         val acceptable = ranked.filter {
             WeeklyMenuAcceptancePolicy.isDayAcceptable(
                 it.assessments.single(), activeMealTypes
+            ) && MajorNutritionalRolePolicy.hasAllRequiredRoles(
+                it.meals, foodsById, dishesById
             )
         }
         val distinctAcceptable = acceptable.distinctBy { it.fingerprint }
@@ -423,17 +495,11 @@ object RepertoireEvaluator {
                 ))
             }
         }
-        if (isLow(NutrientKind.FAT)) {
-            val meal = listOf(MealType.BREAKFAST, MealType.MORNING_SNACK,
-                MealType.AFTERNOON_SNACK, MealType.LUNCH, MealType.DINNER)
-                .minByOrNull { candidate -> rules.count { candidate in it.allowedMealTypes } }
-                ?: MealType.AFTERNOON_SNACK
-            add(CulinaryNeed(
-                CulinaryNeedKind.FAT_COMPLEMENT, meal,
-                setOf(CulinaryRole.TOPPING, CulinaryRole.COOKING_MEDIUM, CulinaryRole.STANDALONE),
-                "Añade un complemento graso para ${meal.label.lowercase()}."
-            ))
-        }
+        // Do not derive a missing fat food from a low-fat result. Unlike a
+        // mandatory companion, that result only proves that this bounded
+        // search did not find suitable foods and quantities. The initial
+        // repertoire milestones already verify the presence of concentrated
+        // and complementary fat sources.
     }
 
     private fun limitingFactors(
