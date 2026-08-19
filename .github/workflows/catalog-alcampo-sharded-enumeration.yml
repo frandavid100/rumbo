@@ -12,6 +12,8 @@ on:
       - 'tools/catalog/alcampo_detail_enricher.py'
       - 'tools/catalog/alcampo_build_final_catalog.py'
       - 'tools/catalog/finalize_alcampo_classification.py'
+      - 'tools/catalog/alcampo_semantic_gate.py'
+      - 'tools/catalog/alcampo_prepare_semantic_review_v2.py'
       - 'tools/catalog/alcampo_export_final.py'
       - '.github/workflows/catalog-alcampo-sharded-enumeration.yml'
       - 'tools/catalog/fixtures/alcampo_root_children_latest.json'
@@ -185,9 +187,21 @@ jobs:
       - name: Build canonical first-party SQLite
         working-directory: tools/catalog
         run: python alcampo_build_final_catalog.py --products ../../enumeration/products.jsonl --details ../../alcampo-final/details.jsonl --output ../../alcampo-final/alcampo_catalog.sqlite
-      - name: Apply auditable Rumbo classification baseline
+      - name: Build deterministic Rumbo classification proposals
         working-directory: tools/catalog
         run: python finalize_alcampo_classification.py ../../alcampo-final/alcampo_catalog.sqlite ../../enumeration/products.jsonl
+      - name: Gate CLASSIFIED and MENU_ELIGIBLE on persisted semantic model review
+        working-directory: tools/catalog
+        run: python alcampo_semantic_gate.py ../../alcampo-final/alcampo_catalog.sqlite --reviews manual/alcampo_semantic_reviews.jsonl
+      - name: Prepare next semantic review batch
+        working-directory: tools/catalog
+        run: |
+          python alcampo_prepare_semantic_review_v2.py ../../alcampo-final/alcampo_catalog.sqlite \
+            --observations ../../enumeration/products.jsonl \
+            --reviews manual/alcampo_semantic_reviews.jsonl \
+            --output ../../alcampo-final/semantic_review_next.jsonl \
+            --progress ../../alcampo-final/semantic_review_progress.json \
+            --limit 500
       - name: Export classified JSONL and coverage report
         working-directory: tools/catalog
         run: python alcampo_export_final.py ../../alcampo-final/alcampo_catalog.sqlite --jsonl ../../alcampo-final/alcampo_catalog.jsonl --summary ../../alcampo-final/summary.json --detail-summary ../../alcampo-final/detail_merge_summary.json --enumeration-report ../../enumeration/enumeration_report.json
@@ -196,14 +210,18 @@ jobs:
           cp enumeration/products.jsonl alcampo-final/source_products.jsonl
           cp enumeration/enumeration_report.json alcampo-final/enumeration_report.json
           cp enumeration/enumeration_exit_code.txt alcampo-final/enumeration_exit_code.txt || true
-      - name: Persist final coverage summary
+      - name: Persist final coverage and semantic review queue
         run: |
           cp alcampo-final/summary.json tools/catalog/fixtures/alcampo_final_summary_latest.json
+          cp alcampo-final/semantic_review_next.jsonl tools/catalog/fixtures/alcampo_semantic_review_next.jsonl
+          cp alcampo-final/semantic_review_progress.json tools/catalog/fixtures/alcampo_semantic_review_progress_latest.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/catalog/fixtures/alcampo_final_summary_latest.json
+          git add tools/catalog/fixtures/alcampo_final_summary_latest.json \
+                  tools/catalog/fixtures/alcampo_semantic_review_next.jsonl \
+                  tools/catalog/fixtures/alcampo_semantic_review_progress_latest.json
           if ! git diff --cached --quiet; then
-            git commit -m "catalog: persist final Alcampo snapshot summary"
+            git commit -m "catalog: persist Alcampo final and semantic review queue"
             git pull --rebase origin agent/catalog-phase1
             git push origin HEAD:agent/catalog-phase1
           fi
