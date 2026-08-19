@@ -1,0 +1,110 @@
+[
+  {
+    "name": "first",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=true&retailerCategoryId=OC100402",
+    "status": 200,
+    "count": 300,
+    "token": "f03c894a-7fa3-48e5-9c87-4cf96bd95250"
+  },
+  {
+    "name": "client_exact_no_tag",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=false&pageToken=f03c894a-7fa3-48e5-9c87-4cf96bd95250&retailerCategoryId=OC100402",
+    "status": 400,
+    "body_preview": "{\"exception\":\"com.lastmile.web.productpage.server.exception.PageDataNotFoundException\",\"path\":\"/core-api/v6/product-pages\",\"code\":\"BAD_REQUEST\",\"httpStatus\":400,\"error\":\"Bad Request\",\"message\":\"Page data not found for token:f03c894a-7fa3-48e5-9c87-4cf96bd95250\",\"moreInfo\":\"http://tools.ietf.org/html/rfc7231#section-6.5.1\",\"timestamp\":\"2026-08-19T19:50:24.202Z\",\"status\":400}",
+    "count": 0,
+    "next": null,
+    "top_keys": [
+      "exception",
+      "path",
+      "code",
+      "httpStatus",
+      "error",
+      "message",
+      "moreInfo",
+      "timestamp",
+      "status"
+    ]
+  },
+  {
+    "name": "omit_additional",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&pageToken=f03c894a-7fa3-48e5-9c87-4cf96bd95250&retailerCategoryId=OC100402",
+    "status": 400,
+    "body_preview": "{\"exception\":\"com.lastmile.web.productpage.server.exception.PageDataNotFoundException\",\"path\":\"/core-api/v6/product-pages\",\"code\":\"BAD_REQUEST\",\"httpStatus\":400,\"error\":\"Bad Request\",\"message\":\"Page data not found for token:f03c894a-7fa3-48e5-9c87-4cf96bd95250\",\"moreInfo\":\"http://tools.ietf.org/html/rfc7231#section-6.5.1\",\"timestamp\":\"2026-08-19T19:50:24.431Z\",\"status\":400}",
+    "count": 0,
+    "next": null,
+    "top_keys": [
+      "exception",
+      "path",
+      "code",
+      "httpStatus",
+      "error",
+      "message",
+      "moreInfo",
+      "timestamp",
+      "status"
+    ]
+  },
+  {
+    "name": "tag_repeat",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=false&pageToken=f03c894a-7fa3-48e5-9c87-4cf96bd95250&retailerCategoryId=OC100402&tag=web&tag=category-item",
+    "status": 400,
+    "body_preview": "{\"exception\":\"com.lastmile.web.productpage.server.exception.PageDataNotFoundException\",\"path\":\"/core-api/v6/product-pages\",\"code\":\"BAD_REQUEST\",\"httpStatus\":400,\"error\":\"Bad Request\",\"message\":\"Page data not found for token:f03c894a-7fa3-48e5-9c87-4cf96bd95250\",\"moreInfo\":\"http://tools.ietf.org/html/rfc7231#section-6.5.1\",\"timestamp\":\"2026-08-19T19:50:24.997Z\",\"status\":400}",
+    "count": 0,
+    "next": null,
+    "top_keys": [
+      "exception",
+      "path",
+      "code",
+      "httpStatus",
+      "error",
+      "message",
+      "moreInfo",
+      "timestamp",
+      "status"
+    ]
+  },
+  {
+    "name": "tag_indices",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=false&pageToken=f03c894a-7fa3-48e5-9c87-4cf96bd95250&retailerCategoryId=OC100402&tag%5B0%5D=web&tag%5B1%5D=category-item",
+    "status": 400,
+    "body_preview": "{\"exception\":\"com.lastmile.web.productpage.server.exception.PageDataNotFoundException\",\"path\":\"/core-api/v6/product-pages\",\"code\":\"BAD_REQUEST\",\"httpStatus\":400,\"error\":\"Bad Request\",\"message\":\"Page data not found for token:f03c894a-7fa3-48e5-9c87-4cf96bd95250\",\"moreInfo\":\"http://tools.ietf.org/html/rfc7231#section-6.5.1\",\"timestamp\":\"2026-08-19T19:50:25.319Z\",\"status\":400}",
+    "count": 0,
+    "next": null,
+    "top_keys": [
+      "exception",
+      "path",
+      "code",
+      "httpStatus",
+      "error",
+      "message",
+      "moreInfo",
+      "timestamp",
+      "status"
+    ]
+  },
+  {
+    "name": "tag_comma",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=false&pageToken=f03c894a-7fa3-48e5-9c87-4cf96bd95250&retailerCategoryId=OC100402&tag=web%2Ccategory-item",
+    "status": 400,
+    "body_preview": "{\"exception\":\"com.lastmile.web.productpage.server.exception.PageDataNotFoundException\",\"path\":\"/core-api/v6/product-pages\",\"code\":\"BAD_REQUEST\",\"httpStatus\":400,\"error\":\"Bad Request\",\"message\":\"Page data not found for token:f03c894a-7fa3-48e5-9c87-4cf96bd95250\",\"moreInfo\":\"http://tools.ietf.org/html/rfc7231#section-6.5.1\",\"timestamp\":\"2026-08-19T19:50:25.605Z\",\"status\":400}",
+    "count": 0,
+    "next": null,
+    "top_keys": [
+      "exception",
+      "path",
+      "code",
+      "httpStatus",
+      "error",
+      "message",
+      "moreInfo",
+      "timestamp",
+      "status"
+    ]
+  },
+  {
+    "name": "token_only",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages?maxProductsToDecorate=300&maxPageSize=300&includeAdditionalPageInfo=false&pageToken=f03c894a-7fa3-48e5-9c87-4cf96bd95250",
+    "status": 202,
+    "body_preview": ""
+  }
+]
