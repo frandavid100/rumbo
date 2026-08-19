@@ -9,6 +9,7 @@ import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class Profile5AutomaticLevel1Test {
@@ -81,5 +82,11 @@ class Profile5AutomaticLevel1Test {
 
         assertEquals("Profile 5 assessment: $result", ConstraintSearchStatus.FEASIBLE, result.searchStatus)
         assertNotNull(result.witness)
+        assertTrue(
+            "El nivel 1 no puede sustituir las categorías principales por complementarias",
+            MajorNutritionalRolePolicy.hasAllRequiredRoles(
+                result.witness!!.meals, foods, emptyMap()
+            )
+        )
     }
 }
