@@ -49,6 +49,12 @@ data class RepertoireAssessment(
     val status: RepertoireStatus,
     val nutrition: Map<NutrientKind, NutrientCapacity>,
     val coverage: List<MealCoverage>,
+    /**
+     * Compatibility values for the legacy progress card. Since COMPLETE no
+     * longer requires N distinct concepts, non-structural evaluations expose at
+     * least the old UI threshold so those obsolete gates cannot become hidden
+     * certification rules. Use raw*Concepts for the actual repertoire counts.
+     */
     val fruitConcepts: Int,
     val vegetableConcepts: Int,
     val acceptableSolutions: Int,
@@ -59,7 +65,9 @@ data class RepertoireAssessment(
     val culinaryNeeds: List<CulinaryNeed> = emptyList(),
     val searchStatus: ConstraintSearchStatus = ConstraintSearchStatus.SEARCH_INCONCLUSIVE,
     val witness: MenuWitness? = null,
-    val constraintViolations: List<ConstraintViolation> = emptyList()
+    val constraintViolations: List<ConstraintViolation> = emptyList(),
+    val rawFruitConcepts: Int = fruitConcepts,
+    val rawVegetableConcepts: Int = vegetableConcepts
 )
 
 data class RepertoireMetrics(
@@ -123,6 +131,15 @@ object RepertoireEvaluator {
             )
         }
 
+        // COMPLETE is based on fruit/vegetable presence in distinct meals, not
+        // on a count of different concepts. The old card still reads these two
+        // fields, so neutralise that compatibility-only gate once structural
+        // validity is established. Actual counts remain in raw*Concepts.
+        val compatibilityFruitGroups = maxOf(fruitGroups, thresholds.adequateFruitConcepts)
+        val compatibilityVegetableGroups = maxOf(
+            vegetableGroups, thresholds.adequateVegetableConcepts
+        )
+
         val attempts = seeds.mapNotNull { seed ->
             runCatching {
                 seed to WeeklyMenuGenerator.generate(
@@ -141,8 +158,10 @@ object RepertoireEvaluator {
             return emptyAssessment(
                 recommendation = recommendation,
                 coverage = coverage,
-                fruit = fruitGroups,
-                vegetables = vegetableGroups,
+                fruit = compatibilityFruitGroups,
+                vegetables = compatibilityVegetableGroups,
+                rawFruit = fruitGroups,
+                rawVegetables = vegetableGroups,
                 foods = activeFoods,
                 factors = listOf(
                     "La búsqueda no encontró un menú testigo; no se ha demostrado que el repertorio sea insuficiente."
@@ -208,8 +227,8 @@ object RepertoireEvaluator {
             status = status,
             nutrition = nutrition,
             coverage = coverage,
-            fruitConcepts = fruitGroups,
-            vegetableConcepts = vegetableGroups,
+            fruitConcepts = compatibilityFruitGroups,
+            vegetableConcepts = compatibilityVegetableGroups,
             acceptableSolutions = distinctAcceptable.size,
             limitingFactors = factors,
             suggestions = suggestions,
@@ -224,7 +243,9 @@ object RepertoireEvaluator {
             } else {
                 ConstraintSearchStatus.FEASIBLE
             },
-            witness = witnessCandidate?.let { MenuWitness(it.seed, it.meals) }
+            witness = witnessCandidate?.let { MenuWitness(it.seed, it.meals) },
+            rawFruitConcepts = fruitGroups,
+            rawVegetableConcepts = vegetableGroups
         )
     }
 
@@ -284,7 +305,9 @@ object RepertoireEvaluator {
         inactiveFoods: List<Food>,
         culinaryNeeds: List<CulinaryNeed> = emptyList(),
         searchStatus: ConstraintSearchStatus = ConstraintSearchStatus.INSUFFICIENT,
-        constraintViolations: List<ConstraintViolation> = emptyList()
+        constraintViolations: List<ConstraintViolation> = emptyList(),
+        rawFruit: Int = fruit,
+        rawVegetables: Int = vegetables
     ): RepertoireAssessment {
         val target = MealPlanEvaluator.dailyTarget(recommendation)
         val nutrition = mapOf(
@@ -293,7 +316,7 @@ object RepertoireEvaluator {
             NutrientKind.CARBOHYDRATES to NutrientCapacity(target.carbohydrateGrams, 0.0, -target.carbohydrateGrams, TargetFit.OUTSIDE),
             NutrientKind.FAT to NutrientCapacity(target.fatGrams, 0.0, -target.fatGrams, TargetFit.OUTSIDE)
         )
-        val suggestions = suggestionsFor(nutrition, fruit, vegetables)
+        val suggestions = suggestionsFor(nutrition, rawFruit, rawVegetables)
         return RepertoireAssessment(
             status = RepertoireStatus.INSUFFICIENT,
             nutrition = nutrition,
@@ -312,7 +335,9 @@ object RepertoireEvaluator {
             culinaryNeeds = culinaryNeeds,
             searchStatus = searchStatus,
             witness = null,
-            constraintViolations = constraintViolations
+            constraintViolations = constraintViolations,
+            rawFruitConcepts = rawFruit,
+            rawVegetableConcepts = rawVegetables
         )
     }
 
