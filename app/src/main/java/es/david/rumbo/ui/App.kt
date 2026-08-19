@@ -2406,11 +2406,11 @@ private fun repertoireProgressTarget(
         assessment.nutrition[kind]?.let { it.deviation < 0.0 && it.fit != TargetFit.ON_TARGET } == true
     }
     if (deficit != null) {
-        val roleLabel = nutritionalRoleLabel(deficit.second).lowercase()
         return 0 to RepertoireProgressTarget(
-            message = "Tu repertorio básico ya está configurado, pero el evaluador todavía detecta un déficit. Añade otra opción eficiente para intentar resolverlo.",
-            buttonLabel = "Añadir $roleLabel",
-            nutritionalRole = deficit.second
+            message = "Tu repertorio básico ya contiene los tipos de alimentos necesarios. " +
+                "El mejor intento sigue dejando ${deficit.first.label().lowercase()} por debajo " +
+                "del objetivo, pero eso es un problema de combinación o cantidades, no una " +
+                "nueva petición de ${nutritionalRoleLabel(deficit.second).lowercase()}."
         )
     }
 
