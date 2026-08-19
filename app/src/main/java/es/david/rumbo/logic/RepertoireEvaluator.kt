@@ -423,17 +423,11 @@ object RepertoireEvaluator {
                 ))
             }
         }
-        if (isLow(NutrientKind.FAT)) {
-            val meal = listOf(MealType.BREAKFAST, MealType.MORNING_SNACK,
-                MealType.AFTERNOON_SNACK, MealType.LUNCH, MealType.DINNER)
-                .minByOrNull { candidate -> rules.count { candidate in it.allowedMealTypes } }
-                ?: MealType.AFTERNOON_SNACK
-            add(CulinaryNeed(
-                CulinaryNeedKind.FAT_COMPLEMENT, meal,
-                setOf(CulinaryRole.TOPPING, CulinaryRole.COOKING_MEDIUM, CulinaryRole.STANDALONE),
-                "Añade un complemento graso para ${meal.label.lowercase()}."
-            ))
-        }
+        // Do not derive a missing fat food from a low-fat result. Unlike a
+        // mandatory companion, that result only proves that this bounded
+        // search did not find suitable foods and quantities. The initial
+        // repertoire milestones already verify the presence of concentrated
+        // and complementary fat sources.
     }
 
     private fun limitingFactors(
