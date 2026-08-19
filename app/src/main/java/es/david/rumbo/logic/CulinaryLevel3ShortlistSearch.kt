@@ -53,11 +53,13 @@ object CulinaryLevel3ShortlistSearch {
         }
 
         fun meals(food: Food): Set<MealType> = allowedMeals[food.id].orEmpty()
-        fun comparableRatio(numerator: Double?, calories: Double?): Double =
+        fun ratio(numerator: Double?, calories: Double?): Double =
             (numerator ?: 0.0) / (calories ?: 0.0).coerceAtLeast(20.0)
         fun fiberCapacity(food: Food): Double =
             (food.fiberGrams ?: 0.0) * (food.portionBasisGrams ?: 100.0) / 100.0
-        fun structuralFood(food: Food): Boolean = CulinaryPolicy.roles(food).any { role ->
+        fun roles(food: Food): Set<CulinaryRole> = CulinaryPolicy.roles(food)
+        fun hasRole(food: Food, role: CulinaryRole): Boolean = role in roles(food)
+        fun structuralFood(food: Food): Boolean = roles(food).any { role ->
             role !in setOf(
                 CulinaryRole.COOKING_MEDIUM, CulinaryRole.SAUCE_DRESSING,
                 CulinaryRole.TOPPING, CulinaryRole.SEASONING,
@@ -68,28 +70,38 @@ object CulinaryLevel3ShortlistSearch {
         val baselineIds = baselineCompleteWitness?.meals.orEmpty()
             .flatMapTo(linkedSetOf()) { meal -> meal.items.map { it.foodId } }
 
-        fun build(
-            extraVegetables: Int,
-            extraProteins: Int,
-            preferBaseline: Boolean
-        ): Set<Long> {
-            val selected = LinkedHashSet<Long>()
-            selected += mandatoryIds
-
-            fun add(food: Food?) {
-                if (food != null && (selected.size < MAX_SHORTLIST_FOODS || food.id in mandatoryIds)) {
-                    selected += food.id
+        fun newSelection(): LinkedHashSet<Long> = LinkedHashSet<Long>().apply { addAll(mandatoryIds) }
+        fun add(selected: LinkedHashSet<Long>, food: Food?) {
+            if (food != null && (selected.size < MAX_SHORTLIST_FOODS || food.id in mandatoryIds)) {
+                selected += food.id
+            }
+        }
+        fun addTop(
+            selected: LinkedHashSet<Long>,
+            values: Sequence<Food>,
+            count: Int,
+            score: (Food) -> Double
+        ) {
+            values.distinctBy { it.id }.sortedByDescending(score).take(count)
+                .forEach { add(selected, it) }
+        }
+        fun ensureMeals(selected: LinkedHashSet<Long>) {
+            mealTypes.sortedBy { it.ordinal }.forEach { mealType ->
+                if (selected.none { id -> mealType in allowedMeals[id].orEmpty() }) {
+                    add(
+                        selected,
+                        activeFoods.asSequence()
+                            .filter { mealType in meals(it) }
+                            .sortedByDescending { structuralFood(it) }
+                            .firstOrNull()
+                    )
                 }
             }
-            fun addTop(values: Sequence<Food>, count: Int, score: (Food) -> Double) {
-                values.distinctBy { it.id }.sortedByDescending(score).take(count).forEach(::add)
-            }
-
-            // Fruit coverage is a hard COMPLETE requirement. Selecting per meal
-            // naturally keeps a breakfast/lunch fruit and a snack fruit when the
-            // repertoire distinguishes those uses.
+        }
+        fun addFruitCoverage(selected: LinkedHashSet<Long>) {
             mealTypes.sortedBy { it.ordinal }.forEach { mealType ->
                 add(
+                    selected,
                     activeFoods.asSequence()
                         .filter { it.category == FoodCategory.FRUIT && mealType in meals(it) }
                         .maxByOrNull { food ->
@@ -98,76 +110,152 @@ object CulinaryLevel3ShortlistSearch {
                         }
                 )
             }
+        }
 
-            // Preserve the strongest fibre carriers. A high-fibre ingredient can
-            // be essential to level 2/3 even if its preferred serving looks
-            // caloric in one meal.
+        fun nutrientChampions(preferBaseline: Boolean): Set<Long> {
+            val selected = newSelection()
+            addFruitCoverage(selected)
             addTop(
+                selected,
                 activeFoods.asSequence().filter { (it.fiberGrams ?: 0.0) > 0.0 },
-                2 + extraVegetables,
+                2,
                 ::fiberCapacity
             )
-
-            // At least one protein-efficient structural option for every active
-            // meal, plus global alternatives for lunch/dinner.
             mealTypes.sortedBy { it.ordinal }.forEach { mealType ->
                 add(
+                    selected,
                     activeFoods.asSequence()
                         .filter { mealType in meals(it) && structuralFood(it) }
-                        .maxByOrNull { comparableRatio(it.proteinGrams, it.calories) }
+                        .maxByOrNull { ratio(it.proteinGrams, it.calories) }
                 )
             }
             addTop(
+                selected,
                 activeFoods.asSequence().filter(::structuralFood),
-                2 + extraProteins,
-                { comparableRatio(it.proteinGrams, it.calories) }
+                2,
+                { ratio(it.proteinGrams, it.calories) }
             )
-
-            // Carbohydrate carriers and a concentrated fat source give the
-            // optimiser independent levers for daily macros.
             addTop(
+                selected,
                 activeFoods.asSequence().filter {
                     it.category == FoodCategory.CARBOHYDRATE && structuralFood(it)
                 },
                 3,
-                { comparableRatio(it.carbohydrateGrams, it.calories) }
+                { ratio(it.carbohydrateGrams, it.calories) }
             )
             addTop(
+                selected,
                 activeFoods.asSequence().filter { (it.fatGrams ?: 0.0) > 0.0 },
                 1,
-                { comparableRatio(it.fatGrams, it.calories) }
+                { ratio(it.fatGrams, it.calories) }
             )
-
             if (preferBaseline) {
                 baselineIds.asSequence().mapNotNull(foodsById::get)
                     .sortedByDescending { food ->
-                        fiberCapacity(food) * 10.0 +
-                            comparableRatio(food.proteinGrams, food.calories) * 100.0
-                    }.forEach(::add)
+                        fiberCapacity(food) * 10.0 + ratio(food.proteinGrams, food.calories) * 100.0
+                    }.forEach { add(selected, it) }
             }
+            ensureMeals(selected)
+            return selected
+        }
 
-            // Ensure no active meal disappears from the reduced model. Prefer a
-            // non-modifier candidate because it can form a meal on its own.
-            mealTypes.sortedBy { it.ordinal }.forEach { mealType ->
-                if (selected.none { id -> mealType in allowedMeals[id].orEmpty() }) {
+        /**
+         * Keeps one or two foods for each major culinary job instead of choosing
+         * everything by nutrient efficiency. This complements the champion list:
+         * a dessert/standalone protein or a dinner-only side can be crucial even
+         * when it loses a global protein/fibre ranking.
+         */
+        fun culinaryStructure(): Set<Long> {
+            val selected = newSelection()
+            addFruitCoverage(selected)
+
+            addTop(
+                selected,
+                activeFoods.asSequence().filter { hasRole(it, CulinaryRole.PLATE_CENTER) },
+                2,
+                { ratio(it.proteinGrams, it.calories) }
+            )
+            addTop(
+                selected,
+                activeFoods.asSequence().filter {
+                    (hasRole(it, CulinaryRole.STANDALONE) || hasRole(it, CulinaryRole.DESSERT)) &&
+                        (it.proteinGrams ?: 0.0) > 0.0
+                },
+                2,
+                { ratio(it.proteinGrams, it.calories) }
+            )
+            addTop(
+                selected,
+                activeFoods.asSequence().filter { hasRole(it, CulinaryRole.PLATE_BASE) },
+                1,
+                { ratio(it.carbohydrateGrams, it.calories) }
+            )
+            addTop(
+                selected,
+                activeFoods.asSequence().filter {
+                    it.category == FoodCategory.VEGETABLE && hasRole(it, CulinaryRole.SIDE)
+                },
+                1,
+                ::fiberCapacity
+            )
+            listOf(MealType.LUNCH, MealType.DINNER).forEach { mealType ->
+                add(
+                    selected,
+                    activeFoods.asSequence().filter {
+                        it.category == FoodCategory.VEGETABLE &&
+                            hasRole(it, CulinaryRole.SIDE) && mealType in meals(it)
+                    }.maxByOrNull { food ->
+                        // Prefer a meal-specialised side after the global fibre
+                        // anchor; this deliberately keeps different vegetable
+                        // options without requiring them to win the same ranking.
+                        (if (meals(food).size == 1) 1000.0 else 0.0) +
+                            fiberCapacity(food)
+                    }
+                )
+            }
+            listOf(MealType.BREAKFAST, MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK)
+                .forEach { mealType ->
                     add(
-                        activeFoods.asSequence()
-                            .filter { mealType in meals(it) }
-                            .sortedByDescending { structuralFood(it) }
-                            .firstOrNull()
+                        selected,
+                        activeFoods.asSequence().filter {
+                            hasRole(it, CulinaryRole.BEVERAGE) && mealType in meals(it)
+                        }.maxByOrNull { ratio(it.carbohydrateGrams, it.calories) }
                     )
                 }
-            }
+            addTop(
+                selected,
+                activeFoods.asSequence().filter {
+                    hasRole(it, CulinaryRole.COOKING_MEDIUM) ||
+                        hasRole(it, CulinaryRole.SAUCE_DRESSING)
+                },
+                1,
+                { ratio(it.fatGrams, it.calories) }
+            )
+            ensureMeals(selected)
+            return selected
+        }
+
+        fun fiberAnchored(): Set<Long> {
+            val selected = LinkedHashSet<Long>()
+            selected += culinaryStructure()
+            val strongestFiber = activeFoods.maxByOrNull(::fiberCapacity)
+            add(selected, strongestFiber)
+            // Prefer the next high-fibre option not already present, but never
+            // displace a structural category merely to fill the shortlist.
+            activeFoods.asSequence().filter { it.id !in selected }
+                .sortedByDescending(::fiberCapacity).firstOrNull()?.let { add(selected, it) }
+            ensureMeals(selected)
             return selected
         }
 
         val shortlists = listOf(
-            build(extraVegetables = 0, extraProteins = 0, preferBaseline = false),
-            build(extraVegetables = 1, extraProteins = 0, preferBaseline = false),
-            build(extraVegetables = 0, extraProteins = 1, preferBaseline = true),
-            build(extraVegetables = 1, extraProteins = 1, preferBaseline = true)
+            nutrientChampions(preferBaseline = false),
+            culinaryStructure(),
+            fiberAnchored(),
+            nutrientChampions(preferBaseline = true)
         ).filter { ids ->
-            ids.isNotEmpty() && mandatoryIds.all(ids::contains) &&
+            ids.isNotEmpty() && ids.size <= MAX_SHORTLIST_FOODS &&
+                mandatoryIds.all(ids::contains) &&
                 mealTypes.all { mealType -> ids.any { mealType in allowedMeals[it].orEmpty() } }
         }.distinct()
 
