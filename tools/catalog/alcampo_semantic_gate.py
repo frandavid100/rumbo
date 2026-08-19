@@ -56,8 +56,7 @@ def set_origin(con: sqlite3.Connection, table: str, pid: int, origin: str) -> No
 
 
 def normalize_proposal_provenance(con: sqlite3.Connection) -> None:
-    # The deterministic classifier and type policies are useful proposals, but they are
-    # not manual/model review. Remove historical naming that could overstate provenance.
+    # Deterministic classifier/type policies are proposals, not manual/model review.
     for table in (
         "culinary_types", "nutritional_role_assignments", "culinary_role_assignments",
         "food_family_assignments", "portion_basis",
@@ -65,14 +64,19 @@ def normalize_proposal_provenance(con: sqlite3.Connection) -> None:
         if not table_exists(con, table):
             continue
         cols = {r[1] for r in con.execute(f"PRAGMA table_info({table})")}
+        if "policy_version" in cols:
+            con.execute(
+                f"UPDATE {table} SET policy_version=? WHERE policy_version LIKE 'alcampo-manual-policy-%'",
+                (PROPOSAL_POLICY,),
+            )
         if "origin" in cols:
             con.execute(
                 f"UPDATE {table} SET origin='AUTOMATIC_PROPOSAL' "
                 "WHERE origin IN ('AUTOMATIC','MANUAL_POLICY')"
             )
     if table_exists(con, "manual_classification_audit"):
-        # Entries produced by deterministic rules are not manual reviews. Semantic review
-        # is recorded separately in semantic_model_reviews with the full model decision.
+        # Historical deterministic-policy entries are not manual reviews. The real model
+        # decisions live in semantic_model_reviews with their full evidence and rationale.
         con.execute("DELETE FROM manual_classification_audit")
 
 
@@ -124,8 +128,6 @@ def main() -> int:
         )
 
         if decision == "ACCEPT" and accepts and nutrition_ok:
-            # Corrections require an explicit structured applier. ACCEPT is therefore
-            # eligibility-bearing only when the persisted decision accepts the proposal.
             con.execute(
                 "UPDATE eligibility SET classified=1,menu_eligible=1,reason=NULL WHERE product_id=?",
                 (pid,),
