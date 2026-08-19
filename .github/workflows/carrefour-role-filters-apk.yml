@@ -24,7 +24,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "$RUNNER_TEMP/old-artifact" app/src/main/assets
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/9320190279/zip" > "$RUNNER_TEMP/old-artifact.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/9360875945/zip" > "$RUNNER_TEMP/old-artifact.zip"
           unzip -q "$RUNNER_TEMP/old-artifact.zip" -d "$RUNNER_TEMP/old-artifact"
           OLD_APK="$(find "$RUNNER_TEMP/old-artifact" -name '*.apk' -print -quit)"
           test -n "$OLD_APK"
