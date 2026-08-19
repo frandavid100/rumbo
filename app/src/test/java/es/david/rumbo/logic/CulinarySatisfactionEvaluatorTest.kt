@@ -130,13 +130,13 @@ class CulinarySatisfactionEvaluatorTest {
         val result = evaluateLunch(
             listOf(
                 PlannedFood(center.id, 175.0, false),
-                PlannedFood(side.id, 190.0, false)
+                PlannedFood(side.id, 180.0, false)
             ),
             listOf(center, side)
         )
         assertTrue(result.satisfactory)
         assertFalse(175.0 == CulinaryPolicy.defaultPolicy(CulinaryRole.PLATE_CENTER).preferredGrams)
-        assertFalse(190.0 == CulinaryPolicy.defaultPolicy(CulinaryRole.SIDE).preferredGrams)
+        assertFalse(180.0 == CulinaryPolicy.defaultPolicy(CulinaryRole.SIDE).preferredGrams)
     }
 
     @Test
