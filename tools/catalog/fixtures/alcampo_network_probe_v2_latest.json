@@ -1,0 +1,96 @@
+[
+  {
+    "kind": "response",
+    "method": "GET",
+    "url": "https://cdn.cookielaw.org/consent/77876368-f360-4e10-a97a-786ad484487c/77876368-f360-4e10-a97a-786ad484487c.json",
+    "status": 200,
+    "content_type": "application/json"
+  },
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/ecomdeliverydestinations/v4/delivery-addresses/fcd73165-cff7-4b43-a27a-ea214f224daa"
+  },
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/search/v1/redirects/active?regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a"
+  },
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/search/v1/suggestions/primary?searchTerm=&limit=20000&regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a"
+  },
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/ecomdeliverydestinations/v1/supported-propositions"
+  },
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/adverts/v1/pop-up?platform=WEB"
+  },
+  {
+    "kind": "request",
+    "method": "PUT",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/products",
+    "post_data": "[\"f7e44473-e475-4fec-b4c8-86ef9f25a6c0\",\"b78cdfde-5c46-4a95-b6c7-343f7d82685e\",\"b7082ebc-2d4e-4492-8545-54928d0f2356\",\"6cdc0ea8-abe3-4894-b64d-924145a3fa99\",\"de0bdf32-576d-444a-9323-5c3d14ab68f6\"]"
+  },
+  {
+    "kind": "response",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/ecomdeliverydestinations/v4/delivery-addresses/fcd73165-cff7-4b43-a27a-ea214f224daa",
+    "status": 200,
+    "content_type": "application/json;charset=utf-8"
+  },
+  {
+    "kind": "response",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/ecomdeliverydestinations/v1/supported-propositions",
+    "status": 200,
+    "content_type": "application/json;charset=utf-8"
+  },
+  {
+    "kind": "response",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/search/v1/redirects/active?regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a",
+    "status": 200,
+    "content_type": "application/json;charset=utf-8"
+  },
+  {
+    "kind": "response",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/search/v1/suggestions/primary?searchTerm=&limit=20000&regionId=ac90d761-9d58-4918-a37d-dd14e1ce384a",
+    "status": 200,
+    "content_type": "application/json;charset=utf-8"
+  },
+  {
+    "kind": "response",
+    "method": "PUT",
+    "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/products",
+    "status": 200,
+    "content_type": "application/json;charset=utf-8"
+  },
+  {
+    "kind": "response",
+    "method": "GET",
+    "url": "https://www.compraonline.alcampo.es/api/adverts/v1/pop-up?platform=WEB",
+    "status": 204,
+    "content_type": ""
+  },
+  {
+    "kind": "response",
+    "method": "GET",
+    "url": "https://cdn.cookielaw.org/consent/77876368-f360-4e10-a97a-786ad484487c/018e09e3-65d0-7678-a409-cd5bbeef7115/es.json",
+    "status": 200,
+    "content_type": "application/json"
+  },
+  {
+    "kind": "response",
+    "method": "GET",
+    "url": "https://cdn.cookielaw.org/scripttemplates/202509.1.0/assets/v2/otPcCenter.json",
+    "status": 200,
+    "content_type": "application/json"
+  }
+]
