@@ -22,16 +22,18 @@ import kotlin.math.pow
  * deliberately independent of the weekly generator: it enumerates small,
  * structurally satisfactory meal compositions, gives every selected occurrence
  * satisfactory quantity bounds, combines the best meal candidates with a
- * bounded beam and only then invokes the real quantity optimiser. It therefore
- * avoids the local calorie/greedy choices that can hide an existing level-3 day.
+ * bounded beam and only then invokes the real quantity optimiser. Candidate
+ * ranking uses the whole attainable nutrient interval, not just preferred grams:
+ * a composition is retained when the target can be reached anywhere inside its
+ * satisfactory ranges.
  *
  * Dishes are not expanded here yet. That makes failure SEARCH_INCONCLUSIVE; it
  * never becomes evidence that the repertoire is insufficient.
  */
 object CulinaryLevel3CompositionSearch {
-    private const val MAX_MEAL_CANDIDATES_PER_BUCKET = 16
+    private const val MAX_MEAL_CANDIDATES_PER_BUCKET = 24
     private const val MAX_ROLE_ASSIGNMENTS_PER_COMBINATION = 4
-    private const val BEAM_PER_COVERAGE_BUCKET = 20
+    private const val BEAM_PER_COVERAGE_BUCKET = 24
     private const val MAX_FINAL_OPTIMIZATIONS = 64
 
     private data class Vector(
@@ -50,16 +52,28 @@ object CulinaryLevel3CompositionSearch {
         )
     }
 
+    private data class VectorRange(
+        val minimum: Vector = Vector(),
+        val maximum: Vector = Vector()
+    ) {
+        operator fun plus(other: VectorRange) = VectorRange(
+            minimum = minimum + other.minimum,
+            maximum = maximum + other.maximum
+        )
+    }
+
     private data class MealCandidate(
         val meal: PlannedMeal,
-        val vector: Vector,
+        val preferredVector: Vector,
+        val attainable: VectorRange,
         val fruit: Boolean,
         val vegetable: Boolean
     )
 
     private data class DayState(
         val meals: List<PlannedMeal> = emptyList(),
-        val vector: Vector = Vector(),
+        val preferredVector: Vector = Vector(),
+        val attainable: VectorRange = VectorRange(),
         val fruitMeals: Int = 0,
         val vegetableMeals: Int = 0,
         val processedShare: Double = 0.0
@@ -106,7 +120,8 @@ object CulinaryLevel3CompositionSearch {
                         add(
                             DayState(
                                 meals = state.meals + candidate.meal,
-                                vector = state.vector + candidate.vector,
+                                preferredVector = state.preferredVector + candidate.preferredVector,
+                                attainable = state.attainable + candidate.attainable,
                                 fruitMeals = state.fruitMeals + if (candidate.fruit) 1 else 0,
                                 vegetableMeals = state.vegetableMeals + if (candidate.vegetable) 1 else 0,
                                 processedShare = state.processedShare + share
@@ -119,14 +134,19 @@ object CulinaryLevel3CompositionSearch {
                 .groupBy { it.fruitMeals.coerceAtMost(2) to it.vegetableMeals.coerceAtMost(2) }
                 .values
                 .flatMap { bucket ->
-                    bucket.sortedBy { partialScore(it, recommendation) }
-                        .take(BEAM_PER_COVERAGE_BUCKET)
+                    bucket.sortedWith(
+                        compareBy<DayState> { partialRangeScore(it, recommendation) }
+                            .thenBy { preferredScore(it.preferredVector, recommendation, it.processedShare) }
+                    ).take(BEAM_PER_COVERAGE_BUCKET)
                 }
-                .sortedBy { partialScore(it, recommendation) }
+                .sortedBy { partialRangeScore(it, recommendation) }
         }
 
-        val finals = beam.sortedBy { finalPreScore(it, recommendation) }
-            .take(MAX_FINAL_OPTIMIZATIONS)
+        val finals = beam.sortedWith(
+            compareBy<DayState> { finalPreScore(it, recommendation) }
+                .thenBy { preferredScore(it.preferredVector, recommendation, 1.0) }
+        ).take(MAX_FINAL_OPTIMIZATIONS)
+
         finals.forEachIndexed { index, state ->
             if (state.fruitMeals < 2 || state.vegetableMeals < 2) return@forEachIndexed
             val optimized = runCatching {
@@ -224,7 +244,11 @@ object CulinaryLevel3CompositionSearch {
                         )
                         raw += MealCandidate(
                             meal = meal,
-                            vector = vector(chosen, items),
+                            preferredVector = vector(chosen, items) { it.grams },
+                            attainable = VectorRange(
+                                minimum = vector(chosen, items) { it.minimumGrams },
+                                maximum = vector(chosen, items) { it.maximumGrams }
+                            ),
                             fruit = chosen.any { it.category == FoodCategory.FRUIT },
                             vegetable = chosen.any { it.category == FoodCategory.VEGETABLE }
                         )
@@ -240,10 +264,12 @@ object CulinaryLevel3CompositionSearch {
             .groupBy { it.fruit to it.vegetable }
             .values
             .flatMap { bucket ->
-                bucket.sortedBy { mealScore(it.vector, recommendation, share) }
-                    .take(MAX_MEAL_CANDIDATES_PER_BUCKET)
+                bucket.sortedWith(
+                    compareBy<MealCandidate> { rangeScore(it.attainable, recommendation, share) }
+                        .thenBy { preferredScore(it.preferredVector, recommendation, share) }
+                ).take(MAX_MEAL_CANDIDATES_PER_BUCKET)
             }
-            .sortedBy { mealScore(it.vector, recommendation, share) }
+            .sortedBy { rangeScore(it.attainable, recommendation, share) }
     }
 
     private fun roleAssignments(
@@ -263,7 +289,7 @@ object CulinaryLevel3CompositionSearch {
         suspend fun SequenceScope<List<CulinaryRole>>.visit(index: Int) {
             if (index == choices.size) {
                 val snapshot = chosen.toList()
-                if (!CulinaryPolicy.hasValidRoleAssignment(snapshot.map(::setOf))) return
+                if (!CulinaryPolicy.hasValidRoleAssignment(snapshot.map { setOf(it) })) return
                 if (CulinarySoftPolicy.missingPreferences(snapshot).isNotEmpty()) return
                 yield(snapshot)
                 return
@@ -301,37 +327,65 @@ object CulinaryLevel3CompositionSearch {
         if (count <= values.size) visit(0)
     }
 
-    private fun vector(foods: List<Food>, items: List<PlannedFood>): Vector =
-        foods.indices.fold(Vector()) { total, index ->
-            val food = foods[index]
-            val factor = items[index].grams / 100.0
-            total + Vector(
-                calories = (food.calories ?: 0.0) * factor,
-                protein = (food.proteinGrams ?: 0.0) * factor,
-                carbohydrates = (food.carbohydrateGrams ?: 0.0) * factor,
-                fat = (food.fatGrams ?: 0.0) * factor,
-                fiber = (food.fiberGrams ?: 0.0) * factor
-            )
-        }
+    private fun vector(
+        foods: List<Food>,
+        items: List<PlannedFood>,
+        grams: (PlannedFood) -> Double
+    ): Vector = foods.indices.fold(Vector()) { total, index ->
+        val food = foods[index]
+        val factor = grams(items[index]) / 100.0
+        total + Vector(
+            calories = (food.calories ?: 0.0) * factor,
+            protein = (food.proteinGrams ?: 0.0) * factor,
+            carbohydrates = (food.carbohydrateGrams ?: 0.0) * factor,
+            fat = (food.fatGrams ?: 0.0) * factor,
+            fiber = (food.fiberGrams ?: 0.0) * factor
+        )
+    }
 
-    private fun mealScore(vector: Vector, recommendation: Recommendation, share: Double): Double =
+    private fun preferredScore(
+        vector: Vector,
+        recommendation: Recommendation,
+        share: Double
+    ): Double =
         relativeSquare(vector.calories, recommendation.calories * share) * 1.25 +
             relativeSquare(vector.protein, recommendation.proteinGrams * share) * 1.15 +
             relativeSquare(vector.carbohydrates, recommendation.carbohydrateGrams * share) +
             relativeSquare(vector.fat, recommendation.fatGrams * share)
 
-    private fun partialScore(state: DayState, recommendation: Recommendation): Double {
+    private fun rangeScore(
+        range: VectorRange,
+        recommendation: Recommendation,
+        share: Double
+    ): Double =
+        intervalSquare(range.minimum.calories, range.maximum.calories, recommendation.calories * share) * 1.25 +
+            intervalSquare(range.minimum.protein, range.maximum.protein, recommendation.proteinGrams * share) * 1.15 +
+            intervalSquare(range.minimum.carbohydrates, range.maximum.carbohydrates, recommendation.carbohydrateGrams * share) +
+            intervalSquare(range.minimum.fat, range.maximum.fat, recommendation.fatGrams * share)
+
+    private fun partialRangeScore(state: DayState, recommendation: Recommendation): Double {
         val share = state.processedShare.coerceAtLeast(0.01)
-        return mealScore(state.vector, recommendation, share) +
-            (2 - state.fruitMeals.coerceAtMost(2)) * 0.06 +
-            (2 - state.vegetableMeals.coerceAtMost(2)) * 0.06
+        return rangeScore(state.attainable, recommendation, share) +
+            (2 - state.fruitMeals.coerceAtMost(2)) * 0.04 +
+            (2 - state.vegetableMeals.coerceAtMost(2)) * 0.04
     }
 
     private fun finalPreScore(state: DayState, recommendation: Recommendation): Double {
         val coveragePenalty = (2 - state.fruitMeals.coerceAtMost(2)) * 100.0 +
             (2 - state.vegetableMeals.coerceAtMost(2)) * 100.0
-        val fiberPenalty = ((25.0 - state.vector.fiber).coerceAtLeast(0.0) / 25.0) * 10.0
-        return mealScore(state.vector, recommendation, 1.0) + coveragePenalty + fiberPenalty
+        val fiberPenalty = if (state.attainable.maximum.fiber >= 25.0) 0.0
+            else ((25.0 - state.attainable.maximum.fiber) / 25.0) * 10.0
+        return rangeScore(state.attainable, recommendation, 1.0) + coveragePenalty + fiberPenalty
+    }
+
+    private fun intervalSquare(minimum: Double, maximum: Double, target: Double): Double {
+        if (target <= 0.0) return if (minimum <= 0.0) 0.0 else minimum.pow(2)
+        val distance = when {
+            target < minimum -> minimum - target
+            target > maximum -> target - maximum
+            else -> 0.0
+        }
+        return (distance / target).pow(2)
     }
 
     private fun relativeSquare(actual: Double, target: Double): Double {
