@@ -2,8 +2,8 @@
   "retailer": "ALCAMPO",
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
-  "importer_version": "alcampo-direct-v8.0",
-  "built_at": "2026-08-19T19:53:48.551865+00:00",
+  "importer_version": "alcampo-direct-v8.1",
+  "built_at": "2026-08-19T21:24:01.741454+00:00",
   "roots": [
     {
       "label": "Frescos",
@@ -87,7 +87,7 @@
     "with_pack_size": 1467,
     "with_image": 1499,
     "with_product_url": 0,
-    "available": 1482
+    "available": 1480
   },
   "third_party_product_data": false,
   "pagination": "cookie_bound_pageToken_with_202_retry"
