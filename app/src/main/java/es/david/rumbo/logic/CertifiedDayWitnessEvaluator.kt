@@ -214,7 +214,31 @@ object CertifiedDayWitnessEvaluator {
             )
         }
 
-        baselineWitness?.takeIf { it.isStructurallyValid() }?.let { baseline ->
+        // Prefer an explicitly supplied persisted witness, but recover a fresh
+        // deterministic viable witness if the caller has none (or an old one has
+        // become invalid). This keeps COMPLETE repair available for new/migrated
+        // profiles and avoids making UI recomposition order part of correctness.
+        val suppliedBaseline = baselineWitness
+            ?.takeIf { it.isStructurallyValid() }
+            ?.takeIf { isViable(it, rules, foodsById, dishesById, recommendation, mealShares) }
+        val freshBaseline = if (suppliedBaseline == null) {
+            runCatching {
+                RepertoireEvaluator.evaluate(
+                    rules = rules,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    recommendation = recommendation,
+                    mealShares = mealShares
+                )
+            }.getOrNull()
+                ?.takeIf { it.searchStatus == ConstraintSearchStatus.FEASIBLE }
+                ?.witness
+                ?.let(::fromMenuWitness)
+                ?.takeIf { isViable(it, rules, foodsById, dishesById, recommendation, mealShares) }
+        } else null
+        val repairBaseline = suppliedBaseline ?: freshBaseline
+
+        repairBaseline?.let { baseline ->
             considerProgressWitness(baseline)
             CompleteDayWitnessRepair.find(
                 baseline,
@@ -306,9 +330,32 @@ object CertifiedDayWitnessEvaluator {
             )?.let { return repairedResult(it) }
         }
 
+        val rawDiagnostic = bestDiagnostic ?: bestAttemptDiagnostic
+        val uiSafeDiagnostic = rawDiagnostic?.let { raw ->
+            // Availability across distinct meals is a structural fact and can
+            // justify an add-food action. Fiber in the best bounded attempt is
+            // not a proof of fiber insufficiency: another composition may reach
+            // 25 g (Ara is a real regression for exactly this distinction).
+            // Keep the compatibility diagnostic non-actionable when coverage is
+            // structurally available so the UI falls through to "search
+            // inconclusive" rather than inventing a fiber shortage.
+            if (availableFruitMeals >= 2 && availableVegetableMeals >= 2) {
+                raw.copy(
+                    fiberGrams = maxOf(raw.fiberGrams, 25.0),
+                    viable = false,
+                    limitingNutrient = null,
+                    limitingDifference = null,
+                    deficientNutrient = null,
+                    deficientDifference = null
+                )
+            } else {
+                raw.copy(viable = false)
+            }
+        }
+
         return CompleteDaySearchResult(
             null,
-            bestAttemptDiagnostic ?: bestDiagnostic,
+            uiSafeDiagnostic,
             bestProgressWitness
         )
     }
