@@ -629,8 +629,8 @@ object WeeklyMenuGenerator {
         // selected foods, but it cannot replace a carbohydrate-heavy choice
         // after all positions are occupied.
         return squared(calories, recommendation.calories * share) * 5.0 +
-            proteinDeficit * 4.0 + carbohydrateDeficit * 1.5 +
-            carbohydrateExcess * 4.0 + fatDeficit * 3.0 + fatExcess * 4.0
+            proteinDeficit * 6.0 + carbohydrateDeficit * 1.5 +
+            carbohydrateExcess * 5.0 + fatDeficit + fatExcess * 4.0
     }
 
     private fun chooseRule(
