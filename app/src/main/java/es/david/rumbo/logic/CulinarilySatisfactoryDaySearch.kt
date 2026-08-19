@@ -35,8 +35,7 @@ data class CulinarilySatisfactoryDaySearchResult(
  */
 object CulinarilySatisfactoryDaySearch {
     private val fallbackSeeds = listOf(
-        11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L,
-        509L, 607L, 701L, 809L, 907L, 1009L, 1103L, 1201L
+        11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L
     )
 
     fun find(
@@ -57,7 +56,7 @@ object CulinarilySatisfactoryDaySearch {
         var bestEvaluation: CulinaryDaySatisfaction? = null
         var bestScore = Double.POSITIVE_INFINITY
 
-        fun considerComplete(candidate: CertifiedDayWitness): CertifiedDayWitness? {
+        fun registerComplete(candidate: CertifiedDayWitness): CertifiedDayWitness? {
             val complete = candidate.copy(
                 level = CertifiedDayLevel.COMPLETE,
                 fingerprint = candidate.meals.hashCode()
@@ -88,23 +87,27 @@ object CulinarilySatisfactoryDaySearch {
                 bestWitness = complete
                 bestEvaluation = evaluation
             }
-
-            return CulinarilySatisfactoryWitnessRepair.find(
-                complete,
-                rules,
-                foodsById,
-                dishesById,
-                recommendation,
-                mealShares,
-                portionContext
-            )
+            return null
         }
 
         baselineCompleteWitness
             ?.takeIf { it.isStructurallyValid() }
-            ?.let(::considerComplete)
-            ?.let { return success(it, rules, foodsById) }
+            ?.let { baseline ->
+                registerComplete(baseline)?.let { return success(it) }
+                CulinarilySatisfactoryWitnessRepair.find(
+                    baseline.copy(level = CertifiedDayLevel.COMPLETE),
+                    rules,
+                    foodsById,
+                    dishesById,
+                    recommendation,
+                    mealShares,
+                    portionContext
+                )?.let { return success(it) }
+            }
 
+        // Fallback generation only widens composition coverage. Do not run the
+        // expensive repair for every seed: keep the best complete candidate and
+        // repair it once at the end.
         for (seed in fallbackSeeds) {
             val generated = runCatching {
                 WeeklyMenuGenerator.generate(
@@ -128,7 +131,19 @@ object CulinarilySatisfactoryDaySearch {
                 meals = generated.meals,
                 fingerprint = generated.meals.hashCode()
             )
-            considerComplete(candidate)?.let { return success(it, rules, foodsById) }
+            registerComplete(candidate)?.let { return success(it) }
+        }
+
+        bestWitness?.let { best ->
+            CulinarilySatisfactoryWitnessRepair.find(
+                best,
+                rules,
+                foodsById,
+                dishesById,
+                recommendation,
+                mealShares,
+                portionContext
+            )?.let { return success(it) }
         }
 
         return CulinarilySatisfactoryDaySearchResult(
@@ -162,8 +177,8 @@ object CulinarilySatisfactoryDaySearch {
         evaluation.issues
             .filter { it.kind == CulinarySatisfactionIssueKind.SOFT_RELATION_UNSATISFIED }
             .forEach { issue ->
-                val sourceRoles = issue.roles
-                val targetSets = sourceRoles.map(CulinarySoftPolicy::preferredCompanions)
+                val targetSets = issue.roles
+                    .map(CulinarySoftPolicy::preferredCompanions)
                     .filter { it.isNotEmpty() }
                 targetSets.forEach { targets ->
                     val hasAny = activeRules.any { rule ->
@@ -183,20 +198,17 @@ object CulinarilySatisfactoryDaySearch {
         )
     }
 
-    private fun success(
-        witness: CertifiedDayWitness,
-        rules: List<PlanningRule>,
-        foodsById: Map<Long, Food>
-    ): CulinarilySatisfactoryDaySearchResult = CulinarilySatisfactoryDaySearchResult(
-        witness = witness,
-        diagnostic = CulinarilySatisfactoryDayDiagnostic(
-            issues = emptyList(),
-            compatibleCompanionAlreadyAvailable = false,
-            unavailablePreferredRoles = emptySet(),
-            searchStatus = ConstraintSearchStatus.FEASIBLE
-        ),
-        progressWitness = witness.copy(level = CertifiedDayLevel.COMPLETE)
-    )
+    private fun success(witness: CertifiedDayWitness): CulinarilySatisfactoryDaySearchResult =
+        CulinarilySatisfactoryDaySearchResult(
+            witness = witness,
+            diagnostic = CulinarilySatisfactoryDayDiagnostic(
+                issues = emptyList(),
+                compatibleCompanionAlreadyAvailable = false,
+                unavailablePreferredRoles = emptySet(),
+                searchStatus = ConstraintSearchStatus.FEASIBLE
+            ),
+            progressWitness = witness.copy(level = CertifiedDayLevel.COMPLETE)
+        )
 
     private fun diagnosticScore(evaluation: CulinaryDaySatisfaction): Double =
         evaluation.issues.sumOf { issue ->
