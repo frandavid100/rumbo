@@ -1,0 +1,47 @@
+name: Catalog Alcampo HTTP detail smoke
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_detail_enricher.py'
+      - '.github/workflows/catalog-alcampo-detail-http-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch and parse representative Alcampo details
+        working-directory: tools/catalog
+        run: |
+          python alcampo_detail_enricher.py --out alcampo-detail-http-smoke --workers 3 --min-valid 3 \
+            --sku 522881 --sku 38829 --sku 887087 --sku 766667 --sku 649871
+      - name: Persist detail smoke summary
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-detail-http-smoke/summary.json ]; then
+            cp tools/catalog/alcampo-detail-http-smoke/summary.json tools/catalog/fixtures/alcampo_detail_http_smoke_summary.json
+            cp tools/catalog/alcampo-detail-http-smoke/details.jsonl tools/catalog/fixtures/alcampo_detail_http_smoke_details.jsonl
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_detail_http_smoke_summary.json tools/catalog/fixtures/alcampo_detail_http_smoke_details.jsonl
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo HTTP detail smoke"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-detail-http-smoke
+          path: tools/catalog/alcampo-detail-http-smoke/
+          retention-days: 7
