@@ -90,6 +90,35 @@ object RepertoireEvaluator {
     private val seeds = listOf(11L, 37L, 89L)
     private val defaultShares = MealDistributionPolicy.defaults
 
+    fun evaluateAutomatically(
+        rules: List<PlanningRule>,
+        foodsById: Map<Long, Food>,
+        dishesById: Map<Long, Dish>,
+        recommendation: Recommendation,
+        mealShares: Map<MealType, Double> = defaultShares,
+        thresholds: RepertoireThresholds = RepertoireThresholds(),
+        maximumSearchBatches: Int = 12
+    ): RepertoireAssessment {
+        require(maximumSearchBatches > 0)
+        var latest: RepertoireAssessment? = null
+        repeat(maximumSearchBatches) { searchAttempt ->
+            val assessment = evaluate(
+                rules = rules,
+                foodsById = foodsById,
+                dishesById = dishesById,
+                recommendation = recommendation,
+                mealShares = mealShares,
+                thresholds = thresholds,
+                searchAttempt = searchAttempt
+            )
+            latest = assessment
+            if (assessment.searchStatus != ConstraintSearchStatus.SEARCH_INCONCLUSIVE) {
+                return assessment
+            }
+        }
+        return requireNotNull(latest)
+    }
+
     fun evaluate(
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
