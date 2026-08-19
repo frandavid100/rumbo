@@ -618,6 +618,9 @@ object WeeklyMenuGenerator {
             squared(carbohydrates, carbohydrateTarget)
         } else 0.0
         val fatTarget = recommendation.fatGrams * share
+        val fatDeficit = if (fat < fatTarget) {
+            squared(fat, fatTarget)
+        } else 0.0
         val fatExcess = if (fat > fatTarget) {
             squared(fat, fatTarget)
         } else 0.0
@@ -627,7 +630,7 @@ object WeeklyMenuGenerator {
         // after all positions are occupied.
         return squared(calories, recommendation.calories * share) * 5.0 +
             proteinDeficit * 4.0 + carbohydrateDeficit * 1.5 +
-            carbohydrateExcess * 2.5 + fatExcess * 4.0
+            carbohydrateExcess * 4.0 + fatDeficit * 3.0 + fatExcess * 4.0
     }
 
     private fun chooseRule(
