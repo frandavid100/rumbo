@@ -1,0 +1,24 @@
+name: Level 3 UI integration
+on:
+  push:
+    branches: [agent/level3-culinary-satisfaction-v2]
+    paths: [.github/workflows/level3-ui-integration.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/level3-culinary-satisfaction-v2
+      - run: python scripts/level3_ui_integration.py
+      - run: |
+          rm scripts/level3_ui_integration.py
+          rm .github/workflows/level3-ui-integration.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Integrar búsqueda y progreso de nivel 3"
+          git push origin HEAD:agent/level3-culinary-satisfaction-v2
