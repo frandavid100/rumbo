@@ -146,6 +146,25 @@ object CertifiedDayWitnessEvaluator {
         }
         val availableFruitMeals = availableMeals(FoodCategory.FRUIT)
         val availableVegetableMeals = availableMeals(FoodCategory.VEGETABLE)
+        // COMPLETE requires fruit and vegetables in two distinct meals. When
+        // the active repertoire cannot place either category that often, no
+        // amount of stochastic generation or quantity optimisation can find a
+        // witness. Return the structural diagnostic immediately so the UI can
+        // offer the corresponding add-food action instead of displaying an
+        // unbounded-looking search state.
+        if (availableFruitMeals < 2 || availableVegetableMeals < 2) {
+            return CompleteDaySearchResult(
+                witness = null,
+                diagnostic = CompleteDayDiagnostic(
+                    fruitMeals = 0,
+                    vegetableMeals = 0,
+                    fiberGrams = 0.0,
+                    viable = false,
+                    availableFruitMeals = availableFruitMeals,
+                    availableVegetableMeals = availableVegetableMeals
+                )
+            )
+        }
         val seeds = listOf(
             11L, 37L, 89L, 131L, 197L, 251L, 313L, 401L, 509L, 607L, 701L, 809L,
             907L, 1009L, 1103L, 1201L, 1301L, 1409L, 1511L, 1601L, 1709L, 1801L,
