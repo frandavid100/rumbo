@@ -38,6 +38,33 @@ class CulinaryPolicyTest {
             setOf(CulinaryRole.SANDWICH_BASE),
             CulinaryPolicy.defaultPolicy(CulinaryRole.SPREAD).requiredRoles
         )
+        assertEquals(
+            setOf(CulinaryRole.PLATE_CENTER),
+            CulinaryPolicy.defaultPolicy(CulinaryRole.COATING).requiredRoles
+        )
+        assertEquals(
+            setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE),
+            CulinaryPolicy.defaultPolicy(CulinaryRole.BINDER).requiredAnyOfRoles
+        )
+    }
+
+    @Test
+    fun coatingAndBinderCannotAppearWithoutFoodToActOn() {
+        assertFalse(CulinaryPolicy.hasValidRoleAssignment(listOf(setOf(CulinaryRole.COATING))))
+        assertTrue(CulinaryPolicy.hasValidRoleAssignment(listOf(
+            setOf(CulinaryRole.COATING), setOf(CulinaryRole.PLATE_CENTER)
+        )))
+        assertFalse(CulinaryPolicy.hasValidRoleAssignment(listOf(setOf(CulinaryRole.BINDER))))
+        assertTrue(CulinaryPolicy.hasValidRoleAssignment(listOf(
+            setOf(CulinaryRole.BINDER), setOf(CulinaryRole.PLATE_BASE)
+        )))
+    }
+
+    @Test
+    fun dailyRepetitionPolicyDistinguishesSubstantialFoodsBasesAndFunctionalIngredients() {
+        assertEquals(1, CulinarySoftPolicy.maximumDailyOccurrences(listOf(CulinaryRole.PLATE_CENTER)))
+        assertEquals(2, CulinarySoftPolicy.maximumDailyOccurrences(listOf(CulinaryRole.SANDWICH_BASE)))
+        assertEquals(null, CulinarySoftPolicy.maximumDailyOccurrences(listOf(CulinaryRole.COOKING_MEDIUM)))
     }
 
     @Test

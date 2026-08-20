@@ -123,6 +123,43 @@ class CulinarilySatisfactoryWitnessRepairTest {
             .items.any { it.foodId == oil.id })
     }
 
+    @Test
+    fun repairReplacesRepeatedFamilyWithRoleEquivalentAlternative() {
+        val foods = baseFoods()
+        val (plain, initialRules) = fixture(foods)
+        val breakfastFood = foods[0].copy(family = "fruit-a")
+        val snackAlternative = foods[1].copy(family = "fruit-b")
+        val adjustedFoods = listOf(breakfastFood, snackAlternative) + foods.drop(2)
+        val snackIndex = plain.meals.indexOfFirst { it.type == MealType.MORNING_SNACK }
+        val meals = plain.meals.toMutableList()
+        meals[snackIndex] = meals[snackIndex].copy(
+            items = listOf(plain.meals[snackIndex].items.single().copy(foodId = breakfastFood.id))
+        )
+        val baseline = plain.copy(meals = meals, fingerprint = meals.hashCode())
+        val rules = initialRules + rule(breakfastFood, MealType.MORNING_SNACK)
+        val byId = adjustedFoods.associateBy { it.id }
+
+        assertFalse(
+            CulinarySatisfactionEvaluator.evaluateDay(
+                baseline.day, baseline.meals, byId, emptyMap(), target,
+                MealDistributionPolicy.defaults
+            ).satisfactory
+        )
+
+        val repaired = CulinarilySatisfactoryWitnessRepair.find(
+            baseline, rules, byId, emptyMap(), target, MealDistributionPolicy.defaults
+        )
+
+        assertNotNull(repaired)
+        assertTrue(repaired!!.meals.single { it.type == MealType.MORNING_SNACK }
+            .items.any { it.foodId == snackAlternative.id })
+        assertTrue(
+            CulinarySatisfactionEvaluator.isCulinarilySatisfactory(
+                repaired, rules, byId, emptyMap(), target, MealDistributionPolicy.defaults
+            )
+        )
+    }
+
     private fun fixture(foods: List<Food>): Pair<CertifiedDayWitness, List<PlanningRule>> {
         val meals = mealTypes.mapIndexed { index, type ->
             PlannedMeal(

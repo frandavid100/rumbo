@@ -19,15 +19,19 @@ import kotlin.math.round
 /**
  * Deterministic bounded repair from a certified COMPLETE day to level 3.
  *
- * Every accepted intermediate state remains COMPLETE. The repair changes the
- * smallest local cause first, but it may normalize several quantity violations
- * together when fixing them one by one would merely make the optimiser push a
- * different occurrence to an extreme. Broad generation remains a later
- * fallback and is never evidence of insufficiency.
+ * The initial and returned witnesses are COMPLETE. Intermediate states may be
+ * nutritionally incomplete: fixing a culinary quantity can temporarily move a
+ * macro outside tolerance, and a later substitution can restore it. Requiring
+ * every intermediate step to remain COMPLETE makes those valid multi-step
+ * repairs unreachable. Broad generation remains a later fallback and is never
+ * evidence of insufficiency.
  */
 object CulinarilySatisfactoryWitnessRepair {
     private const val BEAM_WIDTH = 48
-    private const val MAX_DEPTH = 8
+    // A complete day may require one quantity normalization, two companion
+    // insertions and several family substitutions. Eight steps truncated real
+    // repairs just before completion in the exported BEDCA profile.
+    private const val MAX_DEPTH = 14
     private const val MAX_COMPANIONS_PER_ISSUE = 8
 
     fun find(
@@ -46,6 +50,15 @@ object CulinarilySatisfactoryWitnessRepair {
         ) return null
 
         fun promoted(candidate: CertifiedDayWitness): CertifiedDayWitness? {
+            if (!CertifiedDayWitnessEvaluator.isComplete(
+                    candidate.copy(level = CertifiedDayLevel.COMPLETE),
+                    rules,
+                    foodsById,
+                    dishesById,
+                    recommendation,
+                    mealShares
+                )
+            ) return null
             val level3 = candidate.copy(
                 level = CertifiedDayLevel.CULINARILY_SATISFACTORY,
                 fingerprint = candidate.meals.hashCode()
@@ -78,7 +91,7 @@ object CulinarilySatisfactoryWitnessRepair {
                     mealShares,
                     portionContext
                 ).forEach { variant ->
-                    val accepted = optimizeAndKeepComplete(
+                    val accepted = optimizeCandidate(
                         variant,
                         rules,
                         foodsById,
@@ -330,6 +343,69 @@ object CulinarilySatisfactoryWitnessRepair {
                             }
                         }
                     }
+                    CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED -> {
+                        val index = sourceIndex ?: return@forEach
+                        val sourceId = originalMeal.items[index].foodId
+                        val sourceFood = foodsById[sourceId] ?: return@forEach
+                        val sourceRoles = CulinaryPolicy.roles(sourceFood)
+                        val occupiedConcepts = witness.meals.flatMap { meal ->
+                            materialize(meal, witness.day).items.mapNotNull { item ->
+                                if (meal.type == originalMeal.type && item.foodId == sourceId) null
+                                else foodsById[item.foodId]?.let(::repetitionConcept)
+                            }
+                        }.toSet()
+
+                        // Removing an optional repeated occurrence is the smallest
+                        // valid repair when the meal still has another component.
+                        if (!isMandatory(sourceId, originalMeal.type, activeRules) &&
+                            (originalMeal.items.size > 1 || originalMeal.dishes.isNotEmpty())
+                        ) {
+                            val items = originalMeal.items.toMutableList().also { it.removeAt(index) }
+                            add(replaceMeal(witness, mealIndex, originalMeal.copy(items = items)))
+                        }
+
+                        // Otherwise replace this occurrence with an allowed food
+                        // that can perform the same culinary job and whose family
+                        // is not already used elsewhere in the day. Names and
+                        // brands never participate in this decision.
+                        activeRules.asSequence()
+                            .filter {
+                                originalMeal.type in it.allowedMealTypes &&
+                                    it.itemId != sourceId &&
+                                    originalMeal.items.none { item -> item.foodId == it.itemId }
+                            }
+                            .mapNotNull { rule ->
+                                val food = foodsById[rule.itemId] ?: return@mapNotNull null
+                                if (repetitionConcept(food) in occupiedConcepts) return@mapNotNull null
+                                val role = CulinaryPolicy.roles(food)
+                                    .intersect(sourceRoles)
+                                    .filter { CulinaryPolicy.isAllowedForMeal(it, originalMeal.type) }
+                                    .minByOrNull { it.ordinal } ?: return@mapNotNull null
+                                Triple(rule, food, role)
+                            }
+                            .distinctBy { it.first.itemId }
+                            .sortedWith(
+                                compareByDescending<Triple<PlanningRule, Food, CulinaryRole>> {
+                                    it.second.category == sourceFood.category
+                                }.thenByDescending {
+                                    it.third in issue.roles
+                                }.thenBy { it.first.itemId }
+                            )
+                            .take(MAX_COMPANIONS_PER_ISSUE)
+                            .forEach { (_, food, role) ->
+                                val policy = PortionPolicyResolver.resolve(
+                                    food,
+                                    role,
+                                    originalMeal.type,
+                                    recommendation,
+                                    mealShares,
+                                    portionContext
+                                )
+                                val items = originalMeal.items.toMutableList()
+                                items[index] = satisfactoryItem(food.id, policy)
+                                add(replaceMeal(witness, mealIndex, originalMeal.copy(items = items)))
+                            }
+                    }
 
                     CulinarySatisfactionIssueKind.ROLE_UNRESOLVED -> {
                         sourceIndex?.let { index ->
@@ -403,6 +479,9 @@ object CulinarilySatisfactoryWitnessRepair {
         else -> 0.0
     }
 
+    private fun repetitionConcept(food: Food): String =
+        food.family?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "food:${food.id}"
+
     private fun rolesPresent(
         meal: PlannedMeal,
         excludingFoodId: Long,
@@ -455,7 +534,7 @@ object CulinarilySatisfactoryWitnessRepair {
             )
         }
 
-    private fun optimizeAndKeepComplete(
+    private fun optimizeCandidate(
         witness: CertifiedDayWitness,
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
@@ -478,12 +557,7 @@ object CulinarilySatisfactoryWitnessRepair {
             meals = optimized,
             fingerprint = optimized.hashCode()
         )
-        if (!candidate.isStructurallyValid()) return null
-        return candidate.takeIf {
-            CertifiedDayWitnessEvaluator.isComplete(
-                it, rules, foodsById, dishesById, recommendation, mealShares
-            )
-        }
+        return candidate.takeIf { it.isStructurallyValid() }
     }
 
     private fun score(
@@ -508,6 +582,7 @@ object CulinarilySatisfactoryWitnessRepair {
                 CulinarySatisfactionIssueKind.HARD_ROLE_ASSIGNMENT_INVALID -> 1_000_000.0
                 CulinarySatisfactionIssueKind.ROLE_UNRESOLVED -> 500_000.0
                 CulinarySatisfactionIssueKind.SOFT_RELATION_UNSATISFIED -> 100_000.0
+                CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED -> 50_000.0
                 CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE -> 10_000.0
             }
         }

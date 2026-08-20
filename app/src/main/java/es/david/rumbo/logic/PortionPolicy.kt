@@ -6,6 +6,8 @@ import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.Recommendation
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.round
 
@@ -60,7 +62,15 @@ data class ResolvedPortionPolicy(
     val referenceSource: PortionReferenceSource
 ) {
     fun isHardValid(grams: Double): Boolean = grams in minimum..maximum
-    fun isSatisfactory(grams: Double): Boolean = grams in satisfactoryMinimum..satisfactoryMaximum
+    fun isSatisfactory(grams: Double): Boolean {
+        // Catalogue portions and optimized menu amounts are commonly rounded.
+        // A small boundary discrepancy is not a culinary defect. Keep the
+        // tolerance proportional to the product/role reference and bounded so
+        // genuinely disproportionate quantities remain invalid.
+        val tolerance = (referenceGrams * 0.05).coerceIn(5.0, 15.0)
+        return grams >= satisfactoryMinimum - tolerance &&
+            grams <= satisfactoryMaximum + tolerance
+    }
 }
 
 /**
@@ -94,6 +104,7 @@ object PortionPolicyResolver {
         CulinaryRole.PLATE_CENTER to Calibration(ReferenceMode.PRODUCT_BASIS, 0.50, 1.50, 0.35, 0.75, 1.35),
         CulinaryRole.PLATE_BASE to Calibration(ReferenceMode.PRODUCT_BASIS, 0.625, 1.50, 0.50, 0.70, 1.50),
         CulinaryRole.SIDE to Calibration(ReferenceMode.PRODUCT_BASIS, 0.50, 1.25, 0.15, 0.85, 1.25),
+        CulinaryRole.SALAD_BASE to Calibration(ReferenceMode.PRODUCT_BASIS, 0.50, 1.25, 0.15, 0.85, 1.25),
         CulinaryRole.TOPPING to Calibration(ReferenceMode.ROLE_DEFAULT, 0.25, 2.00, 0.00, 1.00, 1.00),
         CulinaryRole.SAUCE_DRESSING to Calibration(ReferenceMode.ROLE_DEFAULT, 1.0 / 3.0, 2.00, 0.10, 0.85, 1.15),
         CulinaryRole.CEREAL_BASE to Calibration(ReferenceMode.PRODUCT_BASIS, 0.75, 1.50, 0.15, 0.85, 1.20),
@@ -155,6 +166,26 @@ object PortionPolicyResolver {
             val center = (satisfactoryMinimum + satisfactoryMaximum) / 2.0
             satisfactoryMinimum = center
             satisfactoryMaximum = center
+        }
+
+        // A theoretical edge can fall just beside a practical unit. Admit only
+        // the closest adjacent unit, and only within a small unit-relative
+        // tolerance; never widen both ends of the interval.
+        food?.practicalUnitStep()?.let { step ->
+            val lower = (floor(satisfactoryMinimum / step) * step)
+                .takeIf { it >= minimum && it > 0.0 }
+                ?.let { amount -> amount to (satisfactoryMinimum - amount) }
+            val upper = (ceil(satisfactoryMaximum / step) * step)
+                .takeIf { it <= maximum }
+                ?.let { amount -> amount to (amount - satisfactoryMaximum) }
+            val nearest = listOfNotNull(lower?.let { false to it }, upper?.let { true to it })
+                .minWithOrNull(compareBy<Pair<Boolean, Pair<Double, Double>>> { it.second.second }
+                    .thenBy { it.first })
+            val tolerance = (step * 0.10).coerceIn(1.0, 10.0)
+            nearest?.takeIf { it.second.second <= tolerance }?.let { (isUpper, candidate) ->
+                if (isUpper) satisfactoryMaximum = candidate.first
+                else satisfactoryMinimum = candidate.first
+            }
         }
         val effectivePreferred = (reference * scale)
             .coerceIn(satisfactoryMinimum, satisfactoryMaximum)

@@ -67,7 +67,8 @@ object CulinaryLevel3CompositionSearch {
         val preferredVector: Vector,
         val attainable: VectorRange,
         val fruit: Boolean,
-        val vegetable: Boolean
+        val vegetable: Boolean,
+        val rolesByConcept: Map<String, List<CulinaryRole>>
     )
 
     private data class DayState(
@@ -76,7 +77,8 @@ object CulinaryLevel3CompositionSearch {
         val attainable: VectorRange = VectorRange(),
         val fruitMeals: Int = 0,
         val vegetableMeals: Int = 0,
-        val processedShare: Double = 0.0
+        val processedShare: Double = 0.0,
+        val rolesByConcept: Map<String, List<CulinaryRole>> = emptyMap()
     )
 
     fun find(
@@ -116,7 +118,13 @@ object CulinaryLevel3CompositionSearch {
             val share = mealShares[mealType] ?: 0.0
             val expanded = buildList {
                 beam.forEach { state ->
-                    candidatesByMeal.getValue(mealType).forEach { candidate ->
+                    candidatesByMeal.getValue(mealType).forEach candidateLoop@ { candidate ->
+                        val combinedRoles = mergeRoles(state.rolesByConcept, candidate.rolesByConcept)
+                        if (combinedRoles.any { (_, roles) ->
+                                CulinarySoftPolicy.maximumDailyOccurrences(roles)
+                                    ?.let { roles.size > it } == true
+                            }
+                        ) return@candidateLoop
                         add(
                             DayState(
                                 meals = state.meals + candidate.meal,
@@ -124,14 +132,21 @@ object CulinaryLevel3CompositionSearch {
                                 attainable = state.attainable + candidate.attainable,
                                 fruitMeals = state.fruitMeals + if (candidate.fruit) 1 else 0,
                                 vegetableMeals = state.vegetableMeals + if (candidate.vegetable) 1 else 0,
-                                processedShare = state.processedShare + share
+                                processedShare = state.processedShare + share,
+                                rolesByConcept = combinedRoles
                             )
                         )
                     }
                 }
             }
             beam = expanded
-                .groupBy { it.fruitMeals.coerceAtMost(2) to it.vegetableMeals.coerceAtMost(2) }
+                .groupBy {
+                    Triple(
+                        it.fruitMeals.coerceAtMost(2),
+                        it.vegetableMeals.coerceAtMost(2),
+                        (it.attainable.maximum.fiber / 5.0).toInt().coerceIn(0, 5)
+                    )
+                }
                 .values
                 .flatMap { bucket ->
                     bucket.sortedWith(
@@ -250,24 +265,39 @@ object CulinaryLevel3CompositionSearch {
                                 maximum = vector(chosen, items) { it.maximumGrams }
                             ),
                             fruit = chosen.any { it.category == FoodCategory.FRUIT },
-                            vegetable = chosen.any { it.category == FoodCategory.VEGETABLE }
+                            vegetable = chosen.any { it.category == FoodCategory.VEGETABLE },
+                            rolesByConcept = chosen.indices.groupBy(
+                                keySelector = { repetitionKey(chosen[it]) },
+                                valueTransform = { roles[it] }
+                            )
                         )
                     }
             }
         }
 
         val share = mealShares[mealType] ?: 0.0
-        return raw
+        val buckets = raw
             .distinctBy { candidate ->
                 candidate.meal.items.joinToString(",") { "${it.foodId}@${it.minimumGrams}-${it.maximumGrams}" }
             }
             .groupBy { it.fruit to it.vegetable }
-            .values
+        return buckets.values
             .flatMap { bucket ->
-                bucket.sortedWith(
+                val ranked = bucket.sortedWith(
                     compareBy<MealCandidate> { rangeScore(it.attainable, recommendation, share) }
                         .thenBy { preferredScore(it.preferredVector, recommendation, share) }
-                ).take(MAX_MEAL_CANDIDATES_PER_BUCKET)
+                )
+                // Pure nutrient ranking can fill the whole shortlist with near
+                // duplicates from one family. Preserve the best representatives
+                // of every repetition concept so the day-level variety check has
+                // real alternatives to combine later.
+                val diverse = ranked
+                    .flatMap { candidate -> candidate.rolesByConcept.keys.map { it to candidate } }
+                    .groupBy({ it.first }, { it.second })
+                    .values
+                    .flatMap { candidates -> candidates.take(2) }
+                (ranked.take(MAX_MEAL_CANDIDATES_PER_BUCKET) + diverse)
+                    .distinctBy { it.meal.items.map(PlannedFood::foodId) }
             }
             .sortedBy { rangeScore(it.attainable, recommendation, share) }
     }
@@ -277,7 +307,7 @@ object CulinaryLevel3CompositionSearch {
         mealType: MealType
     ): Sequence<List<CulinaryRole>> = sequence {
         val choices = foods.map { food ->
-            CulinaryPolicy.roles(food).sortedWith(
+            CulinaryPolicy.roles(food).filter { CulinaryPolicy.isAllowedForMeal(it, mealType) }.sortedWith(
                 compareByDescending<CulinaryRole> {
                     mealType in CulinaryPolicy.policy(it).suggestedMealTypes
                 }.thenBy { it.ordinal }
@@ -304,6 +334,17 @@ object CulinaryLevel3CompositionSearch {
         }
         visit(0)
     }
+
+    private fun mergeRoles(
+        first: Map<String, List<CulinaryRole>>,
+        second: Map<String, List<CulinaryRole>>
+    ): Map<String, List<CulinaryRole>> = buildMap {
+        first.forEach { (concept, roles) -> put(concept, roles) }
+        second.forEach { (concept, roles) -> put(concept, get(concept).orEmpty() + roles) }
+    }
+
+    private fun repetitionKey(food: Food): String =
+        food.family?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "food:${food.id}"
 
     private fun combinations(values: List<Food>, count: Int): Sequence<List<Food>> = sequence {
         if (count == 0) {

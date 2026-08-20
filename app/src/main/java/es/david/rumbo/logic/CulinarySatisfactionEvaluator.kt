@@ -16,6 +16,7 @@ enum class CulinarySatisfactionIssueKind {
     ROLE_UNRESOLVED,
     QUANTITY_OUTSIDE_SATISFACTORY_RANGE,
     SOFT_RELATION_UNSATISFIED,
+    DAILY_REPETITION_DISCOURAGED,
     HARD_ROLE_ASSIGNMENT_INVALID
 }
 
@@ -60,6 +61,12 @@ object CulinarySatisfactionEvaluator {
     private data class Assignment(
         val occurrence: Occurrence,
         val role: CulinaryRole
+    )
+
+    private data class DailyAssignment(
+        val foodId: Long,
+        val role: CulinaryRole,
+        val mealType: MealType
     )
 
     fun isCulinarilySatisfactory(
@@ -108,9 +115,37 @@ object CulinarySatisfactionEvaluator {
                 portionContext
             )
         }
+        val repetitions = results
+            .flatMap { meal -> meal.assignedRoles.map { (foodId, role) -> DailyAssignment(foodId, role, meal.mealType) } }
+            .groupBy { occurrence -> repetitionKey(foodsById[occurrence.foodId], occurrence.foodId) }
+            .mapNotNull { (_, occurrences) ->
+                val maximum = CulinarySoftPolicy.maximumDailyOccurrences(occurrences.map { it.role })
+                    ?: return@mapNotNull null
+                if (occurrences.size <= maximum) return@mapNotNull null
+                val repeated = occurrences[maximum]
+                val food = foodsById[repeated.foodId]
+                CulinarySatisfactionIssue(
+                    kind = CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED,
+                    mealType = repeated.mealType,
+                    foodId = repeated.foodId,
+                    foodName = food?.name,
+                    roles = occurrences.mapTo(linkedSetOf()) { it.role },
+                    message = "La familia de ${food?.name ?: "este alimento"} se repite demasiado dentro del mismo día."
+                )
+            }
+        val finalResults = if (repetitions.isEmpty() || results.isEmpty()) results else {
+            val issuesByMeal = repetitions.groupBy { it.mealType }
+            results.map { result ->
+                val extra = issuesByMeal[result.mealType].orEmpty()
+                if (extra.isEmpty()) result else result.copy(
+                    satisfactory = false,
+                    issues = result.issues + extra
+                )
+            }
+        }
         return CulinaryDaySatisfaction(
-            satisfactory = results.isNotEmpty() && results.all { it.satisfactory },
-            meals = results
+            satisfactory = finalResults.isNotEmpty() && finalResults.all { it.satisfactory },
+            meals = finalResults
         )
     }
 
@@ -156,8 +191,10 @@ object CulinarySatisfactionEvaluator {
             )
         }
 
+        val isCompositeMeal = occurrences.size > 1
         val eligibleRoles = occurrences.map { occurrence ->
             occurrence.roles.filterTo(linkedSetOf()) { role ->
+                CulinaryPolicy.isAllowedForMeal(role, meal.type) &&
                 PortionPolicyResolver.resolve(
                     occurrence.food,
                     role,
@@ -165,7 +202,16 @@ object CulinarySatisfactionEvaluator {
                     recommendation,
                     mealShares,
                     portionContext
-                ).isSatisfactory(occurrence.grams)
+                ).let { policy ->
+                    policy.isSatisfactory(occurrence.grams) ||
+                        // A small amount can be a legitimate component of a
+                        // composed meal. It only blocks level 3 when it also
+                        // violates the hard role range. Upper satisfactory
+                        // limits remain strict so disproportionate portions are
+                        // still rejected.
+                        (isCompositeMeal && occurrence.grams < policy.satisfactoryMinimum &&
+                            policy.isHardValid(occurrence.grams))
+                }
             }
         }
         if (eligibleRoles.any { it.isEmpty() }) {
@@ -286,6 +332,9 @@ object CulinarySatisfactionEvaluator {
             }
         }
     }
+
+    private fun repetitionKey(food: Food?, foodId: Long): String =
+        food?.family?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "food:$foodId"
 
     private fun softRelationsSatisfied(assignments: List<Assignment>): Boolean =
         missingSoftRelations(assignments).isEmpty()

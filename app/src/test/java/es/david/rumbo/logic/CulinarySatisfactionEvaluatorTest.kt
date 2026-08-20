@@ -171,6 +171,120 @@ class CulinarySatisfactionEvaluatorTest {
         assertTrue(result.issues.any { it.kind == CulinarySatisfactionIssueKind.ROLE_UNRESOLVED })
     }
 
+    @Test
+    fun repeatingSubstantialFoodAcrossMealsBlocksLevel3() {
+        val food = simpleFood(70, setOf("STANDALONE"))
+        val meals = listOf(MealType.BREAKFAST, MealType.MORNING_SNACK).mapIndexed { index, type ->
+            PlannedMeal(
+                id = index.toLong(),
+                type = type,
+                days = setOf(WeekDay.MONDAY),
+                items = listOf(PlannedFood(food.id, 80.0, false))
+            )
+        }
+        val result = CulinarySatisfactionEvaluator.evaluateDay(
+            WeekDay.MONDAY,
+            meals,
+            mapOf(food.id to food),
+            emptyMap(),
+            target,
+            MealDistributionPolicy.defaults
+        )
+        assertFalse(result.satisfactory)
+        assertTrue(result.issues.any {
+            it.kind == CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED &&
+                it.foodId == food.id
+        })
+    }
+
+    @Test
+    fun repeatingFoodFamilyAcrossDifferentProductsBlocksLevel3() {
+        val first = simpleFood(73, setOf("STANDALONE")).copy(family = "pollo")
+        val second = simpleFood(74, setOf("STANDALONE")).copy(family = "Pollo")
+        val meals = listOf(
+            PlannedMeal(1, MealType.MORNING_SNACK, days = setOf(WeekDay.MONDAY), items = listOf(PlannedFood(first.id, 80.0, false))),
+            PlannedMeal(2, MealType.AFTERNOON_SNACK, days = setOf(WeekDay.MONDAY), items = listOf(PlannedFood(second.id, 80.0, false)))
+        )
+        val result = CulinarySatisfactionEvaluator.evaluateDay(
+            WeekDay.MONDAY, meals, listOf(first, second).associateBy { it.id }, emptyMap(),
+            target, MealDistributionPolicy.defaults
+        )
+        assertFalse(result.satisfactory)
+        assertTrue(result.issues.any { it.kind == CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED })
+    }
+
+    @Test
+    fun sandwichCannotHideSecondFillingAsPlateCenter() {
+        val bread = simpleFood(75, setOf("SANDWICH_BASE"))
+        val turkey = simpleFood(76, setOf("SANDWICH_FILLING", "PLATE_CENTER"))
+        val chicken = simpleFood(77, setOf("SANDWICH_FILLING", "PLATE_CENTER"))
+        val meal = PlannedMeal(
+            1, MealType.MORNING_SNACK, days = setOf(WeekDay.MONDAY),
+            items = listOf(
+                PlannedFood(bread.id, 70.0, false),
+                PlannedFood(turkey.id, 60.0, false),
+                PlannedFood(chicken.id, 60.0, false)
+            )
+        )
+        val result = CulinarySatisfactionEvaluator.evaluateMeal(
+            WeekDay.MONDAY, meal, listOf(bread, turkey, chicken).associateBy { it.id }, emptyMap(),
+            target, MealDistributionPolicy.defaults
+        )
+        assertFalse(result.satisfactory)
+    }
+
+    @Test
+    fun leafySaladNeedsDressingForLevel3() {
+        val chicken = simpleFood(78, setOf("PLATE_CENTER"))
+        val beans = simpleFood(79, setOf("PLATE_BASE"))
+        val leaves = simpleFood(80, setOf("SALAD_BASE"))
+        val withoutDressing = evaluateLunch(
+            listOf(
+                PlannedFood(chicken.id, 150.0, false),
+                PlannedFood(beans.id, 100.0, false),
+                PlannedFood(leaves.id, 100.0, false)
+            ),
+            listOf(chicken, beans, leaves)
+        )
+        assertFalse(withoutDressing.satisfactory)
+
+        val dressing = simpleFood(81, setOf("SAUCE_DRESSING"))
+        val withDressing = evaluateLunch(
+            listOf(
+                PlannedFood(chicken.id, 150.0, false),
+                PlannedFood(beans.id, 100.0, false),
+                PlannedFood(leaves.id, 100.0, false),
+                PlannedFood(dressing.id, 30.0, false)
+            ),
+            listOf(chicken, beans, leaves, dressing)
+        )
+        assertTrue(withDressing.satisfactory)
+    }
+
+    @Test
+    fun roleCompatibilityPreventsCoatingAtBreakfast() {
+        val coating = simpleFood(71, setOf("COATING"))
+        val center = simpleFood(72, setOf("PLATE_CENTER"))
+        val meal = PlannedMeal(
+            id = 1,
+            type = MealType.BREAKFAST,
+            days = setOf(WeekDay.MONDAY),
+            items = listOf(
+                PlannedFood(coating.id, 30.0, false),
+                PlannedFood(center.id, 150.0, false)
+            )
+        )
+        val result = CulinarySatisfactionEvaluator.evaluateMeal(
+            WeekDay.MONDAY,
+            meal,
+            listOf(coating, center).associateBy { it.id },
+            emptyMap(),
+            target,
+            MealDistributionPolicy.defaults
+        )
+        assertFalse(result.satisfactory)
+    }
+
     private fun evaluateLunch(
         items: List<PlannedFood>,
         foods: List<Food>

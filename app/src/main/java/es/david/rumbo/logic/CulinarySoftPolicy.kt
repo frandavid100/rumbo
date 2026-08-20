@@ -5,16 +5,32 @@ package es.david.rumbo.logic
  * Hard REQUIRE/FORBID/cardinality rules remain in CulinaryPolicy.
  */
 object CulinarySoftPolicy {
-    const val POLICY_VERSION = 1
+    const val POLICY_VERSION = 4
+
+    private val unlimitedDailyRepetitionRoles = setOf(
+        CulinaryRole.COOKING_MEDIUM,
+        CulinaryRole.SAUCE_DRESSING,
+        CulinaryRole.SEASONING,
+        CulinaryRole.BEVERAGE
+    )
+
+    private val twiceDailyRoles = setOf(
+        CulinaryRole.PLATE_BASE,
+        CulinaryRole.SANDWICH_BASE,
+        CulinaryRole.CEREAL_BASE,
+        CulinaryRole.POWDER_BASE
+    )
 
     private val plateVehicleRoles = setOf(
-        CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE
+        CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE,
+        CulinaryRole.SALAD_BASE
     )
 
     private val preferAnyOf: Map<CulinaryRole, Set<CulinaryRole>> = mapOf(
         CulinaryRole.PLATE_CENTER to setOf(CulinaryRole.PLATE_BASE, CulinaryRole.SIDE),
         CulinaryRole.PLATE_BASE to setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.SIDE),
         CulinaryRole.SIDE to setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE),
+        CulinaryRole.SALAD_BASE to setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE),
         CulinaryRole.SANDWICH_BASE to setOf(CulinaryRole.SANDWICH_FILLING, CulinaryRole.SPREAD),
         CulinaryRole.CEREAL_BASE to setOf(CulinaryRole.CEREAL_MIX_IN),
         CulinaryRole.POWDER_BASE to setOf(CulinaryRole.POWDER_MIX_IN),
@@ -31,5 +47,11 @@ object CulinarySoftPolicy {
             val targets = preferredCompanions(role)
             (role to targets).takeIf { targets.isNotEmpty() && targets.none(present::contains) }
         }.toMap()
+    }
+
+    fun maximumDailyOccurrences(roles: Collection<CulinaryRole>): Int? = when {
+        roles.isNotEmpty() && roles.all(unlimitedDailyRepetitionRoles::contains) -> null
+        roles.isNotEmpty() && roles.all(twiceDailyRoles::contains) -> 2
+        else -> 1
     }
 }

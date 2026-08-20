@@ -7,6 +7,8 @@ import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -71,6 +73,51 @@ class CulinarilySatisfactoryDaySearchTest {
         )
         assertFalse(diagnostic.compatibleCompanionAlreadyAvailable)
         assertTrue(diagnostic.unavailablePreferredRoles.isEmpty())
+    }
+
+    @Test
+    fun hardRoleDependencyBeatsIncidentalQuantityAndFindsExistingDisabledCompanion() {
+        val filling = food(10, setOf("PLATE_CENTER", "SANDWICH_FILLING")).copy(name = "Jamón")
+        val bread = food(20, setOf("SANDWICH_BASE", "PLATE_BASE")).copy(name = "Pan")
+        val banana = food(30, setOf("DESSERT", "STANDALONE")).copy(name = "Plátano")
+        val quantityIssue = CulinarySatisfactionIssue(
+            kind = CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE,
+            mealType = MealType.BREAKFAST,
+            foodId = banana.id,
+            foodName = banana.name,
+            grams = 400.0,
+            roles = setOf(CulinaryRole.DESSERT),
+            message = "fixture"
+        )
+        val evaluation = CulinaryDaySatisfaction(
+            satisfactory = false,
+            meals = listOf(
+                CulinaryMealSatisfaction(
+                    mealType = MealType.BREAKFAST,
+                    satisfactory = false,
+                    issues = listOf(quantityIssue)
+                )
+            )
+        )
+        val diagnostic = CulinarilySatisfactoryDaySearch.diagnose(
+            evaluation,
+            listOf(
+                rule(filling, MealType.MORNING_SNACK),
+                rule(bread, MealType.BREAKFAST),
+                rule(banana, MealType.BREAKFAST)
+            ),
+            listOf(filling, bread, banana).associateBy { it.id }
+        )
+
+        val dependency = assertNotNull(diagnostic.dependencyOpportunity).let {
+            diagnostic.dependencyOpportunity!!
+        }
+        assertEquals(filling.id, dependency.sourceFoodId)
+        assertEquals(CulinaryRole.SANDWICH_FILLING, dependency.sourceRole)
+        assertEquals(CulinaryRole.SANDWICH_BASE, dependency.requiredRole)
+        assertEquals(MealType.MORNING_SNACK, dependency.mealType)
+        assertEquals("Pan", dependency.existingCompatibleFoodName)
+        assertTrue(dependency.hardRequirement)
     }
 
     private fun evaluationForMissingPreference(

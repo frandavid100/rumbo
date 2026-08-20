@@ -9,6 +9,7 @@ enum class CulinaryRole(val label: String) {
     PLATE_CENTER("Centro del plato"),
     PLATE_BASE("Base del plato"),
     SIDE("Acompañamiento"),
+    SALAD_BASE("Base de ensalada"),
     TOPPING("Topping"),
     SAUCE_DRESSING("Salsa o aliño"),
     CEREAL_BASE("Base para cereal"),
@@ -33,16 +34,22 @@ data class CulinaryRolePolicy(
     val maximumGrams: Double? = null,
     val standaloneAllowed: Boolean = true,
     val requiredRoles: Set<CulinaryRole> = emptySet(),
+    val requiredAnyOfRoles: Set<CulinaryRole> = emptySet(),
     val maxPerMeal: Int? = null,
     val suggestedMealTypes: Set<MealType> = MealType.entries.toSet()
 )
 
 /** Canonical culinary policy. Products only store the functional roles they can perform. */
 object CulinaryPolicy {
+    private val mealRestrictedRoles = setOf(CulinaryRole.BINDER, CulinaryRole.COATING)
     private val policies = mapOf(
         CulinaryRole.PLATE_CENTER to CulinaryRolePolicy(150.0, 75.0, 300.0, maxPerMeal = 1),
         CulinaryRole.PLATE_BASE to CulinaryRolePolicy(100.0, 40.0, 300.0, maxPerMeal = 1),
         CulinaryRole.SIDE to CulinaryRolePolicy(150.0, 50.0, 300.0),
+        CulinaryRole.SALAD_BASE to CulinaryRolePolicy(
+            100.0, 40.0, 200.0, standaloneAllowed = false,
+            requiredRoles = setOf(CulinaryRole.SAUCE_DRESSING), maxPerMeal = 1
+        ),
         CulinaryRole.TOPPING to CulinaryRolePolicy(20.0, 5.0, 60.0, standaloneAllowed = false),
         CulinaryRole.SAUCE_DRESSING to CulinaryRolePolicy(30.0, 5.0, 100.0, standaloneAllowed = false),
         CulinaryRole.CEREAL_BASE to CulinaryRolePolicy(200.0, 100.0, 350.0),
@@ -58,15 +65,21 @@ object CulinaryPolicy {
         CulinaryRole.SANDWICH_BASE to CulinaryRolePolicy(70.0, 30.0, 150.0),
         CulinaryRole.SANDWICH_FILLING to CulinaryRolePolicy(
             60.0, 20.0, 150.0, standaloneAllowed = false,
-            requiredRoles = setOf(CulinaryRole.SANDWICH_BASE)
+            requiredRoles = setOf(CulinaryRole.SANDWICH_BASE), maxPerMeal = 1
         ),
         CulinaryRole.SPREAD to CulinaryRolePolicy(
             25.0, 5.0, 60.0, standaloneAllowed = false,
             requiredRoles = setOf(CulinaryRole.SANDWICH_BASE)
         ),
         CulinaryRole.COOKING_MEDIUM to CulinaryRolePolicy(10.0, 5.0, 15.0, standaloneAllowed = false),
-        CulinaryRole.BINDER to CulinaryRolePolicy(20.0, 5.0, 60.0, standaloneAllowed = false),
-        CulinaryRole.COATING to CulinaryRolePolicy(30.0, 10.0, 80.0, standaloneAllowed = false),
+        CulinaryRole.BINDER to CulinaryRolePolicy(
+            20.0, 5.0, 60.0, standaloneAllowed = false,
+            requiredAnyOfRoles = setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE)
+        ),
+        CulinaryRole.COATING to CulinaryRolePolicy(
+            30.0, 10.0, 80.0, standaloneAllowed = false,
+            requiredRoles = setOf(CulinaryRole.PLATE_CENTER)
+        ),
         CulinaryRole.SEASONING to CulinaryRolePolicy(3.0, 0.5, 10.0, standaloneAllowed = false),
         CulinaryRole.STANDALONE to CulinaryRolePolicy(100.0, 20.0, 300.0),
         CulinaryRole.BEVERAGE to CulinaryRolePolicy(250.0, 100.0, 500.0),
@@ -87,6 +100,7 @@ object CulinaryPolicy {
         CulinaryRole.PLATE_CENTER to setOf(MealType.LUNCH, MealType.DINNER),
         CulinaryRole.PLATE_BASE to setOf(MealType.LUNCH, MealType.DINNER),
         CulinaryRole.SIDE to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.SALAD_BASE to setOf(MealType.LUNCH, MealType.DINNER),
         CulinaryRole.TOPPING to MealType.entries.toSet(),
         CulinaryRole.SAUCE_DRESSING to setOf(MealType.LUNCH, MealType.DINNER),
         CulinaryRole.COOKING_MEDIUM to setOf(MealType.LUNCH, MealType.DINNER),
@@ -141,7 +155,8 @@ object CulinaryPolicy {
                 CulinaryRole.COATING -> 0
                 CulinaryRole.CEREAL_MIX_IN, CulinaryRole.POWDER_MIX_IN,
                 CulinaryRole.SANDWICH_FILLING -> 1
-                CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE -> 2
+                CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE,
+                CulinaryRole.SALAD_BASE -> 2
                 CulinaryRole.STANDALONE, CulinaryRole.BEVERAGE, CulinaryRole.DESSERT,
                 CulinaryRole.CEREAL_BASE, CulinaryRole.POWDER_BASE, CulinaryRole.SANDWICH_BASE -> 3
             }
@@ -167,6 +182,9 @@ object CulinaryPolicy {
     fun isSuggestedForMeal(food: Food, mealType: MealType): Boolean =
         roles(food).any { role -> mealType in policy(role).suggestedMealTypes }
 
+    fun isAllowedForMeal(role: CulinaryRole, mealType: MealType): Boolean =
+        role !in mealRestrictedRoles || mealType in policy(role).suggestedMealTypes
+
     /**
      * True when one role can be chosen for every role-aware item so all hard rules hold.
      * Empty role sets belong only to migrated/custom legacy foods and mean that Rumbo has
@@ -185,9 +203,18 @@ object CulinaryPolicy {
                         policy(role).requiredRoles.any { required -> counts.getOrDefault(required, 0) == 0 }
                     }
                 ) return false
+                if (chosen.any { role ->
+                        policy(role).requiredAnyOfRoles.let { alternatives ->
+                            alternatives.isNotEmpty() && alternatives.none { counts.getOrDefault(it, 0) > 0 }
+                        }
+                    }
+                ) return false
                 if (counts.any { (role, count) ->
                         policy(role).maxPerMeal?.let { count > it } == true
                     }
+                ) return false
+                if (counts.getOrDefault(CulinaryRole.SANDWICH_BASE, 0) > 0 &&
+                    counts.getOrDefault(CulinaryRole.PLATE_CENTER, 0) > 0
                 ) return false
                 return true
             }
@@ -205,7 +232,11 @@ object CulinaryPolicy {
         val constrained = roleChoices.filter { it.isNotEmpty() }
         val available = constrained.flatten().toSet()
         return constrained.flatten().flatMapTo(linkedSetOf()) { role ->
-            policy(role).requiredRoles.filter { it !in available }
+            buildSet {
+                addAll(policy(role).requiredRoles.filter { it !in available })
+                val alternatives = policy(role).requiredAnyOfRoles
+                if (alternatives.isNotEmpty() && alternatives.none(available::contains)) addAll(alternatives)
+            }
         }
     }
 }
