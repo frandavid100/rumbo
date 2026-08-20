@@ -3,7 +3,7 @@
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "source": "https://www.carrefour.es",
   "extractor_version": "carrefour-first-party-1.0",
-  "built_at": "2026-08-20T07:10:35.240058+00:00",
+  "built_at": "2026-08-20T08:07:20.962378+00:00",
   "classification_performed": "false",
   "counts": {
     "candidate_urls": 8,
@@ -154,7 +154,7 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "521003205",
       "canonical_url": "https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p",
-      "observed_at": "2026-08-20T07:10:30.297658+00:00",
+      "observed_at": "2026-08-20T08:07:15.930455+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "fetch_error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
       "nutrition_status": "FETCH_ERROR"
@@ -163,7 +163,7 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "521034877",
       "canonical_url": "https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p",
-      "observed_at": "2026-08-20T07:10:30.298650+00:00",
+      "observed_at": "2026-08-20T08:07:15.931225+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "fetch_error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
       "nutrition_status": "FETCH_ERROR"
@@ -172,7 +172,7 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "530362942",
       "canonical_url": "https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p",
-      "observed_at": "2026-08-20T07:10:30.298018+00:00",
+      "observed_at": "2026-08-20T08:07:15.930728+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "fetch_error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
       "nutrition_status": "FETCH_ERROR"
@@ -181,7 +181,7 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "544101780",
       "canonical_url": "https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p",
-      "observed_at": "2026-08-20T07:10:30.297292+00:00",
+      "observed_at": "2026-08-20T08:07:15.930162+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "fetch_error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
       "nutrition_status": "FETCH_ERROR"
@@ -190,7 +190,7 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "682401711",
       "canonical_url": "https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p",
-      "observed_at": "2026-08-20T07:10:30.296788+00:00",
+      "observed_at": "2026-08-20T08:07:15.929779+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "fetch_error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
       "nutrition_status": "FETCH_ERROR"
@@ -199,7 +199,7 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "VC4AECOMM-013524",
       "canonical_url": "https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p",
-      "observed_at": "2026-08-20T07:10:30.298314+00:00",
+      "observed_at": "2026-08-20T08:07:15.930975+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "fetch_error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
       "nutrition_status": "FETCH_ERROR"
@@ -208,7 +208,7 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "VC4AECOMM-701721",
       "canonical_url": "https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p",
-      "observed_at": "2026-08-20T07:10:32.756550+00:00",
+      "observed_at": "2026-08-20T08:07:18.455006+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "fetch_error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
       "nutrition_status": "FETCH_ERROR"
@@ -217,7 +217,7 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "prod600097",
       "canonical_url": "https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p",
-      "observed_at": "2026-08-20T07:10:32.757500+00:00",
+      "observed_at": "2026-08-20T08:07:18.455993+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "fetch_error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
       "nutrition_status": "FETCH_ERROR"
