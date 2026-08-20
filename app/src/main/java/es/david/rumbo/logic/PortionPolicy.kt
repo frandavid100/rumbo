@@ -1,10 +1,35 @@
 package es.david.rumbo.logic
 
+import es.david.rumbo.model.Dish
 import es.david.rumbo.model.Food
 import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.Recommendation
+import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.round
+
+internal fun Food.practicalUnitStep(): Double? = unitAmount?.takeIf { it > 0.0 }?.let { amount ->
+    when {
+        wholeUnitsOnly -> amount
+        unitDivisions > 1 -> amount / unitDivisions
+        else -> null
+    }
+}
+
+internal fun Dish.practicalUnitStep(): Double? = unitAmount?.takeIf { it > 0.0 }?.let { amount ->
+    when {
+        wholeUnitsOnly -> amount
+        unitDivisions > 1 -> amount / unitDivisions
+        else -> null
+    }
+}
+
+internal fun usesPracticalUnits(grams: Double, step: Double?): Boolean {
+    if (step == null) return true
+    val units = grams / step
+    return abs(units - round(units)) < 0.000_001
+}
 
 enum class PortionContext {
     GENERAL_ADULT
