@@ -1,22 +1,30 @@
 {
   "source": "https://www.carrefour.es",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-  "version": "carrefour-first-party-browser-probe-1.2",
-  "built_at": "2026-08-20T10:19:44.986503+00:00",
+  "version": "carrefour-first-party-browser-probe-1.3",
+  "built_at": "2026-08-20T10:33:21.354399+00:00",
+  "probe_policy": {
+    "concurrency": 1,
+    "inter_request_delay_ms": 5000,
+    "max_consecutive_blocks": 2,
+    "no_block_bypass": true
+  },
   "counts": {
     "requested": 8,
+    "attempted": 3,
     "http_success": 1,
     "usable_pages": 1,
     "saved_html_pages": 1,
     "with_product_jsonld": 1,
     "with_nutrition_marker": 1,
-    "blocked": 7,
+    "blocked": 2,
     "errors": 0
   },
+  "stopped_after_block_streak": true,
   "rows": [
     {
       "url": "https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p",
-      "observed_at": "2026-08-20T10:19:37.316125+00:00",
+      "observed_at": "2026-08-20T10:33:12.518612+00:00",
       "status": 403,
       "final_url": "https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p",
       "title": "Attention Required! | Cloudflare",
@@ -35,28 +43,8 @@
       "ok": false
     },
     {
-      "url": "https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p",
-      "observed_at": "2026-08-20T10:19:35.385575+00:00",
-      "status": 403,
-      "final_url": "https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p",
-      "title": "Attention Required! | Cloudflare",
-      "html_bytes": 4669,
-      "text_chars": 693,
-      "markers": {
-        "Información nutricional": false,
-        "Ingredientes": false,
-        "Denominación legal": false,
-        "Alérgenos": false,
-        "Contenido neto": false
-      },
-      "h1": "Sorry, you have been blocked",
-      "product_jsonld": false,
-      "blocked_text": true,
-      "ok": false
-    },
-    {
       "url": "https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p",
-      "observed_at": "2026-08-20T10:19:39.224298+00:00",
+      "observed_at": "2026-08-20T10:33:19.428923+00:00",
       "status": 403,
       "final_url": "https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p",
       "title": "Attention Required! | Cloudflare",
@@ -76,92 +64,12 @@
     },
     {
       "url": "https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p",
-      "observed_at": "2026-08-20T10:19:41.149467+00:00",
-      "status": 403,
-      "final_url": "https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p",
-      "title": "Attention Required! | Cloudflare",
-      "html_bytes": 4669,
-      "text_chars": 693,
-      "markers": {
-        "Información nutricional": false,
-        "Ingredientes": false,
-        "Denominación legal": false,
-        "Alérgenos": false,
-        "Contenido neto": false
-      },
-      "h1": "Sorry, you have been blocked",
-      "product_jsonld": false,
-      "blocked_text": true,
-      "ok": false
-    },
-    {
-      "url": "https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p",
-      "observed_at": "2026-08-20T10:19:31.549389+00:00",
-      "status": 403,
-      "final_url": "https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p",
-      "title": "Attention Required! | Cloudflare",
-      "html_bytes": 4669,
-      "text_chars": 693,
-      "markers": {
-        "Información nutricional": false,
-        "Ingredientes": false,
-        "Denominación legal": false,
-        "Alérgenos": false,
-        "Contenido neto": false
-      },
-      "h1": "Sorry, you have been blocked",
-      "product_jsonld": false,
-      "blocked_text": true,
-      "ok": false
-    },
-    {
-      "url": "https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p",
-      "observed_at": "2026-08-20T10:19:43.056117+00:00",
-      "status": 403,
-      "final_url": "https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p",
-      "title": "Attention Required! | Cloudflare",
-      "html_bytes": 4669,
-      "text_chars": 693,
-      "markers": {
-        "Información nutricional": false,
-        "Ingredientes": false,
-        "Denominación legal": false,
-        "Alérgenos": false,
-        "Contenido neto": false
-      },
-      "h1": "Sorry, you have been blocked",
-      "product_jsonld": false,
-      "blocked_text": true,
-      "ok": false
-    },
-    {
-      "url": "https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p",
-      "observed_at": "2026-08-20T10:19:33.456554+00:00",
-      "status": 403,
-      "final_url": "https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p",
-      "title": "Attention Required! | Cloudflare",
-      "html_bytes": 4669,
-      "text_chars": 693,
-      "markers": {
-        "Información nutricional": false,
-        "Ingredientes": false,
-        "Denominación legal": false,
-        "Alérgenos": false,
-        "Contenido neto": false
-      },
-      "h1": "Sorry, you have been blocked",
-      "product_jsonld": false,
-      "blocked_text": true,
-      "ok": false
-    },
-    {
-      "url": "https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p",
-      "observed_at": "2026-08-20T10:19:28.637107+00:00",
+      "observed_at": "2026-08-20T10:33:04.592406+00:00",
       "status": 200,
-      "final_url": "https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p",
-      "title": "Pizza de jamón y queso Carrefour 580 g. | Supermercado Online Carrefour",
-      "html_bytes": 305679,
-      "text_chars": 5486,
+      "final_url": "https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p",
+      "title": "Limonada Carrefour botella 1 l. | Supermercado Online Carrefour",
+      "html_bytes": 303587,
+      "text_chars": 4597,
       "markers": {
         "Información nutricional": true,
         "Ingredientes": true,
@@ -169,12 +77,12 @@
         "Alérgenos": false,
         "Contenido neto": true
       },
-      "h1": "Pizza de jamón y queso Carrefour 580 g.",
+      "h1": "Limonada Carrefour botella 1 l.",
       "product_jsonld": true,
       "blocked_text": false,
       "ok": true,
-      "saved_html": "html/prod600097.html",
-      "page_sha256": "53065c66176f94f37d731947a9ad1203c525b4c67920a197146193e4b4ff3d91"
+      "saved_html": "html/530362942.html",
+      "page_sha256": "48c97292cafe0cf4cdc09fcaf89ead98ec6706e6da2a2831e54c7a2f1e2313b2"
     }
   ]
 }
