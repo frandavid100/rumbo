@@ -70,12 +70,27 @@ async def inspect(context, url: str, timeout_ms: int):
     return row
 
 
+def persist_row(out: Path, html_dir: Path, row: dict) -> dict:
+    raw = row.pop("_html", None)
+    if raw:
+        filename = html_filename(row.get("final_url") or row["url"])
+        path = html_dir / filename
+        path.write_text(raw, encoding="utf-8")
+        row["saved_html"] = str(path.relative_to(out))
+        row["page_sha256"] = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    print(json.dumps(row, ensure_ascii=False))
+    return row
+
+
 async def run(args):
     urls = args.url or DEFAULT_URLS
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     html_dir = out / "html"
     html_dir.mkdir(parents=True, exist_ok=True)
+    rows = []
+    stopped_after_block_streak = False
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -83,34 +98,49 @@ async def run(args):
             user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36",
             viewport={"width": 1365, "height": 900},
         )
-        rows = []
-        sem = asyncio.Semaphore(max(1, args.concurrency))
 
-        async def one(url):
-            async with sem:
-                return await inspect(context, url, args.timeout * 1000)
+        # Default to a deliberately polite sequential probe. Parallelism remains
+        # available for diagnostics, but is opt-in; it is not used to work around
+        # retailer blocking.
+        if args.concurrency <= 1:
+            consecutive_blocks = 0
+            for index, url in enumerate(urls):
+                row = persist_row(out, html_dir, await inspect(context, url, args.timeout * 1000))
+                rows.append(row)
+                consecutive_blocks = consecutive_blocks + 1 if row.get("blocked_text") else 0
+                if args.max_consecutive_blocks > 0 and consecutive_blocks >= args.max_consecutive_blocks:
+                    stopped_after_block_streak = True
+                    break
+                if index + 1 < len(urls) and args.inter_request_delay_ms > 0:
+                    await asyncio.sleep(args.inter_request_delay_ms / 1000)
+        else:
+            sem = asyncio.Semaphore(args.concurrency)
 
-        for task in asyncio.as_completed([one(u) for u in urls]):
-            row = await task
-            raw = row.pop("_html", None)
-            if raw:
-                filename = html_filename(row.get("final_url") or row["url"])
-                path = html_dir / filename
-                path.write_text(raw, encoding="utf-8")
-                row["saved_html"] = str(path.relative_to(out))
-                row["page_sha256"] = hashlib.sha256(raw.encode("utf-8")).hexdigest()
-            rows.append(row)
-            print(json.dumps(row, ensure_ascii=False))
+            async def one(url):
+                async with sem:
+                    return await inspect(context, url, args.timeout * 1000)
+
+            for task in asyncio.as_completed([one(u) for u in urls]):
+                rows.append(persist_row(out, html_dir, await task))
+
         await context.close()
         await browser.close()
+
     rows.sort(key=lambda r: r["url"])
     summary = {
         "source": "https://www.carrefour.es",
         "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-        "version": "carrefour-first-party-browser-probe-1.2",
+        "version": "carrefour-first-party-browser-probe-1.3",
         "built_at": now_iso(),
+        "probe_policy": {
+            "concurrency": args.concurrency,
+            "inter_request_delay_ms": args.inter_request_delay_ms,
+            "max_consecutive_blocks": args.max_consecutive_blocks,
+            "no_block_bypass": True,
+        },
         "counts": {
-            "requested": len(rows),
+            "requested": len(urls),
+            "attempted": len(rows),
             "http_success": sum(bool(r.get("status") and r["status"] < 400) for r in rows),
             "usable_pages": sum(bool(r.get("ok")) for r in rows),
             "saved_html_pages": sum(bool(r.get("saved_html")) for r in rows),
@@ -119,6 +149,7 @@ async def run(args):
             "blocked": sum(bool(r.get("blocked_text")) for r in rows),
             "errors": sum(bool(r.get("error")) for r in rows),
         },
+        "stopped_after_block_streak": stopped_after_block_streak,
         "rows": rows,
     }
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -130,7 +161,9 @@ def main():
     ap.add_argument("--out", default="carrefour-first-party-browser-probe")
     ap.add_argument("--url", action="append", default=[])
     ap.add_argument("--timeout", type=int, default=35)
-    ap.add_argument("--concurrency", type=int, default=2)
+    ap.add_argument("--concurrency", type=int, default=1)
+    ap.add_argument("--inter-request-delay-ms", type=int, default=5000)
+    ap.add_argument("--max-consecutive-blocks", type=int, default=2)
     args = ap.parse_args()
     return asyncio.run(run(args))
 
