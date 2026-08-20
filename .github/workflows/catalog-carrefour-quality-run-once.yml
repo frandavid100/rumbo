@@ -5,6 +5,7 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-carrefour-quality-run-once.yml'
+      - 'tools/catalog/export_carrefour_candidate_urls.py'
 
 permissions:
   contents: write
@@ -45,15 +46,27 @@ jobs:
         working-directory: tools/catalog
         run: python audit_carrefour_quality.py carrefour-quality-full/carrefour_food_catalog.sqlite --out carrefour-quality-full/audit.json
 
-      - name: Persist compact quality report
+      - name: Export Carrefour URL candidates for direct first-party verification
+        working-directory: tools/catalog
+        run: |
+          python export_carrefour_candidate_urls.py \
+            carrefour-quality-full/carrefour_food_catalog.sqlite \
+            --out fixtures/carrefour_candidate_urls_radarsuper.jsonl
+
+      - name: Persist compact quality report and candidate URLs
         run: |
           mkdir -p tools/catalog/fixtures
           cp tools/catalog/carrefour-quality-full/summary.json tools/catalog/fixtures/carrefour_quality_latest_summary.json
           cp tools/catalog/carrefour-quality-full/audit.json tools/catalog/fixtures/carrefour_quality_latest_audit.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/catalog/fixtures/carrefour_quality_latest_summary.json tools/catalog/fixtures/carrefour_quality_latest_audit.json
-          git diff --cached --quiet || git commit -m "catalog: persist Carrefour quality audit"
+          git add \
+            tools/catalog/fixtures/carrefour_quality_latest_summary.json \
+            tools/catalog/fixtures/carrefour_quality_latest_audit.json \
+            tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl \
+            tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.summary.json
+          git diff --cached --quiet || git commit -m "catalog: persist Carrefour quality audit and candidate URLs"
+          git pull --rebase origin agent/catalog-phase1
           git push origin HEAD:agent/catalog-phase1
 
       - name: Upload quality catalog
