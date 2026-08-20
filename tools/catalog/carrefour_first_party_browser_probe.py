@@ -16,14 +16,14 @@ from playwright.async_api import async_playwright
 # These URLs are identities previously observed on carrefour.es; no third-party
 # product fields are used here.
 DEFAULT_URLS = [
-    "https://www.carrefour.es/supermercado/queso-en-polvo-especial-pasta-carrefour-classic-sin-gluten-150-g/R-fprod1350064/p",
-    "https://www.carrefour.es/supermercado/queso-mozzarella-rallado-carrefour-200-g/R-VC4AECOMM-646724/p",
-    "https://www.carrefour.es/supermercado/queso-gouda-tierno-en-lonchas-carrefour-classic-300-g/R-VC4AECOMM-588832/p",
-    "https://www.carrefour.es/supermercado/queso-rallado-cuatro-quesos-carrefour-200-g/R-521030772/p",
-    "https://www.carrefour.es/supermercado/queso-mozzarella-en-lonchas-carrefour-200-g/R-521030724/p",
-    "https://www.carrefour.es/supermercado/leche-semidesnatada-carrefour-brik-1-l/R-521007071/p",
-    "https://www.carrefour.es/supermercado/leche-entera-carrefour-brik-1-l/R-521006992/p",
-    "https://www.carrefour.es/supermercado/leche-semidesnatada-carrefour-sin-lactosa-brik-1-l/R-714713105/p",
+    "https://www.carrefour.es/supermercado/copos-de-avena-integral-original-carrefour-500-g/R-641402048/p",
+    "https://www.carrefour.es/supermercado/chocolate-con-leche-carrefour-classic-sin-gluten-150-g/R-521004209/p",
+    "https://www.carrefour.es/supermercado/ketchup-classic-carrefour-envase-560-g/R-712515965/p",
+    "https://www.carrefour.es/supermercado/mostaza-de-dijon-classic-carrefour-frasco-200-g/R-VC4AECOMM-524157/p",
+    "https://www.carrefour.es/supermercado/zumo-de-naranja-carrefour-brik-1-l/R-521030036/p",
+    "https://www.carrefour.es/supermercado/mermelada-de-fresa-catgoria-extra-carrefour-650-g/R-521003435/p",
+    "https://www.carrefour.es/supermercado/caldo-de-pollo-en-polvo-calnort-sin-gluten-1-kg/R-prod270619/p",
+    "https://www.carrefour.es/supermercado/biscottes-classic-carrefour-540-g/R-VC4AECOMM-517695/p",
 ]
 MARKERS = ["Información nutricional", "Ingredientes", "Denominación legal", "Alérgenos", "Contenido neto"]
 BLOCK_RE = re.compile(
