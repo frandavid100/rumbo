@@ -1,103 +1,103 @@
 {
-  "built_at": "2026-08-20T23:10:25.968543+00:00",
+  "built_at": "2026-08-20T23:11:25.956437+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 125,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 132,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 11,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 54,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 4444,
+    "evidence_rows": 4547,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
     "nutrition_complete": 139,
-    "nutrition_not_found": 43,
+    "nutrition_not_found": 50,
     "nutrition_partial": 18,
-    "verified_direct_products": 200,
-    "verified_first_party_products": 200,
+    "verified_direct_products": 207,
+    "verified_first_party_products": 207,
     "verified_listing_only_observations": 11,
-    "verified_product_page_observations": 189
+    "verified_product_page_observations": 196
   },
   "coverage": {
     "allergens": {
-      "count": 66,
-      "pct": 33.0
+      "count": 71,
+      "pct": 34.3
     },
     "attributes": {
-      "count": 200,
+      "count": 207,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 11.5
+      "pct": 11.11
     },
     "brand": {
-      "count": 175,
-      "pct": 87.5
+      "count": 182,
+      "pct": 87.92
     },
     "category_path": {
       "count": 115,
-      "pct": 57.5
+      "pct": 55.56
     },
     "gtin": {
       "count": 4,
-      "pct": 2.0
+      "pct": 1.93
     },
     "image_url": {
       "count": 8,
-      "pct": 4.0
+      "pct": 3.86
     },
     "ingredients": {
-      "count": 166,
-      "pct": 83.0
+      "count": 173,
+      "pct": 83.57
     },
     "legal_name": {
-      "count": 168,
-      "pct": 84.0
+      "count": 175,
+      "pct": 84.54
     },
     "mandatory_mentions": {
       "count": 60,
-      "pct": 30.0
+      "pct": 28.99
     },
     "manufacturer_packer_importer": {
-      "count": 169,
-      "pct": 84.5
+      "count": 176,
+      "pct": 85.02
     },
     "name": {
-      "count": 200,
+      "count": 207,
       "pct": 100.0
     },
     "net_content": {
-      "count": 164,
-      "pct": 82.0
+      "count": 171,
+      "pct": 82.61
     },
     "nutriscore": {
       "count": 57,
-      "pct": 28.5
+      "pct": 27.54
     },
     "nutrition_extra": {
-      "count": 186,
-      "pct": 93.0
+      "count": 193,
+      "pct": 93.24
     },
     "operator_address": {
-      "count": 169,
-      "pct": 84.5
+      "count": 176,
+      "pct": 85.02
     },
     "preparation_instructions": {
       "count": 96,
-      "pct": 48.0
+      "pct": 46.38
     },
     "price_eur": {
-      "count": 200,
+      "count": 207,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 166,
-      "pct": 83.0
+      "count": 173,
+      "pct": 83.57
     },
     "unit_price_text": {
-      "count": 200,
+      "count": 207,
       "pct": 100.0
     }
   },
@@ -105,39 +105,39 @@
   "nutrition_field_coverage": {
     "calories_kcal": {
       "count": 157,
-      "pct": 78.5
+      "pct": 75.85
     },
     "carbohydrate_g": {
       "count": 154,
-      "pct": 77.0
+      "pct": 74.4
     },
     "energy_kj": {
       "count": 157,
-      "pct": 78.5
+      "pct": 75.85
     },
     "fat_g": {
       "count": 148,
-      "pct": 74.0
+      "pct": 71.5
     },
     "fiber_g": {
       "count": 48,
-      "pct": 24.0
+      "pct": 23.19
     },
     "protein_g": {
       "count": 150,
-      "pct": 75.0
+      "pct": 72.46
     },
     "salt_g": {
       "count": 147,
-      "pct": 73.5
+      "pct": 71.01
     },
     "saturates_g": {
       "count": 147,
-      "pct": 73.5
+      "pct": 71.01
     },
     "sugars_g": {
       "count": 151,
-      "pct": 75.5
+      "pct": 72.95
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
