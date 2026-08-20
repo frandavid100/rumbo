@@ -1,142 +1,142 @@
 {
-  "built_at": "2026-08-20T12:13:41.758946+00:00",
+  "built_at": "2026-08-20T12:59:02.158956+00:00",
   "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 51,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 54,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 4,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 4,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 1514,
+    "evidence_rows": 1591,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 50,
+    "nutrition_complete": 53,
     "nutrition_not_found": 6,
     "nutrition_partial": 6,
-    "verified_direct_products": 62,
-    "verified_first_party_products": 62,
+    "verified_direct_products": 65,
+    "verified_first_party_products": 65,
     "verified_listing_only_observations": 4,
-    "verified_product_page_observations": 58
+    "verified_product_page_observations": 61
   },
   "coverage": {
     "allergens": {
       "count": 23,
-      "pct": 37.1
+      "pct": 35.38
     },
     "attributes": {
-      "count": 62,
+      "count": 65,
       "pct": 100.0
     },
     "availability": {
       "count": 5,
-      "pct": 8.06
+      "pct": 7.69
     },
     "brand": {
-      "count": 58,
-      "pct": 93.55
+      "count": 61,
+      "pct": 93.85
     },
     "category_path": {
-      "count": 40,
-      "pct": 64.52
+      "count": 43,
+      "pct": 66.15
     },
     "gtin": {
       "count": 4,
-      "pct": 6.45
+      "pct": 6.15
     },
     "image_url": {
       "count": 4,
-      "pct": 6.45
+      "pct": 6.15
     },
     "ingredients": {
-      "count": 57,
-      "pct": 91.94
+      "count": 60,
+      "pct": 92.31
     },
     "legal_name": {
-      "count": 57,
-      "pct": 91.94
+      "count": 60,
+      "pct": 92.31
     },
     "mandatory_mentions": {
-      "count": 22,
-      "pct": 35.48
+      "count": 23,
+      "pct": 35.38
     },
     "manufacturer_packer_importer": {
-      "count": 56,
-      "pct": 90.32
+      "count": 59,
+      "pct": 90.77
     },
     "name": {
-      "count": 62,
+      "count": 65,
       "pct": 100.0
     },
     "net_content": {
-      "count": 57,
-      "pct": 91.94
+      "count": 60,
+      "pct": 92.31
     },
     "nutriscore": {
       "count": 28,
-      "pct": 45.16
+      "pct": 43.08
     },
     "nutrition_extra": {
-      "count": 48,
-      "pct": 77.42
+      "count": 51,
+      "pct": 78.46
     },
     "operator_address": {
-      "count": 56,
-      "pct": 90.32
+      "count": 59,
+      "pct": 90.77
     },
     "preparation_instructions": {
-      "count": 42,
-      "pct": 67.74
+      "count": 45,
+      "pct": 69.23
     },
     "price_eur": {
-      "count": 62,
+      "count": 65,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 57,
-      "pct": 91.94
+      "count": 60,
+      "pct": 92.31
     },
     "unit_price_text": {
-      "count": 62,
+      "count": 65,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 56,
-      "pct": 90.32
+      "count": 59,
+      "pct": 90.77
     },
     "carbohydrate_g": {
-      "count": 53,
-      "pct": 85.48
+      "count": 56,
+      "pct": 86.15
     },
     "energy_kj": {
-      "count": 56,
-      "pct": 90.32
+      "count": 59,
+      "pct": 90.77
     },
     "fat_g": {
-      "count": 55,
-      "pct": 88.71
+      "count": 58,
+      "pct": 89.23
     },
     "fiber_g": {
-      "count": 15,
-      "pct": 24.19
+      "count": 16,
+      "pct": 24.62
     },
     "protein_g": {
-      "count": 52,
-      "pct": 83.87
+      "count": 55,
+      "pct": 84.62
     },
     "salt_g": {
-      "count": 53,
-      "pct": 85.48
+      "count": 56,
+      "pct": 86.15
     },
     "saturates_g": {
-      "count": 55,
-      "pct": 88.71
+      "count": 58,
+      "pct": 89.23
     },
     "sugars_g": {
-      "count": 51,
-      "pct": 82.26
+      "count": 54,
+      "pct": 83.08
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -831,6 +831,69 @@
     {
       "allergens": null,
       "attributes": {
+        "certificate": "Agricultura ecológica de la Unión Europea",
+        "country_of_origin": "España",
+        "milk_origin": "Cabra",
+        "no_artificial_flavours_or_colours": true,
+        "organic": true,
+        "refrigerated": true,
+        "sanitary_register": "RGSEAA:1501603/AB",
+        "yogurt_type": "Natural"
+      },
+      "availability": null,
+      "brand": "CARREFOUR ECO",
+      "calories_kcal": 79.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/yogur-natural-de-leche-de-cabra-ecologica-carrefour-bio-420-g/R-521029383/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.7-indexed",
+      "carbohydrate_g": 4.7,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Yogures y Postres",
+        "Yogur Natural y Sabores",
+        "Natural"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 328.0,
+      "fat_g": 5.1,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Leche entera pasteurizada de cabra* y fermentos lácticos.* Procedente de la agricultura ecológica. Origen de la leche: España.",
+      "legal_name": "Yogur natural de leche de cabra procedente de la agricultura ecológica.",
+      "mandatory_mentions": "Producto ecológico",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour, S.A.",
+      "name": "Yogur natural de leche de cabra ecológica Carrefour Bio 420 g.",
+      "net_content": "420 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T12:55:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
+      "page_sha256": null,
+      "preparation_instructions": "Refrigerado",
+      "price_currency": "EUR",
+      "price_eur": 2.75,
+      "protein_g": 3.4,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page or the official Carrefour category page that linked to it. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521029383",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.09,
+      "saturates_g": 3.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Consérvese entre 1 y 8° C",
+      "sugars_g": 3.9,
+      "unit_price_text": "6,55 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
         "origin": "España",
         "refrigerated": true,
         "sanitary_registration": "15.00066/M",
@@ -1195,61 +1258,6 @@
       "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
       "sugars_g": 5.4,
       "unit_price_text": "3,79 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "oil_type": "Aceite de oliva suave",
-        "package_format": "Botella",
-        "packaging": "Botella"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 900.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-suave-04-carrefour-1-l/R-526600666/p",
-      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
-      "capture_probe_version": "agent-web-direct-1.3-indexed",
-      "carbohydrate_g": null,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Aceites y vinagres"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 3700.0,
-      "fat_g": 100.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Aceite de oliva refinado, aceite de oliva virgen",
-      "legal_name": "Aceite de oliva-Contiene exclusivamente aceites de oliva refinados y aceites de oliva vírgenes.Aceite que contiene exclusivamente aceites de oliva que se hayan sometido a un tratamiento de refinado y de aceites obtenidos directamente de aceitunas.",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Aceite de oliva suave 0,4º Carrefour 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_PARTIAL",
-      "observed_at": "2026-08-20T12:02:41.459753+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 3.79,
-      "protein_g": null,
-      "provenance_note": "Product details were observed on the official Carrefour product page; price/unit price were taken from the more recent official Aceites y vinagres category listing. Indexed crawl ages differ, so no value is asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "526600666",
-      "retrieval_freshness": "MIXED_INDEXED_CRAWL_LAG_POSSIBLE",
-      "salt_g": null,
-      "saturates_g": 14.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Almacenar en lugar fresco, seco y alejado de la luz.",
-      "sugars_g": null,
-      "unit_price_text": "3,79 €/l"
     }
   ],
   "source": "https://www.carrefour.es",
