@@ -242,7 +242,7 @@ class CulinarySatisfactionEvaluatorTest {
             listOf(
                 PlannedFood(chicken.id, 150.0, false),
                 PlannedFood(beans.id, 100.0, false),
-                PlannedFood(leaves.id, 150.0, false)
+                PlannedFood(leaves.id, 100.0, false)
             ),
             listOf(chicken, beans, leaves)
         )
@@ -253,7 +253,7 @@ class CulinarySatisfactionEvaluatorTest {
             listOf(
                 PlannedFood(chicken.id, 150.0, false),
                 PlannedFood(beans.id, 100.0, false),
-                PlannedFood(leaves.id, 150.0, false),
+                PlannedFood(leaves.id, 100.0, false),
                 PlannedFood(dressing.id, 30.0, false)
             ),
             listOf(chicken, beans, leaves, dressing)
