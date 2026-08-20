@@ -7635,7 +7635,8 @@ private fun nutritionalRoleEfficiency(food: Food, role: String): Double? {
 private fun culinaryRoleLabel(value: String): String = when (value) {
     "PLATE_CENTER" -> "Centro del plato"
     "PLATE_BASE" -> "Base del plato"
-    "SIDE" -> "Acompañamiento"\n    "SALAD_BASE" -> "Base de ensalada"
+    "SIDE" -> "Acompañamiento"
+    "SALAD_BASE" -> "Base de ensalada"
     "TOPPING" -> "Topping"
     "SAUCE_DRESSING" -> "Salsa o aliño"
     "CEREAL_BASE" -> "Base para cereal"
