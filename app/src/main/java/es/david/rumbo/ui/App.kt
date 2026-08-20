@@ -2306,7 +2306,9 @@ private data class RepertoireProgressTarget(
     val buttonLabel: String? = null,
     val nutritionalRole: String? = null,
     val culinaryRole: String? = null,
-    val mealType: MealType? = null
+    val mealType: MealType? = null,
+    val retryMealType: MealType? = null,
+    val retryWholeDay: Boolean = false
 )
 
 private data class RepertoireRoleMilestone(
@@ -2362,7 +2364,9 @@ private fun repertoireProgressTarget(
             }
             if (roleless != null) {
                 return 2 to RepertoireProgressTarget(
-                    "Nivel 2 conseguido. Para certificar el nivel 3 hay al menos un alimento sin una clasificación culinaria suficiente (${roleless.foodName ?: "alimento sin clasificar"}). No necesitas añadir otro alimento: hay que resolver esa clasificación o encontrar una composición que no lo necesite."
+                    message = "Nivel 2 conseguido. ${roleless.foodName ?: "Un alimento"} no tiene una clasificación culinaria suficiente para certificar esta combinación. Rumbo puede buscar otro menú que no dependa de ese alimento.",
+                    buttonLabel = "Buscar otro menú",
+                    retryWholeDay = true
                 )
             }
             diagnostic.dependencyOpportunity?.let { dependency ->
@@ -2381,7 +2385,9 @@ private fun repertoireProgressTarget(
             }
             if (quantity != null) {
                 return 2 to RepertoireProgressTarget(
-                    "Nivel 2 conseguido. El mejor día encontrado todavía necesita una cantidad culinariamente extrema de ${quantity.foodName ?: "uno de tus alimentos"}. Rumbo seguirá tratando esto como un problema de combinación y ajuste, no como prueba de que te falten alimentos."
+                    message = "Nivel 2 conseguido. La cantidad de ${quantity.foodName ?: "uno de tus alimentos"} en ${quantity.mealType.label.lowercase()} queda fuera del intervalo culinario configurado. Rumbo puede sustituir esa comida por otra combinación.",
+                    buttonLabel = "Cambiar ${quantity.mealType.label.lowercase()}",
+                    retryMealType = quantity.mealType
                 )
             }
             val soft = diagnostic.issues.firstOrNull {
@@ -2390,7 +2396,9 @@ private fun repertoireProgressTarget(
             if (soft != null) {
                 if (diagnostic.compatibleCompanionAlreadyAvailable) {
                     return 2 to RepertoireProgressTarget(
-                        "Nivel 2 conseguido. Ya tienes en tu repertorio alimentos capaces de completar la combinación culinaria pendiente en ${soft.mealType.label.lowercase()}, pero la búsqueda acotada todavía no ha encontrado una composición completa compatible. No necesitas añadir otro alimento equivalente."
+                        message = "Nivel 2 conseguido. Ya tienes alimentos capaces de completar la combinación pendiente en ${soft.mealType.label.lowercase()}, pero esta propuesta no los combina correctamente.",
+                        buttonLabel = "Cambiar ${soft.mealType.label.lowercase()}",
+                        retryMealType = soft.mealType
                     )
                 }
                 val missingRole = diagnostic.unavailablePreferredRoles.sortedBy { it.ordinal }.firstOrNull()
@@ -2404,7 +2412,9 @@ private fun repertoireProgressTarget(
                 }
             }
             return 2 to RepertoireProgressTarget(
-                "Nivel 2 conseguido. La búsqueda acotada todavía no ha podido certificar un día culinariamente satisfactorio. Esto no demuestra que te falten alimentos."
+                message = "Nivel 2 conseguido. Esta propuesta todavía no puede certificarse como culinariamente satisfactoria. Rumbo puede buscar una combinación distinta con tu repertorio actual.",
+                buttonLabel = "Buscar otro menú",
+                retryWholeDay = true
             )
         }
         return 2 to RepertoireProgressTarget(
@@ -2738,11 +2748,22 @@ private fun RepertoireProgressCard(
                 target.buttonLabel?.let { label ->
                     FilledTonalButton(
                         onClick = {
-                            onOpenSearch(target.nutritionalRole, target.culinaryRole, target.mealType)
+                            when {
+                                target.retryMealType != null && witness != null ->
+                                    onChangeCertifiedDay(witness, target.retryMealType)
+                                target.retryWholeDay && witness != null ->
+                                    onChangeCertifiedDay(witness, null)
+                                else -> onOpenSearch(
+                                    target.nutritionalRole,
+                                    target.culinaryRole,
+                                    target.mealType
+                                )
+                            }
                         },
+                        enabled = !isChangingCertifiedDay,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(label)
+                        Text(if (isChangingCertifiedDay && (target.retryMealType != null || target.retryWholeDay)) "Buscando…" else label)
                     }
                 }
                 dayAssessment?.let { TodayNutritionSummary(it) }
@@ -3387,7 +3408,11 @@ private fun CertifiedMealWitnessCard(
             )
         }
     ).sortedWith(compareBy<WitnessDisplayEntry> { mealCategoryOrder(it.category) }.thenBy { it.name })
-    val itemCount = entries.size
+    // A grouped plate is one visual entry, but its ingredients remain separate
+    // foods for the meal summary.
+    val itemCount = meal?.items.orEmpty().size + meal?.dishes.orEmpty().sumOf { planned ->
+        dishesById[planned.dishId]?.ingredients?.size ?: 1
+    }
     Column(Modifier.fillMaxWidth()) {
         Column(
             Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(16.dp),
@@ -3431,6 +3456,7 @@ private fun CertifiedMealWitnessCard(
                             protein = totals.proteinGrams,
                             carbohydrates = totals.carbohydrateGrams,
                             fat = totals.fatGrams,
+                            isDish = true,
                             onClick = { onOpenDish(dish.id) }
                         )
                     } ?: run {
@@ -3450,6 +3476,7 @@ private fun CertifiedMealWitnessCard(
                             protein = total { it.proteinGrams },
                             carbohydrates = total { it.carbohydrateGrams },
                             fat = total { it.fatGrams },
+                            isDish = group.size > 1,
                             onClick = {
                                 if (food != null) onOpenFood(food.id) else {
                                     onOpenProposedDish(
@@ -3488,6 +3515,7 @@ private fun WitnessMenuItemRow(
     protein: Double?,
     carbohydrates: Double?,
     fat: Double?,
+    isDish: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
@@ -3495,7 +3523,7 @@ private fun WitnessMenuItemRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        FoodCategoryBadge(category)
+        if (isDish) PreparedDishBadge() else FoodCategoryBadge(category)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 name,
@@ -3513,6 +3541,17 @@ private fun WitnessMenuItemRow(
             )
         }
         SearchNutritionGrid(calories, protein, carbohydrates, fat, Modifier.width(114.dp))
+    }
+}
+
+@Composable
+private fun PreparedDishBadge() {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    Box(
+        Modifier.size(40.dp).background(color.copy(alpha = 0.16f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(Icons.Default.Restaurant, contentDescription = "Plato preparado", tint = color)
     }
 }
 
