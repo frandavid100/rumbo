@@ -7,6 +7,7 @@ on:
       - '.github/workflows/catalog-carrefour-first-party-smoke.yml'
       - 'tools/catalog/carrefour_first_party_inventory.py'
       - 'tools/catalog/carrefour_first_party_browser_probe.py'
+      - 'tools/catalog/carrefour_first_party_browser_inventory.py'
   workflow_dispatch:
 
 permissions:
@@ -17,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PROBE_REVISION: '2'
+  PROBE_REVISION: '3'
 
 jobs:
   smoke:
@@ -54,40 +55,82 @@ jobs:
           pip install playwright
           python -m playwright install --with-deps chromium
 
-      - name: Browser first-party product probe
+      - name: Browser first-party inventory
         working-directory: tools/catalog
-        run: python carrefour_first_party_browser_probe.py --out carrefour-first-party-browser-probe --concurrency 2
+        run: |
+          python carrefour_first_party_browser_inventory.py \
+            --out carrefour-first-party-browser-inventory \
+            --rotate \
+            --delay 8 \
+            --stop-after-blocks 1
 
-      - name: Show and validate probes
+      - name: Show and validate first-party results
         run: |
           python - <<'PY'
           import json, pathlib
-          for path in [
+          paths = [
               pathlib.Path('tools/catalog/carrefour-first-party-smoke/summary.json'),
-              pathlib.Path('tools/catalog/carrefour-first-party-browser-probe/summary.json'),
-          ]:
-              if path.exists():
-                  d=json.load(open(path,encoding='utf-8'))
-                  print('\n',path)
-                  print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
-                  if 'coverage' in d:
-                      print(json.dumps(d.get('coverage',{}),ensure_ascii=False,indent=2))
-          b=json.load(open('tools/catalog/carrefour-first-party-browser-probe/summary.json',encoding='utf-8'))
-          if b['counts']['usable_pages'] < 1:
-              raise SystemExit('Carrefour product pages are not usable from the GitHub browser runner')
+              pathlib.Path('tools/catalog/carrefour-first-party-browser-inventory/summary.json'),
+          ]
+          for path in paths:
+              if not path.exists():
+                  continue
+              d=json.load(open(path,encoding='utf-8'))
+              print('\n',path)
+              print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
+              print(json.dumps(d.get('coverage',{}),ensure_ascii=False,indent=2))
+              if d.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
+                  raise SystemExit(f'Bad provenance policy in {path}')
+              if str(d.get('classification_performed')).lower() != 'false':
+                  raise SystemExit(f'Extraction unexpectedly performed classification in {path}')
+          browser = json.load(open('tools/catalog/carrefour-first-party-browser-inventory/summary.json',encoding='utf-8'))
+          if browser['counts']['attempted'] < 1:
+              raise SystemExit('Browser inventory did not attempt any Carrefour product')
           PY
 
-      - name: Persist compact first-party reports
+      - name: Persist compact first-party reports and cumulative successes
         if: always()
         run: |
           mkdir -p tools/catalog/fixtures
           test ! -f tools/catalog/carrefour-first-party-smoke/summary.json || cp tools/catalog/carrefour-first-party-smoke/summary.json tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json
-          test ! -f tools/catalog/carrefour-first-party-browser-probe/summary.json || cp tools/catalog/carrefour-first-party-browser-probe/summary.json tools/catalog/fixtures/carrefour_first_party_browser_probe_latest.json
+          test ! -f tools/catalog/carrefour-first-party-browser-inventory/summary.json || cp tools/catalog/carrefour-first-party-browser-inventory/summary.json tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json
+          python - <<'PY'
+          import json, pathlib
+          fixtures=pathlib.Path('tools/catalog/fixtures')
+          out=pathlib.Path('tools/catalog/carrefour-first-party-browser-inventory')
+
+          def read_jsonl(path):
+              rows=[]
+              if path.exists():
+                  for line in path.read_text(encoding='utf-8').splitlines():
+                      try: rows.append(json.loads(line))
+                      except Exception: pass
+              return rows
+
+          products_path=fixtures/'carrefour_first_party_products_cumulative.jsonl'
+          products={r.get('retailer_sku'):r for r in read_jsonl(products_path) if r.get('retailer_sku')}
+          for r in read_jsonl(out/'products.jsonl'):
+              if r.get('retailer_sku') and not r.get('fetch_error'):
+                  products[r['retailer_sku']]=r
+          products_path.write_text(''.join(json.dumps(products[k],ensure_ascii=False)+'\n' for k in sorted(products)),encoding='utf-8')
+
+          evidence_path=fixtures/'carrefour_first_party_field_evidence_cumulative.jsonl'
+          evidence={}
+          for e in read_jsonl(evidence_path)+read_jsonl(out/'field_evidence.jsonl'):
+              key=(e.get('retailer_sku'),e.get('field'),e.get('source'),e.get('source_url'))
+              if all(key): evidence[key]=e
+          evidence_path.write_text(''.join(json.dumps(evidence[k],ensure_ascii=False)+'\n' for k in sorted(evidence)),encoding='utf-8')
+          print('cumulative products',len(products),'evidence',len(evidence))
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json tools/catalog/fixtures/carrefour_first_party_browser_probe_latest.json 2>/dev/null || true
+          git add \
+            tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json \
+            tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json \
+            tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl 2>/dev/null || true
           if ! git diff --cached --quiet; then
-            git commit -m "catalog: persist Carrefour first-party probes"
+            git commit -m "catalog: persist Carrefour first-party browser inventory"
             git pull --rebase origin agent/catalog-phase1
             git push origin HEAD:agent/catalog-phase1
           fi
@@ -99,6 +142,6 @@ jobs:
           name: carrefour-first-party-probes
           path: |
             tools/catalog/carrefour-first-party-smoke/
-            tools/catalog/carrefour-first-party-browser-probe/
+            tools/catalog/carrefour-first-party-browser-inventory/
           retention-days: 7
           if-no-files-found: warn
