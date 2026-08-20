@@ -1,142 +1,142 @@
 {
-  "built_at": "2026-08-20T13:03:57.334371+00:00",
+  "built_at": "2026-08-20T13:05:10.935558+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 58,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 4,
-    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 12,
+    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 17,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 1789,
+    "evidence_rows": 1923,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 57,
+    "nutrition_complete": 62,
     "nutrition_not_found": 14,
     "nutrition_partial": 6,
-    "verified_direct_products": 77,
-    "verified_first_party_products": 77,
+    "verified_direct_products": 82,
+    "verified_first_party_products": 82,
     "verified_listing_only_observations": 4,
-    "verified_product_page_observations": 73
+    "verified_product_page_observations": 78
   },
   "coverage": {
     "allergens": {
-      "count": 27,
-      "pct": 35.06
+      "count": 31,
+      "pct": 37.8
     },
     "attributes": {
-      "count": 77,
+      "count": 82,
       "pct": 100.0
     },
     "availability": {
       "count": 5,
-      "pct": 6.49
+      "pct": 6.1
     },
     "brand": {
-      "count": 68,
-      "pct": 88.31
+      "count": 73,
+      "pct": 89.02
     },
     "category_path": {
-      "count": 55,
-      "pct": 71.43
+      "count": 60,
+      "pct": 73.17
     },
     "gtin": {
       "count": 4,
-      "pct": 5.19
+      "pct": 4.88
     },
     "image_url": {
       "count": 8,
-      "pct": 10.39
+      "pct": 9.76
     },
     "ingredients": {
-      "count": 64,
-      "pct": 83.12
+      "count": 69,
+      "pct": 84.15
     },
     "legal_name": {
-      "count": 65,
-      "pct": 84.42
+      "count": 70,
+      "pct": 85.37
     },
     "mandatory_mentions": {
-      "count": 32,
-      "pct": 41.56
+      "count": 36,
+      "pct": 43.9
     },
     "manufacturer_packer_importer": {
-      "count": 66,
-      "pct": 85.71
+      "count": 71,
+      "pct": 86.59
     },
     "name": {
-      "count": 77,
+      "count": 82,
       "pct": 100.0
     },
     "net_content": {
-      "count": 64,
-      "pct": 83.12
+      "count": 69,
+      "pct": 84.15
     },
     "nutriscore": {
-      "count": 32,
-      "pct": 41.56
+      "count": 34,
+      "pct": 41.46
     },
     "nutrition_extra": {
-      "count": 63,
-      "pct": 81.82
+      "count": 68,
+      "pct": 82.93
     },
     "operator_address": {
-      "count": 66,
-      "pct": 85.71
+      "count": 71,
+      "pct": 86.59
     },
     "preparation_instructions": {
-      "count": 50,
-      "pct": 64.94
+      "count": 54,
+      "pct": 65.85
     },
     "price_eur": {
-      "count": 77,
+      "count": 82,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 65,
-      "pct": 84.42
+      "count": 70,
+      "pct": 85.37
     },
     "unit_price_text": {
-      "count": 77,
+      "count": 82,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 63,
-      "pct": 81.82
+      "count": 68,
+      "pct": 82.93
     },
     "carbohydrate_g": {
-      "count": 60,
-      "pct": 77.92
+      "count": 65,
+      "pct": 79.27
     },
     "energy_kj": {
-      "count": 63,
-      "pct": 81.82
+      "count": 68,
+      "pct": 82.93
     },
     "fat_g": {
-      "count": 62,
-      "pct": 80.52
+      "count": 67,
+      "pct": 81.71
     },
     "fiber_g": {
       "count": 16,
-      "pct": 20.78
+      "pct": 19.51
     },
     "protein_g": {
-      "count": 59,
-      "pct": 76.62
+      "count": 64,
+      "pct": 78.05
     },
     "salt_g": {
-      "count": 60,
-      "pct": 77.92
+      "count": 65,
+      "pct": 79.27
     },
     "saturates_g": {
-      "count": 62,
-      "pct": 80.52
+      "count": 67,
+      "pct": 81.71
     },
     "sugars_g": {
-      "count": 58,
-      "pct": 75.32
+      "count": 63,
+      "pct": 76.83
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -1128,6 +1128,130 @@
       "unit_price_text": "2,07 €/kg"
     },
     {
+      "allergens": "Contiene: Leche",
+      "attributes": {
+        "cheese_curing": "Madurado",
+        "cheese_format": "Loncha",
+        "cheese_variety": "Mozzarella",
+        "conservation_mode": "Refrigerado",
+        "milk_origin": "Vaca",
+        "refrigerated": true,
+        "sanitary_register": "NL Z 0507 EG"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 293.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/queso-mozzarella-en-lonchas-carrefour-200-g/R-521030724/p",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-2.0-indexed",
+      "carbohydrate_g": 1.0,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "Frescos",
+        "Quesos"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 1219.0,
+      "fat_g": 21.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Leche pasteurizada de vaca, sal, fermentos lácticos, coagulante de leche microbiano.",
+      "legal_name": "Mozzarella, aproximadamente 10 lonchas. Queso de pasta hilada.",
+      "mandatory_mentions": "Una vez abierto consumir rápidamente. Envasado en atmósfera protectora.",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Queso mozzarella en lonchas Carrefour 200 g.",
+      "net_content": "200 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T13:20:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid (España)",
+      "page_sha256": null,
+      "preparation_instructions": "Refrigerado",
+      "price_currency": "EUR",
+      "price_eur": 1.8,
+      "protein_g": 25.0,
+      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521030724",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 1.0,
+      "saturates_g": 15.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar refrigerado a un máximo de 7 ºC.",
+      "sugars_g": 1.0,
+      "unit_price_text": "9,00 €/kg"
+    },
+    {
+      "allergens": "Contiene: Leche",
+      "attributes": {
+        "cheese_format": "Bolsa",
+        "cheese_use": [
+          "Gratinar",
+          "Rallados"
+        ],
+        "cheese_variety": [
+          "Mozzarella",
+          "Emmental"
+        ],
+        "refrigerated": true,
+        "sanitary_register": "DK-M206 EC"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 347.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/queso-rallado-cuatro-quesos-carrefour-200-g/R-521030772/p",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-2.0-indexed",
+      "carbohydrate_g": 2.6,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "Frescos",
+        "Quesos"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 1441.0,
+      "fat_g": 26.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Leche, almidón de patata, sal, fermentos lácticos, cuajo microbiano, annatto, nitrato de sodio, cultivo de ácido propiónico y cloruro de calcio",
+      "legal_name": "Mezcla de quesos Mozzarella, Cheddar, Gouda y Emmental",
+      "mandatory_mentions": "Procedencia de la leche: UE",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Queso rallado cuatro quesos Carrefour 200 g.",
+      "net_content": "200 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T13:20:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 2.05,
+      "protein_g": 24.0,
+      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521030772",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 1.5,
+      "saturates_g": 17.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en frío: 2-5°C",
+      "sugars_g": 0.5,
+      "unit_price_text": "10,25 €/kg"
+    },
+    {
       "allergens": null,
       "attributes": {
         "halal": true,
@@ -1182,109 +1306,6 @@
       "storage_conditions": "Preservar de la luz y del calor.",
       "sugars_g": 0.0,
       "unit_price_text": "2,85 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "conservation_mode": "Congelado",
-        "gluten_free": true,
-        "lactose_free": true,
-        "product_type": "Surimi",
-        "refrigerated": true
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 141.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.0",
-      "carbohydrate_g": 18.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 594.0,
-      "fat_g": 4.8,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Carne de pescado 38%, agua, almidón de maíz, aceite de colza, almidón de patata, azúcar, estabilizantes: sorbitoles-difosfatos-trifosfatos-polifosfatos-carragenanos, sal, almidón de trigo sin gluten, huevo*, aroma, colorante: licopeno. Puede contener trazas de moluscos, soja, crustáceos. * Huevos de gallinas camperas.",
-      "legal_name": "Palitos de surimi con carne de pescado y sabor de cangrejo, ultracongelados.",
-      "mandatory_mentions": "Puede contener trazas de moluscos, soja, crustáceos.",
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour SA",
-      "name": "Palitos de mar Carrefour 450 g.",
-      "net_content": "450 g",
-      "nutriscore": "C",
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:23:16.999047+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
-      "page_sha256": null,
-      "preparation_instructions": "Congelado. No congelar de nuevo tras la descongelación.",
-      "price_currency": "EUR",
-      "price_eur": 1.88,
-      "protein_g": 6.5,
-      "provenance_note": "All populated product fields were observed directly on the official carrefour.es product page; external sources may only have seeded the candidate URL.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521034877",
-      "salt_g": 1.7,
-      "saturates_g": 0.4,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar 24h en el frigorífico, 3 días en el congelador del frigorífico y hasta la fecha de durabilidad mínima en un congelador*** a -18ºC. Atención, no volver a congelar una vez descongelado.",
-      "sugars_g": 5.2,
-      "unit_price_text": "4,18 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "alternative_vegetal": true,
-        "legume_type": "Garbanzos",
-        "origin": "Unión Europea y fuera de la UE",
-        "packaging": "Otros envases"
-      },
-      "availability": null,
-      "brand": "LUENGO",
-      "calories_kcal": 348.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/garbanzo-lechoso-categoria-extra-luengo-1-kg/R-522713748/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.1-indexed",
-      "carbohydrate_g": 46.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 1466.0,
-      "fat_g": 5.8,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Garbanzo Lechoso",
-      "legal_name": "Garbanzo blanco lechoso",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "LEGUMBRES LUENGO. S.A.",
-      "name": "Garbanzo lechoso categoría extra Luengo 1 kg.",
-      "net_content": "1000 g",
-      "nutriscore": "A",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:54:00+00:00",
-      "operator_address": "Ctra Nacional VI, km 314. 24794 Riego de la Vega (León)",
-      "page_sha256": null,
-      "preparation_instructions": "ver envase",
-      "price_currency": "EUR",
-      "price_eur": 4.39,
-      "protein_g": 21.0,
-      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "522713748",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 1.1,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
-      "sugars_g": 5.4,
-      "unit_price_text": "4,39 €/kg"
     }
   ],
   "source": "https://www.carrefour.es",
