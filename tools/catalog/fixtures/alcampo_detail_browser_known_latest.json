@@ -2,15 +2,15 @@
   "source": "https://www.compraonline.alcampo.es",
   "version": "alcampo-detail-browser-v1.2",
   "offset": 0,
-  "concurrency": 2,
+  "concurrency": 1,
   "counts": {
-    "requested": 60,
-    "fetched": 2,
-    "errors": 58,
+    "requested": 1,
+    "fetched": 1,
+    "errors": 0,
     "with_gtin": 0,
-    "with_legal_name": 2,
-    "with_ingredients": 2,
-    "declared_valid_nutrition": 2,
+    "with_legal_name": 1,
+    "with_ingredients": 1,
+    "declared_valid_nutrition": 1,
     "declared_incomplete_nutrition": 0,
     "declared_invalid_nutrition": 0
   }
