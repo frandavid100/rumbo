@@ -330,7 +330,69 @@ object CulinarilySatisfactoryWitnessRepair {
                             }
                         }
                     }
-                    CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED -> Unit
+                    CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED -> {
+                        val index = sourceIndex ?: return@forEach
+                        val sourceId = originalMeal.items[index].foodId
+                        val sourceFood = foodsById[sourceId] ?: return@forEach
+                        val sourceRoles = CulinaryPolicy.roles(sourceFood)
+                        val occupiedConcepts = witness.meals.flatMap { meal ->
+                            materialize(meal, witness.day).items.mapNotNull { item ->
+                                if (meal.type == originalMeal.type && item.foodId == sourceId) null
+                                else foodsById[item.foodId]?.let(::repetitionConcept)
+                            }
+                        }.toSet()
+
+                        // Removing an optional repeated occurrence is the smallest
+                        // valid repair when the meal still has another component.
+                        if (!isMandatory(sourceId, originalMeal.type, activeRules) &&
+                            (originalMeal.items.size > 1 || originalMeal.dishes.isNotEmpty())
+                        ) {
+                            val items = originalMeal.items.toMutableList().also { it.removeAt(index) }
+                            add(replaceMeal(witness, mealIndex, originalMeal.copy(items = items)))
+                        }
+
+                        // Otherwise replace this occurrence with an allowed food
+                        // that can perform the same culinary job and whose family
+                        // is not already used elsewhere in the day. Names and
+                        // brands never participate in this decision.
+                        activeRules.asSequence()
+                            .filter {
+                                originalMeal.type in it.allowedMealTypes &&
+                                    it.itemId != sourceId &&
+                                    originalMeal.items.none { item -> item.foodId == it.itemId }
+                            }
+                            .mapNotNull { rule ->
+                                val food = foodsById[rule.itemId] ?: return@mapNotNull null
+                                if (repetitionConcept(food) in occupiedConcepts) return@mapNotNull null
+                                val role = CulinaryPolicy.roles(food)
+                                    .intersect(sourceRoles)
+                                    .filter { CulinaryPolicy.isAllowedForMeal(it, originalMeal.type) }
+                                    .minByOrNull { it.ordinal } ?: return@mapNotNull null
+                                Triple(rule, food, role)
+                            }
+                            .distinctBy { it.first.itemId }
+                            .sortedWith(
+                                compareByDescending<Triple<PlanningRule, Food, CulinaryRole>> {
+                                    it.second.category == sourceFood.category
+                                }.thenByDescending {
+                                    it.third in issue.roles
+                                }.thenBy { it.first.itemId }
+                            )
+                            .take(MAX_COMPANIONS_PER_ISSUE)
+                            .forEach { (_, food, role) ->
+                                val policy = PortionPolicyResolver.resolve(
+                                    food,
+                                    role,
+                                    originalMeal.type,
+                                    recommendation,
+                                    mealShares,
+                                    portionContext
+                                )
+                                val items = originalMeal.items.toMutableList()
+                                items[index] = satisfactoryItem(food.id, policy)
+                                add(replaceMeal(witness, mealIndex, originalMeal.copy(items = items)))
+                            }
+                    }
 
                     CulinarySatisfactionIssueKind.ROLE_UNRESOLVED -> {
                         sourceIndex?.let { index ->
@@ -403,6 +465,9 @@ object CulinarilySatisfactoryWitnessRepair {
         grams > policy.satisfactoryMaximum -> grams - policy.satisfactoryMaximum
         else -> 0.0
     }
+
+    private fun repetitionConcept(food: Food): String =
+        food.family?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "food:${food.id}"
 
     private fun rolesPresent(
         meal: PlannedMeal,
