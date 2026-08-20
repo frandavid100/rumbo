@@ -6,6 +6,8 @@ import es.david.rumbo.model.MealDistributionPolicy
 import es.david.rumbo.model.MealType
 import es.david.rumbo.model.Recommendation
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.round
 
@@ -156,6 +158,26 @@ object PortionPolicyResolver {
             val center = (satisfactoryMinimum + satisfactoryMaximum) / 2.0
             satisfactoryMinimum = center
             satisfactoryMaximum = center
+        }
+
+        // A theoretical edge can fall just beside a practical unit. Admit only
+        // the closest adjacent unit, and only within a small unit-relative
+        // tolerance; never widen both ends of the interval.
+        food?.practicalUnitStep()?.let { step ->
+            val lower = (floor(satisfactoryMinimum / step) * step)
+                .takeIf { it >= minimum && it > 0.0 }
+                ?.let { amount -> amount to (satisfactoryMinimum - amount) }
+            val upper = (ceil(satisfactoryMaximum / step) * step)
+                .takeIf { it <= maximum }
+                ?.let { amount -> amount to (amount - satisfactoryMaximum) }
+            val nearest = listOfNotNull(lower?.let { false to it }, upper?.let { true to it })
+                .minWithOrNull(compareBy<Pair<Boolean, Pair<Double, Double>>> { it.second.second }
+                    .thenBy { it.first })
+            val tolerance = (step * 0.10).coerceIn(1.0, 10.0)
+            nearest?.takeIf { it.second.second <= tolerance }?.let { (isUpper, candidate) ->
+                if (isUpper) satisfactoryMaximum = candidate.first
+                else satisfactoryMinimum = candidate.first
+            }
         }
         val effectivePreferred = (reference * scale)
             .coerceIn(satisfactoryMinimum, satisfactoryMaximum)

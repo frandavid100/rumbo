@@ -165,6 +165,25 @@ class PortionPolicyTest {
         assertTrue(cheesePolicy.satisfactoryMaximum < fruitPolicy.satisfactoryMaximum)
     }
 
+    @Test
+    fun discreteUnitSnapsTheoreticalIntervalToAUsableServing() {
+        val banana = food(8, 180.0, setOf("DESSERT")).copy(
+            unitAmount = 85.0,
+            wholeUnitsOnly = true
+        )
+        val resolved = PortionPolicyResolver.resolve(
+            banana,
+            CulinaryRole.DESSERT,
+            MealType.BREAKFAST,
+            Recommendation(1875, 154, 198, 52, "test"),
+            MealDistributionPolicy.defaults
+        )
+
+        assertTrue(resolved.isSatisfactory(85.0))
+        assertEquals(85.0, resolved.satisfactoryMinimum, 0.001)
+        assertTrue(resolved.satisfactoryMaximum < 255.0)
+    }
+
     private fun food(id: Long, basis: Double, roles: Set<String>) = Food(
         id = id,
         name = "F$id",
