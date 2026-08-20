@@ -16,6 +16,7 @@ enum class CulinarySatisfactionIssueKind {
     ROLE_UNRESOLVED,
     QUANTITY_OUTSIDE_SATISFACTORY_RANGE,
     SOFT_RELATION_UNSATISFIED,
+    DAILY_REPETITION_DISCOURAGED,
     HARD_ROLE_ASSIGNMENT_INVALID
 }
 
@@ -108,9 +109,36 @@ object CulinarySatisfactionEvaluator {
                 portionContext
             )
         }
+        val repetitions = results
+            .flatMap { meal -> meal.assignedRoles.map { (foodId, role) -> Triple(foodId, role, meal.mealType) } }
+            .groupBy { it.first }
+            .mapNotNull { (foodId, occurrences) ->
+                val maximum = CulinarySoftPolicy.maximumDailyOccurrences(occurrences.map { it.second })
+                    ?: return@mapNotNull null
+                if (occurrences.size <= maximum) return@mapNotNull null
+                val food = foodsById[foodId]
+                CulinarySatisfactionIssue(
+                    kind = CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED,
+                    mealType = occurrences[maximum].third,
+                    foodId = foodId,
+                    foodName = food?.name,
+                    roles = occurrences.mapTo(linkedSetOf()) { it.second },
+                    message = "${food?.name ?: "El alimento"} se repite demasiado dentro del mismo día."
+                )
+            }
+        val finalResults = if (repetitions.isEmpty() || results.isEmpty()) results else {
+            val issuesByMeal = repetitions.groupBy { it.mealType }
+            results.map { result ->
+                val extra = issuesByMeal[result.mealType].orEmpty()
+                if (extra.isEmpty()) result else result.copy(
+                    satisfactory = false,
+                    issues = result.issues + extra
+                )
+            }
+        }
         return CulinaryDaySatisfaction(
-            satisfactory = results.isNotEmpty() && results.all { it.satisfactory },
-            meals = results
+            satisfactory = finalResults.isNotEmpty() && finalResults.all { it.satisfactory },
+            meals = finalResults
         )
     }
 
@@ -158,6 +186,7 @@ object CulinarySatisfactionEvaluator {
 
         val eligibleRoles = occurrences.map { occurrence ->
             occurrence.roles.filterTo(linkedSetOf()) { role ->
+                meal.type in CulinaryPolicy.policy(role).suggestedMealTypes &&
                 PortionPolicyResolver.resolve(
                     occurrence.food,
                     role,

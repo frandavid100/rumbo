@@ -284,6 +284,7 @@ object CulinarilySatisfactoryDaySearch {
                 CulinarySatisfactionIssueKind.HARD_ROLE_ASSIGNMENT_INVALID -> 1_000_000.0
                 CulinarySatisfactionIssueKind.ROLE_UNRESOLVED -> 500_000.0
                 CulinarySatisfactionIssueKind.SOFT_RELATION_UNSATISFIED -> 100_000.0
+                CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED -> 50_000.0
                 CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE -> 10_000.0
             }
         } + evaluation.issues.size

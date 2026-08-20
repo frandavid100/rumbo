@@ -5,7 +5,21 @@ package es.david.rumbo.logic
  * Hard REQUIRE/FORBID/cardinality rules remain in CulinaryPolicy.
  */
 object CulinarySoftPolicy {
-    const val POLICY_VERSION = 1
+    const val POLICY_VERSION = 2
+
+    private val unlimitedDailyRepetitionRoles = setOf(
+        CulinaryRole.COOKING_MEDIUM,
+        CulinaryRole.SAUCE_DRESSING,
+        CulinaryRole.SEASONING,
+        CulinaryRole.BEVERAGE
+    )
+
+    private val twiceDailyRoles = setOf(
+        CulinaryRole.PLATE_BASE,
+        CulinaryRole.SANDWICH_BASE,
+        CulinaryRole.CEREAL_BASE,
+        CulinaryRole.POWDER_BASE
+    )
 
     private val plateVehicleRoles = setOf(
         CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE
@@ -31,5 +45,11 @@ object CulinarySoftPolicy {
             val targets = preferredCompanions(role)
             (role to targets).takeIf { targets.isNotEmpty() && targets.none(present::contains) }
         }.toMap()
+    }
+
+    fun maximumDailyOccurrences(roles: Collection<CulinaryRole>): Int? = when {
+        roles.isNotEmpty() && roles.all(unlimitedDailyRepetitionRoles::contains) -> null
+        roles.isNotEmpty() && roles.all(twiceDailyRoles::contains) -> 2
+        else -> 1
     }
 }
