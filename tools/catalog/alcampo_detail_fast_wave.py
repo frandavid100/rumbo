@@ -13,15 +13,14 @@ from urllib.error import HTTPError, URLError
 import alcampo_detail_enricher as base
 from nutrition_validation import validate_nutrition
 
-VERSION = "alcampo-detail-fast-wave-v1.1"
+VERSION = "alcampo-detail-fast-wave-v1.2"
 _TLS = threading.local()
 
 
 def opener(reset: bool = False):
     if reset or not getattr(_TLS, "opener", None):
-        # Product-detail probes proved that a browser-UA request to /products/x/<sku>
-        # can return the complete SSR page without any category priming. Avoid the
-        # extra priming request because each request consumes scarce WAF headroom.
+        # Keep one cookie jar per worker but avoid category priming: the verified
+        # server-rendered product URL already contains the declared detail fields.
         _TLS.opener = base._new_opener()
     return _TLS.opener
 
@@ -47,16 +46,19 @@ def stable_url(sku: str) -> str:
 
 
 def fetch_fast(sku: str, name_hint: str | None):
-    # The stable x route redirects to Alcampo's exact canonical slug and was verified
-    # to return the same complete SSR detail page. Use it first so a normal success is
-    # one network request, not two guessed routes.
+    # The SSR smoke proved that the canonical slug page exposes ingredients,
+    # legal denomination and a parseable declared nutrition table. Prefer the
+    # name-derived canonical route so a success costs one request instead of an
+    # /products/x redirect plus the canonical request. Keep /products/x as the
+    # stable fallback when Alcampo's slug differs from our transliteration.
     guessed = base.candidate_urls(str(sku), name_hint)
-    urls = [stable_url(str(sku))]
+    urls = []
     for u in guessed:
-        if u not in urls:
+        if "/products/x/" not in u and u not in urls:
             urls.append(u)
-    # At most two first-party requests per product in a fast wave. A later wave on a
-    # fresh runner is a better retry strategy than repeatedly polling one WAF session.
+    x = stable_url(str(sku))
+    if x not in urls:
+        urls.append(x)
     urls = urls[:2]
     last = None
     last_url = urls[-1]
@@ -128,7 +130,7 @@ def summarize(details, requested: int):
             "declared_invalid_nutrition": sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
             "downloaded_html_bytes": sum(d.html_bytes for d in details),
         },
-        "policy": "STABLE_X_ROUTE_FIRST_MAX_TWO_FIRST_PARTY_REQUESTS_CHECKPOINT_EACH_RESULT",
+        "policy": "CANONICAL_SLUG_FIRST_X_FALLBACK_MAX_TWO_FIRST_PARTY_REQUESTS_CHECKPOINT_EACH_RESULT",
     }
 
 
