@@ -27,17 +27,45 @@ jobs:
         with:
           python-version: '3.12'
       - name: Enumerate official Carrefour food sitemap
+        continue-on-error: true
         working-directory: tools/catalog
         run: |
           python carrefour_first_party_sitemap.py \
             --out carrefour-first-party-sitemap \
             --max-sitemaps 5000 \
             --delay 0.15
+      - name: Persist official first-party candidate inventory and diagnostics
+        if: always()
+        run: |
+          mkdir -p tools/catalog/fixtures
+          if test -f tools/catalog/carrefour-first-party-sitemap/summary.json; then
+            cp tools/catalog/carrefour-first-party-sitemap/summary.json tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json
+          fi
+          if test -f tools/catalog/carrefour-first-party-sitemap/products.jsonl; then
+            cp tools/catalog/carrefour-first-party-sitemap/products.jsonl tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl
+          fi
+          if test -f tools/catalog/carrefour-first-party-sitemap/diagnostics.json; then
+            cp tools/catalog/carrefour-first-party-sitemap/diagnostics.json tools/catalog/fixtures/carrefour_first_party_sitemap_diagnostics.json
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_diagnostics.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Carrefour official sitemap inventory"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
       - name: Validate first-party inventory
+        if: always()
         run: |
           python - <<'PY'
-          import json
-          p='tools/catalog/carrefour-first-party-sitemap/summary.json'
+          import json, pathlib
+          p=pathlib.Path('tools/catalog/carrefour-first-party-sitemap/summary.json')
+          if not p.exists():
+              raise SystemExit('Sitemap inventory produced no summary')
           d=json.load(open(p,encoding='utf-8'))
           print(json.dumps(d,ensure_ascii=False,indent=2))
           if d.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
@@ -49,21 +77,6 @@ jobs:
           if d['counts']['remaining_sitemaps']:
               raise SystemExit('Sitemap traversal was incomplete')
           PY
-      - name: Persist official first-party candidate inventory
-        run: |
-          mkdir -p tools/catalog/fixtures
-          cp tools/catalog/carrefour-first-party-sitemap/summary.json tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json
-          cp tools/catalog/carrefour-first-party-sitemap/products.jsonl tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json \
-            tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl
-          if ! git diff --cached --quiet; then
-            git commit -m "catalog: persist Carrefour official sitemap inventory"
-            git pull --rebase origin agent/catalog-phase1
-            git push origin HEAD:agent/catalog-phase1
-          fi
       - name: Upload auditable sitemap inventory
         if: always()
         uses: actions/upload-artifact@v4
