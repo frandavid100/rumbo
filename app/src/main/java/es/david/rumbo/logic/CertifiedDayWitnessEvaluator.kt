@@ -49,15 +49,11 @@ object CertifiedDayWitnessEvaluator {
                 meal.items.any { item ->
                     val food = foodsById[item.foodId] ?: return false
                     val grams = meal.resolvedGrams(item, witness.day)
-                    !usesPracticalUnits(grams, food.practicalUnitStep()) ||
-                        item.adjustable && food.practicalUnitStep() == null &&
-                        !usesComfortableGramAmount(grams)
+                    !usesPracticalUnits(grams, food.practicalUnitStep())
                 } || meal.dishes.any { item ->
                     val dish = dishesById[item.dishId] ?: return false
                     val grams = meal.resolvedGrams(item, witness.day)
-                    !usesPracticalUnits(grams, dish.practicalUnitStep()) ||
-                        item.adjustable && dish.practicalUnitStep() == null &&
-                        !usesComfortableGramAmount(grams)
+                    !usesPracticalUnits(grams, dish.practicalUnitStep())
                 }
             }
         ) return false
