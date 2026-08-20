@@ -37,9 +37,6 @@ internal fun practicalGramAmount(grams: Double): Double = when {
     else -> round(grams / 10.0) * 10.0
 }
 
-internal fun usesComfortableGramAmount(grams: Double): Boolean =
-    abs(grams - practicalGramAmount(grams)) < 0.000_001
-
 enum class PortionContext {
     GENERAL_ADULT
 }
