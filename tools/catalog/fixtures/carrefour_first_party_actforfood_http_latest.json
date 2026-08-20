@@ -1,0 +1,154 @@
+{
+  "retailer": "CARREFOUR",
+  "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
+  "source": "https://actforfood.carrefour.es",
+  "extractor_version": "carrefour-first-party-actforfood-1.0",
+  "built_at": "2026-08-20T08:37:01.290087+00:00",
+  "classification_performed": "false",
+  "counts": {
+    "candidate_urls": 0,
+    "direct_discovered_urls": 0,
+    "fetched": 0,
+    "fetch_errors": 0,
+    "nutrition_complete": 0,
+    "nutrition_partial": 0,
+    "nutrition_not_found": 0,
+    "evidence_rows": 0
+  },
+  "coverage": {
+    "gtin": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "name": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "brand": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "image_url": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "category_path": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "price_eur": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "unit_price_text": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "availability": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "legal_name": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "ingredients": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "allergens": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "net_content": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "storage_conditions": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "preparation_instructions": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "operator_address": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "manufacturer_packer_importer": {
+      "count": 0,
+      "pct": 0.0
+    }
+  },
+  "nutrition_field_coverage": {
+    "energy_kj": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "calories_kcal": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "fat_g": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "saturates_g": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "carbohydrate_g": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "sugars_g": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "fiber_g": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "protein_g": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "salt_g": {
+      "count": 0,
+      "pct": 0.0
+    }
+  },
+  "discovery_diagnostics": [
+    {
+      "root": "https://actforfood.carrefour.es/supermercado/productos-frescos/cat20002/c",
+      "page": 1,
+      "url": "https://actforfood.carrefour.es/supermercado/productos-frescos/cat20002/c",
+      "error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
+      "products": 0
+    },
+    {
+      "root": "https://actforfood.carrefour.es/supermercado/la-despensa/cat20001/c",
+      "page": 1,
+      "url": "https://actforfood.carrefour.es/supermercado/la-despensa/cat20001/c",
+      "error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
+      "products": 0
+    },
+    {
+      "root": "https://actforfood.carrefour.es/supermercado/bebidas/cat20003/c",
+      "page": 1,
+      "url": "https://actforfood.carrefour.es/supermercado/bebidas/cat20003/c",
+      "error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
+      "products": 0
+    },
+    {
+      "root": "https://actforfood.carrefour.es/supermercado/congelados/cat21449123/c",
+      "page": 1,
+      "url": "https://actforfood.carrefour.es/supermercado/congelados/cat21449123/c",
+      "error": "RuntimeError:fetch failed: HTTPError:HTTP Error 403: Forbidden",
+      "products": 0
+    }
+  ],
+  "sample": [],
+  "provenance_note": "All stored product fields are fetched from carrefour.es. Third-party/RadarSuper data may only be used as candidate URL input and is never copied into this dataset."
+}
