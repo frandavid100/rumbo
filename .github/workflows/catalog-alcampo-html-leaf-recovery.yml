@@ -53,10 +53,12 @@ jobs:
     if: needs.prepare.outputs.count != '0'
     strategy:
       fail-fast: false
-      max-parallel: 20
+      # Category SSR is also behind Alcampo's WAF. Moderate parallelism gives
+      # each fresh runner a better chance of receiving the real page instead of 202.
+      max-parallel: 12
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
