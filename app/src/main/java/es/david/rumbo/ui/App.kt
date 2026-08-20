@@ -2219,7 +2219,6 @@ private fun HomeScreen(
                     witness = displayedCertifiedWitness,
                     foodsById = foodsById,
                     dishesById = dishesById,
-                    recommendation = recommendation,
                     onOpenFood = openFood,
                     onOpenDish = onOpenDish
                 )
@@ -2506,14 +2505,12 @@ private fun RepertoireAndWitnessSection(
     witness: CertifiedDayWitness?,
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
-    recommendation: Recommendation,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit
 ) {
     val repertoireKey = "REPERTOIRE"
-    val witnessKey = "CERTIFIED_WITNESS"
     var expandedSection by rememberSaveable(witness?.level) {
-        mutableStateOf(if (witness != null) witnessKey else repertoireKey)
+        mutableStateOf(witness?.meals?.minByOrNull { it.type.ordinal }?.type?.name ?: repertoireKey)
     }
     fun toggleSection(key: String) {
         expandedSection = if (expandedSection == key) "" else key
@@ -2540,26 +2537,31 @@ private fun RepertoireAndWitnessSection(
                     onToggle = { toggleSection(repertoireKey) }
                 )
             }
-            witness?.let {
-                Card(
-                    Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(
-                        topStart = 4.dp,
-                        topEnd = 4.dp,
-                        bottomStart = 12.dp,
-                        bottomEnd = 12.dp
-                    )
-                ) {
-                    CertifiedDayWitnessSection(
-                        witness = it,
-                        foodsById = foodsById,
-                        dishesById = dishesById,
-                        recommendation = recommendation,
-                        onOpenFood = onOpenFood,
-                        onOpenDish = onOpenDish,
-                        expanded = expandedSection == witnessKey,
-                        onToggle = { toggleSection(witnessKey) }
-                    )
+            witness?.let { certifiedDay ->
+                val mealsByType = certifiedDay.meals.associateBy { it.type }
+                MealType.entries.forEachIndexed { index, mealType ->
+                    val isLast = index == MealType.entries.lastIndex
+                    Card(
+                        Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(
+                            topStart = 4.dp,
+                            topEnd = 4.dp,
+                            bottomStart = if (isLast) 12.dp else 4.dp,
+                            bottomEnd = if (isLast) 12.dp else 4.dp
+                        )
+                    ) {
+                        CertifiedMealWitnessCard(
+                            mealType = mealType,
+                            meal = mealsByType[mealType],
+                            day = certifiedDay.day,
+                            foodsById = foodsById,
+                            dishesById = dishesById,
+                            onOpenFood = onOpenFood,
+                            onOpenDish = onOpenDish,
+                            expanded = expandedSection == mealType.name,
+                            onToggle = { toggleSection(mealType.name) }
+                        )
+                    }
                 }
             }
         }
@@ -3140,48 +3142,33 @@ private fun NutritionGoalMetric(
 }
 
 @Composable
-private fun CertifiedDayWitnessSection(
-    witness: CertifiedDayWitness,
+private fun CertifiedMealWitnessCard(
+    mealType: MealType,
+    meal: PlannedMeal?,
+    day: WeekDay,
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
-    recommendation: Recommendation,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
     expanded: Boolean,
     onToggle: () -> Unit
 ) {
-    val levelTitle = when (witness.level) {
-        CertifiedDayLevel.VIABLE -> "Tu día viable"
-        CertifiedDayLevel.COMPLETE -> "Tu día completo"
-        CertifiedDayLevel.CULINARILY_SATISFACTORY -> "Tu día satisfactorio"
-    }
-    val explanation = when (witness.level) {
-        CertifiedDayLevel.VIABLE ->
-            "Rumbo ha certificado que este día puede cubrir tus objetivos básicos. " +
-                "Seguiremos mejorándolo para completar fruta, verdura y fibra."
-        CertifiedDayLevel.COMPLETE ->
-            "Rumbo ha certificado que este día también cubre fruta, verdura y fibra. " +
-                "Seguiremos ajustando sus combinaciones y cantidades."
-        CertifiedDayLevel.CULINARILY_SATISFACTORY ->
-            "Rumbo ha certificado que este día es nutricionalmente completo y " +
-                "culinariamente satisfactorio."
-    }
-    val assessment = MealPlanEvaluator.assessDay(
-        witness.day,
-        witness.meals,
-        foodsById,
-        dishesById,
-        recommendation
-    )
-    val meals = witness.meals.sortedBy { it.type.ordinal }
-
+    val itemCount = meal?.let { it.dishes.size + it.items.size } ?: 0
     Column(Modifier.fillMaxWidth()) {
         Column(
             Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text("Tu día testigo", style = MaterialTheme.typography.titleMedium)
-            Text(levelTitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(mealType.label, style = MaterialTheme.typography.titleMedium)
+            Text(
+                when (itemCount) {
+                    0 -> "Sin alimentos"
+                    1 -> "1 elemento"
+                    else -> "$itemCount elementos"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         AnimatedVisibility(
             visible = expanded,
@@ -3189,70 +3176,96 @@ private fun CertifiedDayWitnessSection(
             exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                Modifier.fillMaxWidth().padding(bottom = 6.dp)
             ) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Text(
-                    explanation,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                meals.forEachIndexed { index, meal ->
-                    val entries = meal.dishes.mapNotNull { planned ->
-                        dishesById[planned.dishId]?.let { dish ->
-                            MenuItemLine(
-                                dish.id,
-                                true,
-                                dish.name,
-                                meal.resolvedGrams(planned, witness.day),
-                                dish.dominantCategory(foodsById)
-                            )
-                        }
-                    } + meal.items.mapNotNull { planned ->
-                        foodsById[planned.foodId]?.let { food ->
-                            MenuItemLine(
-                                food.id,
-                                false,
-                                food.name,
-                                meal.resolvedGrams(planned, witness.day),
-                                food.category
-                            )
-                        }
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                val entries = meal?.dishes.orEmpty().mapNotNull { planned ->
+                    dishesById[planned.dishId]?.let { dish ->
+                        Triple(dish, meal!!.resolvedGrams(planned, day), true)
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text(
-                            meal.type.label,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        entries.forEach { entry ->
-                            Row(
-                                Modifier.fillMaxWidth().clickable {
-                                    if (entry.isDish) onOpenDish(entry.id) else onOpenFood(entry.id)
-                                },
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                SmallFoodCategoryBadge(entry.category)
-                                Text(entry.name, modifier = Modifier.weight(1f))
-                                Text(
-                                    "${formatDecimal(entry.grams)} g",
-                                    fontWeight = FontWeight.SemiBold,
-                                    textAlign = TextAlign.End
-                                )
-                            }
-                        }
-                    }
-                    if (index < meals.lastIndex) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                } + meal?.items.orEmpty().mapNotNull { planned ->
+                    foodsById[planned.foodId]?.let { food ->
+                        Triple(food, meal!!.resolvedGrams(planned, day), false)
                     }
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                TodayNutritionSummary(assessment)
+                if (entries.isEmpty()) {
+                    Text(
+                        "No hay alimentos en esta comida.",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                entries.forEachIndexed { index, (item, grams, isDish) ->
+                    if (isDish) {
+                        val dish = item as Dish
+                        val totals = dish.nutritionForGrams(foodsById, grams)
+                        WitnessMenuItemRow(
+                            name = dish.name,
+                            amount = dishAmountLabel(dish, grams),
+                            category = dish.dominantCategory(foodsById),
+                            calories = totals.calories,
+                            protein = totals.proteinGrams,
+                            carbohydrates = totals.carbohydrateGrams,
+                            fat = totals.fatGrams,
+                            onClick = { onOpenDish(dish.id) }
+                        )
+                    } else {
+                        val food = item as Food
+                        val factor = grams / 100.0
+                        WitnessMenuItemRow(
+                            name = food.name,
+                            amount = foodAmountLabel(food, grams),
+                            category = food.category,
+                            calories = food.calories?.times(factor),
+                            protein = food.proteinGrams?.times(factor),
+                            carbohydrates = food.carbohydrateGrams?.times(factor),
+                            fat = food.fatGrams?.times(factor),
+                            onClick = { onOpenFood(food.id) }
+                        )
+                    }
+                    if (index < entries.lastIndex) {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun WitnessMenuItemRow(
+    name: String,
+    amount: String,
+    category: FoodCategory,
+    calories: Double?,
+    protein: Double?,
+    carbohydrates: Double?,
+    fat: Double?,
+    onClick: () -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FoodCategoryBadge(category)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                amount,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        SearchNutritionGrid(calories, protein, carbohydrates, fat, Modifier.width(114.dp))
     }
 }
 
@@ -4412,6 +4425,21 @@ private fun foodAmountLabel(food: Food, grams: Double): String {
         else -> "${formatDecimal(units)} $plural"
     }
     return "$natural · ${formatDecimal(grams)} g"
+}
+
+private fun dishAmountLabel(dish: Dish, grams: Double): String {
+    val unitAmount = dish.unitAmount?.takeIf { it > 0.0 }
+    val unitName = dish.unitName?.trim()?.takeIf { it.isNotEmpty() }
+    if (unitAmount == null || unitName == null) return "${formatDecimal(grams)} g"
+    val units = grams / unitAmount
+    val count = if (abs(units - units.roundToInt()) < 0.01) {
+        units.roundToInt().toString()
+    } else {
+        formatDecimal(units)
+    }
+    val name = if (abs(units - 1.0) < 0.01) unitName
+    else dish.unitPlural?.trim()?.takeIf { it.isNotEmpty() } ?: unitName
+    return "$count $name · ${formatDecimal(grams)} g"
 }
 
 @Composable
