@@ -33,6 +33,23 @@ jobs:
         run: |
           pip install playwright
           python -m playwright install --with-deps chromium
+      - name: Align browser context with validated probe
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('carrefour_first_party_browser_inventory.py')
+          text = path.read_text(encoding='utf-8')
+          old = 'context = await browser.new_context(locale="es-ES", viewport={"width": 1365, "height": 900})'
+          new = '''context = await browser.new_context(
+              locale="es-ES",
+              user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36",
+              viewport={"width": 1365, "height": 900},
+          )'''
+          if old not in text:
+              raise SystemExit('expected browser context line not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
       - name: Inventory before any other Carrefour request
         working-directory: tools/catalog
         run: |
