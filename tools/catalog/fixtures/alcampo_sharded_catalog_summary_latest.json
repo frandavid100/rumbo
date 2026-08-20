@@ -3,22 +3,22 @@
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
   "importer_version": "alcampo-direct-v6.0",
-  "built_at": "2026-08-20T06:32:33.172226+00:00",
+  "built_at": "2026-08-20T06:37:28.991695+00:00",
   "roots": [
     {
       "label": "Veganos",
       "rid": "OC09112021",
       "source_reported_product_count": 0,
-      "food_products_recursive_union": 170,
+      "food_products_recursive_union": 171,
       "recursive_categories_visited": 17,
       "api_error_categories": 2,
       "children_without_retailer_category_id": 0,
       "unresolved": [
         {
-          "label": "Platos Preparados",
-          "retailer_category_id": "OC0911202111",
+          "label": "Otras bebidas veganas",
+          "retailer_category_id": "OCV0911202125",
           "depth": 2,
-          "source_reported_product_count": 6,
+          "source_reported_product_count": 12,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -28,10 +28,10 @@
           "children_discovered": 0
         },
         {
-          "label": "Elaborados vegetales veganos",
-          "retailer_category_id": "OC0911202112",
+          "label": "Untables",
+          "retailer_category_id": "OC0911202116",
           "depth": 2,
-          "source_reported_product_count": 13,
+          "source_reported_product_count": 15,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -49,16 +49,16 @@
     }
   ],
   "counts": {
-    "unique_products_before_filter": 170,
-    "food_products": 170,
+    "unique_products_before_filter": 171,
+    "food_products": 171,
     "excluded_alcohol": 0,
-    "with_sku": 170,
-    "with_name": 170,
-    "with_brand": 170,
-    "with_pack_size": 167,
-    "with_image": 170,
+    "with_sku": 171,
+    "with_name": 171,
+    "with_brand": 171,
+    "with_pack_size": 168,
+    "with_image": 171,
     "with_product_url": 0,
-    "available": 167
+    "available": 168
   },
   "third_party_product_data": false
 }
