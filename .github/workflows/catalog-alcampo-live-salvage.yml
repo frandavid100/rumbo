@@ -1,0 +1,117 @@
+name: Catalog Alcampo immediate salvage snapshot
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-alcampo-live-salvage.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-live-salvage-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Find latest 13.9k bootstrap run
+        id: base
+        run: |
+          run_id=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/catalog-alcampo-bootstrap-13877.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20" --jq '.workflow_runs[0].id // empty')
+          if [ -z "$run_id" ]; then
+            echo 'No bootstrap run found' >&2
+            exit 2
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '{id,status,conclusion,created_at,updated_at}'
+      - name: Download complete 13,877 listing baseline and every detail artifact already available
+        run: |
+          mkdir -p live/enumeration live/details
+          gh run download "${{ steps.base.outputs.run_id }}" -n alcampo-bootstrap-enumeration -D live/enumeration
+          gh run download "${{ steps.base.outputs.run_id }}" -p 'alcampo-bootstrap-detail-result-*' -D live/details || true
+          test -s live/enumeration/products.jsonl
+          echo "detail_artifact_dirs=$(find live/details -mindepth 1 -maxdepth 1 -type d | wc -l)"
+      - name: Merge currently available first-party detail
+        working-directory: tools/catalog
+        run: |
+          mkdir -p ../../alcampo-live-salvage
+          set +e
+          python alcampo_merge_detail_batches.py \
+            --downloaded ../../live/details \
+            --out ../../alcampo-live-salvage/details.jsonl \
+            --expected-products ../../live/enumeration/products.jsonl
+          code=$?
+          set -e
+          echo "$code" > ../../alcampo-live-salvage/detail_merge_exit_code.txt
+          touch ../../alcampo-live-salvage/details.jsonl
+      - name: Build auditable canonical snapshot and deterministic proposals
+        working-directory: tools/catalog
+        run: |
+          python alcampo_build_final_catalog.py \
+            --products ../../live/enumeration/products.jsonl \
+            --details ../../alcampo-live-salvage/details.jsonl \
+            --output ../../alcampo-live-salvage/alcampo_catalog.sqlite
+          python finalize_alcampo_classification.py \
+            ../../alcampo-live-salvage/alcampo_catalog.sqlite \
+            ../../live/enumeration/products.jsonl
+          python alcampo_semantic_gate.py \
+            ../../alcampo-live-salvage/alcampo_catalog.sqlite \
+            --reviews manual/alcampo_semantic_reviews.jsonl
+      - name: Prepare semantic model review queue from usable products already recovered
+        working-directory: tools/catalog
+        run: |
+          python alcampo_prepare_semantic_review_v2.py \
+            ../../alcampo-live-salvage/alcampo_catalog.sqlite \
+            --observations ../../live/enumeration/products.jsonl \
+            --reviews manual/alcampo_semantic_reviews.jsonl \
+            --output ../../alcampo-live-salvage/semantic_review_next.jsonl \
+            --progress ../../alcampo-live-salvage/semantic_review_progress.json \
+            --limit 3000
+      - name: Export snapshot
+        working-directory: tools/catalog
+        run: |
+          args=(../../alcampo-live-salvage/alcampo_catalog.sqlite --jsonl ../../alcampo-live-salvage/alcampo_catalog.jsonl --summary ../../alcampo-live-salvage/summary.json --detail-summary ../../alcampo-live-salvage/detail_merge_summary.json)
+          if [ -f ../../live/enumeration/enumeration_report.json ]; then args+=(--enumeration-report ../../live/enumeration/enumeration_report.json); fi
+          python alcampo_export_final.py "${args[@]}"
+          cp ../../live/enumeration/products.jsonl ../../alcampo-live-salvage/source_products.jsonl
+          cp ../../live/enumeration/enumeration_report.json ../../alcampo-live-salvage/enumeration_report.json 2>/dev/null || true
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('../../alcampo-live-salvage/summary.json')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          d['bootstrap_source_run']=os.environ['BOOTSTRAP_RUN_ID']
+          d['snapshot_kind']='LIVE_PARTIAL_DETAIL_OVER_COMPLETE_13877_LISTING_BASELINE'
+          p.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+        env:
+          BOOTSTRAP_RUN_ID: ${{ steps.base.outputs.run_id }}
+      - name: Persist current coverage and queue for the model automation
+        run: |
+          cp alcampo-live-salvage/summary.json tools/catalog/fixtures/alcampo_live_salvage_summary_latest.json
+          cp alcampo-live-salvage/detail_merge_summary.json tools/catalog/fixtures/alcampo_live_salvage_detail_latest.json
+          cp alcampo-live-salvage/semantic_review_next.jsonl tools/catalog/fixtures/alcampo_live_salvage_semantic_review_next.jsonl
+          cp alcampo-live-salvage/semantic_review_progress.json tools/catalog/fixtures/alcampo_live_salvage_semantic_review_progress_latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_live_salvage_*
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist live Alcampo salvage snapshot"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-live-salvage-snapshot
+          path: alcampo-live-salvage/
+          retention-days: 14
