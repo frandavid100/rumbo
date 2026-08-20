@@ -20,6 +20,10 @@ DEFAULT_URLS = [
     "https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p",
 ]
 MARKERS = ["Información nutricional", "Ingredientes", "Denominación legal", "Alérgenos", "Contenido neto"]
+BLOCK_RE = re.compile(
+    r"sorry,? you have been blocked|attention required|cloudflare|access denied|forbidden|captcha|robot|incapsula|akamai",
+    re.I,
+)
 
 
 def now_iso():
@@ -47,8 +51,8 @@ async def inspect(context, url: str, timeout_ms: int):
             if '"Product"' in script or '"@type":"Product"' in script or '"@type": "Product"' in script:
                 row["product_jsonld"] = True
                 break
-        row["blocked_text"] = bool(re.search(r"access denied|forbidden|captcha|robot|incapsula|akamai", text, re.I))
-        row["ok"] = bool(row.get("status") and row["status"] < 400 and row["text_chars"] > 1000)
+        row["blocked_text"] = bool((row.get("status") == 403) or BLOCK_RE.search(row["title"] + "\n" + text))
+        row["ok"] = bool(row.get("status") and row["status"] < 400 and row["text_chars"] > 1000 and not row["blocked_text"])
     except Exception as exc:
         row["error"] = f"{type(exc).__name__}:{exc}"
         row["ok"] = False
@@ -64,7 +68,7 @@ async def run(args):
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
             locale="es-ES",
-            user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+            user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36",
             viewport={"width": 1365, "height": 900},
         )
         rows = []
@@ -80,7 +84,7 @@ async def run(args):
     summary = {
         "source": "https://www.carrefour.es",
         "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-        "version": "carrefour-first-party-browser-probe-1.0",
+        "version": "carrefour-first-party-browser-probe-1.1",
         "built_at": now_iso(),
         "counts": {
             "requested": len(rows),
