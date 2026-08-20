@@ -1,5 +1,5 @@
 {
-  "built_at": "2026-08-20T12:13:09.002737+00:00",
+  "built_at": "2026-08-20T12:13:27.744551+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 51,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 4,
@@ -568,7 +568,7 @@
       "nutrition_basis": "100 g",
       "nutrition_extra": {},
       "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T12:28:00+00:00",
+      "observed_at": "2026-08-20T12:10:00+00:00",
       "operator_address": "Interdis - TSA 91431 - 91343 MASSY Cedex - Francia",
       "page_sha256": null,
       "preparation_instructions": "Escurrir antes de consumir",
@@ -628,7 +628,7 @@
       "nutrition_basis": "100 g",
       "nutrition_extra": {},
       "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T12:28:00+00:00",
+      "observed_at": "2026-08-20T12:10:00+00:00",
       "operator_address": "Interdis - TSA 91431 - 91343 MASSY Cedex - Francia",
       "page_sha256": null,
       "preparation_instructions": "Escurrir antes de consumir",
@@ -810,7 +810,7 @@
       "nutrition_basis": "100 g",
       "nutrition_extra": {},
       "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T12:28:00+00:00",
+      "observed_at": "2026-08-20T12:10:00+00:00",
       "operator_address": "Interdis - TSA 91431 - 91343 MASSY Cedex - Francia",
       "page_sha256": null,
       "preparation_instructions": null,
