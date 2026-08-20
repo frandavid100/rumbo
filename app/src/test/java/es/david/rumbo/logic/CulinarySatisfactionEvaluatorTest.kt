@@ -237,7 +237,7 @@ class CulinarySatisfactionEvaluatorTest {
     fun leafySaladNeedsDressingForLevel3() {
         val chicken = simpleFood(78, setOf("PLATE_CENTER"))
         val beans = simpleFood(79, setOf("PLATE_BASE"))
-        val leaves = simpleFood(80, setOf("SIDE")).copy(name = "Canónigos")
+        val leaves = simpleFood(80, setOf("SALAD_BASE"))
         val withoutDressing = evaluateLunch(
             listOf(
                 PlannedFood(chicken.id, 150.0, false),

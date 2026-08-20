@@ -304,7 +304,6 @@ object CulinaryLevel3CompositionSearch {
                 val snapshot = chosen.toList()
                 if (!CulinaryPolicy.hasValidRoleAssignment(snapshot.map { setOf(it) })) return
                 if (CulinarySoftPolicy.missingPreferences(snapshot).isNotEmpty()) return
-                if (CulinarySoftPolicy.hasMissingFoodPreferences(foods.zip(snapshot))) return
                 yield(snapshot)
                 return
             }

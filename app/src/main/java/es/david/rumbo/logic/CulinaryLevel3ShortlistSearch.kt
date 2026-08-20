@@ -193,7 +193,8 @@ object CulinaryLevel3ShortlistSearch {
             addTop(
                 selected,
                 activeFoods.asSequence().filter {
-                    it.category == FoodCategory.VEGETABLE && hasRole(it, CulinaryRole.SIDE)
+                    it.category == FoodCategory.VEGETABLE &&
+                        (hasRole(it, CulinaryRole.SIDE) || hasRole(it, CulinaryRole.SALAD_BASE))
                 },
                 1,
                 ::fiberCapacity
@@ -201,9 +202,10 @@ object CulinaryLevel3ShortlistSearch {
             listOf(MealType.LUNCH, MealType.DINNER).forEach { mealType ->
                 add(
                     selected,
-                    activeFoods.asSequence().filter {
-                        it.category == FoodCategory.VEGETABLE &&
-                            hasRole(it, CulinaryRole.SIDE) && mealType in meals(it)
+                        activeFoods.asSequence().filter {
+                            it.category == FoodCategory.VEGETABLE &&
+                            (hasRole(it, CulinaryRole.SIDE) || hasRole(it, CulinaryRole.SALAD_BASE)) &&
+                            mealType in meals(it)
                     }.maxByOrNull { food ->
                         // Prefer a meal-specialised side after the global fibre
                         // anchor; this deliberately keeps different vegetable
@@ -213,6 +215,12 @@ object CulinaryLevel3ShortlistSearch {
                     }
                 )
             }
+            addTop(
+                selected,
+                activeFoods.asSequence().filter { hasRole(it, CulinaryRole.SAUCE_DRESSING) },
+                1,
+                { -(it.calories ?: 0.0) }
+            )
             listOf(MealType.BREAKFAST, MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK)
                 .forEach { mealType ->
                     add(

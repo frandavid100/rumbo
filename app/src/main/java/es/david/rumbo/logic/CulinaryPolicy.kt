@@ -9,6 +9,7 @@ enum class CulinaryRole(val label: String) {
     PLATE_CENTER("Centro del plato"),
     PLATE_BASE("Base del plato"),
     SIDE("Acompañamiento"),
+    SALAD_BASE("Base de ensalada"),
     TOPPING("Topping"),
     SAUCE_DRESSING("Salsa o aliño"),
     CEREAL_BASE("Base para cereal"),
@@ -45,6 +46,10 @@ object CulinaryPolicy {
         CulinaryRole.PLATE_CENTER to CulinaryRolePolicy(150.0, 75.0, 300.0, maxPerMeal = 1),
         CulinaryRole.PLATE_BASE to CulinaryRolePolicy(100.0, 40.0, 300.0, maxPerMeal = 1),
         CulinaryRole.SIDE to CulinaryRolePolicy(150.0, 50.0, 300.0),
+        CulinaryRole.SALAD_BASE to CulinaryRolePolicy(
+            100.0, 40.0, 200.0, standaloneAllowed = false,
+            requiredRoles = setOf(CulinaryRole.SAUCE_DRESSING), maxPerMeal = 1
+        ),
         CulinaryRole.TOPPING to CulinaryRolePolicy(20.0, 5.0, 60.0, standaloneAllowed = false),
         CulinaryRole.SAUCE_DRESSING to CulinaryRolePolicy(30.0, 5.0, 100.0, standaloneAllowed = false),
         CulinaryRole.CEREAL_BASE to CulinaryRolePolicy(200.0, 100.0, 350.0),
@@ -95,6 +100,7 @@ object CulinaryPolicy {
         CulinaryRole.PLATE_CENTER to setOf(MealType.LUNCH, MealType.DINNER),
         CulinaryRole.PLATE_BASE to setOf(MealType.LUNCH, MealType.DINNER),
         CulinaryRole.SIDE to setOf(MealType.LUNCH, MealType.DINNER),
+        CulinaryRole.SALAD_BASE to setOf(MealType.LUNCH, MealType.DINNER),
         CulinaryRole.TOPPING to MealType.entries.toSet(),
         CulinaryRole.SAUCE_DRESSING to setOf(MealType.LUNCH, MealType.DINNER),
         CulinaryRole.COOKING_MEDIUM to setOf(MealType.LUNCH, MealType.DINNER),
@@ -149,7 +155,8 @@ object CulinaryPolicy {
                 CulinaryRole.COATING -> 0
                 CulinaryRole.CEREAL_MIX_IN, CulinaryRole.POWDER_MIX_IN,
                 CulinaryRole.SANDWICH_FILLING -> 1
-                CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE -> 2
+                CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE,
+                CulinaryRole.SALAD_BASE -> 2
                 CulinaryRole.STANDALONE, CulinaryRole.BEVERAGE, CulinaryRole.DESSERT,
                 CulinaryRole.CEREAL_BASE, CulinaryRole.POWDER_BASE, CulinaryRole.SANDWICH_BASE -> 3
             }

@@ -94,6 +94,7 @@ object PortionPolicyResolver {
         CulinaryRole.PLATE_CENTER to Calibration(ReferenceMode.PRODUCT_BASIS, 0.50, 1.50, 0.35, 0.75, 1.35),
         CulinaryRole.PLATE_BASE to Calibration(ReferenceMode.PRODUCT_BASIS, 0.625, 1.50, 0.50, 0.70, 1.50),
         CulinaryRole.SIDE to Calibration(ReferenceMode.PRODUCT_BASIS, 0.50, 1.25, 0.15, 0.85, 1.25),
+        CulinaryRole.SALAD_BASE to Calibration(ReferenceMode.PRODUCT_BASIS, 0.50, 1.25, 0.15, 0.85, 1.25),
         CulinaryRole.TOPPING to Calibration(ReferenceMode.ROLE_DEFAULT, 0.25, 2.00, 0.00, 1.00, 1.00),
         CulinaryRole.SAUCE_DRESSING to Calibration(ReferenceMode.ROLE_DEFAULT, 1.0 / 3.0, 2.00, 0.10, 0.85, 1.15),
         CulinaryRole.CEREAL_BASE to Calibration(ReferenceMode.PRODUCT_BASIS, 0.75, 1.50, 0.15, 0.85, 1.20),

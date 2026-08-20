@@ -333,18 +333,9 @@ object CulinarySatisfactionEvaluator {
         assignments: List<Assignment>
     ): List<Pair<Assignment, Set<CulinaryRole>>> {
         val present = assignments.mapTo(mutableSetOf()) { it.role }
-        return assignments.flatMap { assignment ->
-            listOf(
-                CulinarySoftPolicy.preferredCompanions(assignment.role),
-                CulinarySoftPolicy.additionalPreferredCompanions(
-                    assignment.occurrence.food,
-                    assignment.role
-                )
-            ).mapNotNull { targets ->
-                (assignment to targets).takeIf {
-                    targets.isNotEmpty() && targets.none(present::contains)
-                }
-            }
+        return assignments.mapNotNull { assignment ->
+            val targets = CulinarySoftPolicy.preferredCompanions(assignment.role)
+            (assignment to targets).takeIf { targets.isNotEmpty() && targets.none(present::contains) }
         }
     }
 
