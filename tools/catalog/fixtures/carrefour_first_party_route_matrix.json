@@ -1,7 +1,7 @@
 {
   "retailer": "CARREFOUR",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-  "updated_at": "2026-08-20T08:40:00Z",
+  "updated_at": "2026-08-20T18:58:00Z",
   "classification_performed": false,
   "routes": [
     {
@@ -31,7 +31,14 @@
       "successful_product_pages": 2,
       "product_jsonld_pages": 2,
       "nutrition_marker_pages": 2,
-      "notes": "A clean Playwright run proved that complete product pages can be returned before subsequent requests are blocked. The probe is being upgraded to preserve successful HTML and parse full per-field evidence offline."
+      "notes": "A clean Playwright run proved that complete product pages can be returned before subsequent requests are blocked. Successful HTML is preserved for auditable offline parsing; this route is also useful for occasional GTIN/image enrichment when it succeeds."
+    },
+    {
+      "route": "www_indexed_official_product_and_category_pages",
+      "host": "https://www.carrefour.es",
+      "result": "USABLE_WITH_CRAWL_LAG",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json",
+      "notes": "Official Carrefour product/category pages can be retrieved through an indexed retrieval layer even while direct GitHub-runner HTTP is challenged. Only facts present on the official Carrefour page are persisted. Price/availability from this route are observed Carrefour values but are not asserted as live/current because crawl lag is possible. Exact cumulative counts are maintained in the cumulative summary rather than duplicated here."
     },
     {
       "route": "www_sitemap_food_index",
@@ -63,7 +70,8 @@
     "Only fields actually observed on a Carrefour-controlled host may use source=CARREFOUR_FIRST_PARTY.",
     "RadarSuper may seed candidate identities or URLs but its fields are never copied into Carrefour first-party evidence.",
     "Open Food Facts data remains OPEN_FOOD_FACTS_VIA_RADARSUPER or its own source and is never relabelled as Carrefour-declared.",
-    "Rumbo nutritional or culinary classification is separate from retailer evidence and is not performed in these extraction datasets."
+    "Rumbo nutritional or culinary classification is separate from retailer evidence and is not performed in these extraction datasets.",
+    "Indexed official-page retrieval is accepted as first-party evidence only for fields actually rendered from the official Carrefour page; its freshness is explicitly qualified."
   ],
-  "next_safe_step": "Use a clean, low-concurrency Playwright probe to preserve any successful Carrefour HTML before WAF blocking, then parse saved HTML offline. Do not distribute requests across runners to evade blocking."
+  "next_safe_step": "Continue low-volume, diverse first-party capture through official Carrefour indexed product/category pages, preserving crawl-lag metadata. Use clean low-concurrency Playwright opportunistically to capture GTIN/image and saved HTML when the WAF allows it. Do not distribute requests across runners to evade blocking."
 }
