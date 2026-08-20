@@ -6,19 +6,24 @@
     "inventory_complete": false,
     "candidate_identity_urls_external_only": 8451,
     "candidate_identity_source": "RADARSUPER_CANDIDATE_IDENTITY_ONLY",
-    "successful_first_party_product_pages_cumulative": 2,
+    "successful_first_party_product_pages_cumulative": 29,
     "successful_first_party_products_fixture": "tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl",
     "field_evidence_fixture": "tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl",
     "direct_http_status": "BLOCKED_403_FROM_GITHUB_RUNNERS",
     "browser_status": "PARTIAL_SUCCESS_THEN_WAF",
     "classification_performed_in_first_party_staging": false,
-    "notes": "The 8,451 RadarSuper-derived Carrefour URLs are discovery candidates only. The only current Carrefour first-party product records are successful observations fetched directly from carrefour.es and stored separately with per-field provenance."
+    "notes": "Current cumulative staging contains 29 products verified from official Carrefour pages. External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.",
+    "first_party_field_evidence_rows_cumulative": 741,
+    "cumulative_summary_fixture": "fixtures/carrefour_first_party_cumulative_summary.json"
   },
   "sources": {
     "first_party_carrefour": {
       "canonical_source": "https://www.carrefour.es",
       "evidence_source_id": "CARREFOUR_FIRST_PARTY",
-      "allowed_evidence_types": ["DECLARED", "OBSERVED_LISTING"],
+      "allowed_evidence_types": [
+        "DECLARED",
+        "OBSERVED_LISTING"
+      ],
       "discovery": {
         "robots_txt": "https://www.carrefour.es/robots.txt",
         "official_food_sitemap_index": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
@@ -174,7 +179,9 @@
       "candidate_urls": 8451,
       "legacy_latest_known": {
         "fixture": "tools/catalog/fixtures/carrefour_quality_latest_summary.json",
-        "nutrition_source": {"OPEN_FOOD_FACTS_VIA_RADARSUPER": 1571}
+        "nutrition_source": {
+          "OPEN_FOOD_FACTS_VIA_RADARSUPER": 1571
+        }
       }
     },
     "open_food_facts": {
