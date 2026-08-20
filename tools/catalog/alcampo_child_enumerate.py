@@ -51,7 +51,7 @@ def collect_with_fresh_session_retries(label: str, rid: str, attempts: int = 6):
     return best_products, best_meta or meta, attempts
 
 
-def recursive_collect(root_label: str, root_rid: str):
+def recursive_collect(root_label: str, root_rid: str, max_depth: int = 64):
     products: dict[str, Product] = {}
     queue: list[tuple[str, str, int | None, int]] = [(root_label, root_rid, None, 0)]
     queued = {root_rid}
@@ -84,10 +84,17 @@ def recursive_collect(root_label: str, root_rid: str):
             "fresh_session_attempts": attempts,
             "errors": errors,
             "children_discovered": len(children),
+            "children_traversed": depth < max_depth,
         }
         node_audit.append(audit)
         if errors:
             unresolved.append(audit)
+
+        # A max_depth=0 shard is intentionally a direct-only audit of a top-level root.
+        # Descendant trees are scheduled independently by the workflow so that large
+        # taxonomies are parallelised instead of timing out in one giant root job.
+        if depth >= max_depth:
+            continue
 
         # Child taxonomy comes from page 1 and is independently addressable. Do not
         # discard it merely because a later pageToken on the parent remained pending;
@@ -123,10 +130,11 @@ def main() -> int:
     p.add_argument("--label", required=True)
     p.add_argument("--rid", required=True)
     p.add_argument("--expected", type=int, default=0)
+    p.add_argument("--max-depth", type=int, default=64)
     p.add_argument("--out", type=Path, required=True)
     a = p.parse_args()
 
-    products, node_audit, unresolved, missing_ids = recursive_collect(a.label, a.rid)
+    products, node_audit, unresolved, missing_ids = recursive_collect(a.label, a.rid, max_depth=max(0, a.max_depth))
     # write_outputs performs the existing first-party alcohol filter and creates JSONL + SQLite.
     root_meta = [{
         "label": a.label,
@@ -136,6 +144,7 @@ def main() -> int:
         "unresolved_categories": unresolved,
         "children_without_retailer_category_id": missing_ids,
         "deduplication_identity": "retailer_sku_else_product_id",
+        "max_depth": max(0, a.max_depth),
     }]
     summary = write_outputs(a.out, products, root_meta)
     got = summary["counts"]["food_products"]
@@ -143,7 +152,8 @@ def main() -> int:
     # Alcampo's productCount is retained only as source diagnostics. It is not a valid
     # completeness denominator for the active regional assortment: direct API traversal
     # can exhaust pageTokens cleanly at a different count. Completeness is therefore
-    # defined by exhausting every discovered first-party category node without API errors.
+    # defined by exhausting every category node this shard is responsible for without
+    # API errors. Descendants intentionally outside max_depth are audited by other shards.
     ok = not unresolved and not missing_ids and got > 0
     check = {
         "label": a.label,
@@ -156,7 +166,8 @@ def main() -> int:
         "unresolved": unresolved,
         "missing_retailer_ids": missing_ids,
         "deduplication_identity": "retailer_sku_else_product_id",
-        "completeness_basis": "recursive_first_party_category_tree_plus_pageToken_exhaustion",
+        "max_depth": max(0, a.max_depth),
+        "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
         "source_product_count_is_diagnostic_only": True,
         "ok": ok,
     }
