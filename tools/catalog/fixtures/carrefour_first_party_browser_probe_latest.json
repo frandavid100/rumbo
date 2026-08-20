@@ -1,0 +1,177 @@
+{
+  "source": "https://www.carrefour.es",
+  "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
+  "version": "carrefour-first-party-browser-probe-1.0",
+  "built_at": "2026-08-20T07:11:16.121842+00:00",
+  "counts": {
+    "requested": 8,
+    "http_success": 2,
+    "usable_pages": 2,
+    "with_product_jsonld": 2,
+    "with_nutrition_marker": 2,
+    "blocked": 0,
+    "errors": 0
+  },
+  "rows": [
+    {
+      "url": "https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p",
+      "observed_at": "2026-08-20T07:11:07.048956+00:00",
+      "status": 200,
+      "final_url": "https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p",
+      "title": "Bocaditos Carrefour 370 g. | Supermercado Online Carrefour",
+      "html_bytes": 248558,
+      "text_chars": 3249,
+      "markers": {
+        "Información nutricional": true,
+        "Ingredientes": true,
+        "Denominación legal": true,
+        "Alérgenos": true,
+        "Contenido neto": true
+      },
+      "h1": "Bocaditos Carrefour 370 g.",
+      "product_jsonld": true,
+      "blocked_text": false,
+      "ok": true
+    },
+    {
+      "url": "https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p",
+      "observed_at": "2026-08-20T07:11:09.786804+00:00",
+      "status": 403,
+      "final_url": "https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p",
+      "title": "Attention Required! | Cloudflare",
+      "html_bytes": 4667,
+      "text_chars": 693,
+      "markers": {
+        "Información nutricional": false,
+        "Ingredientes": false,
+        "Denominación legal": false,
+        "Alérgenos": false,
+        "Contenido neto": false
+      },
+      "h1": "Sorry, you have been blocked",
+      "product_jsonld": false,
+      "blocked_text": false,
+      "ok": false
+    },
+    {
+      "url": "https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p",
+      "observed_at": "2026-08-20T07:11:07.065857+00:00",
+      "status": 200,
+      "final_url": "https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p",
+      "title": "Leche condensada Carrefour 397 g. | Supermercado Online Carrefour",
+      "html_bytes": 305696,
+      "text_chars": 4438,
+      "markers": {
+        "Información nutricional": true,
+        "Ingredientes": true,
+        "Denominación legal": true,
+        "Alérgenos": false,
+        "Contenido neto": true
+      },
+      "h1": "Leche condensada Carrefour 397 g.",
+      "product_jsonld": true,
+      "blocked_text": false,
+      "ok": true
+    },
+    {
+      "url": "https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p",
+      "observed_at": "2026-08-20T07:11:11.719587+00:00",
+      "status": 403,
+      "final_url": "https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p",
+      "title": "Attention Required! | Cloudflare",
+      "html_bytes": 4667,
+      "text_chars": 693,
+      "markers": {
+        "Información nutricional": false,
+        "Ingredientes": false,
+        "Denominación legal": false,
+        "Alérgenos": false,
+        "Contenido neto": false
+      },
+      "h1": "Sorry, you have been blocked",
+      "product_jsonld": false,
+      "blocked_text": false,
+      "ok": false
+    },
+    {
+      "url": "https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p",
+      "observed_at": "2026-08-20T07:11:13.658790+00:00",
+      "status": 403,
+      "final_url": "https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p",
+      "title": "Attention Required! | Cloudflare",
+      "html_bytes": 4667,
+      "text_chars": 693,
+      "markers": {
+        "Información nutricional": false,
+        "Ingredientes": false,
+        "Denominación legal": false,
+        "Alérgenos": false,
+        "Contenido neto": false
+      },
+      "h1": "Sorry, you have been blocked",
+      "product_jsonld": false,
+      "blocked_text": false,
+      "ok": false
+    },
+    {
+      "url": "https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p",
+      "observed_at": "2026-08-20T07:11:10.325601+00:00",
+      "status": 403,
+      "final_url": "https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p",
+      "title": "Attention Required! | Cloudflare",
+      "html_bytes": 4667,
+      "text_chars": 693,
+      "markers": {
+        "Información nutricional": false,
+        "Ingredientes": false,
+        "Denominación legal": false,
+        "Alérgenos": false,
+        "Contenido neto": false
+      },
+      "h1": "Sorry, you have been blocked",
+      "product_jsonld": false,
+      "blocked_text": false,
+      "ok": false
+    },
+    {
+      "url": "https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p",
+      "observed_at": "2026-08-20T07:11:14.184160+00:00",
+      "status": 403,
+      "final_url": "https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p",
+      "title": "Attention Required! | Cloudflare",
+      "html_bytes": 4667,
+      "text_chars": 693,
+      "markers": {
+        "Información nutricional": false,
+        "Ingredientes": false,
+        "Denominación legal": false,
+        "Alérgenos": false,
+        "Contenido neto": false
+      },
+      "h1": "Sorry, you have been blocked",
+      "product_jsonld": false,
+      "blocked_text": false,
+      "ok": false
+    },
+    {
+      "url": "https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p",
+      "observed_at": "2026-08-20T07:11:12.242881+00:00",
+      "status": 403,
+      "final_url": "https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p",
+      "title": "Attention Required! | Cloudflare",
+      "html_bytes": 4667,
+      "text_chars": 693,
+      "markers": {
+        "Información nutricional": false,
+        "Ingredientes": false,
+        "Denominación legal": false,
+        "Alérgenos": false,
+        "Contenido neto": false
+      },
+      "h1": "Sorry, you have been blocked",
+      "product_jsonld": false,
+      "blocked_text": false,
+      "ok": false
+    }
+  ]
+}
