@@ -7,7 +7,7 @@ from pathlib import Path
 import carrefour_first_party_inventory as base
 import carrefour_first_party_browser_inventory as browser
 
-VERSION = "carrefour-first-party-saved-html-1.1"
+VERSION = "carrefour-first-party-saved-html-1.2"
 
 # Conservative whitelist of product-specific labels observed on Carrefour product
 # pages. These remain raw declared characteristics; they are not Rumbo roles or
@@ -17,40 +17,68 @@ ATTRIBUTE_LABELS = {
     "elaboration": ["Elaboración", "Elaboracion"],
     "packaging": ["Envase"],
     "format": ["Formato"],
-    "origin": ["Origen", "País de origen", "Pais de origen"],
+    "origin": ["Origen", "País de origen", "Pais de origen", "País de origen o procedencia", "Pais de origen o procedencia"],
     "variety": ["Variedad"],
     "caliber": ["Calibre"],
-    "oil_type_mayonnaise": ["Tipo de aceite(Mayonesas)", "Tipo de aceite (Mayonesas)"],
+    "sanitary_registration": ["Nº Registro sanitario del fabricante/envasador", "N° Registro sanitario del fabricante/envasador"],
+    "gluten_free": ["Sin gluten"],
+    "vegetarian": ["Vegetariano"],
+    "refrigerated": ["Refrigerado"],
+    "oil_type": ["Tipo de aceite", "Tipo de aceite(Mayonesas)", "Tipo de aceite (Mayonesas)"],
+    "container_presentation": ["Presentación del envase", "Presentacion del envase"],
+    "container_format": ["Formato del envase"],
+    "bread_format": ["Formato de pan"],
+    "pasta_type": ["Tipo pasta"],
+    "pasta_base": ["Base de la pasta"],
+    "sauce_type": ["Tipo salsas"],
+    "cheese_curing": ["Curación queso", "Curacion queso"],
+    "cheese_format": ["Formato quesos"],
+    "cheese_variety": ["Variedad de queso"],
+    "yogurt_type": ["Tipo de yogur"],
+    "yogurt_milk_origin": ["Origen leche del yogur"],
     "milk_type": ["Tipo de leche"],
     "milk_treatment": ["Tratamiento de la leche"],
     "meat_breed": ["Raza"],
 }
+MANDATORY_MENTION_LABELS = [
+    "Menciones obligatorias",
+    "Menciones Obligatorias",
+    "Otras Menciones Obligatorias",
+    "Otra información obligatoria",
+    "Otra informacion obligatoria",
+]
 
 
 def nonempty(value):
     return value not in (None, "", [], {})
 
 
-def augment_declared_attributes(row: dict, evidence: list[dict], text: str) -> None:
+def replace_evidence(evidence: list[dict], row: dict, field: str, value, evidence_type: str = "DECLARED") -> None:
+    evidence[:] = [item for item in evidence if item.get("field") != field]
+    if nonempty(value):
+        evidence.append({
+            "retailer_sku": row.get("retailer_sku"),
+            "field": field,
+            "value": value,
+            "source": base.SOURCE,
+            "evidence_type": evidence_type,
+            "source_url": row.get("canonical_url"),
+            "observed_at": row.get("observed_at"),
+        })
+
+
+def augment_declared_fields(row: dict, evidence: list[dict], text: str) -> None:
     attributes = dict(row.get("attributes") or {})
     for key, labels in ATTRIBUTE_LABELS.items():
         value = base.labelled_value(text, labels)
         if nonempty(value):
             attributes[key] = value
     row["attributes"] = attributes
+    replace_evidence(evidence, row, "attributes", attributes)
 
-    # Keep a single field-level evidence item matching the final declared map.
-    evidence[:] = [item for item in evidence if item.get("field") != "attributes"]
-    if attributes:
-        evidence.append({
-            "retailer_sku": row.get("retailer_sku"),
-            "field": "attributes",
-            "value": attributes,
-            "source": base.SOURCE,
-            "evidence_type": "DECLARED",
-            "source_url": row.get("canonical_url"),
-            "observed_at": row.get("observed_at"),
-        })
+    if not row.get("mandatory_mentions"):
+        row["mandatory_mentions"] = base.labelled_value(text, MANDATORY_MENTION_LABELS)
+    replace_evidence(evidence, row, "mandatory_mentions", row.get("mandatory_mentions"))
 
 
 def main():
@@ -77,7 +105,7 @@ def main():
         status = item.get("status")
         text = base.html_to_text(raw)
         row, ev = browser.extract_from_html(url, final_url, status, raw, text)
-        augment_declared_attributes(row, ev, text)
+        augment_declared_fields(row, ev, text)
         row["capture_method"] = "PLAYWRIGHT_SAVED_HTML"
         row["capture_probe_version"] = summary.get("version")
         rows.append(row)
