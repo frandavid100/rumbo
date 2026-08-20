@@ -102,4 +102,35 @@ class MealQuantityOptimizerTest {
         assertEquals(0.0, yogurtAmount % 120.0, 0.001)
         assertTrue(yogurtAmount in setOf(120.0, 240.0, 360.0))
     }
+
+    @Test
+    fun wholeUnitOverridesAnOlderGramRangeThatCannotContainIt() {
+        val milk = Food(
+            5, "Leche", FoodCategory.PROTEIN, 46.4, 1.6, 4.6, 3.4, 0.0,
+            unitName = "taza", unitAmount = 230.0, wholeUnitsOnly = true
+        )
+        val allFoods = (foods.values + milk).associateBy { it.id }
+        val meals = MealType.entries.mapIndexed { index, type ->
+            PlannedMeal(
+                id = 200L + index,
+                type = type,
+                days = setOf(WeekDay.MONDAY),
+                items = if (type == MealType.BREAKFAST) listOf(
+                    PlannedFood(milk.id, 100.0, true, 50.0, 150.0)
+                ) else listOf(PlannedFood(base.id, 100.0))
+            )
+        }
+
+        val result = MealQuantityOptimizer.optimize(
+            meals, allFoods, emptyMap(), recommendation, setOf(WeekDay.MONDAY)
+        )
+        val breakfast = result.meals.first { it.type == MealType.BREAKFAST }
+        val plannedMilk = breakfast.items.single()
+        val milkAmount = breakfast.resolvedGrams(plannedMilk, WeekDay.MONDAY)
+
+        assertEquals(230.0, milkAmount, 0.001)
+        assertEquals(230.0, plannedMilk.minimumGrams, 0.001)
+        assertEquals(230.0, plannedMilk.maximumGrams, 0.001)
+        assertTrue(usesPracticalUnits(milkAmount, milk.practicalUnitStep()))
+    }
 }

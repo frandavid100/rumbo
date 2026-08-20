@@ -61,6 +61,11 @@ object MealQuantityOptimizer {
         val step: Double? = null
     )
 
+    private data class DiscreteRange(
+        val minimum: Double,
+        val maximum: Double
+    )
+
     fun optimize(
         meals: List<PlannedMeal>,
         foodsById: Map<Long, Food>,
@@ -169,45 +174,66 @@ object MealQuantityOptimizer {
         meals.filter { day in it.days }.forEach { meal ->
             meal.items.filter { it.adjustable }.forEach { item ->
                 val food = foodsById[item.foodId]
-                if (food?.hasComparableNutrition() == true) add(
-                    Variable(
-                        meal.id, meal.type, item.foodId, false, food.name,
-                        item.minimumGrams, item.maximumGrams, meal.resolvedGrams(item, day),
-                        Vector(
-                            food.calories!! / 100.0,
-                            food.proteinGrams!! / 100.0,
-                            food.carbohydrateGrams!! / 100.0,
-                            food.fatGrams!! / 100.0
-                        ),
-                        step = food.unitAmount?.let { amount ->
-                            when {
-                                food.wholeUnitsOnly -> amount
-                                food.unitDivisions > 1 -> amount / food.unitDivisions
-                                else -> null
-                            }
-                        }
+                if (food?.hasComparableNutrition() == true) {
+                    val step = food.practicalUnitStep()
+                    val range = discreteRange(
+                        item.minimumGrams, item.maximumGrams,
+                        meal.resolvedGrams(item, day), step
                     )
-                )
+                    add(
+                        Variable(
+                            meal.id, meal.type, item.foodId, false, food.name,
+                            range.minimum, range.maximum, meal.resolvedGrams(item, day),
+                            Vector(
+                                food.calories!! / 100.0,
+                                food.proteinGrams!! / 100.0,
+                                food.carbohydrateGrams!! / 100.0,
+                                food.fatGrams!! / 100.0
+                            ),
+                            step = step
+                        )
+                    )
+                }
             }
             meal.dishes.filter { it.adjustable }.forEach { item ->
                 val dish = dishesById[item.dishId]
                 val perGram = dish?.nutritionForGrams(foodsById, 1.0)
-                if (dish != null && perGram?.isComplete == true) add(
-                    Variable(
-                        meal.id, meal.type, item.dishId, true, dish.name,
-                        item.minimumGrams, item.maximumGrams, meal.resolvedGrams(item, day),
-                        perGram.toVector(),
-                        step = dish.unitAmount?.let { amount ->
-                            when {
-                                dish.wholeUnitsOnly -> amount
-                                dish.unitDivisions > 1 -> amount / dish.unitDivisions
-                                else -> null
-                            }
-                        } ?: dish.wholeUnitStep(foodsById)
+                if (dish != null && perGram?.isComplete == true) {
+                    val step = dish.practicalUnitStep() ?: dish.wholeUnitStep(foodsById)
+                    val range = discreteRange(
+                        item.minimumGrams, item.maximumGrams,
+                        meal.resolvedGrams(item, day), step
                     )
-                )
+                    add(
+                        Variable(
+                            meal.id, meal.type, item.dishId, true, dish.name,
+                            range.minimum, range.maximum, meal.resolvedGrams(item, day),
+                            perGram.toVector(),
+                            step = step
+                        )
+                    )
+                }
             }
         }
+    }
+
+    private fun discreteRange(
+        minimum: Double,
+        maximum: Double,
+        initial: Double,
+        step: Double?
+    ): DiscreteRange {
+        if (step == null) return DiscreteRange(minimum, maximum)
+        val first = ceil(minimum / step).toLong().coerceAtLeast(1L)
+        val last = floor(maximum / step).toLong()
+        if (first <= last) return DiscreteRange(first * step, last * step)
+
+        // The habitual unit was defined after the planning range (or is larger
+        // than that range). An indivisible unit takes precedence over stale
+        // gram bounds: retain the nearest positive whole unit as the only
+        // feasible amount instead of silently producing a fraction.
+        val nearest = round(initial / step).toLong().coerceAtLeast(1L) * step
+        return DiscreteRange(nearest, nearest)
     }
 
     private fun Dish.wholeUnitStep(foodsById: Map<Long, Food>): Double? {
@@ -249,7 +275,27 @@ object MealQuantityOptimizer {
                 if (variable.isDish) dishAmounts[variable.itemId] = amount
                 else foodAmounts[variable.itemId] = amount
             }
+            val foodRanges = indices.mapNotNull { index ->
+                variables[index].takeUnless { it.isDish }?.let {
+                    it.itemId to (it.minimum to it.maximum)
+                }
+            }.toMap()
+            val dishRanges = indices.mapNotNull { index ->
+                variables[index].takeIf { it.isDish }?.let {
+                    it.itemId to (it.minimum to it.maximum)
+                }
+            }.toMap()
             meal.copy(
+                items = meal.items.map { item ->
+                    foodRanges[item.foodId]?.let { (minimum, maximum) ->
+                        item.copy(minimumGrams = minimum, maximumGrams = maximum)
+                    } ?: item
+                },
+                dishes = meal.dishes.map { item ->
+                    dishRanges[item.dishId]?.let { (minimum, maximum) ->
+                        item.copy(minimumGrams = minimum, maximumGrams = maximum)
+                    } ?: item
+                },
                 dayAmounts = meal.dayAmounts.filterNot { it.day == day } +
                     MealDayAmounts(day, foodAmounts, dishAmounts)
             ).sanitizedDayAmounts()
