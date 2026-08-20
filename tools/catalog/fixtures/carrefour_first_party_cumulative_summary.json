@@ -1,143 +1,143 @@
 {
-  "built_at": "2026-08-20T22:08:17.770903+00:00",
+  "built_at": "2026-08-20T22:09:09.096132+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 99,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 104,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 11,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 54,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 3854,
+    "evidence_rows": 3975,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 120,
+    "nutrition_complete": 125,
     "nutrition_not_found": 39,
     "nutrition_partial": 15,
-    "verified_direct_products": 174,
-    "verified_first_party_products": 174,
+    "verified_direct_products": 179,
+    "verified_first_party_products": 179,
     "verified_listing_only_observations": 11,
-    "verified_product_page_observations": 163
+    "verified_product_page_observations": 168
   },
   "coverage": {
     "allergens": {
       "count": 61,
-      "pct": 35.06
+      "pct": 34.08
     },
     "attributes": {
-      "count": 174,
+      "count": 179,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 13.22
+      "pct": 12.85
     },
     "brand": {
-      "count": 149,
-      "pct": 85.63
+      "count": 154,
+      "pct": 86.03
     },
     "category_path": {
-      "count": 109,
-      "pct": 62.64
+      "count": 114,
+      "pct": 63.69
     },
     "gtin": {
       "count": 4,
-      "pct": 2.3
+      "pct": 2.23
     },
     "image_url": {
       "count": 8,
-      "pct": 4.6
+      "pct": 4.47
     },
     "ingredients": {
-      "count": 140,
-      "pct": 80.46
+      "count": 145,
+      "pct": 81.01
     },
     "legal_name": {
-      "count": 142,
-      "pct": 81.61
+      "count": 147,
+      "pct": 82.12
     },
     "mandatory_mentions": {
       "count": 57,
-      "pct": 32.76
+      "pct": 31.84
     },
     "manufacturer_packer_importer": {
-      "count": 143,
-      "pct": 82.18
+      "count": 148,
+      "pct": 82.68
     },
     "name": {
-      "count": 174,
+      "count": 179,
       "pct": 100.0
     },
     "net_content": {
-      "count": 138,
-      "pct": 79.31
+      "count": 143,
+      "pct": 79.89
     },
     "nutriscore": {
       "count": 54,
-      "pct": 31.03
+      "pct": 30.17
     },
     "nutrition_extra": {
-      "count": 160,
-      "pct": 91.95
+      "count": 165,
+      "pct": 92.18
     },
     "operator_address": {
-      "count": 143,
-      "pct": 82.18
+      "count": 148,
+      "pct": 82.68
     },
     "preparation_instructions": {
       "count": 94,
-      "pct": 54.02
+      "pct": 52.51
     },
     "price_eur": {
-      "count": 174,
+      "count": 179,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 140,
-      "pct": 80.46
+      "count": 145,
+      "pct": 81.01
     },
     "unit_price_text": {
-      "count": 174,
+      "count": 179,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 135,
-      "pct": 77.59
+      "count": 140,
+      "pct": 78.21
     },
     "carbohydrate_g": {
-      "count": 132,
-      "pct": 75.86
+      "count": 137,
+      "pct": 76.54
     },
     "energy_kj": {
-      "count": 135,
-      "pct": 77.59
+      "count": 140,
+      "pct": 78.21
     },
     "fat_g": {
-      "count": 128,
-      "pct": 73.56
+      "count": 133,
+      "pct": 74.3
     },
     "fiber_g": {
-      "count": 39,
-      "pct": 22.41
+      "count": 40,
+      "pct": 22.35
     },
     "protein_g": {
-      "count": 128,
-      "pct": 73.56
+      "count": 133,
+      "pct": 74.3
     },
     "salt_g": {
-      "count": 125,
-      "pct": 71.84
+      "count": 130,
+      "pct": 72.63
     },
     "saturates_g": {
-      "count": 128,
-      "pct": 73.56
+      "count": 133,
+      "pct": 74.3
     },
     "sugars_g": {
-      "count": 129,
-      "pct": 74.14
+      "count": 134,
+      "pct": 74.86
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -365,6 +365,177 @@
       "storage_conditions": "Conservar en lugar fresco y seco.",
       "sugars_g": 55.0,
       "unit_price_text": "5,67 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "jam_type": "Básicas",
+        "packaging": "Frasco cristal",
+        "product": "Mermelada"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 196.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/mermelada-de-albaricoque-carrefour-classic-410-g/R-521003424/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-3.3-indexed",
+      "carbohydrate_g": 48.0,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Dulce",
+        "Mermeladas, Membrillos y Compotas"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 833.0,
+      "fat_g": 0.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Albaricoque, azúcar, espesante: pectina de frutas, acidulante: ácido cítrico",
+      "legal_name": "Mermelada Albaricoque",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "CENTROS COMERCIALES CARREFOUR SA",
+      "name": "Mermelada de albaricoque Carrefour Classic 410 g.",
+      "net_content": "410 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T22:31:00+00:00",
+      "operator_address": "Avenida de la Transicion Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 1.49,
+      "protein_g": 0.5,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521003424",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservese en lugar fresco y seco. Una vez abierto conservesé en el frigorifico",
+      "sugars_g": 47.0,
+      "unit_price_text": "3,63 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "jam_type": "Básicas",
+        "packaging": "Frasco cristal",
+        "product": "Mermelada"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 239.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/mermelada-de-naranja-carrefour-classic-410-g/R-521003430/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-3.3-indexed",
+      "carbohydrate_g": 58.0,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Dulce",
+        "Mermeladas, Membrillos y Compotas"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 1014.0,
+      "fat_g": 0.0,
+      "fetch_error": null,
+      "fiber_g": 1.6,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Naranja, azúcar, espesante: pectina de frutas y acidulante: ácido cítrico",
+      "legal_name": "Mermelada de naranja",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "CENTROS COMERCIALES CARREFOUR SA",
+      "name": "Mermelada de naranja Carrefour Classic 410 g.",
+      "net_content": "410 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T22:31:00+00:00",
+      "operator_address": "Avenida de la transicion Española 36, 28108 Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 1.26,
+      "protein_g": 0.0,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521003430",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservese en lugar fresco y seco. Una vez abierto conservesé en el frigorifico",
+      "sugars_g": 57.0,
+      "unit_price_text": "3,07 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "jam_type": "Básicas",
+        "packaging": "Frasco cristal",
+        "product": "Mermelada"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 196.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/mermelada-de-melocoton-carrefour-classic-650-g/R-521003432/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-3.3-indexed",
+      "carbohydrate_g": 48.0,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Dulce",
+        "Mermeladas, Membrillos y Compotas"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 833.0,
+      "fat_g": 0.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Melocotón, azúcar, espesante: pectinas de frutas, acidulante: ácido cítrico",
+      "legal_name": "Mermelada Melocotón",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "CENTROS COMERCIALES CARREFOUR SA",
+      "name": "Mermelada de melocotón Carrefour Classic 650 g.",
+      "net_content": "650 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T22:31:00+00:00",
+      "operator_address": "Avenida de la Transicion Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 2.09,
+      "protein_g": 0.5,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521003432",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservese en lugar fresco y seco. Una vez abierto conservesé en el frigorifico",
+      "sugars_g": 46.0,
+      "unit_price_text": "3,22 €/kg"
     },
     {
       "allergens": null,
@@ -1088,191 +1259,6 @@
       "storage_conditions": "Conservar en lugar fresco y seco. Una vez abierto, conservar en un recipiente alimentario entre 0ºC y +4 ºC y consumir en 48 horas.",
       "sugars_g": 0.5,
       "unit_price_text": "17,88 €/kg"
-    },
-    {
-      "allergens": "Contiene: Leche",
-      "attributes": {
-        "milk_fat_type": "Entera",
-        "milk_origin": "Vaca",
-        "origin_country": "España",
-        "presentation": "Brik",
-        "sanitary_registration": "ES 15.00220/BU CE; ES 15.05401/B CE"
-      },
-      "availability": null,
-      "brand": "PASCUAL",
-      "calories_kcal": 64.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/leche-entera-pascual-brik-1-l/R-521006986/p",
-      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
-      "capture_probe_version": "agent-web-direct-2.1-indexed",
-      "carbohydrate_g": 4.6,
-      "category_path": [
-        "Supermercado",
-        "La Despensa",
-        "Lácteos",
-        "Leche"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 268.0,
-      "fat_g": 3.6,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Leche entera",
-      "legal_name": "Leche entera UHT",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Calidad Pascual, SAU.",
-      "name": "Leche entera Pascual brik 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {
-        "calcium_mg": 115.0
-      },
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T14:49:30.947915+00:00",
-      "operator_address": "Ctra. De Palencia, s/n - 09400 Aranda de Duero (Burgos)",
-      "page_sha256": null,
-      "preparation_instructions": "Una vez abierto, conservar el envase cerrado en nevera y consumir antes de 3 días.",
-      "price_currency": "EUR",
-      "price_eur": 1.43,
-      "protein_g": 3.2,
-      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521006986",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.12,
-      "saturates_g": 2.5,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Una vez abierto, conservar el envase cerrado en nevera y consumir antes de 3 días.",
-      "sugars_g": 4.6,
-      "unit_price_text": "1,43 €/l"
-    },
-    {
-      "allergens": "Contiene: Leche",
-      "attributes": {
-        "conservation_mode": "Lugar fresco y seco",
-        "country_of_origin": "España",
-        "milk_fat_type": "Entera",
-        "milk_origin": "Vaca",
-        "milk_processing": "Uperisada",
-        "origin_country": "España",
-        "presentation": "Brik",
-        "sanitary_register": "15.01710/LU",
-        "sanitary_registration": "15.01710/LU"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 63.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/leche-entera-carrefour-brik-1-l/R-521006992/p",
-      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
-      "capture_probe_version": "agent-web-direct-2.1-indexed",
-      "carbohydrate_g": 4.7,
-      "category_path": [
-        "Supermercado",
-        "La Despensa",
-        "Lácteos",
-        "Leche"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 264.0,
-      "fat_g": 3.6,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": "https://static.carrefour.es/hd_350x_/img_pim_food/231395_00_1.jpg",
-      "ingredients": "Leche entera de vaca.",
-      "legal_name": "Leche UHT entera",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Leche entera Carrefour brik 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": "B",
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T14:52:48.597552+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": "Lugar fresco y seco",
-      "price_currency": "EUR",
-      "price_eur": 0.96,
-      "protein_g": 3.0,
-      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521006992",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.13,
-      "saturates_g": 2.5,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en lugar seco y fresco. Una vez abierto el envase, consérvese en el frigorífico. Es aconsejable su consumo en los 2 ó 3 días siguientes.",
-      "sugars_g": 4.7,
-      "unit_price_text": "0,96 €/l"
-    },
-    {
-      "allergens": "Contiene: Leche",
-      "attributes": {
-        "conservation_mode": "Lugar fresco y seco",
-        "milk_fat_type": "Desnatada",
-        "milk_origin": "Vaca",
-        "milk_processing": "Uperisada",
-        "origin_country": "España",
-        "presentation": "Brik",
-        "sanitary_registration": "15.01710/LU"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 38.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/leche-desnatada-con-calcio-carrefour-brik-1-l/R-521006998/p",
-      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
-      "capture_probe_version": "agent-web-direct-2.1-indexed",
-      "carbohydrate_g": 4.8,
-      "category_path": [
-        "Supermercado",
-        "La Despensa",
-        "Lácteos",
-        "Leche"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 163.0,
-      "fat_g": 0.4,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Leche desnatada, proteinas lácteas (leche), sales de calcio de la leche y vitaminas A,D, E y ácido fólico.",
-      "legal_name": "Leche UHT desnatada, enriquecida con proteínas, calcio, vitaminas A, D, E y ácido fólico.",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Leche desnatada con calcio Carrefour brik 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": "A",
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {
-        "calcium_mg": 160.0,
-        "folic_acid_ug": 20.0
-      },
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T14:52:48.597552+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": "Lugar fresco y seco",
-      "price_currency": "EUR",
-      "price_eur": 1.02,
-      "protein_g": 3.9,
-      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521006998",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.13,
-      "saturates_g": 0.3,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en lugar seco y fresco. Una vez abierto el envase, consérvese en el frigorífico. Es aconsejable su consumo en los 2 ó 3 días siguientes.",
-      "sugars_g": 4.8,
-      "unit_price_text": "1,02 €/l"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
