@@ -9,6 +9,7 @@ on:
       - 'tools/catalog/carrefour_first_party_from_saved_html.py'
       - 'tools/catalog/carrefour_first_party_browser_inventory.py'
       - 'tools/catalog/carrefour_first_party_inventory.py'
+      - 'tools/catalog/sanitize_carrefour_first_party_output.py'
   workflow_dispatch:
 
 permissions:
@@ -35,13 +36,14 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Probe known Carrefour product pages on a clean runner
         working-directory: tools/catalog
-        run: python carrefour_first_party_browser_probe.py --out carrefour-first-party-browser-probe --concurrency 2
+        run: python carrefour_first_party_browser_probe.py --out carrefour-first-party-browser-probe --concurrency 1
       - name: Extract full first-party fields from successful saved pages
         working-directory: tools/catalog
         run: |
           python carrefour_first_party_from_saved_html.py \
             --probe-dir carrefour-first-party-browser-probe \
             --out carrefour-first-party-browser-extracted
+          python sanitize_carrefour_first_party_output.py carrefour-first-party-browser-extracted
       - name: Print results
         run: |
           cat tools/catalog/carrefour-first-party-browser-probe/summary.json
