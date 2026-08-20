@@ -1,0 +1,7 @@
+{
+  "retailer": "CARREFOUR",
+  "candidate_source": "RADARSUPER_CANDIDATE_ONLY",
+  "candidate_urls": 8451,
+  "first_party_fields_copied": 0,
+  "policy": "URLs are seeds for direct Carrefour verification only. No RadarSuper field may become CARREFOUR_FIRST_PARTY evidence without direct observation on carrefour.es."
+}

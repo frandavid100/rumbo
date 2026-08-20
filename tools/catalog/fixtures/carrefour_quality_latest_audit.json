@@ -1,27 +1,27 @@
 {
-  "menu_eligible": 1143,
+  "menu_eligible": 1156,
   "blocking_issue_count": 0,
   "blocking_product_count": 0,
   "blocking_by_reason": {},
   "menu_eligible_by_type": {
     "CULINARY_OIL": 22,
     "SEASONING": 13,
-    "MILK_BASE": 86,
-    "SNACK_DESSERT": 233,
-    "BREAD": 46,
+    "SNACK_DESSERT": 236,
+    "MILK_BASE": 89,
+    "BREAD": 47,
     "SAUCE": 80,
-    "MAIN_FISH": 79,
-    "VEGETABLE": 52,
+    "MAIN_FISH": 80,
+    "VEGETABLE": 53,
     "MAIN_MEAT": 50,
-    "BEVERAGE": 76,
     "FRUIT": 15,
+    "BEVERAGE": 77,
     "BREWED_DRINK_BASE": 33,
-    "FAT_COMPLEMENT": 26,
+    "FAT_COMPLEMENT": 27,
     "FRESH_STARCH": 24,
     "LEGUME": 26,
     "DRIED_FRUIT": 2,
     "PICKLED_VEGETABLE": 3,
-    "DRY_RICE": 27,
+    "DRY_RICE": 28,
     "BREAKFAST_CEREAL": 15,
     "DRY_PASTA": 11,
     "FRESH_FILLED_PASTA": 1,
@@ -31,24 +31,24 @@
     "COOKING_INGREDIENT": 3,
     "CHEESE": 91,
     "CURED_MEAT": 25,
-    "MAIN_EGG": 1
+    "MAIN_EGG": 2
   },
   "menu_eligible_by_family": {
     "Aceite, especias y salsas": 113,
     "Agua y refrescos": 36,
     "Aperitivos": 56,
     "Arroz, legumbres y pasta": 64,
-    "Azúcar, caramelos y chocolate": 109,
+    "Azúcar, caramelos y chocolate": 115,
     "Cacao, café e infusiones": 40,
     "Carne": 24,
     "Cereales y galletas": 80,
-    "Charcutería y quesos": 139,
+    "Charcutería y quesos": 141,
     "Congelados": 49,
     "Conservas, caldos y cremas": 77,
-    "Fruta y verdura": 54,
-    "Huevos, leche y mantequilla": 101,
+    "Fruta y verdura": 56,
+    "Huevos, leche y mantequilla": 103,
     "Marisco y pescado": 35,
-    "Panadería y pastelería": 40,
+    "Panadería y pastelería": 41,
     "Pizzas y platos preparados": 16,
     "Postres y yogures": 99,
     "Zumos": 11
@@ -908,6 +908,18 @@
       }
     },
     {
+      "product_id": "carrefour:batido-de-chocolate-okey-botella-750-ml-carrefour",
+      "name": "Batido de chocolate Okey botella 750 ml.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "BEVERAGE",
+      "nutrition": {
+        "calories": 66.0,
+        "protein_g": 2.2,
+        "carbohydrate_g": 11.0,
+        "fat_g": 1.3
+      }
+    },
+    {
       "product_id": "carrefour:batido-de-proteinas-sabor-chocolate-sin-azucar-anadido-valio-profeel-250-ml-valio-protein-carrefour",
       "name": "Batido de proteínas sabor chocolate sin azúcar añadido Valio Profeel 250 ml.",
       "family": "Azúcar, caramelos y chocolate",
@@ -917,18 +929,6 @@
         "protein_g": 10.0,
         "carbohydrate_g": 4.7,
         "fat_g": 1.7
-      }
-    },
-    {
-      "product_id": "carrefour:bebida-de-fruta-pina-sabor-coco-carrefour-classic-sin-azucar-anadido-brik-1-l-carrefour",
-      "name": "Bebida de fruta piña sabor coco Carrefour Classic sin azúcar añadido brik 1 l.",
-      "family": "Azúcar, caramelos y chocolate",
-      "culinary_type": "BEVERAGE",
-      "nutrition": {
-        "calories": 28.0,
-        "protein_g": 0.0,
-        "carbohydrate_g": 6.5,
-        "fat_g": 0.0
       }
     },
     {
@@ -1004,6 +1004,18 @@
       }
     },
     {
+      "product_id": "carrefour:cacahuetes-fritos-con-miel-carrefour-125-g-carrefour",
+      "name": "Cacahuetes fritos con miel Carrefour 125 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "FAT_COMPLEMENT",
+      "nutrition": {
+        "calories": 610.0,
+        "protein_g": 22.0,
+        "carbohydrate_g": 20.0,
+        "fat_g": 48.0
+      }
+    },
+    {
       "product_id": "carrefour:chocolate-con-almendra-y-naranja-troceada-valor-sin-gluten-200-g-carrefour",
       "name": "Chocolate con almendra y naranja troceada Valor sin gluten 200 g.",
       "family": "Azúcar, caramelos y chocolate",
@@ -1049,6 +1061,18 @@
         "protein_g": 0.0,
         "carbohydrate_g": 0.6,
         "fat_g": 0.0
+      }
+    },
+    {
+      "product_id": "carrefour:bombon-de-chocolate-blanco-relleno-de-crema-tipo-dubai-millano-120-g-carrefour",
+      "name": "Bombón de chocolate blanco relleno de crema tipo Dubai Millano 120 g.",
+      "family": "Azúcar, caramelos y chocolate",
+      "culinary_type": "MILK_BASE",
+      "nutrition": {
+        "calories": 551.0,
+        "protein_g": 5.6,
+        "carbohydrate_g": 57.0,
+        "fat_g": 33.0
       }
     },
     {
@@ -1520,6 +1544,18 @@
       }
     },
     {
+      "product_id": "carrefour:pan-de-queso-mordi-godi-sin-gluten-253-g-carrefour",
+      "name": "Pan de queso Mordi & Godi sin gluten 253 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "BREAD",
+      "nutrition": {
+        "calories": 252.0,
+        "protein_g": 3.8,
+        "carbohydrate_g": 34.0,
+        "fat_g": 11.0
+      }
+    },
+    {
       "product_id": "carrefour:apetina-queso-blanco-dados-en-salmuera-arla-200-g-carrefour",
       "name": "Apetina queso blanco dados en salmuera Arla 200 g.",
       "family": "Charcutería y quesos",
@@ -1612,6 +1648,18 @@
         "calories": 157.0,
         "protein_g": 6.5,
         "carbohydrate_g": 10.0,
+        "fat_g": 10.0
+      }
+    },
+    {
+      "product_id": "carrefour:mezzelune-con-relleno-de-jamon-de-parma-y-parmigiano-reggiano-garofalo-230-g-carrefour",
+      "name": "Mezzelune con relleno de jamón de parma y parmigiano reggiano Garofalo 230 g.",
+      "family": "Charcutería y quesos",
+      "culinary_type": "MAIN_EGG",
+      "nutrition": {
+        "calories": 264.0,
+        "protein_g": 9.1,
+        "carbohydrate_g": 33.0,
         "fat_g": 10.0
       }
     },
@@ -2240,6 +2288,18 @@
       }
     },
     {
+      "product_id": "carrefour:sardinas-en-tomate-ribeira-sin-gluten-85-g-carrefour",
+      "name": "Sardinas en tomate Ribeira sin gluten 85 g.",
+      "family": "Fruta y verdura",
+      "culinary_type": "MAIN_FISH",
+      "nutrition": {
+        "calories": 198.0,
+        "protein_g": 15.4,
+        "carbohydrate_g": 0.9,
+        "fat_g": 14.7
+      }
+    },
+    {
       "product_id": "carrefour:ensalada-de-pasta-y-pollo-carrefour-el-mercado-340-g-carrefour",
       "name": "Ensalada de pasta y pollo Carrefour El Mercado 340 g",
       "family": "Fruta y verdura",
@@ -2636,6 +2696,18 @@
       }
     },
     {
+      "product_id": "carrefour:masa-de-hojaldre-carrefour-no-gluten-sin-gluten-280-g-carrefour",
+      "name": "Masa de hojaldre Carrefour No gluten sin gluten 280 g.",
+      "family": "Panadería y pastelería",
+      "culinary_type": "DRY_RICE",
+      "nutrition": {
+        "calories": 354.0,
+        "protein_g": 2.5,
+        "carbohydrate_g": 37.0,
+        "fat_g": 20.0
+      }
+    },
+    {
       "product_id": "carrefour:berlina-dunkin-de-avellana-y-cacao-1-ud-carrefour",
       "name": "Berlina Dunkin de Avellana y Cacao 1 ud.",
       "family": "Panadería y pastelería",
@@ -2781,7 +2853,7 @@
     },
     {
       "product_id": "carrefour:croquetas-caseras-de-bacalao-295-g-carrefour-carrefour",
-      "name": "Croquetas caseras de bacalao 295 g",
+      "name": "Croquetas caseras de bacalao Carrefour El Mercado 295 g",
       "family": "Pizzas y platos preparados",
       "culinary_type": "MAIN_FISH",
       "nutrition": {
@@ -2829,7 +2901,7 @@
     },
     {
       "product_id": "carrefour:croquetas-de-pollo-10-ud-carrefour-carrefour",
-      "name": "Croquetas de pollo 10 ud",
+      "name": "Croquetas de pollo Carrefour El Mercado 10 ud",
       "family": "Pizzas y platos preparados",
       "culinary_type": "MAIN_MEAT",
       "nutrition": {
