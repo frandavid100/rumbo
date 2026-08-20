@@ -1,142 +1,142 @@
 {
-  "built_at": "2026-08-20T18:58:15.355859+00:00",
+  "built_at": "2026-08-20T19:57:45.775839+00:00",
   "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 73,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 78,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 7,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 41,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 2829,
+    "evidence_rows": 2953,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 92,
+    "nutrition_complete": 97,
     "nutrition_not_found": 26,
     "nutrition_partial": 6,
-    "verified_direct_products": 124,
-    "verified_first_party_products": 124,
+    "verified_direct_products": 129,
+    "verified_first_party_products": 129,
     "verified_listing_only_observations": 7,
-    "verified_product_page_observations": 117
+    "verified_product_page_observations": 122
   },
   "coverage": {
     "allergens": {
-      "count": 51,
-      "pct": 41.13
+      "count": 52,
+      "pct": 40.31
     },
     "attributes": {
-      "count": 124,
+      "count": 129,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 18.55
+      "pct": 17.83
     },
     "brand": {
-      "count": 105,
-      "pct": 84.68
+      "count": 110,
+      "pct": 85.27
     },
     "category_path": {
       "count": 87,
-      "pct": 70.16
+      "pct": 67.44
     },
     "gtin": {
       "count": 4,
-      "pct": 3.23
+      "pct": 3.1
     },
     "image_url": {
       "count": 8,
-      "pct": 6.45
+      "pct": 6.2
     },
     "ingredients": {
-      "count": 99,
-      "pct": 79.84
+      "count": 104,
+      "pct": 80.62
     },
     "legal_name": {
-      "count": 101,
-      "pct": 81.45
+      "count": 106,
+      "pct": 82.17
     },
     "mandatory_mentions": {
       "count": 43,
-      "pct": 34.68
+      "pct": 33.33
     },
     "manufacturer_packer_importer": {
-      "count": 102,
-      "pct": 82.26
+      "count": 107,
+      "pct": 82.95
     },
     "name": {
-      "count": 124,
+      "count": 129,
       "pct": 100.0
     },
     "net_content": {
-      "count": 99,
-      "pct": 79.84
+      "count": 104,
+      "pct": 80.62
     },
     "nutriscore": {
-      "count": 43,
-      "pct": 34.68
+      "count": 45,
+      "pct": 34.88
     },
     "nutrition_extra": {
-      "count": 110,
-      "pct": 88.71
+      "count": 115,
+      "pct": 89.15
     },
     "operator_address": {
-      "count": 102,
-      "pct": 82.26
+      "count": 107,
+      "pct": 82.95
     },
     "preparation_instructions": {
-      "count": 74,
-      "pct": 59.68
+      "count": 79,
+      "pct": 61.24
     },
     "price_eur": {
-      "count": 124,
+      "count": 129,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 100,
-      "pct": 80.65
+      "count": 105,
+      "pct": 81.4
     },
     "unit_price_text": {
-      "count": 124,
+      "count": 129,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 98,
-      "pct": 79.03
+      "count": 103,
+      "pct": 79.84
     },
     "carbohydrate_g": {
-      "count": 95,
-      "pct": 76.61
+      "count": 100,
+      "pct": 77.52
     },
     "energy_kj": {
-      "count": 98,
-      "pct": 79.03
+      "count": 103,
+      "pct": 79.84
     },
     "fat_g": {
-      "count": 97,
-      "pct": 78.23
+      "count": 102,
+      "pct": 79.07
     },
     "fiber_g": {
-      "count": 28,
-      "pct": 22.58
+      "count": 29,
+      "pct": 22.48
     },
     "protein_g": {
-      "count": 94,
-      "pct": 75.81
+      "count": 99,
+      "pct": 76.74
     },
     "salt_g": {
-      "count": 94,
-      "pct": 75.81
+      "count": 99,
+      "pct": 76.74
     },
     "saturates_g": {
-      "count": 97,
-      "pct": 78.23
+      "count": 102,
+      "pct": 79.07
     },
     "sugars_g": {
-      "count": 93,
-      "pct": 75.0
+      "count": 98,
+      "pct": 75.97
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -254,6 +254,60 @@
       "unit_price_text": "5,67 €/kg"
     },
     {
+      "allergens": "Puede contener: Cereales que contienen gluten",
+      "attributes": {
+        "alternative_vegetal": true,
+        "cooked": true,
+        "drained_weight_g": 400,
+        "legume_type": "Lentejas",
+        "no_added_salt": true,
+        "packaging": "Frasco cristal"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 86.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/lentejas-cocidas-categoria-extra-classic-carrefour-sin-sal-anadida-400-g/R-521005483/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-2.6-indexed",
+      "carbohydrate_g": 13.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 364.0,
+      "fat_g": 0.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Lentejas, agua y antioxidantes (EDTA y ácido ascórbico)",
+      "legal_name": "Lenteja cocida",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Carrefour",
+      "name": "Lentejas cocidas categoría extra Classic Carrefour sin sal añadida 400 g.",
+      "net_content": "570 g",
+      "nutriscore": "A",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T19:56:00+00:00",
+      "operator_address": "Avda. de la Transición Española 36, 28108, Alcobendas (Madrid)",
+      "page_sha256": null,
+      "preparation_instructions": "ver envase",
+      "price_currency": "EUR",
+      "price_eur": 0.9,
+      "protein_g": 6.3,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521005483",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.1,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Una vez abierto mantener en refrigeración y consumir en los 2-3 días siguientes",
+      "sugars_g": 0.0,
+      "unit_price_text": "2,25 €/kg"
+    },
+    {
       "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
       "attributes": {
         "alternative_vegetal": true,
@@ -358,6 +412,59 @@
       "storage_conditions": "Conservar en un lugar fresco y seco. Una vez abierto mantener en refrigeración y consumir antes de 2 días",
       "sugars_g": 0.0,
       "unit_price_text": "2,00 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "alternative_vegetal": true,
+        "cooked": true,
+        "drained_weight_g": 400,
+        "legume_type": "Lentejas",
+        "packaging": "Bote"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 88.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/lentejas-cocidas-categoria-extra-carrefour-400-g/R-521005501/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-2.6-indexed",
+      "carbohydrate_g": 13.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 370.0,
+      "fat_g": 0.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Lentejas, agua, sal y antioxidantes (EDTA y ácido ascórbico)",
+      "legal_name": "Lenteja cocida",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Carrefour",
+      "name": "Lentejas cocidas categoría extra Carrefour 400 g.",
+      "net_content": "570 g",
+      "nutriscore": "A",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T19:56:00+00:00",
+      "operator_address": "Avda. de la Transición Española 36, 28108, Alcobendas (Madrid)",
+      "page_sha256": null,
+      "preparation_instructions": "ver envase",
+      "price_currency": "EUR",
+      "price_eur": 0.9,
+      "protein_g": 6.6,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521005501",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.69,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Una vez abierto mantener en refrigeración y consumir en los 2-3 días siguientes",
+      "sugars_g": 0.0,
+      "unit_price_text": "2,25 €/kg"
     },
     {
       "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
@@ -1190,128 +1297,6 @@
       "storage_conditions": "Almacenar en lugar fresco y seco. Preservar de la luz solar.",
       "sugars_g": 0.0,
       "unit_price_text": "1,88 €/kg"
-    },
-    {
-      "allergens": "Contiene: Pescado",
-      "attributes": {
-        "can_opening": "Easy peel",
-        "country_of_origin": "España",
-        "drained_weight_g": 312,
-        "industrial": true,
-        "packaging": "Lata",
-        "preserve_characteristic": "En aceite vegetal",
-        "preserve_type": "Atún claro"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 186.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/atun-claro-en-aceite-de-girasol-carrefour-pack-de-6-latas-de-52-g/R-521029268/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-2.5-indexed",
-      "carbohydrate_g": 0.5,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Conservas, Sopas y Precocinados",
-        "Conservas de Pescado y Marisco"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 778.0,
-      "fat_g": 10.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Atún claro (Thunnus albacares), aceite de girasol 24.2% y sal",
-      "legal_name": "Atún claro en aceite de girasol",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "CARREFOUR",
-      "name": "Atún claro en aceite de girasol Carrefour pack de 6 latas de 52 g.",
-      "net_content": "420 g",
-      "nutriscore": "C",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T18:54:00+00:00",
-      "operator_address": "Interdis - TSA 91431 - 91343 MASSY Cedex - Francia",
-      "page_sha256": null,
-      "preparation_instructions": "Lugar fresco y seco",
-      "price_currency": "EUR",
-      "price_eur": 3.75,
-      "protein_g": 24.0,
-      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521029268",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 1.5,
-      "saturates_g": 1.3,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en lugar fresco y seco. Una vez abierto, conservar en un recipiente alimentario entre 0ºC y +4 ºC y consumir en 48 horas.",
-      "sugars_g": 0.5,
-      "unit_price_text": "12,02 €/kg"
-    },
-    {
-      "allergens": "Contiene: Pescado",
-      "attributes": {
-        "can_opening": "Abrefácil",
-        "country_of_origin": "España",
-        "drained_weight_g": 312,
-        "industrial": true,
-        "packaging": "Lata",
-        "preserve_characteristic": "En aceite de oliva",
-        "preserve_type": "Atún claro en aceite de oliva"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 196.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/atun-claro-en-aceite-de-oliva-classic-carrefour-pack-de-3-latas-de-104-g/R-521029278/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.6-indexed",
-      "carbohydrate_g": 0.5,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Conservas, Sopas y Precocinados",
-        "Conservas de Pescado y Marisco"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 818.0,
-      "fat_g": 12.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Atún claro (Thunnus albacares), aceite de oliva 29.5% y sal",
-      "legal_name": "Atún claro en aceite de oliva",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "CARREFOUR",
-      "name": "Atún claro en aceite de oliva Classic Carrefour pack de 3 latas de 104 g.",
-      "net_content": "450 g",
-      "nutriscore": "C",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T12:10:00+00:00",
-      "operator_address": "Interdis - TSA 91431 - 91343 MASSY Cedex - Francia",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 4.95,
-      "protein_g": 22.0,
-      "provenance_note": "All populated fields were observed directly on the official Carrefour product page. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521029278",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 1.2,
-      "saturates_g": 1.9,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar protegido del calor y de la humedad. Una vez abierto, conservar en un recipiente alimentario entre 0ºC y +4ºC y consumir en 48 horas.",
-      "sugars_g": 0.5,
-      "unit_price_text": "15,87 €/kg"
     }
   ],
   "source": "https://www.carrefour.es",
