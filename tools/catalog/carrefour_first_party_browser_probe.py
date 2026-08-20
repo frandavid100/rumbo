@@ -10,15 +10,20 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
+# Keep the most valuable, already verified official pages first. Carrefour's WAF
+# often allows only the first few clean-browser requests from a GitHub runner,
+# so repeating pages whose HTML has already been saved wastes the scarce window.
+# These URLs are identities previously observed on carrefour.es; no third-party
+# product fields are used here.
 DEFAULT_URLS = [
-    "https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p",
-    "https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p",
-    "https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p",
-    "https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p",
-    "https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p",
-    "https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p",
-    "https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p",
-    "https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p",
+    "https://www.carrefour.es/supermercado/queso-en-polvo-especial-pasta-carrefour-classic-sin-gluten-150-g/R-fprod1350064/p",
+    "https://www.carrefour.es/supermercado/queso-mozzarella-rallado-carrefour-200-g/R-VC4AECOMM-646724/p",
+    "https://www.carrefour.es/supermercado/queso-gouda-tierno-en-lonchas-carrefour-classic-300-g/R-VC4AECOMM-588832/p",
+    "https://www.carrefour.es/supermercado/queso-rallado-cuatro-quesos-carrefour-200-g/R-521030772/p",
+    "https://www.carrefour.es/supermercado/queso-mozzarella-en-lonchas-carrefour-200-g/R-521030724/p",
+    "https://www.carrefour.es/supermercado/leche-semidesnatada-carrefour-brik-1-l/R-521007071/p",
+    "https://www.carrefour.es/supermercado/leche-entera-carrefour-brik-1-l/R-521006992/p",
+    "https://www.carrefour.es/supermercado/leche-semidesnatada-carrefour-sin-lactosa-brik-1-l/R-714713105/p",
 ]
 MARKERS = ["Información nutricional", "Ingredientes", "Denominación legal", "Alérgenos", "Contenido neto"]
 BLOCK_RE = re.compile(
@@ -130,7 +135,7 @@ async def run(args):
     summary = {
         "source": "https://www.carrefour.es",
         "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-        "version": "carrefour-first-party-browser-probe-1.3",
+        "version": "carrefour-first-party-browser-probe-1.4",
         "built_at": now_iso(),
         "probe_policy": {
             "concurrency": args.concurrency,
