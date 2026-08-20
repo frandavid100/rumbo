@@ -13,6 +13,7 @@ FIELDS = [
     "gtin", "name", "brand", "image_url", "category_path", "price_eur", "unit_price_text", "availability",
     "legal_name", "ingredients", "allergens", "net_content", "storage_conditions", "preparation_instructions",
     "operator_address", "manufacturer_packer_importer", "mandatory_mentions", "nutriscore", "attributes",
+    "nutrition_extra",
 ]
 NUTRITION_FIELDS = [
     "energy_kj", "calories_kcal", "fat_g", "saturates_g", "carbohydrate_g", "sugars_g", "fiber_g",
@@ -63,7 +64,9 @@ def main() -> int:
             continue
         if field == "attributes" and not row.get("attributes"):
             continue
-        if field in {"nutriscore", "attributes"}:
+        if field == "nutrition_extra" and not row.get("nutrition_extra"):
+            continue
+        if field in {"nutriscore", "attributes", "nutrition_extra"}:
             item = dict(item)
             item["value"] = row.get(field)
         clean_evidence.append(item)
@@ -92,6 +95,7 @@ def main() -> int:
             "nutrition_complete": complete,
             "nutrition_partial": partial,
             "nutrition_not_found": no_nutrition,
+            "nutrition_extra_products": sum(bool(row.get("nutrition_extra")) for row in rows),
             "evidence_rows": len(clean_evidence),
             "external_candidate_identity_urls_not_counted_as_first_party": external_candidate_urls,
         },
@@ -100,7 +104,7 @@ def main() -> int:
         "sample": rows[:20],
         "provenance_note": "Every populated product field counted here was observed directly on carrefour.es. Candidate URLs from third-party mirrors are discovery inputs only and are not counted as Carrefour evidence.",
         "candidate_identity_note": "The external candidate URL count is reported only to measure the pending verification pool; it is not Carrefour first-party coverage.",
-        "quality_note": "Nutri-Score is retained only as a single A-E grade; demonstrably generic marketplace/page chrome is excluded from product attributes.",
+        "quality_note": "Nutri-Score is retained only as a single A-E grade; demonstrably generic marketplace/page chrome and known legacy parser artifacts are excluded from product attributes. Extra micronutrients are counted only when directly declared on the captured Carrefour page.",
     }
 
     summary_path = Path(args.summary)
