@@ -1,0 +1,56 @@
+name: Catalog Carrefour first-party cumulative report
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-first-party-cumulative.yml'
+      - 'tools/catalog/summarize_carrefour_first_party.py'
+      - 'tools/catalog/sanitize_carrefour_first_party_output.py'
+      - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carrefour-first-party-cumulative-report
+  cancel-in-progress: true
+
+jobs:
+  summarize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build auditable cumulative report and SQLite
+        working-directory: tools/catalog
+        run: |
+          python summarize_carrefour_first_party.py \
+            --products fixtures/carrefour_first_party_products_cumulative.jsonl \
+            --evidence fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
+            --summary fixtures/carrefour_first_party_cumulative_summary.json \
+            --sqlite carrefour-first-party-cumulative.sqlite
+      - name: Persist compact report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: update Carrefour first-party cumulative report"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - name: Upload auditable cumulative SQLite
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-first-party-cumulative
+          path: tools/catalog/carrefour-first-party-cumulative.sqlite
+          retention-days: 7
+          if-no-files-found: error
