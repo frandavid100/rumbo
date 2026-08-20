@@ -4,6 +4,9 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - 'tools/catalog/manual/alcampo_semantic_reviews.jsonl'
+      - '.github/workflows/catalog-alcampo-semantic-refresh.yml'
+      - 'tools/catalog/alcampo_semantic_gate.py'
+      - 'tools/catalog/alcampo_prepare_semantic_review_v2.py'
   workflow_dispatch:
 permissions:
   contents: write
@@ -27,10 +30,17 @@ jobs:
       - name: Find newest usable canonical snapshot
         id: base
         run: |
-          # Prefer the immediate-salvage snapshot because it keeps the complete
-          # 13,877-SKU listing baseline while accepting whatever first-party detail
-          # has already finished. Fall back to the strict complete pipeline when a
-          # salvage snapshot is not available.
+          # Prefer the browser-enriched snapshot: unlike early direct/urllib attempts,
+          # a normal-UA Chromium PDP is verified to expose Alcampo's declared legal
+          # name, ingredients and complete nutrition table.
+          browser_run=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/catalog-alcampo-browser-detail-wave.yml/runs?branch=agent%2Fcatalog-phase1&status=completed&per_page=20" \
+            --jq '.workflow_runs[] | select(.conclusion=="success") | .id' | head -n 1)
+          if [ -n "$browser_run" ]; then
+            echo "run_id=$browser_run" >> "$GITHUB_OUTPUT"
+            echo "artifact=alcampo-browser-detail-final" >> "$GITHUB_OUTPUT"
+            echo "kind=browser_detail" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           live_run=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/catalog-alcampo-live-salvage.yml/runs?branch=agent%2Fcatalog-phase1&status=completed&per_page=20" \
             --jq '.workflow_runs[] | select(.conclusion=="success") | .id' | head -n 1)
           if [ -n "$live_run" ]; then
@@ -53,6 +63,12 @@ jobs:
           mkdir -p alcampo-reviewed
           gh run download "${{ steps.base.outputs.run_id }}" -n "${{ steps.base.outputs.artifact }}" -D alcampo-reviewed
           test -s alcampo-reviewed/alcampo_catalog.sqlite
+          if [ ! -s alcampo-reviewed/source_products.jsonl ]; then
+            mkdir -p baseline-source
+            gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D baseline-source
+            cp baseline-source/products.jsonl alcampo-reviewed/source_products.jsonl
+            cp baseline-source/enumeration_report.json alcampo-reviewed/enumeration_report.json
+          fi
           test -s alcampo-reviewed/source_products.jsonl
       - name: Apply persisted semantic model reviews
         working-directory: tools/catalog
@@ -65,7 +81,7 @@ jobs:
             --reviews manual/alcampo_semantic_reviews.jsonl \
             --output ../../alcampo-reviewed/semantic_review_next.jsonl \
             --progress ../../alcampo-reviewed/semantic_review_progress.json \
-            --limit 1000
+            --limit 1500
       - name: Re-export reviewed snapshot
         working-directory: tools/catalog
         run: |
