@@ -1,0 +1,107 @@
+name: Catalog Carrefour first-party actforfood probe
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-first-party-actforfood.yml'
+      - 'tools/catalog/carrefour_first_party_inventory.py'
+      - 'tools/catalog/carrefour_first_party_browser_inventory.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carrefour-first-party-actforfood
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright Chromium
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Probe official actforfood Carrefour product pages
+        working-directory: tools/catalog
+        run: |
+          python carrefour_first_party_browser_inventory.py \
+            --out carrefour-first-party-actforfood-inventory \
+            --delay 10 \
+            --stop-after-blocks 2 \
+            --url 'https://actforfood.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p' \
+            --url 'https://actforfood.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p' \
+            --url 'https://actforfood.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p' \
+            --url 'https://actforfood.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p' \
+            --url 'https://actforfood.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p' \
+            --url 'https://actforfood.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p' \
+            --url 'https://actforfood.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p' \
+            --url 'https://actforfood.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p'
+      - name: Validate and persist first-party results
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          out=pathlib.Path('tools/catalog/carrefour-first-party-actforfood-inventory')
+          summary=out/'summary.json'
+          if not summary.exists():
+              raise SystemExit('missing actforfood summary')
+          d=json.loads(summary.read_text(encoding='utf-8'))
+          if d.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
+              raise SystemExit('bad source policy')
+          if str(d.get('classification_performed')).lower() != 'false':
+              raise SystemExit('unexpected classification')
+          fixtures=pathlib.Path('tools/catalog/fixtures')
+          fixtures.mkdir(parents=True, exist_ok=True)
+          (fixtures/'carrefour_first_party_actforfood_summary.json').write_text(
+              json.dumps(d, ensure_ascii=False, indent=2), encoding='utf-8')
+          def read_jsonl(path):
+              rows=[]
+              if path.exists():
+                  for line in path.read_text(encoding='utf-8').splitlines():
+                      try: rows.append(json.loads(line))
+                      except Exception: pass
+              return rows
+          products_path=fixtures/'carrefour_first_party_products_cumulative.jsonl'
+          products={r.get('retailer_sku'):r for r in read_jsonl(products_path) if r.get('retailer_sku')}
+          for r in read_jsonl(out/'products.jsonl'):
+              if r.get('retailer_sku') and not r.get('fetch_error'):
+                  products[r['retailer_sku']]=r
+          products_path.write_text(''.join(json.dumps(products[k],ensure_ascii=False)+'\n' for k in sorted(products)),encoding='utf-8')
+          evidence_path=fixtures/'carrefour_first_party_field_evidence_cumulative.jsonl'
+          evidence={}
+          for e in read_jsonl(evidence_path)+read_jsonl(out/'field_evidence.jsonl'):
+              key=(e.get('retailer_sku'),e.get('field'),e.get('source'),e.get('source_url'))
+              if all(key): evidence[key]=e
+          evidence_path.write_text(''.join(json.dumps(evidence[k],ensure_ascii=False)+'\n' for k in sorted(evidence)),encoding='utf-8')
+          print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
+          print('cumulative products',len(products),'evidence',len(evidence))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            tools/catalog/fixtures/carrefour_first_party_actforfood_summary.json \
+            tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Carrefour actforfood first-party probe"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - name: Upload auditable probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-first-party-actforfood
+          path: tools/catalog/carrefour-first-party-actforfood-inventory/
+          retention-days: 7
+          if-no-files-found: warn
