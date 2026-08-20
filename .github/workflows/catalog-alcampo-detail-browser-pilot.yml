@@ -1,0 +1,57 @@
+name: Catalog Alcampo browser detail pilot
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/alcampo_detail_browser.py'
+      - '.github/workflows/catalog-alcampo-detail-browser-pilot.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-detail-browser-pilot-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: playwright install --with-deps chromium
+      - name: Download known 13,877-SKU baseline
+        run: |
+          mkdir -p seed
+          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D seed
+          test -s seed/products.jsonl
+      - name: Fetch a representative browser-backed detail sample
+        working-directory: tools/catalog
+        run: python alcampo_detail_browser.py --input ../../seed/products.jsonl --out alcampo-detail-browser-pilot --limit 60 --concurrency 2 --min-valid 1
+      - name: Persist browser detail pilot summary
+        if: always()
+        run: |
+          if [ -f tools/catalog/alcampo-detail-browser-pilot/summary.json ]; then
+            cp tools/catalog/alcampo-detail-browser-pilot/summary.json tools/catalog/fixtures/alcampo_detail_browser_pilot_latest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/alcampo_detail_browser_pilot_latest.json
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Alcampo browser detail pilot"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-detail-browser-pilot
+          path: tools/catalog/alcampo-detail-browser-pilot/
+          retention-days: 7
