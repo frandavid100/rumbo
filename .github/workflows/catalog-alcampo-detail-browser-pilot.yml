@@ -27,6 +27,19 @@ jobs:
           python-version: '3.12'
       - run: pip install playwright
       - run: playwright install --with-deps chromium
+      - name: Validate browser path against known-rendering Alcampo PDP
+        working-directory: tools/catalog
+        run: |
+          printf '%s\n' '{"sku":"522881","name":"ALCAMPO ECOLÓGICO Tofu procedente de agricultura biológica 2 x 200 g"}' > alcampo-known-product.jsonl
+          python alcampo_detail_browser.py --input alcampo-known-product.jsonl --out alcampo-detail-browser-known --limit 1 --concurrency 1 --min-valid 0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          row=json.loads(Path('alcampo-detail-browser-known/details.jsonl').read_text(encoding='utf-8').splitlines()[0])
+          print(json.dumps(row,ensure_ascii=False,indent=2))
+          if row.get('error'):
+              raise SystemExit(2)
+          PY
       - name: Download known 13,877-SKU baseline
         run: |
           mkdir -p seed
@@ -38,20 +51,25 @@ jobs:
       - name: Persist browser detail pilot summary
         if: always()
         run: |
+          if [ -f tools/catalog/alcampo-detail-browser-known/summary.json ]; then
+            cp tools/catalog/alcampo-detail-browser-known/summary.json tools/catalog/fixtures/alcampo_detail_browser_known_latest.json
+          fi
           if [ -f tools/catalog/alcampo-detail-browser-pilot/summary.json ]; then
             cp tools/catalog/alcampo-detail-browser-pilot/summary.json tools/catalog/fixtures/alcampo_detail_browser_pilot_latest.json
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add tools/catalog/fixtures/alcampo_detail_browser_pilot_latest.json
-            if ! git diff --cached --quiet; then
-              git commit -m "catalog: persist Alcampo browser detail pilot"
-              git pull --rebase origin agent/catalog-phase1
-              git push origin HEAD:agent/catalog-phase1
-            fi
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_detail_browser_known_latest.json tools/catalog/fixtures/alcampo_detail_browser_pilot_latest.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Alcampo browser detail pilot"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
           fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: alcampo-detail-browser-pilot
-          path: tools/catalog/alcampo-detail-browser-pilot/
+          path: |
+            tools/catalog/alcampo-detail-browser-known/
+            tools/catalog/alcampo-detail-browser-pilot/
           retention-days: 7
