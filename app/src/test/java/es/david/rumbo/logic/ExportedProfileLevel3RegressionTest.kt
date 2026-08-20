@@ -70,12 +70,66 @@ class ExportedProfileLevel3RegressionTest {
             meal(1005L, MealType.DINNER, listOf(PlannedFood(4256230435931326165L, 110.0, true, 50.0, 300.0),PlannedFood(5759078436861737485L, 65.0, true, 40.0, 300.0),PlannedFood(4908616859504657730L, 160.0, true, 75.0, 300.0),PlannedFood(5961251453330686429L, 85.0, true, 40.0, 250.0))),
         )
         val baseline = CertifiedDayWitness(CertifiedDayLevel.COMPLETE, 11L, WeekDay.MONDAY, meals, meals.hashCode())
+        val byId = foods.associateBy { it.id }
+        val target = Recommendation(1875, 154, 198, 52, "export")
+        fun planned(id: Long, role: CulinaryRole, mealType: MealType): PlannedFood {
+            val policy = PortionPolicyResolver.resolve(
+                byId.getValue(id), role, mealType, target, MealDistributionPolicy.defaults
+            )
+            return PlannedFood(
+                id, policy.effectivePreferred, true,
+                policy.satisfactoryMinimum, policy.satisfactoryMaximum
+            )
+        }
+        val designedMeals = listOf(
+            meal(2001L, MealType.BREAKFAST, listOf(
+                planned(4365814837990144418L, CulinaryRole.BEVERAGE, MealType.BREAKFAST),
+                planned(5961251453330686429L, CulinaryRole.DESSERT, MealType.BREAKFAST),
+                planned(5203449563016489509L, CulinaryRole.TOPPING, MealType.BREAKFAST),
+                planned(4597281240235899950L, CulinaryRole.DESSERT, MealType.BREAKFAST)
+            )),
+            meal(2002L, MealType.MORNING_SNACK, listOf(
+                planned(5053420851366914800L, CulinaryRole.SANDWICH_BASE, MealType.MORNING_SNACK),
+                planned(4533143235677122585L, CulinaryRole.SANDWICH_FILLING, MealType.MORNING_SNACK)
+            )),
+            meal(2003L, MealType.LUNCH, listOf(
+                planned(5877912053805521076L, CulinaryRole.PLATE_CENTER, MealType.LUNCH),
+                planned(5113321827553490261L, CulinaryRole.PLATE_BASE, MealType.LUNCH),
+                planned(4256230435931326165L, CulinaryRole.SIDE, MealType.LUNCH),
+                planned(5194589425113431274L, CulinaryRole.COOKING_MEDIUM, MealType.LUNCH)
+            )),
+            meal(2004L, MealType.AFTERNOON_SNACK, listOf(
+                planned(5053420851366914800L, CulinaryRole.SANDWICH_BASE, MealType.AFTERNOON_SNACK),
+                planned(5140518523843252124L, CulinaryRole.SANDWICH_FILLING, MealType.AFTERNOON_SNACK),
+                planned(5916984186410301698L, CulinaryRole.DESSERT, MealType.AFTERNOON_SNACK)
+            )),
+            meal(2005L, MealType.DINNER, listOf(
+                planned(4908616859504657730L, CulinaryRole.PLATE_CENTER, MealType.DINNER),
+                planned(4078594988320490919L, CulinaryRole.PLATE_BASE, MealType.DINNER),
+                planned(4415633190118516354L, CulinaryRole.SALAD_BASE, MealType.DINNER),
+                planned(5194589425113431274L, CulinaryRole.SAUCE_DRESSING, MealType.DINNER)
+            ))
+        )
+        val designed = MealQuantityOptimizer.optimize(
+            designedMeals, byId, emptyMap(), target,
+            setOf(WeekDay.MONDAY), MealDistributionPolicy.defaults
+        ).meals
+        val designedWitness = CertifiedDayWitness(
+            CertifiedDayLevel.COMPLETE, 99L, WeekDay.MONDAY, designed, designed.hashCode()
+        )
+        val designedComplete = CertifiedDayWitnessEvaluator.isComplete(
+            designedWitness, rules, byId, emptyMap(), target, MealDistributionPolicy.defaults
+        )
+        val designedCulinary = CulinarySatisfactionEvaluator.evaluateDay(
+            WeekDay.MONDAY, designed, byId, emptyMap(), target, MealDistributionPolicy.defaults
+        )
         val result = CulinarilySatisfactoryDaySearch.find(
-            rules, foods.associateBy { it.id }, emptyMap(),
-            Recommendation(1875, 154, 198, 52, "export"), MealDistributionPolicy.defaults, baseline
+            rules, byId, emptyMap(), target, MealDistributionPolicy.defaults, baseline
         )
         assertNotNull(
-            "No level 3 witness. diagnostic=${result.diagnostic}; progress=${result.progressWitness}",
+            "No level 3 witness. designedComplete=$designedComplete; " +
+                "designedCulinary=$designedCulinary; designed=$designed; " +
+                "diagnostic=${result.diagnostic}; progress=${result.progressWitness}",
             result.witness
         )
     }
