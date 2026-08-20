@@ -1,0 +1,147 @@
+name: Catalog Alcampo recover pending leaves from first-party HTML
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-alcampo-html-leaf-recovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-html-leaf-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - id: matrix
+        name: Extract every unresolved API category from the persisted recursive audit
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          p=Path('tools/catalog/fixtures/alcampo_sharded_enumeration_latest.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          found={}
+          def walk(x):
+              if isinstance(x,dict):
+                  u=x.get('unresolved')
+                  if isinstance(u,list):
+                      for row in u:
+                          if not isinstance(row,dict): continue
+                          rid=str(row.get('retailer_category_id') or row.get('rid') or '').strip()
+                          if rid:
+                              found[rid]=str(row.get('label') or rid)
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+          walk(data)
+          include=[{'rid':rid,'label':label} for rid,label in sorted(found.items())]
+          print('matrix='+json.dumps({'include':include},ensure_ascii=False,separators=(',',':')))
+          print('count='+str(len(include)))
+          PY
+
+  recover:
+    needs: prepare
+    if: needs.prepare.outputs.count != '0'
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Recover leaf through official /categories/~/RID SSR then decorate its own UUIDs
+        working-directory: tools/catalog
+        continue-on-error: true
+        run: |
+          python alcampo_html_leaf_recovery.py \
+            --label "${{ matrix.label }}" \
+            --rid "${{ matrix.rid }}" \
+            --out "alcampo-html-recovery-${{ matrix.rid }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-html-recovery-${{ matrix.rid }}
+          path: tools/catalog/alcampo-html-recovery-${{ matrix.rid }}/
+          retention-days: 7
+          if-no-files-found: warn
+
+  merge:
+    needs: [prepare, recover]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download stable 13,877 baseline
+        run: |
+          mkdir -p baseline
+          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D baseline
+          test -s baseline/products.jsonl
+      - uses: actions/download-artifact@v4
+        if: needs.prepare.outputs.count != '0'
+        with:
+          pattern: alcampo-html-recovery-*
+          path: recovered
+      - name: Union recovered leaves with baseline, never replace baseline with a smaller crawl
+        working-directory: tools/catalog
+        run: |
+          mkdir -p ../../alcampo-html-recovery-union
+          python alcampo_recovery_union.py \
+            --baseline-products ../../baseline/products.jsonl \
+            --recovery-root ../../recovered \
+            --out ../../alcampo-html-recovery-union
+      - name: Materialize only newly recovered SKUs for subsequent detail work
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          def rows(p):
+              for line in Path(p).read_text(encoding='utf-8').splitlines():
+                  if line.strip(): yield json.loads(line)
+          baseline={str(r.get('sku') or '') for r in rows('baseline/products.jsonl')}
+          new=[r for r in rows('alcampo-html-recovery-union/products.jsonl') if str(r.get('sku') or '') not in baseline]
+          with open('alcampo-html-recovery-union/new_products.jsonl','w',encoding='utf-8') as f:
+              for r in new: f.write(json.dumps(r,ensure_ascii=False)+'\n')
+          Path('alcampo-html-recovery-union/new_products_summary.json').write_text(json.dumps({'new_unique_skus':len(new)},indent=2),encoding='utf-8')
+          print('new_unique_skus',len(new))
+          PY
+      - name: Persist enumeration recovery state
+        run: |
+          cp alcampo-html-recovery-union/recovery_report.json tools/catalog/fixtures/alcampo_html_recovery_enumeration_latest.json
+          cp alcampo-html-recovery-union/summary.json tools/catalog/fixtures/alcampo_html_recovery_catalog_summary_latest.json
+          cp alcampo-html-recovery-union/new_products_summary.json tools/catalog/fixtures/alcampo_html_recovery_new_products_latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_html_recovery_*
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Alcampo HTML leaf recovery"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-html-recovery-union
+          path: alcampo-html-recovery-union/
+          retention-days: 14
