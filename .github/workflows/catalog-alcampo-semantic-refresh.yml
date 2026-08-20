@@ -24,20 +24,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Find latest completed complete-pipeline snapshot
+      - name: Find newest usable canonical snapshot
         id: base
         run: |
-          run_id=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/catalog-alcampo-sharded-enumeration.yml/runs?branch=agent/catalog-phase1&status=completed&per_page=30" \
+          # Prefer the immediate-salvage snapshot because it keeps the complete
+          # 13,877-SKU listing baseline while accepting whatever first-party detail
+          # has already finished. Fall back to the strict complete pipeline when a
+          # salvage snapshot is not available.
+          live_run=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/catalog-alcampo-live-salvage.yml/runs?branch=agent%2Fcatalog-phase1&status=completed&per_page=20" \
+            --jq '.workflow_runs[] | select(.conclusion=="success") | .id' | head -n 1)
+          if [ -n "$live_run" ]; then
+            echo "run_id=$live_run" >> "$GITHUB_OUTPUT"
+            echo "artifact=alcampo-live-salvage-snapshot" >> "$GITHUB_OUTPUT"
+            echo "kind=live_salvage" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          run_id=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/catalog-alcampo-sharded-enumeration.yml/runs?branch=agent%2Fcatalog-phase1&status=completed&per_page=30" \
             --jq '.workflow_runs[] | select(.conclusion=="success") | .id' | head -n 1)
           if [ -z "$run_id" ]; then
-            echo "No successful Alcampo base snapshot exists yet" >&2
+            echo "No usable Alcampo canonical snapshot exists yet" >&2
             exit 2
           fi
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
-      - name: Download latest canonical snapshot
+          echo "artifact=alcampo-food-catalog-classified-snapshot" >> "$GITHUB_OUTPUT"
+          echo "kind=complete_pipeline" >> "$GITHUB_OUTPUT"
+      - name: Download canonical snapshot
         run: |
           mkdir -p alcampo-reviewed
-          gh run download "${{ steps.base.outputs.run_id }}" -n alcampo-food-catalog-classified-snapshot -D alcampo-reviewed
+          gh run download "${{ steps.base.outputs.run_id }}" -n "${{ steps.base.outputs.artifact }}" -D alcampo-reviewed
           test -s alcampo-reviewed/alcampo_catalog.sqlite
           test -s alcampo-reviewed/source_products.jsonl
       - name: Apply persisted semantic model reviews
@@ -51,7 +65,7 @@ jobs:
             --reviews manual/alcampo_semantic_reviews.jsonl \
             --output ../../alcampo-reviewed/semantic_review_next.jsonl \
             --progress ../../alcampo-reviewed/semantic_review_progress.json \
-            --limit 500
+            --limit 1000
       - name: Re-export reviewed snapshot
         working-directory: tools/catalog
         run: |
@@ -59,6 +73,18 @@ jobs:
           if [ -f ../../alcampo-reviewed/detail_merge_summary.json ]; then args+=(--detail-summary ../../alcampo-reviewed/detail_merge_summary.json); fi
           if [ -f ../../alcampo-reviewed/enumeration_report.json ]; then args+=(--enumeration-report ../../alcampo-reviewed/enumeration_report.json); fi
           python alcampo_export_final.py "${args[@]}"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('../../alcampo-reviewed/summary.json')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          d['semantic_review_base_kind']=os.environ['BASE_KIND']
+          d['semantic_review_base_run']=os.environ['BASE_RUN']
+          p.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+        env:
+          BASE_KIND: ${{ steps.base.outputs.kind }}
+          BASE_RUN: ${{ steps.base.outputs.run_id }}
       - name: Persist reviewed coverage and next queue
         run: |
           cp alcampo-reviewed/summary.json tools/catalog/fixtures/alcampo_final_summary_latest.json
