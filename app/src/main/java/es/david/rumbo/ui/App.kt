@@ -208,6 +208,7 @@ import es.david.rumbo.logic.CulinaryPolicy
 import es.david.rumbo.logic.CulinaryRole
 import es.david.rumbo.logic.CulinaryRolePolicy
 import es.david.rumbo.logic.CertifiedDayWitnessEvaluator
+import es.david.rumbo.logic.CertifiedDayVariantGenerator
 import es.david.rumbo.logic.CulinarySatisfactionEvaluator
 import es.david.rumbo.logic.CulinarySatisfactionIssueKind
 import es.david.rumbo.logic.CulinarilySatisfactoryDayDiagnostic
@@ -393,6 +394,7 @@ fun RumboApp(repository: AppRepository) {
     var pendingTopDelete by remember { mutableStateOf<Screen?>(null) }
     var addingMeasurement by rememberSaveable { mutableStateOf(false) }
     var generatingMenuWeekName by remember { mutableStateOf<String?>(null) }
+    var changingCertifiedDay by remember { mutableStateOf(false) }
     val screenStateHolder = rememberSaveableStateHolder()
     val generateMenuAsync: (PlanWeek) -> String? = { week ->
         when {
@@ -842,6 +844,43 @@ fun RumboApp(repository: AppRepository) {
                     },
                     onClearCertifiedDayWitness = {
                         data = repository.clearCertifiedDayWitness(it)
+                    },
+                    onChangeCertifiedDay = { witness, mealType ->
+                        if (!changingCertifiedDay && currentRecommendation != null) {
+                            changingCertifiedDay = true
+                            val rules = data.activeProfileData?.planningRules.orEmpty()
+                            val foods = data.foods.associateBy { it.id }
+                            val dishes = data.dishes.associateBy { it.id }
+                            val target = currentRecommendation
+                            val shares = mealShares
+                            scope.launch {
+                                val variant = withContext(Dispatchers.Default) {
+                                    CertifiedDayVariantGenerator.find(
+                                        witness, mealType, rules, foods, dishes, target, shares
+                                    )
+                                }
+                                if (variant != null) {
+                                    data = repository.saveCertifiedDayWitness(variant)
+                                } else {
+                                    snackbarHostState.showSnackbar(
+                                        if (mealType == null) "No se ha encontrado otro menú del mismo nivel."
+                                        else "No se ha encontrado otra ${mealType.label.lowercase()} que conserve el nivel."
+                                    )
+                                }
+                                changingCertifiedDay = false
+                            }
+                        }
+                    },
+                    isChangingCertifiedDay = changingCertifiedDay,
+                    onSaveCertifiedDayToLibrary = { witness ->
+                        val alreadySaved = data.activeProfileData?.certifiedDayLibrary
+                            .orEmpty().any { it.fingerprint == witness.fingerprint }
+                        if (alreadySaved) {
+                            scope.launch { snackbarHostState.showSnackbar("Este menú ya está en la biblioteca.") }
+                        } else {
+                            data = repository.saveCertifiedDayToLibrary(witness)
+                            scope.launch { snackbarHostState.showSnackbar("Menú guardado en la biblioteca.") }
+                        }
                     },
                     onOpenProgressSearch = { nutritionalRole, culinaryRole, mealType ->
                         catalogRetailerFilter = null
@@ -1739,6 +1778,9 @@ private fun HomeScreen(
     onOpenFoods: () -> Unit,
     onSaveCertifiedDayWitness: (CertifiedDayWitness) -> Unit,
     onClearCertifiedDayWitness: (CertifiedDayLevel) -> Unit,
+    onChangeCertifiedDay: (CertifiedDayWitness, MealType?) -> Unit,
+    isChangingCertifiedDay: Boolean,
+    onSaveCertifiedDayToLibrary: (CertifiedDayWitness) -> Unit,
     onOpenProgressSearch: (String?, String?, MealType?) -> Unit,
     onAddMissingMeal: (MealType, WeekDay) -> Unit,
     onApplyAdjustedMeals: (List<PlannedMeal>) -> Unit
@@ -2217,10 +2259,18 @@ private fun HomeScreen(
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
                     onOpenSearch = onOpenProgressSearch,
                     witness = displayedCertifiedWitness,
+                    recommendation = recommendation,
                     foodsById = foodsById,
                     dishesById = dishesById,
                     onOpenFood = openFood,
-                    onOpenDish = onOpenDish
+                    onOpenDish = onOpenDish,
+                    onChangeCertifiedDay = onChangeCertifiedDay,
+                    isChangingCertifiedDay = isChangingCertifiedDay,
+                    onSaveCertifiedDayToLibrary = onSaveCertifiedDayToLibrary,
+                    isSavedToLibrary = displayedCertifiedWitness?.let { shown ->
+                        data.activeProfileData?.certifiedDayLibrary.orEmpty()
+                            .any { it.fingerprint == shown.fingerprint }
+                    } == true
                 )
             }
         }
@@ -2503,10 +2553,15 @@ private fun RepertoireAndWitnessSection(
     planningRules: List<PlanningRule>,
     onOpenSearch: (String?, String?, MealType?) -> Unit,
     witness: CertifiedDayWitness?,
+    recommendation: Recommendation,
     foodsById: Map<Long, Food>,
     dishesById: Map<Long, Dish>,
     onOpenFood: (Long) -> Unit,
-    onOpenDish: (Long) -> Unit
+    onOpenDish: (Long) -> Unit,
+    onChangeCertifiedDay: (CertifiedDayWitness, MealType?) -> Unit,
+    isChangingCertifiedDay: Boolean,
+    onSaveCertifiedDayToLibrary: (CertifiedDayWitness) -> Unit,
+    isSavedToLibrary: Boolean
 ) {
     val repertoireKey = "REPERTOIRE"
     var expandedSection by rememberSaveable(witness?.level) {
@@ -2533,6 +2588,14 @@ private fun RepertoireAndWitnessSection(
                     isSearchingCompleteDay, completeDayDiagnostic, hasCertifiedCulinaryDay,
                     isSearchingCulinaryDay, culinaryDayDiagnostic, foods, repertoireFoodIds,
                     planningRules, onOpenSearch,
+                    witness = witness,
+                    recommendation = recommendation,
+                    foodsById = foodsById,
+                    dishesById = dishesById,
+                    onChangeCertifiedDay = onChangeCertifiedDay,
+                    isChangingCertifiedDay = isChangingCertifiedDay,
+                    onSaveCertifiedDayToLibrary = onSaveCertifiedDayToLibrary,
+                    isSavedToLibrary = isSavedToLibrary,
                     expanded = expandedSection == repertoireKey,
                     onToggle = { toggleSection(repertoireKey) }
                 )
@@ -2558,6 +2621,8 @@ private fun RepertoireAndWitnessSection(
                             dishesById = dishesById,
                             onOpenFood = onOpenFood,
                             onOpenDish = onOpenDish,
+                            onChangeMeal = { onChangeCertifiedDay(certifiedDay, mealType) },
+                            isChanging = isChangingCertifiedDay,
                             expanded = expandedSection == mealType.name,
                             onToggle = { toggleSection(mealType.name) }
                         )
@@ -2582,6 +2647,14 @@ private fun RepertoireProgressCard(
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>,
     onOpenSearch: (String?, String?, MealType?) -> Unit,
+    witness: CertifiedDayWitness?,
+    recommendation: Recommendation,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    onChangeCertifiedDay: (CertifiedDayWitness, MealType?) -> Unit,
+    isChangingCertifiedDay: Boolean,
+    onSaveCertifiedDayToLibrary: (CertifiedDayWitness) -> Unit,
+    isSavedToLibrary: Boolean,
     expanded: Boolean,
     onToggle: () -> Unit
 ) {
@@ -2602,6 +2675,9 @@ private fun RepertoireProgressCard(
         2 -> "Nivel 2 · Menú completo"
         3 -> "Nivel 3 · Culinariamente satisfactorio"
         else -> "Nivel 4 · Menú variado"
+    }
+    val dayAssessment = witness?.let {
+        MealPlanEvaluator.assessDay(it.day, it.meals, foodsById, dishesById, recommendation)
     }
     Column(Modifier.fillMaxWidth()) {
         Column(
@@ -2631,6 +2707,30 @@ private fun RepertoireProgressCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(label)
+                    }
+                }
+                dayAssessment?.let { TodayNutritionSummary(it) }
+                witness?.let { shown ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(
+                            onClick = { onChangeCertifiedDay(shown, null) },
+                            enabled = !isChangingCertifiedDay,
+                            modifier = Modifier.weight(1f)
+                        ) { Text(if (isChangingCertifiedDay) "Buscando…" else "Cambiar menú") }
+                        FilledTonalButton(
+                            onClick = { onSaveCertifiedDayToLibrary(shown) },
+                            enabled = shown.level == CertifiedDayLevel.CULINARILY_SATISFACTORY &&
+                                !isSavedToLibrary,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                when {
+                                    isSavedToLibrary -> "Guardado"
+                                    shown.level != CertifiedDayLevel.CULINARILY_SATISFACTORY -> "Nivel 3 necesario"
+                                    else -> "Guardar en biblioteca"
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -3150,6 +3250,8 @@ private fun CertifiedMealWitnessCard(
     dishesById: Map<Long, Dish>,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
+    onChangeMeal: () -> Unit,
+    isChanging: Boolean,
     expanded: Boolean,
     onToggle: () -> Unit
 ) {
@@ -3226,6 +3328,13 @@ private fun CertifiedMealWitnessCard(
                     if (index < entries.lastIndex) {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
+                }
+                if (meal != null) {
+                    FilledTonalButton(
+                        onClick = onChangeMeal,
+                        enabled = !isChanging,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) { Text(if (isChanging) "Buscando alternativa…" else "Cambiar esta comida") }
                 }
             }
         }

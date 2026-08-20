@@ -536,7 +536,8 @@ data class ProfileData(
     val culinaryPolicyOverrides: List<CulinaryPolicyOverride> = emptyList(),
     val nutritionToleranceSettings: NutritionToleranceSettings = NutritionToleranceSettings(),
     val mealShares: Map<MealType, Double>? = null,
-    val certifiedDayWitnesses: List<CertifiedDayWitness> = emptyList()
+    val certifiedDayWitnesses: List<CertifiedDayWitness> = emptyList(),
+    val certifiedDayLibrary: List<CertifiedDayWitness> = emptyList()
 )
 
 data class AppData(

@@ -77,7 +77,8 @@ class AppRepository(private val context: Context) {
             nutritionToleranceSettings = existing?.nutritionToleranceSettings
                 ?: NutritionToleranceSettings(),
             mealShares = existing?.mealShares,
-            certifiedDayWitnesses = existing?.certifiedDayWitnesses.orEmpty()
+            certifiedDayWitnesses = existing?.certifiedDayWitnesses.orEmpty(),
+            certifiedDayLibrary = existing?.certifiedDayLibrary.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -148,6 +149,20 @@ class AppRepository(private val context: Context) {
         )
     }
 
+    fun saveCertifiedDayToLibrary(witness: CertifiedDayWitness): AppData {
+        require(witness.level == CertifiedDayLevel.CULINARILY_SATISFACTORY) {
+            "Solo los días de nivel 3 pueden guardarse en la biblioteca"
+        }
+        require(witness.isStructurallyValid()) { "El día certificado no es válido" }
+        val current = load()
+        val active = current.activeProfileData ?: return current
+        if (active.certifiedDayLibrary.any { it.fingerprint == witness.fingerprint }) return current
+        return updateActive(
+            current,
+            active.copy(certifiedDayLibrary = active.certifiedDayLibrary + witness)
+        )
+    }
+
     fun saveProfileWithBaseline(profile: UserProfile, baseline: Measurement): AppData {
         require(baseline.weightKg != null || baseline.waistCm != null) {
             "El perfil inicial necesita al menos el peso o la cintura"
@@ -168,7 +183,8 @@ class AppRepository(private val context: Context) {
             nutritionToleranceSettings = existing?.nutritionToleranceSettings
                 ?: NutritionToleranceSettings(),
             mealShares = existing?.mealShares,
-            certifiedDayWitnesses = existing?.certifiedDayWitnesses.orEmpty()
+            certifiedDayWitnesses = existing?.certifiedDayWitnesses.orEmpty(),
+            certifiedDayLibrary = existing?.certifiedDayLibrary.orEmpty()
         )
         val profiles = if (existing == null) {
             current.profiles + updatedProfile
@@ -602,6 +618,18 @@ class AppRepository(private val context: Context) {
             require(profileData.certifiedDayWitnesses.all { it.isStructurallyValid() }) {
                 "Hay días testigo no válidos"
             }
+            require(profileData.certifiedDayLibrary.all {
+                it.level == CertifiedDayLevel.CULINARILY_SATISFACTORY && it.isStructurallyValid()
+            }) { "La biblioteca contiene días no certificados en nivel 3" }
+            require(profileData.certifiedDayLibrary.distinctBy { it.fingerprint }.size ==
+                profileData.certifiedDayLibrary.size) { "La biblioteca contiene días duplicados" }
+            val certifiedDays = profileData.certifiedDayWitnesses + profileData.certifiedDayLibrary
+            require(certifiedDays.flatMap { it.meals }.flatMap { it.items }.all { it.foodId in foodIds }) {
+                "Hay días certificados con alimentos inexistentes"
+            }
+            require(certifiedDays.flatMap { it.meals }.flatMap { it.dishes }.all { it.dishId in dishIds }) {
+                "Hay días certificados con platos inexistentes"
+            }
             require(profileData.certifiedDayWitnesses.flatMap { it.meals }.flatMap { it.items }
                 .all { it.foodId in foodIds }) {
                 "Hay días testigo con alimentos inexistentes"
@@ -632,7 +660,7 @@ class AppRepository(private val context: Context) {
     }
 
     private fun encode(data: AppData): JSONObject = JSONObject().apply {
-        put("schemaVersion", 25)
+        put("schemaVersion", 26)
         putNullable("activeProfileId", data.activeProfileId)
         put("profiles", JSONArray().apply {
             data.profiles.forEach { profileData ->
@@ -651,6 +679,10 @@ class AppRepository(private val context: Context) {
                     put(
                         "certifiedDayWitnesses",
                         encodeCertifiedDayWitnesses(profileData.certifiedDayWitnesses)
+                    )
+                    put(
+                        "certifiedDayLibrary",
+                        encodeCertifiedDayWitnesses(profileData.certifiedDayLibrary)
                     )
                     put(
                         "culinaryPolicyOverrides",
@@ -924,6 +956,12 @@ class AppRepository(private val context: Context) {
                                 dishesById,
                                 schemaVersion
                             ),
+                            certifiedDayLibrary = decodeCertifiedDayWitnesses(
+                                item.optJSONArray("certifiedDayLibrary") ?: JSONArray(),
+                                dishesById,
+                                schemaVersion
+                            ).filter { it.level == CertifiedDayLevel.CULINARILY_SATISFACTORY }
+                                .distinctBy { it.fingerprint },
                             culinaryPolicyOverrides = decodeCulinaryPolicyOverrides(
                                 item.optJSONArray("culinaryPolicyOverrides") ?: JSONArray()
                             ),
