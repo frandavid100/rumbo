@@ -1,7 +1,15 @@
 {
   "target": "https://www.compraonline.alcampo.es/products/x/522881",
-  "xhr_fetch_records": 134,
-  "interesting": 56,
+  "main_status": 200,
+  "final_url": "https://www.compraonline.alcampo.es/products/alcampo-ecol%C3%B3gico-tofu-procedente-de-agricultura-biol%C3%B3gica-2-x-200-g/522881",
+  "rendered_name": "ALCAMPO ECOLÓGICO Tofu procedente de agricultura biológica 2 x 200 g.",
+  "rendered_gtin": null,
+  "rendered_legal_name": "Tofu natural",
+  "rendered_ingredients": true,
+  "rendered_nutrition_complete": true,
+  "rendered_nutrition_basis": "100_g",
+  "xhr_fetch_records": 136,
+  "interesting": 55,
   "requests": [
     {
       "method": "GET",
@@ -60,67 +68,17 @@
     },
     {
       "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/pagead/conversion/16955749051/?random=1787192498223&cv=11&fst=1787192498223&fmt=8&bg=ffffff&guid=ON&async=1&en=conversion&gtm=45be68i1v9217236499z89106690763za20gzb9106690763zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&rcb=0&label=cBVtCJbIgKAcELvlkJU_&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&gdid=dYWJhMj&bttype=purchase&value=3.3&currency_code=EUR&hn=www.googleadservices.com&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&_tu=CA&category=acrcp_v1_512&ept=6",
+      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=19&frm=0&apvc=1&ae=g&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=763798860.1787207001&navt=n&npa=1&ep.ads_data_redaction=0&gtm=45He68i1v9106690763za200zd9106690763xea&gcs=G100&gcd=13p3p3p3p5l1&dma_cps=-&dma=0&tag_exp=115616986~115938466~115938469~118897920~118897930~120385422&tft=1787207001054&tfd=2108&fmt=8",
       "post_data": null
     },
     {
       "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/pagead/conversion/16955749051/?random=1787192498223&cv=11&fst=1787192498223&fmt=8&bg=ffffff&guid=ON&async=1&en=conversion&gtm=45be68i1v9217236499z89106690763za20gzb9106690763zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&rcb=0&label=lRIACM_S6J8cEOeS8Y4D&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&gdid=dYWJhMj&bttype=purchase&value=3.3&currency_code=EUR&hn=www.googleadservices.com&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&category=acrcp_v1_512&ept=6",
+      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=9&frm=0&apvc=0&tid=AW-836520295&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=763798860.1787207001&navt=n&npa=1&gtm=45be68i1v9104327235z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115616985~115938466~115938469~118897920~118897930~119367802~119367810~120385423&tft=1787207001295&tfd=2349&tids=AW-836520295&fmt=8",
       "post_data": null
     },
     {
       "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/measurement/conversion?random=1787192498332&cv=11&tid=G-KT0SVFYKW5&fst=1787192498332&fmt=8&en=first_visit&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&gacid=1835284442.1787192499&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&gdid=dYWJhMj&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&rcb=0",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/measurement/conversion?random=1787192498332&cv=11&tid=G-KT0SVFYKW5&fst=1787192498332&fmt=8&en=session_start&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&gacid=1835284442.1787192499&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&gdid=dYWJhMj&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&rcb=0",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://www.google-analytics.com/g/collect?v=2&tid=G-KT0SVFYKW5&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763&_p=1787192497473&gcs=G100&gcd=13q3q3q3q5l1&npa=1&dma_cps=-&dma=0&gdid=dYWJhMj&_eu=AAAAAGAC&_prs=ok&are=1&cid=1835284442.1787192499&frm=0&pscdl=denied&rcb=0&sr=1280x720&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uam=&uamb=0&uap=Linux&uapv=&uaw=0&ul=es-es&gaf=2&_s=1&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385422&sid=1787192498&sct=1&seg=0&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%C3%B3gico-tofu-procedente-de-agricultura-biol%C3%B3gica-2-x-200-g%2F522881&dt=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&en=page_view&_fv=2&_nsi=1&_ss=2&ep.gtm_container=GTM-MS8BHBF&ep.fire_trigger=page_view%2F%2F&ep.osp_transaction_id=&ep.osp_session_id=ff92a2f0-4d15-451e-81f5-5a5ab6c43104&epn.cart_value=0&ep.custom_region=AZ&ep.is_logged_in=false&ep.refresh_page=false&ep.transaction_type=new&ep.retailer_banner_id=alcampo&ep.retailer_region_id=5&ep.region_name=Vaguada&ep.banner_name=Alcampo&tfd=2833",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/measurement/conversion?random=1787192498333&cv=11&tid=G-KT0SVFYKW5&fst=1787192498333&fmt=8&en=view_item&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385422&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&gacid=1835284442.1787192499&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&currency_code=EUR&gdid=dYWJhMj&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&rcb=0",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://www.google-analytics.com/g/collect?v=2&tid=G-KT0SVFYKW5&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763&_p=1787192497473&gcs=G100&gcd=13q3q3q3q5l1&npa=1&dma_cps=-&dma=0&gdid=dYWJhMj&_eu=IAAAAGAC&_prs=ok&are=1&cid=1835284442.1787192499&frm=0&pscdl=denied&rcb=0&sr=1280x720&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uam=&uamb=0&uap=Linux&uapv=&uaw=0&ul=es-es&gaf=2&_s=2&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385422&cu=EUR&sid=1787192498&sct=1&seg=0&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%C3%B3gico-tofu-procedente-de-agricultura-biol%C3%B3gica-2-x-200-g%2F522881&dt=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&en=view_item&_c=1&pr1=id522881~nmALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.~brALCAMPO%20ECOL%C3%93GICO~va400g~pr3.3~k0rating~v00~qt1~k1is_on_promotion~v1false~k2is_favorite~v2false~k3is_featured~v3false~k4can_add_to_cart~v4true~caVeganos~c2Proteina%20vegana~c3Tofu%20y%20Seit%C3%A1n~k5item_badges~v5&ep.gtm_container=GTM-MS8BHBF&ep.fire_trigger=view_item%2FE-commerce%2FGA_PRODUCT_DETAILS&ep.osp_transaction_id=&ep.osp_session_id=ff92a2f0-4d15-451e-81f5-5a5ab6c43104&ep.page_view_id=02d61ebe-c098-4668-a720-990fcffdf293&epn.cart_value=0&ep.custom_region=AZ&_et=2&tfd=2838",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=7&frm=0&apvc=1&ae=g&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=1123691323.1787192498&navt=n&npa=1&ep.ads_data_redaction=0&gdid=dYWJhMj&gtm=45He68i1v9106690763za200zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115616986~115938466~115938468~118897920~118897930~119793972~120385422&tft=1787192498542&tfd=2839&fmt=8",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=14&frm=0&apvc=0&tid=DC-16848907&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=1123691323.1787192498&navt=n&npa=1&gdid=dYWJhMj&_tu=KA&gtm=45fe68i1v9250207325z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115616985~115938466~115938468~118897920~118897930~119367802~119367810~120213116~120385423&tft=1787192498543&tfd=2840&tids=DC-16848907&fmt=8",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=5&frm=0&apvc=0&tid=DC-11287471&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=1123691323.1787192498&navt=n&npa=1&gdid=dYWJhMj&_tu=KA&gtm=45fe68i1v9190517986z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115616986~115938466~115938469~118897920~118897930~119367802~119367810~120385423&tft=1787192498545&tfd=2841&tids=DC-11287471&fmt=8",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=0&frm=0&apvc=0&tid=AW-16955749051&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=1123691323.1787192498&navt=n&npa=1&gdid=dYWJhMj&_tu=CA&gtm=45be68i1v9217236499z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~120385422&tft=1787192498546&tfd=2843&tids=AW-16955749051&fmt=8",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=12&frm=0&apvc=0&tid=AW-836520295&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=1123691323.1787192498&navt=n&npa=1&gdid=dYWJhMj&gtm=45be68i1v9104327235z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115616986~115938466~115938469~118897920~118897930~119367802~119367810~120315470~120385423&tft=1787192498547&tfd=2843&tids=AW-836520295&fmt=8",
-      "post_data": null
-    },
-    {
-      "method": "POST",
-      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=8&frm=0&apvc=0&tid=DC-9568082&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=1123691323.1787192498&navt=n&npa=1&gdid=dYWJhMj&_tu=KA&gtm=45fe68i1v9190652147z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~119793973~120213116~120385423&tft=1787192498548&tfd=2844&tids=DC-9568082&fmt=8",
+      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=14&frm=0&apvc=0&tid=DC-9568082&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=763798860.1787207001&navt=n&npa=1&gtm=45fe68i1v9190652147z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120213116~120385422~120584450&tft=1787207001364&tfd=2418&tids=DC-9568082&fmt=8",
       "post_data": null
     },
     {
@@ -132,6 +90,56 @@
       "method": "PUT",
       "url": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/products",
       "post_data": "[\"45652856-2733-4491-8572-b4e5e7f8390b\",\"b8cdc7bb-9c6e-4c9a-bc01-0b4a0b51d4db\",\"12311ec1-6a29-4d87-a908-eec5c0d40658\",\"6984136c-3a96-4292-972c-cb3cf0b37aa2\",\"d9d5e4c5-7772-4516-9f97-8b59be052d8b\",\"ea252da4-144d-47ea-bf23-e53acba22859\",\"35067cdf-732c-4bb8-a28a-ad18e714679b\",\"bac7c9d2-92dd-4dbd-927b-74ec7e91123e\"]"
+    },
+    {
+      "method": "POST",
+      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=6&frm=0&apvc=0&tid=DC-16848907&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=763798860.1787207001&navt=n&npa=1&gtm=45fe68i1v9250207325z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~120213116~120385422&tft=1787207001574&tfd=2628&tids=DC-16848907&fmt=8",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://pagead2.googlesyndication.com/pagead/conversion/16955749051/?random=1787207001640&cv=11&fst=1787207001640&fmt=8&bg=ffffff&guid=ON&async=1&en=conversion&gtm=45be68i1v9217236499z89106690763za20gzb9106690763zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385423&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&rcb=19&label=cBVtCJbIgKAcELvlkJU_&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&bttype=purchase&value=3.3&currency_code=EUR&hn=www.googleadservices.com&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&_tu=CA&category=acrcp_v1_512&ept=6",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://pagead2.googlesyndication.com/pagead/conversion/16955749051/?random=1787207001645&cv=11&fst=1787207001645&fmt=8&bg=ffffff&guid=ON&async=1&en=conversion&gtm=45be68i1v9217236499z89106690763za20gzb9106690763zd9106690763xea&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385423&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&rcb=19&label=lRIACM_S6J8cEOeS8Y4D&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&bttype=purchase&value=3.3&currency_code=EUR&hn=www.googleadservices.com&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&_tu=CA&category=acrcp_v1_512&ept=6",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=19&frm=0&apvc=0&tid=AW-16955749051&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=763798860.1787207001&navt=n&npa=1&gtm=45be68i1v9217236499z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385423&tft=1787207001648&tfd=2702&tids=AW-16955749051&fmt=8",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://pagead2.googlesyndication.com/ccm/collect?rcb=12&frm=0&apvc=0&tid=DC-11287471&en=page_view&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&scrsrc=www.googletagmanager.com&rnd=763798860.1787207001&navt=n&npa=1&gtm=45fe68i1v9190517986z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385422&tft=1787207001714&tfd=2768&tids=DC-11287471&fmt=8",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://pagead2.googlesyndication.com/measurement/conversion?random=1787207001784&cv=11&tid=G-KT0SVFYKW5&fst=1787207001784&fmt=8&en=first_visit&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385423&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&gacid=1954510472.1787207002&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&rcb=13",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://pagead2.googlesyndication.com/measurement/conversion?random=1787207001784&cv=11&tid=G-KT0SVFYKW5&fst=1787207001784&fmt=8&en=session_start&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385423&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&gacid=1954510472.1787207002&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&rcb=13",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://www.google-analytics.com/g/collect?v=2&tid=G-KT0SVFYKW5&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763&_p=1787207000024&gcs=G100&gcd=13q3q3q3q5l1&npa=1&dma_cps=-&dma=0&_eu=AAAAAGAC&_prs=ok&are=1&cid=1954510472.1787207002&frm=0&pscdl=denied&rcb=13&sr=1280x720&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uam=&uamb=0&uap=Linux&uapv=&uaw=0&ul=es-es&gaf=2&_s=1&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385423&sid=1787207001&sct=1&seg=0&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%C3%B3gico-tofu-procedente-de-agricultura-biol%C3%B3gica-2-x-200-g%2F522881&dt=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&en=page_view&_fv=2&_nsi=1&_ss=2&ep.gtm_container=GTM-MS8BHBF&ep.fire_trigger=page_view%2F%2F&ep.osp_transaction_id=&ep.osp_session_id=c8f46708-c4ae-43f4-95d9-aa36ec331c38&epn.cart_value=0&ep.is_logged_in=false&ep.refresh_page=false&ep.transaction_type=new&ep.retailer_banner_id=alcampo&ep.retailer_region_id=5&ep.region_name=Vaguada&ep.banner_name=Alcampo&tfd=2859",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://pagead2.googlesyndication.com/measurement/conversion?random=1787207001807&cv=11&tid=G-KT0SVFYKW5&fst=1787207001807&fmt=8&en=view_item&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763xec&gcs=G100&gcd=13q3q3q3q5l1&dma_cps=-&dma=0&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385423&u_w=1280&u_h=720&url=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%25C3%25B3gico-tofu-procedente-de-agricultura-biol%25C3%25B3gica-2-x-200-g%2F522881&gacid=1954510472.1787207002&frm=0&tiba=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&currency_code=EUR&npa=1&pscdl=denied&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uamb=0&uam=&uap=Linux&uapv=&uaw=0&rcb=13",
+      "post_data": null
+    },
+    {
+      "method": "POST",
+      "url": "https://www.google-analytics.com/g/collect?v=2&tid=G-KT0SVFYKW5&gtm=45Pe68i1v9172281844z89106690763za20gzb9106690763zd9106690763&_p=1787207000024&gcs=G100&gcd=13q3q3q3q5l1&npa=1&dma_cps=-&dma=0&_eu=IAAAAGAC&_prs=ok&are=1&cid=1954510472.1787207002&frm=0&pscdl=denied&rcb=13&sr=1280x720&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uam=&uamb=0&uap=Linux&uapv=&uaw=0&ul=es-es&gaf=2&_s=2&tag_exp=115938466~115938468~118897920~118897930~119367802~119367810~120385423&cu=EUR&sid=1787207001&sct=1&seg=0&dl=https%3A%2F%2Fwww.compraonline.alcampo.es%2Fproducts%2Falcampo-ecol%C3%B3gico-tofu-procedente-de-agricultura-biol%C3%B3gica-2-x-200-g%2F522881&dt=ALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.%20-%20Alcampo%20%C2%A1Haz%20tu%20Compra%20Online%20y%20Recoge%20M%C3%A1s%20de%2050.000%20Productos%20a%20Precios%20Alcampo%20A%20Partir%20de%202h!&en=view_item&_c=1&pr1=id522881~nmALCAMPO%20ECOL%C3%93GICO%20Tofu%20procedente%20de%20agricultura%20biol%C3%B3gica%202%20x%20200%20g.~brALCAMPO%20ECOL%C3%93GICO~va400g~pr3.3~k0rating~v00~qt1~k1is_on_promotion~v1false~k2is_favorite~v2false~k3is_featured~v3false~k4can_add_to_cart~v4true~caVeganos~c2Proteina%20vegana~c3Tofu%20y%20Seit%C3%A1n~k5item_badges~v5&ep.gtm_container=GTM-MS8BHBF&ep.fire_trigger=view_item%2FE-commerce%2FGA_PRODUCT_DETAILS&ep.osp_transaction_id=&ep.osp_session_id=c8f46708-c4ae-43f4-95d9-aa36ec331c38&ep.page_view_id=e77db7e6-6742-48c8-b530-926ed41bdf44&epn.cart_value=0&_et=5&tfd=2869",
+      "post_data": null
     }
   ]
 }
