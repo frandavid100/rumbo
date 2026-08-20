@@ -5,10 +5,15 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-carrefour-first-party-cumulative.yml'
+      - 'tools/catalog/merge_carrefour_first_party_observations.py'
       - 'tools/catalog/summarize_carrefour_first_party.py'
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
       - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products_batch2.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_field_evidence.jsonl'
+      - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.summary.json'
   workflow_dispatch:
 
 permissions:
@@ -29,21 +34,39 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Build auditable cumulative report and SQLite
+      - name: Install parser dependency
+        run: pip install playwright
+      - name: Merge every verified first-party observation and build auditable staging
         working-directory: tools/catalog
         run: |
-          python summarize_carrefour_first_party.py \
-            --products fixtures/carrefour_first_party_products_cumulative.jsonl \
-            --evidence fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
+          PRODUCTS=(fixtures/carrefour_first_party_products_cumulative.jsonl)
+          EVIDENCE=(fixtures/carrefour_first_party_field_evidence_cumulative.jsonl)
+          for f in \
+            fixtures/carrefour_first_party_agent_web_products.jsonl \
+            fixtures/carrefour_first_party_agent_web_products_batch2.jsonl; do
+            if [ -s "$f" ]; then PRODUCTS+=("$f"); fi
+          done
+          if [ -s fixtures/carrefour_first_party_agent_web_field_evidence.jsonl ]; then
+            EVIDENCE+=(fixtures/carrefour_first_party_agent_web_field_evidence.jsonl)
+          fi
+          python merge_carrefour_first_party_observations.py \
+            --products "${PRODUCTS[@]}" \
+            --evidence "${EVIDENCE[@]}" \
+            --candidate-summary fixtures/carrefour_candidate_urls_radarsuper.summary.json \
+            --out-products fixtures/carrefour_first_party_products_cumulative.jsonl \
+            --out-evidence fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
             --summary fixtures/carrefour_first_party_cumulative_summary.json \
             --sqlite carrefour-first-party-cumulative.sqlite
-      - name: Persist compact report
+      - name: Persist compact auditable staging
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json
+          git add \
+            tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json
           if ! git diff --cached --quiet; then
-            git commit -m "catalog: update Carrefour first-party cumulative report"
+            git commit -m "catalog: merge Carrefour first-party observations"
             git pull --rebase origin agent/catalog-phase1
             git push origin HEAD:agent/catalog-phase1
           fi
