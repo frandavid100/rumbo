@@ -17,13 +17,10 @@ concurrency:
   group: carrefour-first-party-smoke
   cancel-in-progress: true
 
-env:
-  PROBE_REVISION: '3'
-
 jobs:
-  smoke:
+  browser:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,74 +28,41 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
-      - name: Direct HTTP first-party probe
-        continue-on-error: true
-        working-directory: tools/catalog
-        run: |
-          python carrefour_first_party_inventory.py \
-            --out carrefour-first-party-smoke \
-            --max-pages 1 \
-            --max-products 80 \
-            --workers 6 \
-            --seed-url 'https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p' \
-            --seed-url 'https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p' \
-            --seed-url 'https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p' \
-            --seed-url 'https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p' \
-            --seed-url 'https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p' \
-            --seed-url 'https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p' \
-            --seed-url 'https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p' \
-            --seed-url 'https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p'
-
       - name: Install Playwright Chromium
         run: |
           pip install playwright
           python -m playwright install --with-deps chromium
-
-      - name: Browser first-party inventory
+      - name: Browser first-party inventory on a fresh runner
         working-directory: tools/catalog
         run: |
           python carrefour_first_party_browser_inventory.py \
             --out carrefour-first-party-browser-inventory \
-            --rotate \
-            --delay 8 \
+            --delay 12 \
             --stop-after-blocks 1
-
-      - name: Show and validate first-party results
+      - name: Validate first-party provenance
         run: |
           python - <<'PY'
-          import json, pathlib
-          paths = [
-              pathlib.Path('tools/catalog/carrefour-first-party-smoke/summary.json'),
-              pathlib.Path('tools/catalog/carrefour-first-party-browser-inventory/summary.json'),
-          ]
-          for path in paths:
-              if not path.exists():
-                  continue
-              d=json.load(open(path,encoding='utf-8'))
-              print('\n',path)
-              print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
-              print(json.dumps(d.get('coverage',{}),ensure_ascii=False,indent=2))
-              if d.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
-                  raise SystemExit(f'Bad provenance policy in {path}')
-              if str(d.get('classification_performed')).lower() != 'false':
-                  raise SystemExit(f'Extraction unexpectedly performed classification in {path}')
-          browser = json.load(open('tools/catalog/carrefour-first-party-browser-inventory/summary.json',encoding='utf-8'))
-          if browser['counts']['attempted'] < 1:
-              raise SystemExit('Browser inventory did not attempt any Carrefour product')
+          import json
+          p='tools/catalog/carrefour-first-party-browser-inventory/summary.json'
+          d=json.load(open(p,encoding='utf-8'))
+          print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
+          print(json.dumps(d.get('coverage',{}),ensure_ascii=False,indent=2))
+          if d.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
+              raise SystemExit('Bad Carrefour provenance policy')
+          if str(d.get('classification_performed')).lower() != 'false':
+              raise SystemExit('Extraction unexpectedly performed classification')
+          if d['counts']['attempted'] < 1:
+              raise SystemExit('Browser inventory did not attempt any product')
           PY
-
-      - name: Persist compact first-party reports and cumulative successes
+      - name: Persist compact browser inventory and cumulative successes
         if: always()
         run: |
           mkdir -p tools/catalog/fixtures
-          test ! -f tools/catalog/carrefour-first-party-smoke/summary.json || cp tools/catalog/carrefour-first-party-smoke/summary.json tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json
           test ! -f tools/catalog/carrefour-first-party-browser-inventory/summary.json || cp tools/catalog/carrefour-first-party-browser-inventory/summary.json tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json
           python - <<'PY'
           import json, pathlib
           fixtures=pathlib.Path('tools/catalog/fixtures')
           out=pathlib.Path('tools/catalog/carrefour-first-party-browser-inventory')
-
           def read_jsonl(path):
               rows=[]
               if path.exists():
@@ -106,14 +70,12 @@ jobs:
                       try: rows.append(json.loads(line))
                       except Exception: pass
               return rows
-
           products_path=fixtures/'carrefour_first_party_products_cumulative.jsonl'
           products={r.get('retailer_sku'):r for r in read_jsonl(products_path) if r.get('retailer_sku')}
           for r in read_jsonl(out/'products.jsonl'):
               if r.get('retailer_sku') and not r.get('fetch_error'):
                   products[r['retailer_sku']]=r
           products_path.write_text(''.join(json.dumps(products[k],ensure_ascii=False)+'\n' for k in sorted(products)),encoding='utf-8')
-
           evidence_path=fixtures/'carrefour_first_party_field_evidence_cumulative.jsonl'
           evidence={}
           for e in read_jsonl(evidence_path)+read_jsonl(out/'field_evidence.jsonl'):
@@ -125,7 +87,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
-            tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json \
             tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json \
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
             tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl 2>/dev/null || true
@@ -134,14 +95,47 @@ jobs:
             git pull --rebase origin agent/catalog-phase1
             git push origin HEAD:agent/catalog-phase1
           fi
-
-      - name: Upload auditable first-party probes
+      - name: Upload auditable browser inventory
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: carrefour-first-party-probes
-          path: |
-            tools/catalog/carrefour-first-party-smoke/
-            tools/catalog/carrefour-first-party-browser-inventory/
+          name: carrefour-first-party-browser-inventory
+          path: tools/catalog/carrefour-first-party-browser-inventory/
+          retention-days: 7
+          if-no-files-found: warn
+
+  direct-http:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Direct HTTP first-party probe on a separate runner
+        continue-on-error: true
+        working-directory: tools/catalog
+        run: |
+          python carrefour_first_party_inventory.py \
+            --out carrefour-first-party-smoke \
+            --max-pages 1 \
+            --max-products 8 \
+            --workers 2 \
+            --seed-url 'https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p'
+      - name: Upload HTTP diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-first-party-http-diagnostics
+          path: tools/catalog/carrefour-first-party-smoke/
           retention-days: 7
           if-no-files-found: warn
