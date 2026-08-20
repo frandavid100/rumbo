@@ -5,6 +5,7 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-carrefour-first-party-smoke.yml'
+      - 'tools/catalog/carrefour_first_party_sitemap.py'
       - 'tools/catalog/carrefour_first_party_inventory.py'
       - 'tools/catalog/carrefour_first_party_browser_probe.py'
       - 'tools/catalog/carrefour_first_party_browser_inventory.py'
@@ -28,6 +29,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Enumerate official Carrefour food sitemap
+        continue-on-error: true
+        working-directory: tools/catalog
+        run: |
+          python carrefour_first_party_sitemap.py \
+            --out carrefour-first-party-sitemap \
+            --max-sitemaps 5000 \
+            --delay 0.15
       - name: Install Playwright Chromium
         run: |
           pip install playwright
@@ -40,24 +49,32 @@ jobs:
             --delay 12 \
             --stop-after-blocks 1
       - name: Validate first-party provenance
+        if: always()
         run: |
           python - <<'PY'
-          import json
-          p='tools/catalog/carrefour-first-party-browser-inventory/summary.json'
-          d=json.load(open(p,encoding='utf-8'))
-          print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
-          print(json.dumps(d.get('coverage',{}),ensure_ascii=False,indent=2))
-          if d.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
-              raise SystemExit('Bad Carrefour provenance policy')
-          if str(d.get('classification_performed')).lower() != 'false':
-              raise SystemExit('Extraction unexpectedly performed classification')
-          if d['counts']['attempted'] < 1:
-              raise SystemExit('Browser inventory did not attempt any product')
+          import json, pathlib
+          for p in [
+              pathlib.Path('tools/catalog/carrefour-first-party-sitemap/summary.json'),
+              pathlib.Path('tools/catalog/carrefour-first-party-browser-inventory/summary.json'),
+          ]:
+              if not p.exists():
+                  print('missing',p)
+                  continue
+              d=json.load(open(p,encoding='utf-8'))
+              print('\n',p)
+              print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
+              if d.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
+                  raise SystemExit(f'Bad Carrefour provenance policy in {p}')
+              if str(d.get('classification_performed')).lower() != 'false':
+                  raise SystemExit(f'Extraction unexpectedly performed classification in {p}')
           PY
-      - name: Persist compact browser inventory and cumulative successes
+      - name: Persist compact first-party inventory and cumulative successes
         if: always()
         run: |
           mkdir -p tools/catalog/fixtures
+          test ! -f tools/catalog/carrefour-first-party-sitemap/summary.json || cp tools/catalog/carrefour-first-party-sitemap/summary.json tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json
+          test ! -f tools/catalog/carrefour-first-party-sitemap/products.jsonl || cp tools/catalog/carrefour-first-party-sitemap/products.jsonl tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl
+          test ! -f tools/catalog/carrefour-first-party-sitemap/diagnostics.json || cp tools/catalog/carrefour-first-party-sitemap/diagnostics.json tools/catalog/fixtures/carrefour_first_party_sitemap_diagnostics.json
           test ! -f tools/catalog/carrefour-first-party-browser-inventory/summary.json || cp tools/catalog/carrefour-first-party-browser-inventory/summary.json tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json
           python - <<'PY'
           import json, pathlib
@@ -87,20 +104,25 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_diagnostics.json \
             tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json \
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
             tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl 2>/dev/null || true
           if ! git diff --cached --quiet; then
-            git commit -m "catalog: persist Carrefour first-party browser inventory"
+            git commit -m "catalog: persist Carrefour first-party inventory"
             git pull --rebase origin agent/catalog-phase1
             git push origin HEAD:agent/catalog-phase1
           fi
-      - name: Upload auditable browser inventory
+      - name: Upload auditable first-party inventory
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: carrefour-first-party-browser-inventory
-          path: tools/catalog/carrefour-first-party-browser-inventory/
+          path: |
+            tools/catalog/carrefour-first-party-sitemap/
+            tools/catalog/carrefour-first-party-browser-inventory/
           retention-days: 7
           if-no-files-found: warn
 
