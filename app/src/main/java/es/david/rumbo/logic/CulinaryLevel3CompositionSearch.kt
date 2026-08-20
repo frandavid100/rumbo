@@ -140,7 +140,13 @@ object CulinaryLevel3CompositionSearch {
                 }
             }
             beam = expanded
-                .groupBy { it.fruitMeals.coerceAtMost(2) to it.vegetableMeals.coerceAtMost(2) }
+                .groupBy {
+                    Triple(
+                        it.fruitMeals.coerceAtMost(2),
+                        it.vegetableMeals.coerceAtMost(2),
+                        (it.attainable.maximum.fiber / 5.0).toInt().coerceIn(0, 5)
+                    )
+                }
                 .values
                 .flatMap { bucket ->
                     bucket.sortedWith(
