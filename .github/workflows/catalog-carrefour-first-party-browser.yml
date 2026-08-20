@@ -1,0 +1,54 @@
+name: Carrefour first-party browser probe
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-first-party-browser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Probe known Carrefour product pages
+        working-directory: tools/catalog
+        run: python carrefour_first_party_browser_probe.py --out carrefour-first-party-browser-probe --concurrency 2
+      - name: Print result
+        run: cat tools/catalog/carrefour-first-party-browser-probe/summary.json
+      - name: Persist result
+        if: always()
+        run: |
+          mkdir -p tools/catalog/fixtures
+          if test -f tools/catalog/carrefour-first-party-browser-probe/summary.json; then
+            cp tools/catalog/carrefour-first-party-browser-probe/summary.json tools/catalog/fixtures/carrefour_first_party_browser_probe_latest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tools/catalog/fixtures/carrefour_first_party_browser_probe_latest.json
+            if ! git diff --cached --quiet; then
+              git commit -m "catalog: persist Carrefour browser probe"
+              git pull --rebase origin agent/catalog-phase1
+              git push origin HEAD:agent/catalog-phase1
+            fi
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: carrefour-first-party-browser-probe
+          path: tools/catalog/carrefour-first-party-browser-probe/
+          retention-days: 7
+          if-no-files-found: warn
