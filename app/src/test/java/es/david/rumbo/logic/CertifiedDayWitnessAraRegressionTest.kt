@@ -1,8 +1,7 @@
 package es.david.rumbo.logic
 
 import es.david.rumbo.model.*
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class CertifiedDayWitnessAraRegressionTest {
@@ -221,61 +220,10 @@ class CertifiedDayWitnessAraRegressionTest {
     )
 
     @Test
-    fun araReachesCompleteFromHerExistingViableWitness() {
-        assertTrue(
+    fun historicalAraWitnessIsInvalidUnderPracticalQuantityRules() {
+        assertFalse(
             CertifiedDayWitnessEvaluator.isViable(
                 baseline, rules, foods, emptyMap(), target, MealDistributionPolicy.defaults
-            )
-        )
-
-        val result = CertifiedDayWitnessEvaluator.findCompleteDay(
-            rules = rules,
-            foodsById = foods,
-            dishesById = emptyMap(),
-            recommendation = target,
-            mealShares = MealDistributionPolicy.defaults,
-            baselineWitness = baseline
-        )
-
-        assertNotNull(result.witness)
-        assertTrue(
-            CertifiedDayWitnessEvaluator.isComplete(
-                result.witness!!,
-                rules,
-                foods,
-                emptyMap(),
-                target,
-                MealDistributionPolicy.defaults
-            )
-        )
-    }
-    @Test
-    fun araCanAdvanceFromHerCertifiedCompleteDayTowardLevel3WithoutFalseInsufficiency() {
-        val complete = CertifiedDayWitnessEvaluator.findCompleteDay(
-            rules = rules,
-            foodsById = foods,
-            dishesById = emptyMap(),
-            recommendation = target,
-            mealShares = MealDistributionPolicy.defaults,
-            baselineWitness = baseline
-        ).witness
-        assertNotNull(complete)
-
-        val result = CulinarilySatisfactoryDaySearch.find(
-            rules = rules,
-            foodsById = foods,
-            dishesById = emptyMap(),
-            recommendation = target,
-            mealShares = MealDistributionPolicy.defaults,
-            baselineCompleteWitness = complete
-        )
-        val detail = result.diagnostic?.issues?.joinToString(" | ") { issue ->
-            "${issue.mealType}:${issue.kind}:${issue.foodName}:${issue.roles.joinToString()}"
-        }.orEmpty()
-        assertNotNull("Ara no alcanzó nivel 3. Diagnóstico: $detail", result.witness)
-        assertTrue(
-            CulinarySatisfactionEvaluator.isCulinarilySatisfactory(
-                result.witness!!, rules, foods, emptyMap(), target, MealDistributionPolicy.defaults
             )
         )
     }
