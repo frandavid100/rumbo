@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import re
 from datetime import datetime, timezone
@@ -30,6 +31,12 @@ def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 
+def html_filename(url: str) -> str:
+    m = re.search(r"/R-([^/]+)/p/?(?:\?.*)?$", url, re.I)
+    key = m.group(1) if m else hashlib.sha256(url.encode()).hexdigest()[:20]
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", key) + ".html"
+
+
 async def inspect(context, url: str, timeout_ms: int):
     page = await context.new_page()
     row = {"url": url, "observed_at": now_iso()}
@@ -53,6 +60,8 @@ async def inspect(context, url: str, timeout_ms: int):
                 break
         row["blocked_text"] = bool((row.get("status") == 403) or BLOCK_RE.search(row["title"] + "\n" + text))
         row["ok"] = bool(row.get("status") and row["status"] < 400 and row["text_chars"] > 1000 and not row["blocked_text"])
+        if row["ok"]:
+            row["_html"] = html
     except Exception as exc:
         row["error"] = f"{type(exc).__name__}:{exc}"
         row["ok"] = False
@@ -63,7 +72,10 @@ async def inspect(context, url: str, timeout_ms: int):
 
 async def run(args):
     urls = args.url or DEFAULT_URLS
-    out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    html_dir = out / "html"
+    html_dir.mkdir(parents=True, exist_ok=True)
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -73,23 +85,35 @@ async def run(args):
         )
         rows = []
         sem = asyncio.Semaphore(max(1, args.concurrency))
+
         async def one(url):
             async with sem:
                 return await inspect(context, url, args.timeout * 1000)
+
         for task in asyncio.as_completed([one(u) for u in urls]):
-            row = await task; rows.append(row)
+            row = await task
+            raw = row.pop("_html", None)
+            if raw:
+                filename = html_filename(row.get("final_url") or row["url"])
+                path = html_dir / filename
+                path.write_text(raw, encoding="utf-8")
+                row["saved_html"] = str(path.relative_to(out))
+                row["page_sha256"] = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+            rows.append(row)
             print(json.dumps(row, ensure_ascii=False))
-        await context.close(); await browser.close()
+        await context.close()
+        await browser.close()
     rows.sort(key=lambda r: r["url"])
     summary = {
         "source": "https://www.carrefour.es",
         "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-        "version": "carrefour-first-party-browser-probe-1.1",
+        "version": "carrefour-first-party-browser-probe-1.2",
         "built_at": now_iso(),
         "counts": {
             "requested": len(rows),
             "http_success": sum(bool(r.get("status") and r["status"] < 400) for r in rows),
             "usable_pages": sum(bool(r.get("ok")) for r in rows),
+            "saved_html_pages": sum(bool(r.get("saved_html")) for r in rows),
             "with_product_jsonld": sum(bool(r.get("product_jsonld")) for r in rows),
             "with_nutrition_marker": sum(bool(r.get("markers", {}).get("Información nutricional")) for r in rows),
             "blocked": sum(bool(r.get("blocked_text")) for r in rows),
