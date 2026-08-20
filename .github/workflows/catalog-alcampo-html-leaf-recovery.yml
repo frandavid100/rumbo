@@ -4,6 +4,9 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-alcampo-html-leaf-recovery.yml'
+      - 'tools/catalog/alcampo_html_leaf_recovery.py'
+      - 'tools/catalog/alcampo_recovery_union.py'
+      - 'tools/catalog/fixtures/alcampo_sharded_enumeration_latest.json'
   workflow_dispatch:
 permissions:
   contents: write
@@ -38,12 +41,16 @@ jobs:
                           if not isinstance(row,dict): continue
                           rid=str(row.get('retailer_category_id') or row.get('rid') or '').strip()
                           if rid:
-                              found[rid]=str(row.get('label') or rid)
+                              expected=int(row.get('source_reported_product_count') or 0)
+                              prev=found.get(rid)
+                              candidate={'rid':rid,'label':str(row.get('label') or rid),'expected':expected}
+                              if prev is None or expected > int(prev.get('expected') or 0):
+                                  found[rid]=candidate
                   for v in x.values(): walk(v)
               elif isinstance(x,list):
                   for v in x: walk(v)
           walk(data)
-          include=[{'rid':rid,'label':label} for rid,label in sorted(found.items())]
+          include=[found[rid] for rid in sorted(found)]
           print('matrix='+json.dumps({'include':include},ensure_ascii=False,separators=(',',':')))
           print('count='+str(len(include)))
           PY
@@ -53,8 +60,6 @@ jobs:
     if: needs.prepare.outputs.count != '0'
     strategy:
       fail-fast: false
-      # Category SSR is also behind Alcampo's WAF. Moderate parallelism gives
-      # each fresh runner a better chance of receiving the real page instead of 202.
       max-parallel: 12
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
@@ -66,13 +71,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Recover leaf through official /categories/~/RID SSR then decorate its own UUIDs
+      - name: Enumerate leaf from official category SSR and optionally decorate UUIDs
         working-directory: tools/catalog
         continue-on-error: true
         run: |
           python alcampo_html_leaf_recovery.py \
             --label "${{ matrix.label }}" \
             --rid "${{ matrix.rid }}" \
+            --expected "${{ matrix.expected }}" \
             --out "alcampo-html-recovery-${{ matrix.rid }}"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -106,14 +112,18 @@ jobs:
         with:
           pattern: alcampo-html-recovery-*
           path: recovered
-      - name: Union recovered leaves with baseline, never replace baseline with a smaller crawl
+      - name: Audit every visible first-party SKU against the stable union
         working-directory: tools/catalog
         run: |
           mkdir -p ../../alcampo-html-recovery-union
+          set +e
           python alcampo_recovery_union.py \
             --baseline-products ../../baseline/products.jsonl \
             --recovery-root ../../recovered \
             --out ../../alcampo-html-recovery-union
+          code=$?
+          echo "$code" > ../../alcampo-html-recovery-union/recovery_exit_code.txt
+          set -e
       - name: Materialize only newly recovered SKUs for subsequent detail work
         run: |
           python - <<'PY'
