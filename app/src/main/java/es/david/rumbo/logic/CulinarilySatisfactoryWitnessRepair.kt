@@ -28,7 +28,10 @@ import kotlin.math.round
  */
 object CulinarilySatisfactoryWitnessRepair {
     private const val BEAM_WIDTH = 48
-    private const val MAX_DEPTH = 8
+    // A complete day may require one quantity normalization, two companion
+    // insertions and several family substitutions. Eight steps truncated real
+    // repairs just before completion in the exported BEDCA profile.
+    private const val MAX_DEPTH = 14
     private const val MAX_COMPANIONS_PER_ISSUE = 8
 
     fun find(
