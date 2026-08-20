@@ -53,6 +53,16 @@ def main() -> int:
         "official Carrefour category-listing-only observations. Listing-only records never imply that "
         "ingredients, nutrition or other product-detail fields were observed."
     )
+    summary["source"] = "CARREFOUR_OFFICIAL_HOSTS"
+    summary["source_hosts"] = [
+        "https://www.carrefour.es",
+        "https://actforfood.carrefour.es",
+    ]
+    summary["provenance_note"] = (
+        "Only fields observed directly on official Carrefour-controlled pages are merged. Third-party catalogs may seed "
+        "candidate URLs, but their product facts are never promoted to CARREFOUR_FIRST_PARTY. Indexed official-page "
+        "retrieval is explicitly marked because crawl lag is possible."
+    )
     summary_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
