@@ -2,50 +2,63 @@
   "retailer": "CARREFOUR",
   "policy": "PER_FIELD_PROVENANCE_REQUIRED",
   "updated_at": "2026-08-20",
+  "current_first_party_status": {
+    "inventory_complete": false,
+    "candidate_identity_urls_external_only": 8451,
+    "candidate_identity_source": "RADARSUPER_CANDIDATE_IDENTITY_ONLY",
+    "successful_first_party_product_pages_cumulative": 2,
+    "successful_first_party_products_fixture": "tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl",
+    "field_evidence_fixture": "tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl",
+    "direct_http_status": "BLOCKED_403_FROM_GITHUB_RUNNERS",
+    "browser_status": "PARTIAL_SUCCESS_THEN_WAF",
+    "classification_performed_in_first_party_staging": false,
+    "notes": "The 8,451 RadarSuper-derived Carrefour URLs are discovery candidates only. The only current Carrefour first-party product records are successful observations fetched directly from carrefour.es and stored separately with per-field provenance."
+  },
   "sources": {
     "first_party_carrefour": {
       "canonical_source": "https://www.carrefour.es",
       "evidence_source_id": "CARREFOUR_FIRST_PARTY",
+      "allowed_evidence_types": ["DECLARED", "OBSERVED_LISTING"],
       "discovery": {
         "robots_txt": "https://www.carrefour.es/robots.txt",
         "official_food_sitemap_index": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
-        "notes": "Carrefour declares the food sitemap index in its own robots.txt. Use it as the canonical first-party product identity/URL discovery route before category crawling."
+        "notes": "Carrefour declares the food sitemap index in its own robots.txt. It is the preferred first-party identity/URL discovery route when accessible."
       },
       "pipelines": [
         {
           "path": "tools/catalog/carrefour_catalog_importer.py",
-          "status": "legacy_direct",
-          "notes": "Direct urllib Carrefour scraper; limited roots and mixes extraction with classification. Preserve for history, do not use as the canonical first-party staging format."
+          "status": "legacy_direct_mixed_with_classification",
+          "notes": "Direct urllib Carrefour scraper. Raw fields are first-party when fetched successfully, but the script also performs Rumbo classification, so its output is not the canonical extraction-only staging dataset."
         },
         {
           "path": "tools/catalog/direct_retailer_catalog.py",
           "status": "legacy_direct_probe",
-          "notes": "Direct Playwright Carrefour adapter. Historical smoke discovered categories but zero product URLs; useful as a probe, not as the canonical first-party dataset."
+          "notes": "Historical direct Playwright adapter; useful as a probe only."
         },
         {
           "path": "tools/catalog/carrefour_first_party_sitemap.py",
           "status": "canonical_first_party_identity_inventory",
-          "notes": "Traverses Carrefour's official sitemap-food index, records retailer SKU, canonical product URL and sitemap last-modified evidence, and persists JSONL plus SQLite without any Rumbo classification."
+          "notes": "Traverses Carrefour's official sitemap route and persists only Carrefour-observed identity evidence; performs no Rumbo classification."
         },
         {
           "path": "tools/catalog/carrefour_first_party_sitemap_browser.py",
           "status": "canonical_first_party_sitemap_browser_fallback",
-          "notes": "Browser fallback for Carrefour's own sitemap route when direct HTTP from the runner is challenged."
+          "notes": "Browser fallback for Carrefour's official sitemap route when direct HTTP is challenged."
         },
         {
           "path": "tools/catalog/carrefour_first_party_inventory.py",
           "status": "canonical_first_party_http_staging",
-          "notes": "Extraction-only HTTP staging. Stores product fields, partial nutrition and field-level evidence fetched from carrefour.es; performs no Rumbo classification. GitHub-hosted direct HTTP is currently answered with 403 by Carrefour."
+          "notes": "Extraction-only HTTP staging. Stores product fields, partial nutrition and field-level evidence from carrefour.es; performs no Rumbo classification."
         },
         {
           "path": "tools/catalog/carrefour_first_party_browser_inventory.py",
           "status": "canonical_first_party_browser_staging",
-          "notes": "Polite real-browser fallback for Carrefour product pages. Extracts only fields observed directly on carrefour.es, records per-field evidence, captures candidate first-party JSON/XHR endpoints, persists JSONL plus SQLite, and stops after a WAF block threshold rather than hammering the site. Candidate URLs may come from third-party mirrors, but no third-party field is copied as evidence."
+          "notes": "Low-concurrency real-browser fallback. Third-party URLs may seed which Carrefour pages to verify, but no third-party field is copied into Carrefour evidence. Stops after consecutive WAF blocks."
         },
         {
           "path": "tools/catalog/carrefour_first_party_browser_probe.py",
           "status": "canonical_first_party_saved_page_probe",
-          "notes": "Captures successful Carrefour product HTML verbatim for auditable offline parsing."
+          "notes": "Captures successful Carrefour product HTML for auditable offline parsing."
         },
         {
           "path": "tools/catalog/carrefour_first_party_from_saved_html.py",
@@ -55,19 +68,32 @@
         {
           "path": "tools/catalog/sanitize_carrefour_first_party_output.py",
           "status": "first_party_extraction_quality_gate",
-          "notes": "Rejects demonstrably generic page chrome from product-specific fields: Nutri-Score is accepted only as a grade A-E and marketplace boilerplate is excluded from product attributes. Raw captured HTML remains the audit source."
+          "notes": "Rejects demonstrably generic page chrome from product-specific fields while retaining raw captured HTML as audit evidence."
+        },
+        {
+          "path": "tools/catalog/summarize_carrefour_first_party.py",
+          "status": "first_party_summary_only",
+          "notes": "Summarizes extraction coverage; does not enrich or classify products."
         },
         {
           "path": "tools/catalog/carrefour_first_party_actforfood_inventory.py",
           "status": "first_party_alternate_route_probe",
-          "notes": "Tests Carrefour's own Act For Food route as an alternate first-party surface; it is kept separate from third-party enrichment."
+          "notes": "Tests Carrefour's own Act For Food surface as an alternate first-party route."
         }
+      ],
+      "workflows": [
+        ".github/workflows/catalog-carrefour-first-party-smoke.yml",
+        ".github/workflows/catalog-carrefour-first-party-sitemap.yml",
+        ".github/workflows/catalog-carrefour-first-party-browser.yml",
+        ".github/workflows/catalog-carrefour-first-party-fresh-inventory.yml",
+        ".github/workflows/catalog-carrefour-first-party-cumulative.yml",
+        ".github/workflows/catalog-carrefour-first-party-actforfood.yml",
+        ".github/workflows/catalog-carrefour-first-party-actforfood-http.yml"
       ],
       "fixtures": [
         {
           "path": "tools/catalog/fixtures/carrefour_direct_smoke_summary.json",
           "status": "historical_direct_smoke",
-          "counts": {"discovered": 0, "fetched": 0},
           "third_party_product_data": false
         },
         {
@@ -79,6 +105,14 @@
           "status": "official_sitemap_product_identity_inventory"
         },
         {
+          "path": "tools/catalog/fixtures/carrefour_first_party_sitemap_browser_summary.json",
+          "status": "official_sitemap_browser_inventory_summary"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_sitemap_browser_products.jsonl",
+          "status": "official_sitemap_browser_product_identity_inventory"
+        },
+        {
           "path": "tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json",
           "status": "latest_direct_http_first_party_probe"
         },
@@ -87,12 +121,28 @@
           "status": "latest_browser_first_party_inventory"
         },
         {
+          "path": "tools/catalog/fixtures/carrefour_first_party_fresh_inventory_latest.json",
+          "status": "latest_clean_browser_first_party_inventory"
+        },
+        {
           "path": "tools/catalog/fixtures/carrefour_first_party_browser_probe_latest.json",
           "status": "latest_saved_html_browser_probe"
         },
         {
           "path": "tools/catalog/fixtures/carrefour_first_party_browser_extracted_latest.json",
           "status": "latest_offline_extraction_from_first_party_saved_html"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_actforfood_http_latest.json",
+          "status": "alternate_first_party_http_probe"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_actforfood_summary.json",
+          "status": "alternate_first_party_browser_probe"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_route_matrix.json",
+          "status": "first_party_route_diagnostics"
         },
         {
           "path": "tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl",
@@ -114,16 +164,16 @@
       ],
       "status": "candidate_identity_and_legacy_catalog_only",
       "rules": [
-        "May seed candidate Carrefour product URLs/identities.",
-        "Candidate export is labelled RADARSUPER_CANDIDATE_ONLY and is used only to decide which official Carrefour URL to verify.",
-        "Never copy a RadarSuper field into CARREFOUR_FIRST_PARTY evidence.",
-        "Open Food Facts nutrition surfaced by RadarSuper remains OPEN_FOOD_FACTS_VIA_RADARSUPER and is never DECLARED Carrefour evidence."
+        "May seed candidate Carrefour URLs/identities for later direct verification.",
+        "Candidate export is external identity evidence only and is never copied as CARREFOUR_FIRST_PARTY product evidence.",
+        "Open Food Facts nutrition surfaced by RadarSuper remains OPEN_FOOD_FACTS_VIA_RADARSUPER.",
+        "A product discovered through RadarSuper becomes first-party evidence only after its official Carrefour page is fetched successfully and the individual field is observed there."
       ],
       "candidate_fixture": "tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl",
-      "latest_known": {
+      "candidate_summary_fixture": "tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.summary.json",
+      "candidate_urls": 8451,
+      "legacy_latest_known": {
         "fixture": "tools/catalog/fixtures/carrefour_quality_latest_summary.json",
-        "unique_product_urls": 8449,
-        "identified": 8372,
         "nutrition_source": {"OPEN_FOOD_FACTS_VIA_RADARSUPER": 1571}
       }
     },
@@ -134,6 +184,16 @@
     "aesan_or_manufacturer": {
       "status": "third_party_or_external",
       "rule": "Keep separate provenance; not part of the Carrefour first-party pass."
+    },
+    "rumbo_internal_or_manual": {
+      "status": "not_retailer_evidence",
+      "examples": [
+        "tools/catalog/carrefour_manual_build.py",
+        "tools/catalog/classifier.py",
+        "tools/catalog/classifier_quality.py",
+        "tools/catalog/fixtures/classification_nutrition_overrides.json"
+      ],
+      "rule": "Classification, manual decisions, heuristics and overrides are Rumbo-internal metadata. They must never be attributed to Carrefour or used to manufacture missing first-party fields."
     }
   },
   "classification_policy": "Extraction is independent of Rumbo classification. Automatic proposals are not manual semantic review and are not first-party retailer evidence."
