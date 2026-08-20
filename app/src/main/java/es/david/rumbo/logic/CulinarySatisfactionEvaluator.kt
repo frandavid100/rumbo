@@ -186,7 +186,7 @@ object CulinarySatisfactionEvaluator {
 
         val eligibleRoles = occurrences.map { occurrence ->
             occurrence.roles.filterTo(linkedSetOf()) { role ->
-                meal.type in CulinaryPolicy.policy(role).suggestedMealTypes &&
+                CulinaryPolicy.isAllowedForMeal(role, meal.type) &&
                 PortionPolicyResolver.resolve(
                     occurrence.food,
                     role,

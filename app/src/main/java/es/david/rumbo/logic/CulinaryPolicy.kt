@@ -40,6 +40,7 @@ data class CulinaryRolePolicy(
 
 /** Canonical culinary policy. Products only store the functional roles they can perform. */
 object CulinaryPolicy {
+    private val mealRestrictedRoles = setOf(CulinaryRole.BINDER, CulinaryRole.COATING)
     private val policies = mapOf(
         CulinaryRole.PLATE_CENTER to CulinaryRolePolicy(150.0, 75.0, 300.0, maxPerMeal = 1),
         CulinaryRole.PLATE_BASE to CulinaryRolePolicy(100.0, 40.0, 300.0, maxPerMeal = 1),
@@ -173,6 +174,9 @@ object CulinaryPolicy {
 
     fun isSuggestedForMeal(food: Food, mealType: MealType): Boolean =
         roles(food).any { role -> mealType in policy(role).suggestedMealTypes }
+
+    fun isAllowedForMeal(role: CulinaryRole, mealType: MealType): Boolean =
+        role !in mealRestrictedRoles || mealType in policy(role).suggestedMealTypes
 
     /**
      * True when one role can be chosen for every role-aware item so all hard rules hold.

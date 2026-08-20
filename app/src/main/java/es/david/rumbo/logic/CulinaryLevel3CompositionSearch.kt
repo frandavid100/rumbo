@@ -67,7 +67,8 @@ object CulinaryLevel3CompositionSearch {
         val preferredVector: Vector,
         val attainable: VectorRange,
         val fruit: Boolean,
-        val vegetable: Boolean
+        val vegetable: Boolean,
+        val rolesByFood: Map<Long, List<CulinaryRole>>
     )
 
     private data class DayState(
@@ -76,7 +77,8 @@ object CulinaryLevel3CompositionSearch {
         val attainable: VectorRange = VectorRange(),
         val fruitMeals: Int = 0,
         val vegetableMeals: Int = 0,
-        val processedShare: Double = 0.0
+        val processedShare: Double = 0.0,
+        val rolesByFood: Map<Long, List<CulinaryRole>> = emptyMap()
     )
 
     fun find(
@@ -116,7 +118,13 @@ object CulinaryLevel3CompositionSearch {
             val share = mealShares[mealType] ?: 0.0
             val expanded = buildList {
                 beam.forEach { state ->
-                    candidatesByMeal.getValue(mealType).forEach { candidate ->
+                    candidatesByMeal.getValue(mealType).forEach candidateLoop@ { candidate ->
+                        val combinedRoles = mergeRoles(state.rolesByFood, candidate.rolesByFood)
+                        if (combinedRoles.any { (_, roles) ->
+                                CulinarySoftPolicy.maximumDailyOccurrences(roles)
+                                    ?.let { roles.size > it } == true
+                            }
+                        ) return@candidateLoop
                         add(
                             DayState(
                                 meals = state.meals + candidate.meal,
@@ -124,7 +132,8 @@ object CulinaryLevel3CompositionSearch {
                                 attainable = state.attainable + candidate.attainable,
                                 fruitMeals = state.fruitMeals + if (candidate.fruit) 1 else 0,
                                 vegetableMeals = state.vegetableMeals + if (candidate.vegetable) 1 else 0,
-                                processedShare = state.processedShare + share
+                                processedShare = state.processedShare + share,
+                                rolesByFood = combinedRoles
                             )
                         )
                     }
@@ -250,7 +259,11 @@ object CulinaryLevel3CompositionSearch {
                                 maximum = vector(chosen, items) { it.maximumGrams }
                             ),
                             fruit = chosen.any { it.category == FoodCategory.FRUIT },
-                            vegetable = chosen.any { it.category == FoodCategory.VEGETABLE }
+                            vegetable = chosen.any { it.category == FoodCategory.VEGETABLE },
+                            rolesByFood = chosen.indices.groupBy(
+                                keySelector = { chosen[it].id },
+                                valueTransform = { roles[it] }
+                            )
                         )
                     }
             }
@@ -277,7 +290,7 @@ object CulinaryLevel3CompositionSearch {
         mealType: MealType
     ): Sequence<List<CulinaryRole>> = sequence {
         val choices = foods.map { food ->
-            CulinaryPolicy.roles(food).sortedWith(
+            CulinaryPolicy.roles(food).filter { CulinaryPolicy.isAllowedForMeal(it, mealType) }.sortedWith(
                 compareByDescending<CulinaryRole> {
                     mealType in CulinaryPolicy.policy(it).suggestedMealTypes
                 }.thenBy { it.ordinal }
@@ -303,6 +316,14 @@ object CulinaryLevel3CompositionSearch {
             }
         }
         visit(0)
+    }
+
+    private fun mergeRoles(
+        first: Map<Long, List<CulinaryRole>>,
+        second: Map<Long, List<CulinaryRole>>
+    ): Map<Long, List<CulinaryRole>> = buildMap {
+        first.forEach { (foodId, roles) -> put(foodId, roles) }
+        second.forEach { (foodId, roles) -> put(foodId, get(foodId).orEmpty() + roles) }
     }
 
     private fun combinations(values: List<Food>, count: Int): Sequence<List<Food>> = sequence {
