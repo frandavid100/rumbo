@@ -211,6 +211,7 @@ import es.david.rumbo.logic.CertifiedDayWitnessEvaluator
 import es.david.rumbo.logic.CertifiedDayVariantGenerator
 import es.david.rumbo.logic.CulinarySatisfactionEvaluator
 import es.david.rumbo.logic.CulinarySatisfactionIssueKind
+import es.david.rumbo.logic.CulinarySoftPolicy
 import es.david.rumbo.logic.CulinarilySatisfactoryDayDiagnostic
 import es.david.rumbo.logic.CulinarilySatisfactoryDaySearch
 import es.david.rumbo.model.ActivityLevel
@@ -910,6 +911,10 @@ fun RumboApp(repository: AppRepository) {
                         selectedDishId = it
                         dishReturnScreenName = Screen.HOME.name
                         screenName = Screen.DISH_DETAIL.name
+                    },
+                    onSaveProposedDish = { dish ->
+                        data = repository.saveDish(dish)
+                        scope.launch { snackbarHostState.showSnackbar("Receta guardada en tus platos.") }
                     },
                     onAddMissingMeal = { type, day ->
                         plannerWeekName = PlanWeek.CURRENT.name
@@ -1775,6 +1780,7 @@ private fun HomeScreen(
     onOpenFood: (Long, String?) -> Unit,
     onDismissFoodSuggestion: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
+    onSaveProposedDish: (Dish) -> Unit,
     onOpenFoods: () -> Unit,
     onSaveCertifiedDayWitness: (CertifiedDayWitness) -> Unit,
     onClearCertifiedDayWitness: (CertifiedDayLevel) -> Unit,
@@ -2264,6 +2270,7 @@ private fun HomeScreen(
                     dishesById = dishesById,
                     onOpenFood = openFood,
                     onOpenDish = onOpenDish,
+                    onSaveProposedDish = onSaveProposedDish,
                     onChangeCertifiedDay = onChangeCertifiedDay,
                     isChangingCertifiedDay = isChangingCertifiedDay,
                     onSaveCertifiedDayToLibrary = onSaveCertifiedDayToLibrary,
@@ -2558,6 +2565,7 @@ private fun RepertoireAndWitnessSection(
     dishesById: Map<Long, Dish>,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
+    onSaveProposedDish: (Dish) -> Unit,
     onChangeCertifiedDay: (CertifiedDayWitness, MealType?) -> Unit,
     isChangingCertifiedDay: Boolean,
     onSaveCertifiedDayToLibrary: (CertifiedDayWitness) -> Unit,
@@ -2621,6 +2629,7 @@ private fun RepertoireAndWitnessSection(
                             dishesById = dishesById,
                             onOpenFood = onOpenFood,
                             onOpenDish = onOpenDish,
+                            onSaveProposedDish = onSaveProposedDish,
                             onChangeMeal = { onChangeCertifiedDay(certifiedDay, mealType) },
                             isChanging = isChangingCertifiedDay,
                             expanded = expandedSection == mealType.name,
@@ -3241,6 +3250,79 @@ private fun NutritionGoalMetric(
     }
 }
 
+internal data class ProposedDishIngredient(
+    val food: Food,
+    val grams: Double
+)
+
+internal fun mealCategoryOrder(category: FoodCategory): Int = when (category) {
+    FoodCategory.PROTEIN -> 0
+    FoodCategory.CARBOHYDRATE -> 1
+    FoodCategory.FAT -> 2
+    FoodCategory.VEGETABLE -> 3
+    FoodCategory.FRUIT -> 4
+    FoodCategory.OTHER -> 5
+}
+
+internal fun groupCulinaryCompanions(
+    ingredients: List<ProposedDishIngredient>
+): List<List<ProposedDishIngredient>> {
+    if (ingredients.size < 2) return ingredients.map(::listOf)
+    fun related(first: Food, second: Food): Boolean {
+        val firstRoles = CulinaryPolicy.roles(first)
+        val secondRoles = CulinaryPolicy.roles(second)
+        fun pointsTo(source: Set<CulinaryRole>, target: Set<CulinaryRole>): Boolean =
+            source.any { role ->
+                CulinaryPolicy.policy(role).requiredRoles.any(target::contains) ||
+                    CulinarySoftPolicy.preferredCompanions(role).any(target::contains)
+            }
+        return pointsTo(firstRoles, secondRoles) || pointsTo(secondRoles, firstRoles)
+    }
+
+    val remaining = ingredients.indices.toMutableSet()
+    val groups = mutableListOf<List<ProposedDishIngredient>>()
+    while (remaining.isNotEmpty()) {
+        val component = linkedSetOf(remaining.first())
+        var changed: Boolean
+        do {
+            changed = false
+            remaining.filterNot(component::contains).toList().forEach { candidate ->
+                if (component.any { related(ingredients[it].food, ingredients[candidate].food) }) {
+                    component += candidate
+                    changed = true
+                }
+            }
+        } while (changed)
+        remaining.removeAll(component)
+        groups += component.map(ingredients::get).sortedWith(
+            compareBy<ProposedDishIngredient> { mealCategoryOrder(it.food.category) }
+                .thenBy { it.food.name }
+        )
+    }
+    return groups.sortedWith(
+        compareBy<List<ProposedDishIngredient>> { group ->
+            group.minOf { mealCategoryOrder(it.food.category) }
+        }.thenBy { it.first().food.name }
+    )
+}
+
+private fun proposedDishName(ingredients: List<ProposedDishIngredient>): String {
+    val names = ingredients.map { it.food.name.substringBefore(",").trim() }
+    return when (names.size) {
+        0 -> "Plato propuesto"
+        1 -> names.single()
+        2 -> "${names[0]} con ${names[1]}"
+        else -> "${names.first()} con ${names.drop(1).dropLast(1).joinToString(", ")} y ${names.last()}"
+    }.take(80)
+}
+
+private data class WitnessDisplayEntry(
+    val category: FoodCategory,
+    val name: String,
+    val dish: Pair<Dish, Double>? = null,
+    val foods: List<ProposedDishIngredient> = emptyList()
+)
+
 @Composable
 private fun CertifiedMealWitnessCard(
     mealType: MealType,
@@ -3250,12 +3332,36 @@ private fun CertifiedMealWitnessCard(
     dishesById: Map<Long, Dish>,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
+    onSaveProposedDish: (Dish) -> Unit,
     onChangeMeal: () -> Unit,
     isChanging: Boolean,
     expanded: Boolean,
     onToggle: () -> Unit
 ) {
-    val itemCount = meal?.let { it.dishes.size + it.items.size } ?: 0
+    val foodGroups = meal?.items.orEmpty().mapNotNull { planned ->
+        foodsById[planned.foodId]?.let { food ->
+            ProposedDishIngredient(food, meal!!.resolvedGrams(planned, day))
+        }
+    }.let(::groupCulinaryCompanions)
+    val entries = (
+        meal?.dishes.orEmpty().mapNotNull { planned ->
+            dishesById[planned.dishId]?.let { dish ->
+                WitnessDisplayEntry(
+                    category = dish.dominantCategory(foodsById),
+                    name = dish.name,
+                    dish = dish to meal!!.resolvedGrams(planned, day)
+                )
+            }
+        } + foodGroups.map { group ->
+            WitnessDisplayEntry(
+                category = group.minBy { mealCategoryOrder(it.food.category) }.food.category,
+                name = if (group.size > 1) proposedDishName(group) else group.single().food.name,
+                foods = group
+            )
+        }
+    ).sortedWith(compareBy<WitnessDisplayEntry> { mealCategoryOrder(it.category) }.thenBy { it.name })
+    val itemCount = entries.size
+    var proposedDish by remember { mutableStateOf<List<ProposedDishIngredient>?>(null) }
     Column(Modifier.fillMaxWidth()) {
         Column(
             Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(16.dp),
@@ -3281,15 +3387,6 @@ private fun CertifiedMealWitnessCard(
                 Modifier.fillMaxWidth().padding(bottom = 6.dp)
             ) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
-                val entries = meal?.dishes.orEmpty().mapNotNull { planned ->
-                    dishesById[planned.dishId]?.let { dish ->
-                        Triple(dish, meal!!.resolvedGrams(planned, day), true)
-                    }
-                } + meal?.items.orEmpty().mapNotNull { planned ->
-                    foodsById[planned.foodId]?.let { food ->
-                        Triple(food, meal!!.resolvedGrams(planned, day), false)
-                    }
-                }
                 if (entries.isEmpty()) {
                     Text(
                         "No hay alimentos en esta comida.",
@@ -3297,9 +3394,8 @@ private fun CertifiedMealWitnessCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                entries.forEachIndexed { index, (item, grams, isDish) ->
-                    if (isDish) {
-                        val dish = item as Dish
+                entries.forEachIndexed { index, entry ->
+                    entry.dish?.let { (dish, grams) ->
                         val totals = dish.nutritionForGrams(foodsById, grams)
                         WitnessMenuItemRow(
                             name = dish.name,
@@ -3311,18 +3407,26 @@ private fun CertifiedMealWitnessCard(
                             fat = totals.fatGrams,
                             onClick = { onOpenDish(dish.id) }
                         )
-                    } else {
-                        val food = item as Food
-                        val factor = grams / 100.0
+                    } ?: run {
+                        val group = entry.foods
+                        val food = group.singleOrNull()?.food
+                        val grams = group.singleOrNull()?.grams
+                        fun total(selector: (Food) -> Double?): Double? =
+                            group.map { ingredient ->
+                                selector(ingredient.food)?.times(ingredient.grams / 100.0)
+                            }.takeIf { values -> values.all { it != null } }?.sumOf { it!! }
                         WitnessMenuItemRow(
-                            name = food.name,
-                            amount = foodAmountLabel(food, grams),
-                            category = food.category,
-                            calories = food.calories?.times(factor),
-                            protein = food.proteinGrams?.times(factor),
-                            carbohydrates = food.carbohydrateGrams?.times(factor),
-                            fat = food.fatGrams?.times(factor),
-                            onClick = { onOpenFood(food.id) }
+                            name = entry.name,
+                            amount = if (food != null && grams != null) foodAmountLabel(food, grams)
+                                else "${group.size} ingredientes · ${formatDecimal(group.sumOf { it.grams })} g",
+                            category = entry.category,
+                            calories = total { it.calories },
+                            protein = total { it.proteinGrams },
+                            carbohydrates = total { it.carbohydrateGrams },
+                            fat = total { it.fatGrams },
+                            onClick = {
+                                if (food != null) onOpenFood(food.id) else proposedDish = group
+                            }
                         )
                     }
                     if (index < entries.lastIndex) {
@@ -3339,6 +3443,70 @@ private fun CertifiedMealWitnessCard(
             }
         }
     }
+    proposedDish?.let { ingredients ->
+        ProposedDishEditorDialog(
+            initialName = proposedDishName(ingredients),
+            ingredients = ingredients,
+            onDismiss = { proposedDish = null },
+            onSave = { dish ->
+                onSaveProposedDish(dish)
+                proposedDish = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun ProposedDishEditorDialog(
+    initialName: String,
+    ingredients: List<ProposedDishIngredient>,
+    onDismiss: () -> Unit,
+    onSave: (Dish) -> Unit
+) {
+    var name by remember(ingredients) { mutableStateOf(initialName) }
+    var amounts by remember(ingredients) {
+        mutableStateOf(ingredients.associate { it.food.id to formatDecimal(it.grams) })
+    }
+    val parsed = ingredients.mapNotNull { ingredient ->
+        parseDecimal(amounts[ingredient.food.id].orEmpty())
+            ?.takeIf { it in 0.1..5000.0 }
+            ?.let { DishIngredient(ingredient.food.id, it) }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Guardar como receta") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(80) },
+                    label = { Text("Nombre del plato") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                ingredients.forEach { ingredient ->
+                    OutlinedTextField(
+                        value = amounts[ingredient.food.id].orEmpty(),
+                        onValueChange = { value -> amounts = amounts + (ingredient.food.id to value) },
+                        label = { Text(ingredient.food.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        suffix = { Text("g") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && parsed.size == ingredients.size,
+                onClick = {
+                    onSave(Dish(System.currentTimeMillis(), name.trim(), parsed))
+                }
+            ) { Text("Guardar receta") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }
 
 @Composable
