@@ -60,7 +60,7 @@ object CulinaryPolicy {
         CulinaryRole.SANDWICH_BASE to CulinaryRolePolicy(70.0, 30.0, 150.0),
         CulinaryRole.SANDWICH_FILLING to CulinaryRolePolicy(
             60.0, 20.0, 150.0, standaloneAllowed = false,
-            requiredRoles = setOf(CulinaryRole.SANDWICH_BASE)
+            requiredRoles = setOf(CulinaryRole.SANDWICH_BASE), maxPerMeal = 1
         ),
         CulinaryRole.SPREAD to CulinaryRolePolicy(
             25.0, 5.0, 60.0, standaloneAllowed = false,
@@ -205,6 +205,9 @@ object CulinaryPolicy {
                 if (counts.any { (role, count) ->
                         policy(role).maxPerMeal?.let { count > it } == true
                     }
+                ) return false
+                if (counts.getOrDefault(CulinaryRole.SANDWICH_BASE, 0) > 0 &&
+                    counts.getOrDefault(CulinaryRole.PLATE_CENTER, 0) > 0
                 ) return false
                 return true
             }

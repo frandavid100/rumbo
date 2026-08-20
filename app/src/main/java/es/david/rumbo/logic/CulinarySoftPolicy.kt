@@ -1,11 +1,13 @@
 package es.david.rumbo.logic
 
+import es.david.rumbo.model.Food
+
 /**
  * Versioned structural preferences used by level 3.
  * Hard REQUIRE/FORBID/cardinality rules remain in CulinaryPolicy.
  */
 object CulinarySoftPolicy {
-    const val POLICY_VERSION = 2
+    const val POLICY_VERSION = 4
 
     private val unlimitedDailyRepetitionRoles = setOf(
         CulinaryRole.COOKING_MEDIUM,
@@ -25,6 +27,10 @@ object CulinarySoftPolicy {
         CulinaryRole.PLATE_CENTER, CulinaryRole.PLATE_BASE, CulinaryRole.SIDE
     )
 
+    private val leafySaladMarkers = setOf(
+        "canonigo", "canónigo", "lechuga", "escarola", "rucula", "rúcula", "endibia", "berro"
+    )
+
     private val preferAnyOf: Map<CulinaryRole, Set<CulinaryRole>> = mapOf(
         CulinaryRole.PLATE_CENTER to setOf(CulinaryRole.PLATE_BASE, CulinaryRole.SIDE),
         CulinaryRole.PLATE_BASE to setOf(CulinaryRole.PLATE_CENTER, CulinaryRole.SIDE),
@@ -39,12 +45,27 @@ object CulinarySoftPolicy {
     fun preferredCompanions(role: CulinaryRole): Set<CulinaryRole> =
         preferAnyOf[role].orEmpty()
 
+    fun additionalPreferredCompanions(food: Food, role: CulinaryRole): Set<CulinaryRole> {
+        val name = food.name.lowercase()
+        return if (role == CulinaryRole.SIDE && leafySaladMarkers.any(name::contains)) {
+            setOf(CulinaryRole.SAUCE_DRESSING)
+        } else emptySet()
+    }
+
     fun missingPreferences(roles: Collection<CulinaryRole>): Map<CulinaryRole, Set<CulinaryRole>> {
         val present = roles.toSet()
         return roles.distinct().mapNotNull { role ->
             val targets = preferredCompanions(role)
             (role to targets).takeIf { targets.isNotEmpty() && targets.none(present::contains) }
         }.toMap()
+    }
+
+    fun hasMissingFoodPreferences(assignments: List<Pair<Food, CulinaryRole>>): Boolean {
+        val present = assignments.mapTo(mutableSetOf()) { it.second }
+        return assignments.any { (food, role) ->
+            val targets = additionalPreferredCompanions(food, role)
+            targets.isNotEmpty() && targets.none(present::contains)
+        }
     }
 
     fun maximumDailyOccurrences(roles: Collection<CulinaryRole>): Int? = when {

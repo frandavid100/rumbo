@@ -63,6 +63,12 @@ object CulinarySatisfactionEvaluator {
         val role: CulinaryRole
     )
 
+    private data class DailyAssignment(
+        val foodId: Long,
+        val role: CulinaryRole,
+        val mealType: MealType
+    )
+
     fun isCulinarilySatisfactory(
         witness: CertifiedDayWitness,
         rules: List<PlanningRule>,
@@ -110,20 +116,21 @@ object CulinarySatisfactionEvaluator {
             )
         }
         val repetitions = results
-            .flatMap { meal -> meal.assignedRoles.map { (foodId, role) -> Triple(foodId, role, meal.mealType) } }
-            .groupBy { it.first }
-            .mapNotNull { (foodId, occurrences) ->
-                val maximum = CulinarySoftPolicy.maximumDailyOccurrences(occurrences.map { it.second })
+            .flatMap { meal -> meal.assignedRoles.map { (foodId, role) -> DailyAssignment(foodId, role, meal.mealType) } }
+            .groupBy { occurrence -> repetitionKey(foodsById[occurrence.foodId], occurrence.foodId) }
+            .mapNotNull { (_, occurrences) ->
+                val maximum = CulinarySoftPolicy.maximumDailyOccurrences(occurrences.map { it.role })
                     ?: return@mapNotNull null
                 if (occurrences.size <= maximum) return@mapNotNull null
-                val food = foodsById[foodId]
+                val repeated = occurrences[maximum]
+                val food = foodsById[repeated.foodId]
                 CulinarySatisfactionIssue(
                     kind = CulinarySatisfactionIssueKind.DAILY_REPETITION_DISCOURAGED,
-                    mealType = occurrences[maximum].third,
-                    foodId = foodId,
+                    mealType = repeated.mealType,
+                    foodId = repeated.foodId,
                     foodName = food?.name,
-                    roles = occurrences.mapTo(linkedSetOf()) { it.second },
-                    message = "${food?.name ?: "El alimento"} se repite demasiado dentro del mismo día."
+                    roles = occurrences.mapTo(linkedSetOf()) { it.role },
+                    message = "La familia de ${food?.name ?: "este alimento"} se repite demasiado dentro del mismo día."
                 )
             }
         val finalResults = if (repetitions.isEmpty() || results.isEmpty()) results else {
@@ -316,6 +323,9 @@ object CulinarySatisfactionEvaluator {
         }
     }
 
+    private fun repetitionKey(food: Food?, foodId: Long): String =
+        food?.family?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "food:$foodId"
+
     private fun softRelationsSatisfied(assignments: List<Assignment>): Boolean =
         missingSoftRelations(assignments).isEmpty()
 
@@ -323,9 +333,18 @@ object CulinarySatisfactionEvaluator {
         assignments: List<Assignment>
     ): List<Pair<Assignment, Set<CulinaryRole>>> {
         val present = assignments.mapTo(mutableSetOf()) { it.role }
-        return assignments.mapNotNull { assignment ->
-            val targets = CulinarySoftPolicy.preferredCompanions(assignment.role)
-            (assignment to targets).takeIf { targets.isNotEmpty() && targets.none(present::contains) }
+        return assignments.flatMap { assignment ->
+            listOf(
+                CulinarySoftPolicy.preferredCompanions(assignment.role),
+                CulinarySoftPolicy.additionalPreferredCompanions(
+                    assignment.occurrence.food,
+                    assignment.role
+                )
+            ).mapNotNull { targets ->
+                (assignment to targets).takeIf {
+                    targets.isNotEmpty() && targets.none(present::contains)
+                }
+            }
         }
     }
 

@@ -68,7 +68,7 @@ object CulinaryLevel3CompositionSearch {
         val attainable: VectorRange,
         val fruit: Boolean,
         val vegetable: Boolean,
-        val rolesByFood: Map<Long, List<CulinaryRole>>
+        val rolesByConcept: Map<String, List<CulinaryRole>>
     )
 
     private data class DayState(
@@ -78,7 +78,7 @@ object CulinaryLevel3CompositionSearch {
         val fruitMeals: Int = 0,
         val vegetableMeals: Int = 0,
         val processedShare: Double = 0.0,
-        val rolesByFood: Map<Long, List<CulinaryRole>> = emptyMap()
+        val rolesByConcept: Map<String, List<CulinaryRole>> = emptyMap()
     )
 
     fun find(
@@ -119,7 +119,7 @@ object CulinaryLevel3CompositionSearch {
             val expanded = buildList {
                 beam.forEach { state ->
                     candidatesByMeal.getValue(mealType).forEach candidateLoop@ { candidate ->
-                        val combinedRoles = mergeRoles(state.rolesByFood, candidate.rolesByFood)
+                        val combinedRoles = mergeRoles(state.rolesByConcept, candidate.rolesByConcept)
                         if (combinedRoles.any { (_, roles) ->
                                 CulinarySoftPolicy.maximumDailyOccurrences(roles)
                                     ?.let { roles.size > it } == true
@@ -133,7 +133,7 @@ object CulinaryLevel3CompositionSearch {
                                 fruitMeals = state.fruitMeals + if (candidate.fruit) 1 else 0,
                                 vegetableMeals = state.vegetableMeals + if (candidate.vegetable) 1 else 0,
                                 processedShare = state.processedShare + share,
-                                rolesByFood = combinedRoles
+                                rolesByConcept = combinedRoles
                             )
                         )
                     }
@@ -260,8 +260,8 @@ object CulinaryLevel3CompositionSearch {
                             ),
                             fruit = chosen.any { it.category == FoodCategory.FRUIT },
                             vegetable = chosen.any { it.category == FoodCategory.VEGETABLE },
-                            rolesByFood = chosen.indices.groupBy(
-                                keySelector = { chosen[it].id },
+                            rolesByConcept = chosen.indices.groupBy(
+                                keySelector = { repetitionKey(chosen[it]) },
                                 valueTransform = { roles[it] }
                             )
                         )
@@ -304,6 +304,7 @@ object CulinaryLevel3CompositionSearch {
                 val snapshot = chosen.toList()
                 if (!CulinaryPolicy.hasValidRoleAssignment(snapshot.map { setOf(it) })) return
                 if (CulinarySoftPolicy.missingPreferences(snapshot).isNotEmpty()) return
+                if (CulinarySoftPolicy.hasMissingFoodPreferences(foods.zip(snapshot))) return
                 yield(snapshot)
                 return
             }
@@ -319,12 +320,15 @@ object CulinaryLevel3CompositionSearch {
     }
 
     private fun mergeRoles(
-        first: Map<Long, List<CulinaryRole>>,
-        second: Map<Long, List<CulinaryRole>>
-    ): Map<Long, List<CulinaryRole>> = buildMap {
-        first.forEach { (foodId, roles) -> put(foodId, roles) }
-        second.forEach { (foodId, roles) -> put(foodId, get(foodId).orEmpty() + roles) }
+        first: Map<String, List<CulinaryRole>>,
+        second: Map<String, List<CulinaryRole>>
+    ): Map<String, List<CulinaryRole>> = buildMap {
+        first.forEach { (concept, roles) -> put(concept, roles) }
+        second.forEach { (concept, roles) -> put(concept, get(concept).orEmpty() + roles) }
     }
+
+    private fun repetitionKey(food: Food): String =
+        food.family?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "food:${food.id}"
 
     private fun combinations(values: List<Food>, count: Int): Sequence<List<Food>> = sequence {
         if (count == 0) {
