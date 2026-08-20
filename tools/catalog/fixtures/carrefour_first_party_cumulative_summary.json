@@ -1,143 +1,143 @@
 {
-  "built_at": "2026-08-20T22:04:03.112395+00:00",
+  "built_at": "2026-08-20T22:08:17.770903+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 94,
-    "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 7,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 99,
+    "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 11,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 54,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 3711,
+    "evidence_rows": 3854,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 115,
-    "nutrition_not_found": 35,
+    "nutrition_complete": 120,
+    "nutrition_not_found": 39,
     "nutrition_partial": 15,
-    "verified_direct_products": 165,
-    "verified_first_party_products": 165,
-    "verified_listing_only_observations": 7,
-    "verified_product_page_observations": 158
+    "verified_direct_products": 174,
+    "verified_first_party_products": 174,
+    "verified_listing_only_observations": 11,
+    "verified_product_page_observations": 163
   },
   "coverage": {
     "allergens": {
       "count": 61,
-      "pct": 36.97
+      "pct": 35.06
     },
     "attributes": {
-      "count": 165,
+      "count": 174,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 13.94
+      "pct": 13.22
     },
     "brand": {
-      "count": 144,
-      "pct": 87.27
+      "count": 149,
+      "pct": 85.63
     },
     "category_path": {
-      "count": 100,
-      "pct": 60.61
+      "count": 109,
+      "pct": 62.64
     },
     "gtin": {
       "count": 4,
-      "pct": 2.42
+      "pct": 2.3
     },
     "image_url": {
       "count": 8,
-      "pct": 4.85
+      "pct": 4.6
     },
     "ingredients": {
-      "count": 135,
-      "pct": 81.82
+      "count": 140,
+      "pct": 80.46
     },
     "legal_name": {
-      "count": 137,
-      "pct": 83.03
+      "count": 142,
+      "pct": 81.61
     },
     "mandatory_mentions": {
-      "count": 55,
-      "pct": 33.33
+      "count": 57,
+      "pct": 32.76
     },
     "manufacturer_packer_importer": {
-      "count": 138,
-      "pct": 83.64
+      "count": 143,
+      "pct": 82.18
     },
     "name": {
-      "count": 165,
+      "count": 174,
       "pct": 100.0
     },
     "net_content": {
-      "count": 133,
-      "pct": 80.61
+      "count": 138,
+      "pct": 79.31
     },
     "nutriscore": {
       "count": 54,
-      "pct": 32.73
+      "pct": 31.03
     },
     "nutrition_extra": {
-      "count": 151,
-      "pct": 91.52
+      "count": 160,
+      "pct": 91.95
     },
     "operator_address": {
-      "count": 138,
-      "pct": 83.64
+      "count": 143,
+      "pct": 82.18
     },
     "preparation_instructions": {
-      "count": 89,
-      "pct": 53.94
+      "count": 94,
+      "pct": 54.02
     },
     "price_eur": {
-      "count": 165,
+      "count": 174,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 135,
-      "pct": 81.82
+      "count": 140,
+      "pct": 80.46
     },
     "unit_price_text": {
-      "count": 165,
+      "count": 174,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 130,
-      "pct": 78.79
+      "count": 135,
+      "pct": 77.59
     },
     "carbohydrate_g": {
-      "count": 127,
-      "pct": 76.97
+      "count": 132,
+      "pct": 75.86
     },
     "energy_kj": {
-      "count": 130,
-      "pct": 78.79
+      "count": 135,
+      "pct": 77.59
     },
     "fat_g": {
-      "count": 123,
-      "pct": 74.55
+      "count": 128,
+      "pct": 73.56
     },
     "fiber_g": {
-      "count": 36,
-      "pct": 21.82
+      "count": 39,
+      "pct": 22.41
     },
     "protein_g": {
-      "count": 123,
-      "pct": 74.55
+      "count": 128,
+      "pct": 73.56
     },
     "salt_g": {
-      "count": 120,
-      "pct": 72.73
+      "count": 125,
+      "pct": 71.84
     },
     "saturates_g": {
-      "count": 123,
-      "pct": 74.55
+      "count": 128,
+      "pct": 73.56
     },
     "sugars_g": {
-      "count": 124,
-      "pct": 75.15
+      "count": 129,
+      "pct": 74.14
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -418,6 +418,62 @@
       "storage_conditions": "Conservese en lugar fresco y seco. Una vez abierto conservesé en el frigorifico",
       "sugars_g": 47.0,
       "unit_price_text": "3,22 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "listing_product": "Mil flores"
+      },
+      "availability": null,
+      "brand": null,
+      "calories_kcal": null,
+      "canonical_url": "https://www.carrefour.es/supermercado/miel-de-flores-carrefour-classic-500-g/R-521003512/p",
+      "capture_method": "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-3.2-indexed",
+      "carbohydrate_g": null,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Dulce",
+        "Miel"
+      ],
+      "direct_listing_observed": true,
+      "direct_page_observed": false,
+      "energy_kj": null,
+      "fat_g": null,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": null,
+      "legal_name": null,
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": null,
+      "name": "Miel de flores Carrefour Classic' 500 g.",
+      "net_content": null,
+      "nutriscore": null,
+      "nutrition_basis": null,
+      "nutrition_extra": {},
+      "nutrition_status": "NOT_OBSERVED_ON_LISTING",
+      "observed_at": "2026-08-20T22:24:00+00:00",
+      "operator_address": null,
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 3.19,
+      "protein_g": null,
+      "provenance_note": "Identity, name, category and listing price were observed directly on Carrefour's official Miel category page. Product-detail retrieval was unavailable; no missing detail field is inferred.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521003512",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": null,
+      "saturates_g": null,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": null,
+      "sugars_g": null,
+      "unit_price_text": "6,38 €/kg"
     },
     {
       "allergens": null,
@@ -1217,68 +1273,6 @@
       "storage_conditions": "Conservar en lugar seco y fresco. Una vez abierto el envase, consérvese en el frigorífico. Es aconsejable su consumo en los 2 ó 3 días siguientes.",
       "sugars_g": 4.8,
       "unit_price_text": "1,02 €/l"
-    },
-    {
-      "allergens": "Contiene: Leche",
-      "attributes": {
-        "conservation_mode": "Lugar fresco y seco",
-        "country_of_origin": "España",
-        "milk_fat_type": "Semidesnatada",
-        "milk_origin": "Vaca",
-        "milk_processing": "Uperisada",
-        "origin_country": "España",
-        "presentation": "Brik",
-        "sanitary_register": "15.01710/LU",
-        "sanitary_registration": "15.01710/LU"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 46.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/leche-semidesnatada-carrefour-brik-1-l/R-521007071/p",
-      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
-      "capture_probe_version": "agent-web-direct-2.1-indexed",
-      "carbohydrate_g": 4.7,
-      "category_path": [
-        "Supermercado",
-        "La Despensa",
-        "Lácteos",
-        "Leche"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 192.0,
-      "fat_g": 1.6,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": "https://static.carrefour.es/hd_350x_/img_pim_food/231394_00_1.jpg",
-      "ingredients": "Leche semidesnatada de vaca",
-      "legal_name": "Leche UHT semidesnatada",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Leche semidesnatada Carrefour brik 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": "B",
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T14:52:48.597552+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": "Lugar fresco y seco",
-      "price_currency": "EUR",
-      "price_eur": 0.84,
-      "protein_g": 3.1,
-      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521007071",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.13,
-      "saturates_g": 1.1,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en lugar seco y fresco. Una vez abierto el envase, consérvese en el frigorífico. Es aconsejable su consumo en los 2 ó 3 días siguientes.",
-      "sugars_g": 4.7,
-      "unit_price_text": "0,84 €/l"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
