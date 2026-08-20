@@ -1,0 +1,239 @@
+{
+  "retailer": "CARREFOUR",
+  "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
+  "source": "https://www.carrefour.es",
+  "extractor_version": "carrefour-first-party-saved-html-1.0",
+  "built_at": "2026-08-20T08:51:20.153587+00:00",
+  "classification_performed": "false",
+  "counts": {
+    "probe_requested": 8,
+    "probe_usable_pages": 2,
+    "saved_html_pages": 2,
+    "extracted_products": 2,
+    "nutrition_complete": 2,
+    "nutrition_partial": 0,
+    "nutrition_not_found": 0,
+    "evidence_rows": 55
+  },
+  "coverage": {
+    "gtin": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "name": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "brand": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "image_url": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "category_path": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "price_eur": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "unit_price_text": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "availability": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "legal_name": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "ingredients": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "allergens": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "net_content": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "storage_conditions": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "preparation_instructions": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "operator_address": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "manufacturer_packer_importer": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "mandatory_mentions": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "nutriscore": {
+      "count": 1,
+      "pct": 50.0
+    },
+    "attributes": {
+      "count": 2,
+      "pct": 100.0
+    }
+  },
+  "nutrition_field_coverage": {
+    "energy_kj": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "calories_kcal": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "fat_g": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "saturates_g": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "carbohydrate_g": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "sugars_g": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "fiber_g": {
+      "count": 0,
+      "pct": 0.0
+    },
+    "protein_g": {
+      "count": 2,
+      "pct": 100.0
+    },
+    "salt_g": {
+      "count": 2,
+      "pct": 100.0
+    }
+  },
+  "sample": [
+    {
+      "retailer": "CARREFOUR",
+      "retailer_sku": "VC4AECOMM-013524",
+      "canonical_url": "https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p",
+      "observed_at": "2026-08-20T08:51:20.121301+00:00",
+      "source": "CARREFOUR_FIRST_PARTY",
+      "http_status": 200,
+      "page_sha256": "cdb2fcdb69ed32a975765318533811c634c65f70b9d2e88356c64fe025df1cc1",
+      "fetch_error": null,
+      "name": "Mayonesa Carrefour envase 500 ml 475g.",
+      "brand": "CARREFOUR",
+      "gtin": "8410086310306",
+      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/013524_00_1.jpg",
+      "category_path": [
+        "Inicio",
+        "Supermercado",
+        "La Despensa",
+        "Alimentación",
+        "Salsas y Tomate Frito"
+      ],
+      "price_eur": 1.43,
+      "price_currency": "EUR",
+      "unit_price_text": "3,01 €/l",
+      "availability": "InStock",
+      "legal_name": "Mayonesa",
+      "ingredients": "Aceite de girasol (70%), agua, yema de huevo (6%), vinagre de vino, azúcar, sal, zumo de limón concentrado, estabilizante: goma xantana, conservador: sorbato potásico, concentrado de zanahoria y calabaza, aromas. Puede contener trazas de mostaza y leche .",
+      "allergens": null,
+      "net_content": "500 ml",
+      "storage_conditions": "Conservar en ligar fresco y seco al abrigo de la luz y del calor. Una vez abierto, conservar en frigorífico un máximo de un mes.",
+      "preparation_instructions": "Conservar en un lugar fresco, seco y aislado del suelo",
+      "operator_address": "Av. de la Transición Española, 36, 28108 Alcobendas, Madrid",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "mandatory_mentions": null,
+      "nutriscore": null,
+      "attributes": {
+        "product_type": "s vendidos por terceros"
+      },
+      "nutrition_basis": "100 g",
+      "nutrition_status": "DECLARED_COMPLETE",
+      "energy_kj": 2685.0,
+      "calories_kcal": 653.0,
+      "fat_g": 71.0,
+      "saturates_g": 7.4,
+      "carbohydrate_g": 1.6,
+      "sugars_g": 1.3,
+      "fiber_g": null,
+      "protein_g": 0.8,
+      "salt_g": 1.0,
+      "capture_method": "PLAYWRIGHT_SAVED_HTML",
+      "capture_probe_version": "carrefour-first-party-browser-probe-1.2"
+    },
+    {
+      "retailer": "CARREFOUR",
+      "retailer_sku": "prod600097",
+      "canonical_url": "https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p",
+      "observed_at": "2026-08-20T08:51:20.133606+00:00",
+      "source": "CARREFOUR_FIRST_PARTY",
+      "http_status": 200,
+      "page_sha256": "0c3a6e5103957fc614cf5341c5eea55e0cb0538cfe1d38642cc1c85fc43b088b",
+      "fetch_error": null,
+      "name": "Pizza de jamón y queso Carrefour 580 g.",
+      "brand": "CARREFOUR",
+      "gtin": "3560071092795",
+      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/841125_00_1.jpg",
+      "category_path": [
+        "Inicio",
+        "Supermercado",
+        "Congelados",
+        "Pizzas Congeladas",
+        "Masa Fina"
+      ],
+      "price_eur": 4.65,
+      "price_currency": "EUR",
+      "unit_price_text": "8,02 €/kg",
+      "availability": "InStock",
+      "legal_name": "Pizza con queso, jamón cocido ahumado y emmental, cocida a la piedra - Comida preparada ultracongelada.",
+      "ingredients": "Harina de trigo , puré de tomate, queso 12,6%, agua, jamón cocido ahumado 11,2% (carne de cerdo, sal, dextrosa, azúcar, antioxidantes : ascorbato sódico y extractos de romero, conservador : nitrito sódico, ahumado natural), emmental 6,3%, aceite de colza, sal, levadura, dextrosa, almidón, almidón de trigo , azúcar, plantas aromáticas, cebolla asada (cebolla, aceite de girasol), concentrado de vegetales (champiñon, tomate, zanahoria, cebolla, pimientos, ajo), especias, ajo, aceite de girasol. Puede contener trazas de apio .",
+      "allergens": null,
+      "net_content": "580 g",
+      "storage_conditions": "Mantener a -18°C. No volver a congelar una vez descongelado.",
+      "preparation_instructions": "1. Precalentar su horno a 225°C para un horno tradicional o a 180°C para un horno de convección.2. Sacar la pizza del envase de cartón y retirar la película protectora de plástico.3. Colocar la pizza aún ultracongelada en la rejilla de cocción a media altura del horno y hornear entre 16 y 18 minutos.La pizza estará lista cuando el queso esté totalmente fundido y los bordes dorados. Si la pizza ya está descongelada, reducir el tiempo de cocción de 3 a 4 minutos.",
+      "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "mandatory_mentions": null,
+      "nutriscore": "es un sistema de información de calidad nutricional compuesto por cinco letras de colores que van de la \"A\" verde, con mayor calidad, a la \"E\" roja con calidad inferior.",
+      "attributes": {
+        "product_type": "s vendidos por terceros"
+      },
+      "nutrition_basis": "100 g",
+      "nutrition_status": "DECLARED_COMPLETE",
+      "energy_kj": 980.0,
+      "calories_kcal": 233.0,
+      "fat_g": 7.0,
+      "saturates_g": 3.3,
+      "carbohydrate_g": 29.0,
+      "sugars_g": 5.1,
+      "fiber_g": null,
+      "protein_g": 12.0,
+      "salt_g": 1.3,
+      "capture_method": "PLAYWRIGHT_SAVED_HTML",
+      "capture_probe_version": "carrefour-first-party-browser-probe-1.2"
+    }
+  ],
+  "provenance_note": "Every populated field was parsed offline from HTML captured directly from a successful Carrefour product-page response in Playwright. No third-party field is copied into this dataset."
+}
