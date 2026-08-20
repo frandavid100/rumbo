@@ -18,6 +18,7 @@ NUTRITION_FIELDS = [
     "energy_kj", "calories_kcal", "fat_g", "saturates_g", "carbohydrate_g", "sugars_g", "fiber_g",
     "protein_g", "salt_g",
 ]
+DEFAULT_CANDIDATE_SUMMARY = Path("fixtures/carrefour_candidate_urls_radarsuper.summary.json")
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -30,12 +31,23 @@ def read_jsonl(path: Path) -> list[dict]:
     return rows
 
 
+def read_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--products", required=True)
     ap.add_argument("--evidence", required=True)
     ap.add_argument("--summary", required=True)
     ap.add_argument("--sqlite", required=True)
+    ap.add_argument("--candidate-summary", default=str(DEFAULT_CANDIDATE_SUMMARY))
     args = ap.parse_args()
 
     rows = [sanitize_row(row) for row in read_jsonl(Path(args.products)) if not row.get("fetch_error")]
@@ -60,23 +72,34 @@ def main() -> int:
     complete = sum(row.get("nutrition_status") == "DECLARED_COMPLETE" for row in rows)
     partial = sum(row.get("nutrition_status") == "DECLARED_PARTIAL" for row in rows)
     no_nutrition = sum(row.get("nutrition_status") == "NOT_FOUND" for row in rows)
+
+    candidate_summary = read_json(Path(args.candidate_summary))
+    external_candidate_urls = candidate_summary.get("unique_carrefour_urls")
+    if not isinstance(external_candidate_urls, int):
+        external_candidate_urls = candidate_summary.get("rows")
+    if not isinstance(external_candidate_urls, int):
+        external_candidate_urls = 0
+
     report = {
         "retailer": "CARREFOUR",
         "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
         "source": "https://www.carrefour.es",
         "built_at": base.now_iso(),
         "classification_performed": "false",
+        "inventory_complete": False,
         "counts": {
             "products": len(rows),
             "nutrition_complete": complete,
             "nutrition_partial": partial,
             "nutrition_not_found": no_nutrition,
             "evidence_rows": len(clean_evidence),
+            "external_candidate_identity_urls_not_counted_as_first_party": external_candidate_urls,
         },
         "coverage": {field: base.coverage(rows, field) for field in FIELDS},
         "nutrition_field_coverage": {field: base.coverage(rows, field) for field in NUTRITION_FIELDS},
         "sample": rows[:20],
-        "provenance_note": "Every populated product field counted here was observed directly on carrefour.es. Candidate URLs from third-party mirrors are not counted as Carrefour evidence.",
+        "provenance_note": "Every populated product field counted here was observed directly on carrefour.es. Candidate URLs from third-party mirrors are discovery inputs only and are not counted as Carrefour evidence.",
+        "candidate_identity_note": "The external candidate URL count is reported only to measure the pending verification pool; it is not Carrefour first-party coverage.",
         "quality_note": "Nutri-Score is retained only as a single A-E grade; demonstrably generic marketplace/page chrome is excluded from product attributes.",
     }
 
