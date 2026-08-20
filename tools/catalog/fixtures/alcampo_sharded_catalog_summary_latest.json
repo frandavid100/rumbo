@@ -3,7 +3,7 @@
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
   "importer_version": "alcampo-direct-v6.0",
-  "built_at": "2026-08-20T06:43:11.001542+00:00",
+  "built_at": "2026-08-20T06:44:33.592563+00:00",
   "roots": [
     {
       "label": "Veganos",
@@ -11,14 +11,42 @@
       "source_reported_product_count": 0,
       "food_products_recursive_union": 171,
       "recursive_categories_visited": 17,
-      "api_error_categories": 2,
+      "api_error_categories": 4,
       "children_without_retailer_category_id": 0,
       "unresolved": [
+        {
+          "label": "Bebidas de almendra veganas",
+          "retailer_category_id": "OCV16031003",
+          "depth": 2,
+          "source_reported_product_count": 16,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
         {
           "label": "Burger vegana",
           "retailer_category_id": "OC0911202113",
           "depth": 2,
           "source_reported_product_count": 10,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Tofu y Seitán",
+          "retailer_category_id": "OC0911202115",
+          "depth": 2,
+          "source_reported_product_count": 2,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,

@@ -1,7 +1,7 @@
 {
-  "root_shards_expected": 0,
+  "root_shards_expected": 10,
   "root_shards_seen": 1,
-  "root_shards_missing": 0,
+  "root_shards_missing": 9,
   "root_shards_failed": 1,
   "failed": [
     {
@@ -10,14 +10,42 @@
       "source_reported_product_count": 0,
       "food_products_recursive_union": 171,
       "recursive_categories_visited": 17,
-      "api_error_categories": 2,
+      "api_error_categories": 4,
       "children_without_retailer_category_id": 0,
       "unresolved": [
+        {
+          "label": "Bebidas de almendra veganas",
+          "retailer_category_id": "OCV16031003",
+          "depth": 2,
+          "source_reported_product_count": 16,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
         {
           "label": "Burger vegana",
           "retailer_category_id": "OC0911202113",
           "depth": 2,
           "source_reported_product_count": 10,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Tofu y Seitán",
+          "retailer_category_id": "OC0911202115",
+          "depth": 2,
+          "source_reported_product_count": 2,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -52,7 +80,7 @@
     }
   ],
   "recursive_category_nodes_visited": 17,
-  "api_error_categories": 2,
+  "api_error_categories": 4,
   "children_without_retailer_category_id": 0,
   "source_reported_product_count_sum_diagnostic_only": 0,
   "product_rows_before_global_dedup": 171,
