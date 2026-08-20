@@ -1,0 +1,763 @@
+{
+  "baseline_manifest": "../../baseline/products.jsonl",
+  "baseline_rows": 13877,
+  "baseline_unique": 13877,
+  "recursive_manifest": null,
+  "recursive_rows": 0,
+  "recursive_new_unique_vs_baseline": 0,
+  "recovery_product_artifacts": 20,
+  "recovery_rows": 0,
+  "recovery_new_unique": 0,
+  "recovery_checks": 20,
+  "recovery_checks_failed": 20,
+  "recovery_api_error_categories": 20,
+  "recovery_children_without_retailer_id": 0,
+  "unique_food_products_union": 13877,
+  "net_new_unique_vs_13877_baseline": 0,
+  "identity": "retailer_sku_else_product_id",
+  "completeness_claim": "RECOVERY_UNION_NOT_PROVEN_COMPLETE",
+  "failed_recovery_targets": [
+    {
+      "label": "Vinagre de Jerez",
+      "rid": "OC10012",
+      "source_reported_product_count": 10,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Vinagre de Jerez",
+          "retailer_category_id": "OC10012",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC10012",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/aceite-y-vinagre/vinagres/vinagre-de-jerez/OC10012",
+          "html_status": 200,
+          "html_bytes": 701030,
+          "html_product_ids": 10,
+          "html_retailer_product_ids": 10,
+          "html_product_links": 10,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:10]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 10,
+      "html_product_ids": 10,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC10012/child_check.json"
+    },
+    {
+      "label": "Vinagre de manzana",
+      "rid": "OC10013",
+      "source_reported_product_count": 9,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Vinagre de manzana",
+          "retailer_category_id": "OC10013",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC10013",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/aceite-y-vinagre/vinagres/vinagre-de-manzana/OC10013",
+          "html_status": 200,
+          "html_bytes": 687873,
+          "html_product_ids": 9,
+          "html_retailer_product_ids": 9,
+          "html_product_links": 9,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:9]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 9,
+      "html_product_ids": 9,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC10013/child_check.json"
+    },
+    {
+      "label": "Otros aderezos y especialidades",
+      "rid": "OC10016",
+      "source_reported_product_count": 8,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Otros aderezos y especialidades",
+          "retailer_category_id": "OC10016",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC10016",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/aceite-y-vinagre/vinagres/otros-aderezos-y-especialidades/OC10016",
+          "html_status": 200,
+          "html_bytes": 674750,
+          "html_product_ids": 8,
+          "html_retailer_product_ids": 8,
+          "html_product_links": 8,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:8]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 8,
+      "html_product_ids": 8,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC10016/child_check.json"
+    },
+    {
+      "label": "Alcachofas",
+      "rid": "OC100401001",
+      "source_reported_product_count": 24,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Alcachofas",
+          "retailer_category_id": "OC100401001",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100401001",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/conservas-vegetales/alcachofas/OC100401001",
+          "html_status": 200,
+          "html_bytes": 979397,
+          "html_product_ids": 24,
+          "html_retailer_product_ids": 24,
+          "html_product_links": 24,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:24]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 24,
+      "html_product_ids": 24,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100401001/child_check.json"
+    },
+    {
+      "label": "Judías verdes, patatas y cebollas",
+      "rid": "OC100401006",
+      "source_reported_product_count": 19,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Judías verdes, patatas y cebollas",
+          "retailer_category_id": "OC100401006",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100401006",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/conservas-vegetales/jud%C3%ADas-verdes-patatas-y-cebollas/OC100401006",
+          "html_status": 200,
+          "html_bytes": 869718,
+          "html_product_ids": 19,
+          "html_retailer_product_ids": 19,
+          "html_product_links": 19,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:19]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 19,
+      "html_product_ids": 19,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100401006/child_check.json"
+    },
+    {
+      "label": "Maíz",
+      "rid": "OC100401009",
+      "source_reported_product_count": 13,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Maíz",
+          "retailer_category_id": "OC100401009",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100401009",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/conservas-vegetales/ma%C3%ADz-guisantes-y-zanahorias/ma%C3%ADz/OC100401009",
+          "html_status": 200,
+          "html_bytes": 750884,
+          "html_product_ids": 13,
+          "html_retailer_product_ids": 13,
+          "html_product_links": 13,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:13]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 13,
+      "html_product_ids": 13,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100401009/child_check.json"
+    },
+    {
+      "label": "Pisto y sofritos",
+      "rid": "OC100401011",
+      "source_reported_product_count": 13,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Pisto y sofritos",
+          "retailer_category_id": "OC100401011",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100401011",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/conservas-vegetales/pisto-y-sofritos/OC100401011",
+          "html_status": 200,
+          "html_bytes": 761861,
+          "html_product_ids": 13,
+          "html_retailer_product_ids": 13,
+          "html_product_links": 13,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:13]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 13,
+      "html_product_ids": 13,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100401011/child_check.json"
+    },
+    {
+      "label": "Caballa y melva",
+      "rid": "OC100402006",
+      "source_reported_product_count": 25,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Caballa y melva",
+          "retailer_category_id": "OC100402006",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100402006",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/conservas-de-pescado/caballa-y-melva/OC100402006",
+          "html_status": 200,
+          "html_bytes": 993000,
+          "html_product_ids": 25,
+          "html_retailer_product_ids": 25,
+          "html_product_links": 25,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:25]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 25,
+      "html_product_ids": 25,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100402006/child_check.json"
+    },
+    {
+      "label": "Berberechos",
+      "rid": "OC100402011",
+      "source_reported_product_count": 15,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Berberechos",
+          "retailer_category_id": "OC100402011",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100402011",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/conservas-de-pescado/berberechos/OC100402011",
+          "html_status": 200,
+          "html_bytes": 788929,
+          "html_product_ids": 15,
+          "html_retailer_product_ids": 15,
+          "html_product_links": 15,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:15]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 15,
+      "html_product_ids": 15,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100402011/child_check.json"
+    },
+    {
+      "label": "Almejas Navajas y Zamburiñas",
+      "rid": "OC100402012",
+      "source_reported_product_count": 16,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Almejas Navajas y Zamburiñas",
+          "retailer_category_id": "OC100402012",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100402012",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/conservas-de-pescado/almejas-navajas-y-zamburi%C3%B1as/OC100402012",
+          "html_status": 200,
+          "html_bytes": 826296,
+          "html_product_ids": 16,
+          "html_retailer_product_ids": 16,
+          "html_product_links": 16,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:16]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 16,
+      "html_product_ids": 16,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100402012/child_check.json"
+    },
+    {
+      "label": "Albóndigas",
+      "rid": "OC1004047B",
+      "source_reported_product_count": 10,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Albóndigas",
+          "retailer_category_id": "OC1004047B",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC1004047B",
+          "final_url": "https://www.compraonline.alcampo.es/categories/comida-preparada/platos-preparados-en-conserva/alb%C3%B3ndigas/OC1004047B",
+          "html_status": 200,
+          "html_bytes": 698860,
+          "html_product_ids": 10,
+          "html_retailer_product_ids": 10,
+          "html_product_links": 10,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:10]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 10,
+      "html_product_ids": 10,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC1004047B/child_check.json"
+    },
+    {
+      "label": "Canelones y Lasañas",
+      "rid": "OC100501007",
+      "source_reported_product_count": 10,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Canelones y Lasañas",
+          "retailer_category_id": "OC100501007",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100501007",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/pasta-alimenticia/canelones-y-lasa%C3%B1as/OC100501007",
+          "html_status": 200,
+          "html_bytes": 755877,
+          "html_product_ids": 10,
+          "html_retailer_product_ids": 10,
+          "html_product_links": 10,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:10]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 10,
+      "html_product_ids": 10,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100501007/child_check.json"
+    },
+    {
+      "label": "Pasta Rellena",
+      "rid": "OC100501008",
+      "source_reported_product_count": 9,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Pasta Rellena",
+          "retailer_category_id": "OC100501008",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100501008",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/pasta-alimenticia/pasta-rellena/OC100501008",
+          "html_status": 200,
+          "html_bytes": 681694,
+          "html_product_ids": 9,
+          "html_retailer_product_ids": 9,
+          "html_product_links": 9,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:9]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 9,
+      "html_product_ids": 9,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100501008/child_check.json"
+    },
+    {
+      "label": "Espirales y Lacitos",
+      "rid": "OC100501011",
+      "source_reported_product_count": 23,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Espirales y Lacitos",
+          "retailer_category_id": "OC100501011",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100501011",
+          "final_url": "https://www.compraonline.alcampo.es/categories/alimentaci%C3%B3n/pasta-alimenticia/espirales-y-lacitos/OC100501011",
+          "html_status": 200,
+          "html_bytes": 959896,
+          "html_product_ids": 23,
+          "html_retailer_product_ids": 23,
+          "html_product_links": 23,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:23]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 23,
+      "html_product_ids": 23,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100501011/child_check.json"
+    },
+    {
+      "label": "Barritas Cereales",
+      "rid": "OC100804008",
+      "source_reported_product_count": 50,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Barritas Cereales",
+          "retailer_category_id": "OC100804008",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC100804008",
+          "final_url": "https://www.compraonline.alcampo.es/categories/desayuno-y-merienda/cereales-y-barritas/barritas-cereales/OC100804008",
+          "html_status": 200,
+          "html_bytes": 1552756,
+          "html_product_ids": 50,
+          "html_retailer_product_ids": 50,
+          "html_product_links": 50,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:40]:RuntimeError:HTTP_403:",
+            "PUT[40:50]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 50,
+      "html_product_ids": 50,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC100804008/child_check.json"
+    },
+    {
+      "label": "Snacks y Tortitas sin gluten",
+      "rid": "OC10120408",
+      "source_reported_product_count": 15,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Snacks y Tortitas sin gluten",
+          "retailer_category_id": "OC10120408",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC10120408",
+          "final_url": "https://www.compraonline.alcampo.es/categories/sin-gluten-sin-lactosa-nutrici%C3%B3n-deportiva-y-funcional/sin-gluten-apto-cel%C3%ADacos/snacks-y-tortitas-sin-gluten/OC10120408",
+          "html_status": 200,
+          "html_bytes": 805135,
+          "html_product_ids": 15,
+          "html_retailer_product_ids": 15,
+          "html_product_links": 15,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:15]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 15,
+      "html_product_ids": 15,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC10120408/child_check.json"
+    },
+    {
+      "label": "Agua botella menos de 1 l.",
+      "rid": "OC11010411",
+      "source_reported_product_count": 50,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Agua botella menos de 1 l.",
+          "retailer_category_id": "OC11010411",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC11010411",
+          "final_url": "https://www.compraonline.alcampo.es/categories/bebidas/agua-soda-y-gaseosas/aguas-sin-gas/agua-botella-menos-de-1-l/OC11010411",
+          "html_status": 200,
+          "html_bytes": 1516380,
+          "html_product_ids": 50,
+          "html_retailer_product_ids": 50,
+          "html_product_links": 50,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:40]:RuntimeError:HTTP_403:",
+            "PUT[40:50]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 50,
+      "html_product_ids": 50,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC11010411/child_check.json"
+    },
+    {
+      "label": "Agua con gas formatos menos 1 l.",
+      "rid": "OC11010421",
+      "source_reported_product_count": 23,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Agua con gas formatos menos 1 l.",
+          "retailer_category_id": "OC11010421",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC11010421",
+          "final_url": "https://www.compraonline.alcampo.es/categories/bebidas/agua-soda-y-gaseosas/aguas-con-gas/agua-con-gas-formatos-menos-1-l/OC11010421",
+          "html_status": 200,
+          "html_bytes": 953904,
+          "html_product_ids": 23,
+          "html_retailer_product_ids": 23,
+          "html_product_links": 23,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:23]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 23,
+      "html_product_ids": 23,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC11010421/child_check.json"
+    },
+    {
+      "label": "Aguas con gas sabores",
+      "rid": "OC11010422",
+      "source_reported_product_count": 9,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Aguas con gas sabores",
+          "retailer_category_id": "OC11010422",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC11010422",
+          "final_url": "https://www.compraonline.alcampo.es/categories/bebidas/agua-soda-y-gaseosas/aguas-con-gas/aguas-con-gas-sabores/OC11010422",
+          "html_status": 200,
+          "html_bytes": 676383,
+          "html_product_ids": 9,
+          "html_retailer_product_ids": 9,
+          "html_product_links": 9,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:9]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 9,
+      "html_product_ids": 9,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC11010422/child_check.json"
+    },
+    {
+      "label": "Agua con gas formatos más de 1 l.",
+      "rid": "OC11010423",
+      "source_reported_product_count": 13,
+      "food_products_recursive_union": 0,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Agua con gas formatos más de 1 l.",
+          "retailer_category_id": "OC11010423",
+          "method": "FIRST_PARTY_CATEGORY_HTML_PLUS_FIRST_PARTY_V6_PRODUCTS_PUT",
+          "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC11010423",
+          "final_url": "https://www.compraonline.alcampo.es/categories/bebidas/agua-soda-y-gaseosas/aguas-con-gas/agua-con-gas-formatos-m%C3%A1s-de-1-l/OC11010423",
+          "html_status": 200,
+          "html_bytes": 783670,
+          "html_product_ids": 13,
+          "html_retailer_product_ids": 13,
+          "html_product_links": 13,
+          "decorated_products": 0,
+          "errors": [
+            "PUT[0:13]:RuntimeError:HTTP_403:"
+          ]
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "first_party_category_html_visible_cards_plus_v6_products_put",
+      "source_product_count_is_diagnostic_only": true,
+      "html_product_links": 13,
+      "html_product_ids": 13,
+      "ok": false,
+      "artifact_path": "../../recovered/alcampo-html-recovery-OC11010423/child_check.json"
+    }
+  ]
+}
