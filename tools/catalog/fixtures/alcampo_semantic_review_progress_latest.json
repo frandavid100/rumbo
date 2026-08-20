@@ -5,5 +5,6 @@
   "remaining_semantic_review": 0,
   "batch_size": 0,
   "batch_path": "../../alcampo-reviewed/semantic_review_next.jsonl",
+  "batch_priority_policy": "PRIMARY_MENU_ROLES_THEN_COMPLEMENTARY_THEN_AMBIGUOUS_SNACKS",
   "automatic_proposals_are_not_classified": true
 }
