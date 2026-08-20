@@ -182,6 +182,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.david.rumbo.data.AppRepository
+import es.david.rumbo.data.catalog.CatalogImportManager
+import es.david.rumbo.data.catalog.InstalledCatalog
 import es.david.rumbo.logic.FoodSimilarityEngine
 import es.david.rumbo.logic.FoodSuggestion
 import es.david.rumbo.logic.FoodSuggestionEngine
@@ -377,6 +379,7 @@ fun RumboApp(repository: AppRepository) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var installedCatalogs by remember { mutableStateOf(CatalogImportManager.list(context)) }
     var mealShares by remember(data.activeProfileId) {
         mutableStateOf(data.activeProfileData?.mealShares ?: loadMealShares(context))
     }
@@ -517,6 +520,27 @@ fun RumboApp(repository: AppRepository) {
             scope.launch { snackbarHostState.showSnackbar("Copia importada") }
         }.onFailure {
             scope.launch { snackbarHostState.showSnackbar("El archivo no contiene una copia válida") }
+        }
+    }
+
+    val catalogImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        runCatching {
+            val input = context.contentResolver.openInputStream(uri)
+                ?: error("No se pudo leer el archivo")
+            CatalogImportManager.import(context, input)
+        }.onSuccess { catalog ->
+            installedCatalogs = CatalogImportManager.list(context)
+            data = repository.reloadCatalog()
+            scope.launch {
+                snackbarHostState.showSnackbar("Catálogo ${catalog.name} importado")
+            }
+        }.onFailure { error ->
+            scope.launch {
+                snackbarHostState.showSnackbar(error.message ?: "El catálogo no es válido")
+            }
         }
     }
 
@@ -1339,7 +1363,24 @@ fun RumboApp(repository: AppRepository) {
                         adjustmentRange = it
                     },
                     onExport = { exportLauncher.launch("rumbo-copia-${LocalDate.now()}.json") },
-                    onImport = { importLauncher.launch(arrayOf("application/json", "text/plain")) }
+                    onImport = { importLauncher.launch(arrayOf("application/json", "text/plain")) },
+                    catalogs = installedCatalogs,
+                    onImportCatalog = {
+                        catalogImportLauncher.launch(
+                            arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")
+                        )
+                    },
+                    onDeleteCatalog = { catalog ->
+                        if (CatalogImportManager.delete(context, catalog.id)) {
+                            installedCatalogs = CatalogImportManager.list(context)
+                            data = repository.reloadCatalog()
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Catálogo ${catalog.name} eliminado")
+                            }
+                        } else {
+                            scope.launch { snackbarHostState.showSnackbar("No se pudo eliminar el catálogo") }
+                        }
+                    }
                 )
                 screen == Screen.HELP -> HelpScreen()
                 screen == Screen.GOAL_EXPLANATION -> GoalExplanationScreen(data)
@@ -7663,7 +7704,7 @@ private fun CatalogEntries(
                         protein = food?.proteinGrams ?: dishNutrition?.proteinGrams,
                         carbohydrates = food?.carbohydrateGrams ?: dishNutrition?.carbohydrateGrams,
                         fat = food?.fatGrams ?: dishNutrition?.fatGrams,
-                        modifier = Modifier.width(98.dp)
+                        modifier = Modifier.width(114.dp)
                     )
                 }
             } else if (entry.isDish) {
@@ -8407,23 +8448,23 @@ private fun SearchNutritionGrid(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Metric(
                 Icons.Default.LocalFireDepartment, "Calorías", display(calories), false,
-                Modifier.width(46.dp)
+                Modifier.width(54.dp)
             )
             Spacer(Modifier.width(6.dp))
             Metric(
                 foodCategoryIcon(FoodCategory.PROTEIN), "Proteínas", display(protein), true,
-                Modifier.width(46.dp)
+                Modifier.width(54.dp)
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Metric(
                 foodCategoryIcon(FoodCategory.CARBOHYDRATE), "Carbohidratos",
-                display(carbohydrates), false, Modifier.width(46.dp)
+                display(carbohydrates), false, Modifier.width(54.dp)
             )
             Spacer(Modifier.width(6.dp))
             Metric(
                 foodCategoryIcon(FoodCategory.FAT), "Grasas", display(fat), true,
-                Modifier.width(46.dp)
+                Modifier.width(54.dp)
             )
         }
     }
@@ -9516,7 +9557,10 @@ private fun SettingsScreen(
     adjustmentRange: Pair<Double, Double>,
     onSaveAdjustmentRange: (Pair<Double, Double>) -> Unit,
     onExport: () -> Unit,
-    onImport: () -> Unit
+    onImport: () -> Unit,
+    catalogs: List<InstalledCatalog>,
+    onImportCatalog: () -> Unit,
+    onDeleteCatalog: (InstalledCatalog) -> Unit
 ) {
     var adjustmentDivisor by remember(adjustmentRange) {
         mutableStateOf(formatDecimal(adjustmentRange.first))
@@ -9525,6 +9569,28 @@ private fun SettingsScreen(
         mutableStateOf(formatDecimal(adjustmentRange.second))
     }
     var adjustmentError by remember { mutableStateOf<String?>(null) }
+    var pendingCatalogDelete by remember { mutableStateOf<InstalledCatalog?>(null) }
+
+    pendingCatalogDelete?.let { catalog ->
+        AlertDialog(
+            onDismissRequest = { pendingCatalogDelete = null },
+            title = { Text("¿Eliminar ${catalog.name}?") },
+            text = {
+                Text(
+                    "Sus alimentos dejarán de estar disponibles. Las comidas y reglas que los utilicen se limpiarán al recargar los datos."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingCatalogDelete = null
+                    onDeleteCatalog(catalog)
+                }) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCatalogDelete = null }) { Text("Cancelar") }
+            }
+        )
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -9566,6 +9632,49 @@ private fun SettingsScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Guardar límites") }
+            }
+        }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Catálogos de alimentos",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    if (catalogs.isEmpty()) "No hay catálogos importados."
+                    else "Los alimentos de todos los catálogos se combinan en las búsquedas y menús.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                catalogs.forEach { catalog ->
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(catalog.name, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                buildString {
+                                    append(catalog.source)
+                                    catalog.catalogVersion?.let { append(" · ").append(it) }
+                                    append(" · ").append(catalog.productCount).append(" alimentos")
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = { pendingCatalogDelete = catalog }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar ${catalog.name}")
+                        }
+                    }
+                    HorizontalDivider()
+                }
+                OutlinedButton(onClick = onImportCatalog, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Importar catálogo")
+                }
             }
         }
         Card(Modifier.fillMaxWidth()) {

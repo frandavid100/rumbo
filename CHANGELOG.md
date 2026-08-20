@@ -111,3 +111,16 @@
 - Importación del catálogo público AESAN 2022.
 - Búsqueda por nombre, marca, categoría, comercio y EAN.
 - Sugerencias de alimentos con composición similar.
+# 0.77.0
+
+- Añade importación, listado y eliminación de catálogos `.rumbocatalog` desde Ajustes.
+- Permite combinar varios catálogos genéricos o comerciales sin exigir publicaciones de supermercado.
+- Incorpora el pipeline reproducible de BEDCA y sus validaciones, sin empaquetar sus datos en el APK.
+- Retira del proceso de compilación los catálogos provisionales de Carrefour y AESAN/Mercadona.
+
+# 0.77.1
+
+- Corrige el recorte visual de valores nutricionales de tres cifras.
+- Deduplica las entradas equivalentes de BEDCA conservando toda su procedencia.
+- Formaliza identidad, versión y espacio de productos de los catálogos importables.
+- Sustituye atómicamente una versión anterior cuando se importa el mismo `catalog_id`.

@@ -26,3 +26,12 @@ El catálogo se puede regenerar ejecutando:
 ```bash
 python3 tools/import_aesan.py
 ```
+
+# BEDCA development catalogue
+
+The optional BEDCA catalogue produced by `tools/build_bedca_catalog.py` is for
+internal development and validation only. BEDCA's public site currently states
+"all rights reserved" and no redistribution permission has been established.
+The generated database must not be committed, bundled in a release APK, or
+published until its reuse terms are clarified. Every nutrition row is marked
+`GENERIC` and retains source-level evidence in the development SQLite.
