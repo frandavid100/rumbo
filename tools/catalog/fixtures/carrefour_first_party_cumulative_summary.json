@@ -1,143 +1,143 @@
 {
-  "built_at": "2026-08-20T23:09:41.581864+00:00",
+  "built_at": "2026-08-20T23:10:25.968543+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 116,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 125,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 11,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 54,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 4235,
+    "evidence_rows": 4444,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 133,
+    "nutrition_complete": 139,
     "nutrition_not_found": 43,
-    "nutrition_partial": 15,
-    "verified_direct_products": 191,
-    "verified_first_party_products": 191,
+    "nutrition_partial": 18,
+    "verified_direct_products": 200,
+    "verified_first_party_products": 200,
     "verified_listing_only_observations": 11,
-    "verified_product_page_observations": 180
+    "verified_product_page_observations": 189
   },
   "coverage": {
     "allergens": {
       "count": 66,
-      "pct": 34.55
+      "pct": 33.0
     },
     "attributes": {
-      "count": 191,
+      "count": 200,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 12.04
+      "pct": 11.5
     },
     "brand": {
-      "count": 166,
-      "pct": 86.91
+      "count": 175,
+      "pct": 87.5
     },
     "category_path": {
       "count": 115,
-      "pct": 60.21
+      "pct": 57.5
     },
     "gtin": {
       "count": 4,
-      "pct": 2.09
+      "pct": 2.0
     },
     "image_url": {
       "count": 8,
-      "pct": 4.19
+      "pct": 4.0
     },
     "ingredients": {
-      "count": 157,
-      "pct": 82.2
+      "count": 166,
+      "pct": 83.0
     },
     "legal_name": {
-      "count": 159,
-      "pct": 83.25
+      "count": 168,
+      "pct": 84.0
     },
     "mandatory_mentions": {
       "count": 60,
-      "pct": 31.41
+      "pct": 30.0
     },
     "manufacturer_packer_importer": {
-      "count": 160,
-      "pct": 83.77
+      "count": 169,
+      "pct": 84.5
     },
     "name": {
-      "count": 191,
+      "count": 200,
       "pct": 100.0
     },
     "net_content": {
-      "count": 155,
-      "pct": 81.15
+      "count": 164,
+      "pct": 82.0
     },
     "nutriscore": {
-      "count": 56,
-      "pct": 29.32
+      "count": 57,
+      "pct": 28.5
     },
     "nutrition_extra": {
-      "count": 177,
-      "pct": 92.67
+      "count": 186,
+      "pct": 93.0
     },
     "operator_address": {
-      "count": 160,
-      "pct": 83.77
+      "count": 169,
+      "pct": 84.5
     },
     "preparation_instructions": {
       "count": 96,
-      "pct": 50.26
+      "pct": 48.0
     },
     "price_eur": {
-      "count": 191,
+      "count": 200,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 157,
-      "pct": 82.2
+      "count": 166,
+      "pct": 83.0
     },
     "unit_price_text": {
-      "count": 191,
+      "count": 200,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 148,
-      "pct": 77.49
+      "count": 157,
+      "pct": 78.5
     },
     "carbohydrate_g": {
-      "count": 145,
-      "pct": 75.92
+      "count": 154,
+      "pct": 77.0
     },
     "energy_kj": {
-      "count": 148,
-      "pct": 77.49
+      "count": 157,
+      "pct": 78.5
     },
     "fat_g": {
-      "count": 141,
-      "pct": 73.82
+      "count": 148,
+      "pct": 74.0
     },
     "fiber_g": {
-      "count": 47,
-      "pct": 24.61
+      "count": 48,
+      "pct": 24.0
     },
     "protein_g": {
-      "count": 141,
-      "pct": 73.82
+      "count": 150,
+      "pct": 75.0
     },
     "salt_g": {
-      "count": 138,
-      "pct": 72.25
+      "count": 147,
+      "pct": 73.5
     },
     "saturates_g": {
-      "count": 141,
-      "pct": 73.82
+      "count": 147,
+      "pct": 73.5
     },
     "sugars_g": {
-      "count": 142,
-      "pct": 74.35
+      "count": 151,
+      "pct": 75.5
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -1101,6 +1101,60 @@
       "unit_price_text": "8,80 €/kg"
     },
     {
+      "allergens": null,
+      "attributes": {
+        "country_of_origin": "España",
+        "packaging": "Brik",
+        "sugar_format": "Grano",
+        "sugar_type": "Morena"
+      },
+      "availability": null,
+      "brand": "AZUCARERA",
+      "calories_kcal": 380.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/azucar-moreno-de-cana-integral-azucarera-800-g/R-521004632/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-3.6-indexed",
+      "carbohydrate_g": 95.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 1615.0,
+      "fat_g": 0.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Azucar",
+      "legal_name": "Azúcar Moreno de caña integral",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "AB Azucarera Iberia, S.L",
+      "name": "Azúcar moreno de caña integral Azucarera 800 g.",
+      "net_content": "800 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {
+        "polyols_g": 0.0
+      },
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T23:28:00+00:00",
+      "operator_address": "Avenida de Manoteras,46 28050 Madrid",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 1.99,
+      "protein_g": 0.0,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible; missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521004632",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservese en lugar fresco y seco",
+      "sugars_g": 95.0,
+      "unit_price_text": "2,49 €/kg"
+    },
+    {
       "allergens": "Contiene gluten",
       "attributes": {
         "flour_strength": "Fuerza (Mayor o igual a 250)",
@@ -1205,59 +1259,6 @@
       "storage_conditions": "Una vez abierto mantener en refrigeración y consumir en los 2-3 días siguientes",
       "sugars_g": 0.0,
       "unit_price_text": "2,25 €/kg"
-    },
-    {
-      "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
-      "attributes": {
-        "alternative_vegetal": true,
-        "drained_weight_g": 400,
-        "legume_type": "Garbanzos",
-        "no_added_salt": true,
-        "packaging": "Bote"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 97.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/garbanzos-cocidos-sin-sal-anadida-categoria-extra-classic-carrefour-400-g/R-521005485/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.1-indexed",
-      "carbohydrate_g": 12.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 408.0,
-      "fat_g": 1.9,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Garbanzos, agua, antioxidante: ácido cítrico y conservador (metabisulfito sódico)",
-      "legal_name": "Garbanzos cocidos",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Carrefour",
-      "name": "Garbanzos cocidos sin sal añadida categoría extra Classic Carrefour 400 g.",
-      "net_content": "570 g",
-      "nutriscore": "A",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T11:14:00+00:00",
-      "operator_address": "Avda. de la Transición Española 36, 28108, Alcobendas (Madrid)",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 0.8,
-      "protein_g": 5.4,
-      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521005485",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.04,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Una vez abierto mantener en refrigeración y consumir en los 2-3 días siguientes",
-      "sugars_g": 0.0,
-      "unit_price_text": "2,00 €/kg"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
