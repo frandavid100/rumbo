@@ -1,7 +1,7 @@
 {
   "retailer": "CARREFOUR",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-  "updated_at": "2026-08-20T18:58:00Z",
+  "updated_at": "2026-08-20T21:10:00Z",
   "classification_performed": false,
   "routes": [
     {
@@ -64,6 +64,14 @@
       "attempted_products": 2,
       "successful_products": 0,
       "reason": "Browser requests on the GitHub-hosted runner were blocked by Carrefour edge/WAF"
+    },
+    {
+      "route": "actforfood_indexed_official_product_and_category_pages",
+      "host": "https://actforfood.carrefour.es",
+      "result": "USABLE_WITH_CRAWL_LAG",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_agent_web_products_batch27_actforfood_fish.jsonl",
+      "verified_product_pages": 3,
+      "notes": "Indexed retrieval exposes official Act for Food Carrefour product and category pages despite direct runner WAF blocking. Product pages observed on 2026-08-20 exposed retailer SKU, name, price, unit price and detailed fresh-food attributes such as species, farming zone, cut and state; indexed category pages exposed broad assortment and recent observed listing prices. Only rendered official Carrefour facts are persisted, with crawl-lag metadata."
     }
   ],
   "provenance_rules": [
@@ -73,5 +81,5 @@
     "Rumbo nutritional or culinary classification is separate from retailer evidence and is not performed in these extraction datasets.",
     "Indexed official-page retrieval is accepted as first-party evidence only for fields actually rendered from the official Carrefour page; its freshness is explicitly qualified."
   ],
-  "next_safe_step": "Continue low-volume, diverse first-party capture through official Carrefour indexed product/category pages, preserving crawl-lag metadata. Use clean low-concurrency Playwright opportunistically to capture GTIN/image and saved HTML when the WAF allows it. Do not distribute requests across runners to evade blocking."
+  "next_safe_step": "Continue low-volume, diverse first-party capture through indexed official Carrefour and Act for Food product/category pages, preserving crawl-lag metadata. Prefer Act for Food indexed pages when they expose fresher assortment or fresh-food attributes. Use clean low-concurrency Playwright opportunistically to capture GTIN/image and saved HTML when the WAF allows it. Do not distribute requests across runners to evade blocking."
 }
