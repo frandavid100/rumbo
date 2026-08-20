@@ -133,4 +133,11 @@ class MealQuantityOptimizerTest {
         assertEquals(230.0, plannedMilk.maximumGrams, 0.001)
         assertTrue(usesPracticalUnits(milkAmount, milk.practicalUnitStep()))
     }
+
+    @Test
+    fun practicalGramAmountsUseComfortableSteps() {
+        assertEquals(7.0, practicalGramAmount(7.4), 0.001)
+        assertEquals(35.0, practicalGramAmount(33.0), 0.001)
+        assertEquals(150.0, practicalGramAmount(148.0), 0.001)
+    }
 }
