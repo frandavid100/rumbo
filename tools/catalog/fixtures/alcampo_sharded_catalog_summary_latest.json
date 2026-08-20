@@ -3,7 +3,7 @@
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
   "importer_version": "alcampo-direct-v6.0",
-  "built_at": "2026-08-20T07:09:33.729262+00:00",
+  "built_at": "2026-08-20T07:20:17.270790+00:00",
   "roots": [
     {
       "label": "Veganos",
@@ -15,10 +15,10 @@
       "children_without_retailer_category_id": 0,
       "unresolved": [
         {
-          "label": "Tofu y Seitán",
-          "retailer_category_id": "OC0911202115",
+          "label": "Platos Preparados",
+          "retailer_category_id": "OC0911202111",
           "depth": 2,
-          "source_reported_product_count": 2,
+          "source_reported_product_count": 6,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -29,10 +29,10 @@
           "children_traversed": true
         },
         {
-          "label": "Postres Vegetales veganos",
-          "retailer_category_id": "OC091120217",
+          "label": "Untables",
+          "retailer_category_id": "OC0911202116",
           "depth": 2,
-          "source_reported_product_count": 19,
+          "source_reported_product_count": 15,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -43,10 +43,10 @@
           "children_traversed": true
         },
         {
-          "label": "Desayunos veganos",
-          "retailer_category_id": "OC091120213",
+          "label": "Despensa vegana",
+          "retailer_category_id": "OC091120214",
           "depth": 2,
-          "source_reported_product_count": 31,
+          "source_reported_product_count": 1,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
