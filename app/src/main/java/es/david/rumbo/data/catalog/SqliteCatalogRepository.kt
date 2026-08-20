@@ -5,13 +5,116 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 private const val CATALOG_ASSET_NAME = "catalog.sqlite"
 
 object CatalogRepositoryProvider {
     fun fromAssets(context: Context): CatalogRepository = runCatching {
-        SqliteCatalogRepository(context.applicationContext, CATALOG_ASSET_NAME)
+        val imported = CatalogImportManager.catalogFiles(context.applicationContext)
+            .map(::SqliteCatalogRepository)
+        when (imported.size) {
+            0 -> SqliteCatalogRepository(context.applicationContext, CATALOG_ASSET_NAME)
+            1 -> imported.single()
+            else -> CompositeCatalogRepository(imported)
+        }
     }.getOrElse { EmptyCatalogRepository }
+}
+
+data class InstalledCatalog(
+    val id: String,
+    val name: String,
+    val source: String,
+    val catalogVersion: String?,
+    val schemaVersion: String,
+    val productCount: Int
+)
+
+/** Atomic storage boundary for catalogues selected through Android's document picker. */
+object CatalogImportManager {
+    private const val EXTENSION = ".rumbocatalog"
+
+    private fun directory(context: Context): File = File(context.filesDir, "catalogs")
+        .apply { mkdirs() }
+
+    internal fun catalogFiles(context: Context): List<File> = directory(context)
+        .listFiles { file -> file.isFile && file.name.endsWith(EXTENSION) }
+        .orEmpty().sortedBy { it.name }
+
+    fun list(context: Context): List<InstalledCatalog> = catalogFiles(context).mapNotNull { file ->
+        runCatching { summary(validateCatalogFile(file)) }.getOrNull()
+    }
+
+    fun import(context: Context, input: InputStream): InstalledCatalog {
+        val directory = directory(context)
+        val temporary = File(directory, "catalog-import.tmp")
+        input.use { source -> temporary.outputStream().use(source::copyTo) }
+        val metadata = runCatching { validateCatalogFile(temporary) }
+            .getOrElse { error ->
+                temporary.delete()
+                throw IllegalArgumentException("El archivo no es un catálogo válido de Rumbo", error)
+            }
+        require(metadata["schema_version"] == "rumbo-catalog-1") {
+            "La versión del catálogo no es compatible con esta versión de Rumbo"
+        }
+        val catalog = summary(metadata)
+        val target = File(directory, "${catalog.id}$EXTENSION")
+        Files.move(
+            temporary.toPath(), target.toPath(),
+            StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING
+        )
+        return catalog
+    }
+
+    fun delete(context: Context, catalogId: String): Boolean {
+        require(catalogId.matches(Regex("[a-z0-9][a-z0-9._-]{0,79}")))
+        val target = File(directory(context), "$catalogId$EXTENSION")
+        return !target.exists() || target.delete()
+    }
+
+    private fun summary(metadata: Map<String, String>): InstalledCatalog {
+        val id = metadata["catalog_id"]
+            ?.takeIf { it.matches(Regex("[a-z0-9][a-z0-9._-]{0,79}")) }
+            ?: error("El catálogo no declara una identidad válida")
+        return InstalledCatalog(
+            id = id,
+            name = metadata["catalog_name"]?.takeIf { it.isNotBlank() } ?: id,
+            source = metadata["catalog_identity_source"] ?: "Desconocida",
+            catalogVersion = metadata["catalog_version"],
+            schemaVersion = metadata["schema_version"] ?: error("Falta schema_version"),
+            productCount = metadata["product_count"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+        )
+    }
+}
+
+private class CompositeCatalogRepository(
+    private val repositories: List<CatalogRepository>
+) : CatalogRepository {
+    override fun metadata(): Map<String, String> = mapOf(
+        "catalog_count" to repositories.size.toString(),
+        "schema_version" to "rumbo-catalog-1"
+    )
+
+    override fun retailers(): Set<String> = repositories.flatMapTo(sortedSetOf()) { it.retailers() }
+
+    override fun search(query: CatalogQuery): List<CatalogProduct> = repositories
+        .flatMap { it.search(query) }
+        .distinctBy { it.id }
+        .sortedBy { it.name.lowercase() }
+        .take(query.limit)
+
+    override fun product(productId: String): CatalogProduct? =
+        repositories.firstNotNullOfOrNull { it.product(productId) }
+}
+
+private fun validateCatalogFile(file: File): Map<String, String> {
+    val database = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+    return database.use {
+        requireSchema(it)
+        readMetadata(it)
+    }
 }
 
 object EmptyCatalogRepository : CatalogRepository {
@@ -25,15 +128,18 @@ object EmptyCatalogRepository : CatalogRepository {
  * Adapter for the current provisional catalogue SQLite.
  * Schema knowledge is intentionally private to this class: app callers depend only on CatalogRepository.
  */
-class SqliteCatalogRepository(
-    context: Context,
-    assetName: String = CATALOG_ASSET_NAME
+class SqliteCatalogRepository internal constructor(
+    file: File
 ) : CatalogRepository {
+    constructor(
+        context: Context,
+        assetName: String = CATALOG_ASSET_NAME
+    ) : this(materializeAsset(context, assetName))
+
     private val database: SQLiteDatabase
     private val cachedMetadata: Map<String, String>
 
     init {
-        val file = materializeAsset(context, assetName)
         database = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
         requireSchema(database)
         cachedMetadata = readMetadata(database)
@@ -54,7 +160,9 @@ class SqliteCatalogRepository(
             repeat(3) { args += needle }
         }
         if (query.retailers.isNotEmpty()) {
-            clauses += "rl.retailer IN (${placeholders(query.retailers.size)})"
+            clauses += "EXISTS (SELECT 1 FROM retailer_listings filtered_rl " +
+                "WHERE filtered_rl.product_id = p.product_id AND " +
+                "filtered_rl.retailer IN (${placeholders(query.retailers.size)}))"
             args += query.retailers
         }
         if (query.eligibility.isNotEmpty()) {
@@ -67,7 +175,6 @@ class SqliteCatalogRepository(
         val sql = """
             SELECT DISTINCT p.product_id
             FROM products p
-            JOIN retailer_listings rl ON rl.product_id = p.product_id
             LEFT JOIN classifications c ON c.product_id = p.product_id
             $where
             ORDER BY p.name COLLATE NOCASE

@@ -113,6 +113,26 @@ class CatalogFoodAdapterTest {
         assertTrue(CatalogFoodAdapter.stableFoodId(first) > 0)
     }
 
+    @Test
+    fun genericBedcaFoodNeedsNoRetailerListing() {
+        val roles = listOf(
+            CatalogRole(CatalogRoleAxis.NUTRITIONAL, "PRIMARY_CARBOHYDRATE", 0.95, "bedca"),
+            CatalogRole(CatalogRoleAxis.CULINARY, "PLATE_BASE", 0.95, "bedca")
+        )
+        val product = CatalogProduct(
+            id = "bedca:123", gtin = null, name = "Arroz blanco, crudo", brand = null,
+            legalName = null, ingredients = null, family = "arroz", subcategory = "Cereales",
+            provenance = CatalogProvenance("BEDCA", "BEDCA:123", "BEDCA", "1", "1", "1"),
+            listings = emptyList(), nutrition = completeNutrition(350.0, 7.0, 78.0, 1.0),
+            classification = CatalogClassification("1", true, "MENU_ELIGIBLE", roles, 80.0),
+            eligibility = CatalogEligibility.MENU_ELIGIBLE
+        )
+        val food = CatalogFoodAdapter.toFood(product)!!
+        assertEquals("arroz", food.family)
+        assertNull(food.retailer)
+        assertEquals(setOf("PLATE_BASE"), food.culinaryRoles)
+    }
+
     private fun product(
         id: String,
         name: String,

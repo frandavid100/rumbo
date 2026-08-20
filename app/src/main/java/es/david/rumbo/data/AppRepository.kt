@@ -39,14 +39,21 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
 
-class AppRepository(context: Context) {
+class AppRepository(private val context: Context) {
     private val preferences = context.getSharedPreferences("rumbo_data", Context.MODE_PRIVATE)
-    private val baseFoods: List<Food> by lazy {
+    private var baseFoods: List<Food> = loadBaseFoods()
+    private var baseFoodsById: Map<Long, Food> = baseFoods.associateBy { it.id }
+
+    private fun loadBaseFoods(): List<Food> =
         CatalogBackedFoodCatalog.load(context)
             .distinctBy { it.id }
             .sortedWith(foodComparator)
+
+    fun reloadCatalog(): AppData {
+        baseFoods = loadBaseFoods()
+        baseFoodsById = baseFoods.associateBy { it.id }
+        return load()
     }
-    private val baseFoodsById: Map<Long, Food> by lazy { baseFoods.associateBy { it.id } }
 
     fun load(): AppData {
         val raw = preferences.getString(KEY_DATA, null)

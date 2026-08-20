@@ -19,13 +19,16 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Restaurar catálogo nutricional de Mercadona
+      - name: Verificar que el APK no empaqueta catálogos
         run: |
-          mkdir -p app/src/main/assets
-          base64 --decode tools/aesan_foods.dat.b64 > app/src/main/assets/aesan_foods.dat
+          test ! -e app/src/main/assets/catalog.sqlite
+          test ! -e app/src/main/assets/aesan_foods.dat
       - uses: gradle/actions/setup-gradle@v4
       - name: Probar y compilar
         run: ./gradlew test assembleRelease
+      - name: Verificar APK sin catálogo
+        run: |
+          test -z "$(unzip -Z1 app/build/outputs/apk/release/app-release-unsigned.apk | grep -E '^assets/(catalog\.sqlite|aesan_foods\.dat)$' || true)"
       - name: Leer versión de Rumbo
         run: echo "RUMBO_VERSION=$(sed -n 's/.*versionName = \"\(.*\)\"/\1/p' app/build.gradle)" >> "$GITHUB_ENV"
       - name: Preparar herramientas de firma

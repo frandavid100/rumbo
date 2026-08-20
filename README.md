@@ -82,6 +82,24 @@ solo cuando la marca o el fabricante permiten atribuirlo a Mercadona y no modifi
 los valores nutricionales publicados. Debe ejecutarse antes de compilar una copia
 recién clonada del repositorio.
 
+## Construir el catálogo genérico de BEDCA
+
+El catálogo de desarrollo se construye fuera de la aplicación y no se versiona:
+
+```bash
+python3 tools/build_bedca_catalog.py \
+  --output build/catalog/bedca/rumbo-bedca-development.rumbocatalog \
+  --report build/catalog/bedca/report.json
+python3 tools/validate_catalog.py \
+  build/catalog/bedca/rumbo-bedca-development.rumbocatalog \
+  --json build/catalog/bedca/validation.json
+```
+
+La descarga es reanudable. El SQLite conserva las observaciones de nutrientes,
+normaliza los campos necesarios para Rumbo y separa clasificación, familia
+alimentaria, base física de porción y elegibilidad. No debe incorporarse a un
+APK público mientras no se aclaren los derechos de redistribución de BEDCA.
+
 ## Criterio de cálculo
 
 La estimación base usa Mifflin–St Jeor y el nivel de actividad. Los objetivos representan ritmos relativos y prudentes, no un número libre de kilos por semana. La app bloquea un déficit con IMC ≤ 18,5 y un superávit cuando el IMC o la relación cintura/altura indican que no es razonable recomendarlo automáticamente.
