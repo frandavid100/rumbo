@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/catalog-carrefour-first-party-smoke.yml'
       - 'tools/catalog/carrefour_first_party_sitemap.py'
+      - 'tools/catalog/carrefour_first_party_sitemap_browser.py'
       - 'tools/catalog/carrefour_first_party_inventory.py'
       - 'tools/catalog/carrefour_first_party_browser_probe.py'
       - 'tools/catalog/carrefour_first_party_browser_inventory.py'
@@ -41,6 +42,14 @@ jobs:
         run: |
           pip install playwright
           python -m playwright install --with-deps chromium
+      - name: Browser fallback for official Carrefour food sitemap
+        continue-on-error: true
+        working-directory: tools/catalog
+        run: |
+          python carrefour_first_party_sitemap_browser.py \
+            --out carrefour-first-party-sitemap-browser \
+            --max-sitemaps 5000 \
+            --delay 0.2
       - name: Browser first-party inventory on a fresh runner
         working-directory: tools/catalog
         run: |
@@ -55,6 +64,7 @@ jobs:
           import json, pathlib
           for p in [
               pathlib.Path('tools/catalog/carrefour-first-party-sitemap/summary.json'),
+              pathlib.Path('tools/catalog/carrefour-first-party-sitemap-browser/summary.json'),
               pathlib.Path('tools/catalog/carrefour-first-party-browser-inventory/summary.json'),
           ]:
               if not p.exists():
@@ -75,6 +85,9 @@ jobs:
           test ! -f tools/catalog/carrefour-first-party-sitemap/summary.json || cp tools/catalog/carrefour-first-party-sitemap/summary.json tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json
           test ! -f tools/catalog/carrefour-first-party-sitemap/products.jsonl || cp tools/catalog/carrefour-first-party-sitemap/products.jsonl tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl
           test ! -f tools/catalog/carrefour-first-party-sitemap/diagnostics.json || cp tools/catalog/carrefour-first-party-sitemap/diagnostics.json tools/catalog/fixtures/carrefour_first_party_sitemap_diagnostics.json
+          test ! -f tools/catalog/carrefour-first-party-sitemap-browser/summary.json || cp tools/catalog/carrefour-first-party-sitemap-browser/summary.json tools/catalog/fixtures/carrefour_first_party_sitemap_browser_summary.json
+          test ! -f tools/catalog/carrefour-first-party-sitemap-browser/products.jsonl || cp tools/catalog/carrefour-first-party-sitemap-browser/products.jsonl tools/catalog/fixtures/carrefour_first_party_sitemap_browser_products.jsonl
+          test ! -f tools/catalog/carrefour-first-party-sitemap-browser/diagnostics.json || cp tools/catalog/carrefour-first-party-sitemap-browser/diagnostics.json tools/catalog/fixtures/carrefour_first_party_sitemap_browser_diagnostics.json
           test ! -f tools/catalog/carrefour-first-party-browser-inventory/summary.json || cp tools/catalog/carrefour-first-party-browser-inventory/summary.json tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json
           python - <<'PY'
           import json, pathlib
@@ -107,6 +120,9 @@ jobs:
             tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json \
             tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl \
             tools/catalog/fixtures/carrefour_first_party_sitemap_diagnostics.json \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_browser_summary.json \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_browser_products.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_sitemap_browser_diagnostics.json \
             tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json \
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
             tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl 2>/dev/null || true
@@ -122,6 +138,7 @@ jobs:
           name: carrefour-first-party-browser-inventory
           path: |
             tools/catalog/carrefour-first-party-sitemap/
+            tools/catalog/carrefour-first-party-sitemap-browser/
             tools/catalog/carrefour-first-party-browser-inventory/
           retention-days: 7
           if-no-files-found: warn
