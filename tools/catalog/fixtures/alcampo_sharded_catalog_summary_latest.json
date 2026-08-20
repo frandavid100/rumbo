@@ -3,116 +3,22 @@
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
   "importer_version": "alcampo-direct-v6.0",
-  "built_at": "2026-08-20T06:42:04.356921+00:00",
+  "built_at": "2026-08-20T06:43:11.001542+00:00",
   "roots": [
-    {
-      "label": "Bebidas",
-      "rid": "OCC11",
-      "source_reported_product_count": 0,
-      "food_products_recursive_union": 954,
-      "recursive_categories_visited": 16,
-      "api_error_categories": 6,
-      "children_without_retailer_category_id": 0,
-      "unresolved": [
-        {
-          "label": "Bebidas",
-          "retailer_category_id": "OCC11",
-          "depth": 0,
-          "source_reported_product_count": null,
-          "direct_unique_products": 1800,
-          "pages": 6,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 14
-        },
-        {
-          "label": "Refrescos",
-          "retailer_category_id": "OC1103",
-          "depth": 1,
-          "source_reported_product_count": 544,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0
-        },
-        {
-          "label": "Agua, Soda y Gaseosas",
-          "retailer_category_id": "OC1101",
-          "depth": 1,
-          "source_reported_product_count": 247,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0
-        },
-        {
-          "label": "Tintos de verano y sangrías",
-          "retailer_category_id": "OC11534",
-          "depth": 1,
-          "source_reported_product_count": 48,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0
-        },
-        {
-          "label": "Zumos con leche/soja",
-          "retailer_category_id": "OC6331072",
-          "depth": 2,
-          "source_reported_product_count": 16,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0
-        },
-        {
-          "label": "Néctar, concentrados y exprimidos",
-          "retailer_category_id": "OC633107",
-          "depth": 2,
-          "source_reported_product_count": 130,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0
-        }
-      ],
-      "missing_retailer_ids": [],
-      "deduplication_identity": "retailer_sku_else_product_id",
-      "completeness_basis": "recursive_first_party_category_tree_plus_pageToken_exhaustion",
-      "source_product_count_is_diagnostic_only": true,
-      "ok": false
-    },
     {
       "label": "Veganos",
       "rid": "OC09112021",
       "source_reported_product_count": 0,
       "food_products_recursive_union": 171,
       "recursive_categories_visited": 17,
-      "api_error_categories": 3,
+      "api_error_categories": 2,
       "children_without_retailer_category_id": 0,
       "unresolved": [
         {
-          "label": "Bebidas de almendra veganas",
-          "retailer_category_id": "OCV16031003",
+          "label": "Burger vegana",
+          "retailer_category_id": "OC0911202113",
           "depth": 2,
-          "source_reported_product_count": 16,
+          "source_reported_product_count": 10,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -123,24 +29,10 @@
           "children_traversed": true
         },
         {
-          "label": "Otras bebidas veganas",
-          "retailer_category_id": "OCV0911202125",
+          "label": "Desayunos veganos",
+          "retailer_category_id": "OC091120213",
           "depth": 2,
-          "source_reported_product_count": 12,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Postres Vegetales veganos",
-          "retailer_category_id": "OC091120217",
-          "depth": 2,
-          "source_reported_product_count": 19,
+          "source_reported_product_count": 31,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -161,16 +53,16 @@
     }
   ],
   "counts": {
-    "unique_products_before_filter": 1121,
-    "food_products": 1121,
+    "unique_products_before_filter": 171,
+    "food_products": 171,
     "excluded_alcohol": 0,
-    "with_sku": 1121,
-    "with_name": 1121,
-    "with_brand": 1121,
-    "with_pack_size": 1102,
-    "with_image": 1121,
+    "with_sku": 171,
+    "with_name": 171,
+    "with_brand": 171,
+    "with_pack_size": 168,
+    "with_image": 171,
     "with_product_url": 0,
-    "available": 1113
+    "available": 168
   },
   "third_party_product_data": false
 }
