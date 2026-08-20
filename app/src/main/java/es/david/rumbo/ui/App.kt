@@ -2203,7 +2203,7 @@ private fun HomeScreen(
         }
         if (recommendation != null) {
             item {
-                RepertoireProgressCard(
+                RepertoireAndWitnessSection(
                     assessment = repertoireAssessment,
                     hasCertifiedViableDay = hasCertifiedViableDay,
                     hasCertifiedCompleteDay = hasCertifiedCompleteDay,
@@ -2215,13 +2215,7 @@ private fun HomeScreen(
                     foods = data.foods,
                     repertoireFoodIds = data.activeProfileData?.repertoireFoodIds.orEmpty(),
                     planningRules = data.activeProfileData?.planningRules.orEmpty(),
-                    onOpenSearch = onOpenProgressSearch
-                )
-            }
-        }
-        if (recommendation != null && displayedCertifiedWitness != null) {
-            item {
-                CertifiedDayWitnessSection(
+                    onOpenSearch = onOpenProgressSearch,
                     witness = displayedCertifiedWitness,
                     foodsById = foodsById,
                     dishesById = dishesById,
@@ -2496,6 +2490,83 @@ private fun RepertoireLevelMilestones(currentLevel: Int) {
 }
 
 @Composable
+private fun RepertoireAndWitnessSection(
+    assessment: RepertoireAssessment?,
+    hasCertifiedViableDay: Boolean,
+    hasCertifiedCompleteDay: Boolean,
+    isSearchingCompleteDay: Boolean,
+    completeDayDiagnostic: CertifiedDayWitnessEvaluator.CompleteDayDiagnostic?,
+    hasCertifiedCulinaryDay: Boolean,
+    isSearchingCulinaryDay: Boolean,
+    culinaryDayDiagnostic: CulinarilySatisfactoryDayDiagnostic?,
+    foods: List<Food>,
+    repertoireFoodIds: Set<Long>,
+    planningRules: List<PlanningRule>,
+    onOpenSearch: (String?, String?, MealType?) -> Unit,
+    witness: CertifiedDayWitness?,
+    foodsById: Map<Long, Food>,
+    dishesById: Map<Long, Dish>,
+    recommendation: Recommendation,
+    onOpenFood: (Long) -> Unit,
+    onOpenDish: (Long) -> Unit
+) {
+    val repertoireKey = "REPERTOIRE"
+    val witnessKey = "CERTIFIED_WITNESS"
+    var expandedSection by rememberSaveable(witness?.level) {
+        mutableStateOf(if (witness != null) witnessKey else repertoireKey)
+    }
+    fun toggleSection(key: String) {
+        expandedSection = if (expandedSection == key) "" else key
+    }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Tu menú", style = MaterialTheme.typography.titleLarge)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(
+                    topStart = 12.dp,
+                    topEnd = 12.dp,
+                    bottomStart = if (witness == null) 12.dp else 4.dp,
+                    bottomEnd = if (witness == null) 12.dp else 4.dp
+                )
+            ) {
+                RepertoireProgressCard(
+                    assessment, hasCertifiedViableDay, hasCertifiedCompleteDay,
+                    isSearchingCompleteDay, completeDayDiagnostic, hasCertifiedCulinaryDay,
+                    isSearchingCulinaryDay, culinaryDayDiagnostic, foods, repertoireFoodIds,
+                    planningRules, onOpenSearch,
+                    expanded = expandedSection == repertoireKey,
+                    onToggle = { toggleSection(repertoireKey) }
+                )
+            }
+            witness?.let {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(
+                        topStart = 4.dp,
+                        topEnd = 4.dp,
+                        bottomStart = 12.dp,
+                        bottomEnd = 12.dp
+                    )
+                ) {
+                    CertifiedDayWitnessSection(
+                        witness = it,
+                        foodsById = foodsById,
+                        dishesById = dishesById,
+                        recommendation = recommendation,
+                        onOpenFood = onOpenFood,
+                        onOpenDish = onOpenDish,
+                        expanded = expandedSection == witnessKey,
+                        onToggle = { toggleSection(witnessKey) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun RepertoireProgressCard(
     assessment: RepertoireAssessment?,
     hasCertifiedViableDay: Boolean,
@@ -2508,7 +2579,9 @@ private fun RepertoireProgressCard(
     foods: List<Food>,
     repertoireFoodIds: Set<Long>,
     planningRules: List<PlanningRule>,
-    onOpenSearch: (String?, String?, MealType?) -> Unit
+    onOpenSearch: (String?, String?, MealType?) -> Unit,
+    expanded: Boolean,
+    onToggle: () -> Unit
 ) {
     val (level, target) = remember(
         assessment, hasCertifiedViableDay, hasCertifiedCompleteDay, isSearchingCompleteDay,
@@ -2528,15 +2601,25 @@ private fun RepertoireProgressCard(
         3 -> "Nivel 3 · Culinariamente satisfactorio"
         else -> "Nivel 4 · Menú variado"
     }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Tu repertorio", style = MaterialTheme.typography.titleLarge)
-        Card(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text("Tu repertorio", style = MaterialTheme.typography.titleMedium)
+            Text(title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+        ) {
             Column(
-                Modifier.fillMaxWidth().padding(16.dp),
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 RepertoireLevelMilestones(level)
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(target.message, style = MaterialTheme.typography.bodyLarge)
                 target.buttonLabel?.let { label ->
                     FilledTonalButton(
@@ -3063,7 +3146,9 @@ private fun CertifiedDayWitnessSection(
     dishesById: Map<Long, Dish>,
     recommendation: Recommendation,
     onOpenFood: (Long) -> Unit,
-    onOpenDish: (Long) -> Unit
+    onOpenDish: (Long) -> Unit,
+    expanded: Boolean,
+    onToggle: () -> Unit
 ) {
     val levelTitle = when (witness.level) {
         CertifiedDayLevel.VIABLE -> "Tu día viable"
@@ -3090,14 +3175,24 @@ private fun CertifiedDayWitnessSection(
     )
     val meals = witness.meals.sortedBy { it.type.ordinal }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Tu día testigo", style = MaterialTheme.typography.titleLarge)
-        Card(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text("Tu día testigo", style = MaterialTheme.typography.titleMedium)
+            Text(levelTitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+        ) {
             Column(
-                Modifier.fillMaxWidth().padding(16.dp),
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(levelTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Text(
                     explanation,
                     style = MaterialTheme.typography.bodyMedium,
