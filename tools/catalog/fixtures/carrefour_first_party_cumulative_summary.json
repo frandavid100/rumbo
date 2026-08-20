@@ -1,143 +1,143 @@
 {
-  "built_at": "2026-08-20T21:06:56.595364+00:00",
+  "built_at": "2026-08-20T21:59:46.848401+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 5,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 86,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 85,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 7,
-    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 41,
+    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 49,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 3154,
+    "evidence_rows": 3326,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 100,
-    "nutrition_not_found": 34,
-    "nutrition_partial": 8,
-    "verified_direct_products": 142,
-    "verified_first_party_products": 142,
+    "nutrition_complete": 104,
+    "nutrition_not_found": 35,
+    "nutrition_partial": 10,
+    "verified_direct_products": 149,
+    "verified_first_party_products": 149,
     "verified_listing_only_observations": 7,
-    "verified_product_page_observations": 135
+    "verified_product_page_observations": 142
   },
   "coverage": {
     "allergens": {
-      "count": 53,
-      "pct": 37.32
+      "count": 56,
+      "pct": 37.58
     },
     "attributes": {
-      "count": 142,
+      "count": 149,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 16.2
+      "pct": 15.44
     },
     "brand": {
-      "count": 121,
-      "pct": 85.21
+      "count": 128,
+      "pct": 85.91
     },
     "category_path": {
-      "count": 88,
-      "pct": 61.97
+      "count": 95,
+      "pct": 63.76
     },
     "gtin": {
       "count": 4,
-      "pct": 2.82
+      "pct": 2.68
     },
     "image_url": {
       "count": 8,
-      "pct": 5.63
+      "pct": 5.37
     },
     "ingredients": {
-      "count": 112,
-      "pct": 78.87
+      "count": 119,
+      "pct": 79.87
     },
     "legal_name": {
-      "count": 114,
-      "pct": 80.28
+      "count": 121,
+      "pct": 81.21
     },
     "mandatory_mentions": {
-      "count": 48,
-      "pct": 33.8
+      "count": 51,
+      "pct": 34.23
     },
     "manufacturer_packer_importer": {
-      "count": 115,
-      "pct": 80.99
+      "count": 122,
+      "pct": 81.88
     },
     "name": {
-      "count": 142,
+      "count": 149,
       "pct": 100.0
     },
     "net_content": {
-      "count": 110,
-      "pct": 77.46
+      "count": 117,
+      "pct": 78.52
     },
     "nutriscore": {
-      "count": 45,
-      "pct": 31.69
+      "count": 47,
+      "pct": 31.54
     },
     "nutrition_extra": {
-      "count": 128,
-      "pct": 90.14
+      "count": 135,
+      "pct": 90.6
     },
     "operator_address": {
-      "count": 115,
-      "pct": 80.99
+      "count": 122,
+      "pct": 81.88
     },
     "preparation_instructions": {
-      "count": 83,
-      "pct": 58.45
+      "count": 86,
+      "pct": 57.72
     },
     "price_eur": {
-      "count": 142,
+      "count": 149,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 112,
-      "pct": 78.87
+      "count": 119,
+      "pct": 79.87
     },
     "unit_price_text": {
-      "count": 142,
+      "count": 149,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 108,
-      "pct": 76.06
+      "count": 114,
+      "pct": 76.51
     },
     "carbohydrate_g": {
-      "count": 105,
-      "pct": 73.94
+      "count": 111,
+      "pct": 74.5
     },
     "energy_kj": {
-      "count": 108,
-      "pct": 76.06
+      "count": 114,
+      "pct": 76.51
     },
     "fat_g": {
-      "count": 107,
-      "pct": 75.35
+      "count": 112,
+      "pct": 75.17
     },
     "fiber_g": {
-      "count": 29,
-      "pct": 20.42
+      "count": 32,
+      "pct": 21.48
     },
     "protein_g": {
-      "count": 104,
-      "pct": 73.24
+      "count": 109,
+      "pct": 73.15
     },
     "salt_g": {
-      "count": 102,
-      "pct": 71.83
+      "count": 108,
+      "pct": 72.48
     },
     "saturates_g": {
-      "count": 107,
-      "pct": 75.35
+      "count": 112,
+      "pct": 75.17
     },
     "sugars_g": {
-      "count": 103,
-      "pct": 72.54
+      "count": 108,
+      "pct": 72.48
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -253,6 +253,64 @@
       "storage_conditions": "Conservar en lugar fresco y seco.",
       "sugars_g": 55.0,
       "unit_price_text": "5,67 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "chocolate_type": "Con leche",
+        "gluten_free": true,
+        "industrial": true,
+        "packaging": "Otros envases",
+        "vegetarian": true
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 539.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/chocolate-con-leche-carrefour-classic-sin-gluten-150-g/R-521004209/p",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-2.9-indexed",
+      "carbohydrate_g": 57.0,
+      "category_path": [
+        "Supermercado",
+        "La Despensa",
+        "Dulce",
+        "Bombones y Chocolates"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 2251.0,
+      "fat_g": 31.0,
+      "fetch_error": null,
+      "fiber_g": 2.0,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Azúcar, leche entera en polvo 23%, manteca de cacao, pasta de cacao, suero lácteo en polvo, emulgente: lecitinas, aroma natural de vainilla. Cacao: 30% mínimo. Puede contener trazas de soja y frutos de cáscara.",
+      "legal_name": "Chocolate con leche extrafino",
+      "mandatory_mentions": "Sin gluten",
+      "manufacturer_packer_importer": "CARREFOUR FRANCIA",
+      "name": "Chocolate con leche Carrefour Classic sin gluten 150 g.",
+      "net_content": "150 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T21:58:00+00:00",
+      "operator_address": "Interdis TSA 91431-91343 MASSY CEDEX FRANCE Nº CRISTAL 0969397006",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 1.32,
+      "protein_g": 7.0,
+      "provenance_note": "All populated fields were observed on official Carrefour product and/or category pages via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521004209",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.2,
+      "saturates_g": 22.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar fresco y seco, alejado de olores extraños.",
+      "sugars_g": 55.0,
+      "unit_price_text": "8,80 €/kg"
     },
     {
       "allergens": "Puede contener: Cereales que contienen gluten",
@@ -1242,62 +1300,6 @@
       "storage_conditions": "Se aconseja mantener el producto en un lugar fresco, alejado de fuentes de calor y de la luz, a una temperatura entre 10ºC y 25ºC.",
       "sugars_g": 0.0,
       "unit_price_text": "1,84 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "packaging": "Otros envases",
-        "rice_type": "Redondo"
-      },
-      "availability": null,
-      "brand": "SOS",
-      "calories_kcal": 354.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/arroz-redondo-sos-1-kg/R-521012514/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.4-indexed",
-      "carbohydrate_g": 79.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Alimentación",
-        "Arroz y Cous Cous"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 1503.0,
-      "fat_g": 1.0,
-      "fetch_error": null,
-      "fiber_g": 3.0,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "100% Arroz grano redondo",
-      "legal_name": "Arroz grano Redondo.",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Herba Ricemills. S.L.U.",
-      "name": "Arroz redondo Sos 1 kg.",
-      "net_content": "1000 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T12:04:31.142954+00:00",
-      "operator_address": "C/ Real. 43 - 41920 San Juan de Aznalfarache (Sevilla)",
-      "page_sha256": null,
-      "preparation_instructions": "Tiempo de cocción 13 minutos aproximadamente.",
-      "price_currency": "EUR",
-      "price_eur": 1.88,
-      "protein_g": 7.0,
-      "provenance_note": "All populated fields were observed on official carrefour.es pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521012514",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Almacenar en lugar fresco y seco. Preservar de la luz solar.",
-      "sugars_g": 0.0,
-      "unit_price_text": "1,88 €/kg"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
