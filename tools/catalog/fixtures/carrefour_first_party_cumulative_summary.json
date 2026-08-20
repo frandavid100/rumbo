@@ -1,142 +1,142 @@
 {
-  "built_at": "2026-08-20T12:10:12.998307+00:00",
+  "built_at": "2026-08-20T12:11:52.526889+00:00",
   "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 43,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 51,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 4,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 4,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 1303,
+    "evidence_rows": 1514,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 42,
+    "nutrition_complete": 50,
     "nutrition_not_found": 6,
     "nutrition_partial": 6,
-    "verified_direct_products": 54,
-    "verified_first_party_products": 54,
+    "verified_direct_products": 62,
+    "verified_first_party_products": 62,
     "verified_listing_only_observations": 4,
-    "verified_product_page_observations": 50
+    "verified_product_page_observations": 58
   },
   "coverage": {
     "allergens": {
-      "count": 17,
-      "pct": 31.48
+      "count": 23,
+      "pct": 37.1
     },
     "attributes": {
-      "count": 54,
+      "count": 62,
       "pct": 100.0
     },
     "availability": {
       "count": 5,
-      "pct": 9.26
+      "pct": 8.06
     },
     "brand": {
-      "count": 50,
-      "pct": 92.59
+      "count": 58,
+      "pct": 93.55
     },
     "category_path": {
-      "count": 32,
-      "pct": 59.26
+      "count": 40,
+      "pct": 64.52
     },
     "gtin": {
       "count": 4,
-      "pct": 7.41
+      "pct": 6.45
     },
     "image_url": {
       "count": 4,
-      "pct": 7.41
+      "pct": 6.45
     },
     "ingredients": {
-      "count": 49,
-      "pct": 90.74
+      "count": 57,
+      "pct": 91.94
     },
     "legal_name": {
-      "count": 49,
-      "pct": 90.74
+      "count": 57,
+      "pct": 91.94
     },
     "mandatory_mentions": {
       "count": 22,
-      "pct": 40.74
+      "pct": 35.48
     },
     "manufacturer_packer_importer": {
-      "count": 49,
-      "pct": 90.74
+      "count": 56,
+      "pct": 90.32
     },
     "name": {
-      "count": 54,
+      "count": 62,
       "pct": 100.0
     },
     "net_content": {
-      "count": 49,
-      "pct": 90.74
+      "count": 57,
+      "pct": 91.94
     },
     "nutriscore": {
-      "count": 23,
-      "pct": 42.59
+      "count": 28,
+      "pct": 45.16
     },
     "nutrition_extra": {
-      "count": 40,
-      "pct": 74.07
+      "count": 48,
+      "pct": 77.42
     },
     "operator_address": {
-      "count": 49,
-      "pct": 90.74
+      "count": 56,
+      "pct": 90.32
     },
     "preparation_instructions": {
-      "count": 35,
-      "pct": 64.81
+      "count": 42,
+      "pct": 67.74
     },
     "price_eur": {
-      "count": 54,
+      "count": 62,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 49,
-      "pct": 90.74
+      "count": 57,
+      "pct": 91.94
     },
     "unit_price_text": {
-      "count": 54,
+      "count": 62,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 48,
-      "pct": 88.89
+      "count": 56,
+      "pct": 90.32
     },
     "carbohydrate_g": {
-      "count": 45,
-      "pct": 83.33
+      "count": 53,
+      "pct": 85.48
     },
     "energy_kj": {
-      "count": 48,
-      "pct": 88.89
+      "count": 56,
+      "pct": 90.32
     },
     "fat_g": {
-      "count": 47,
-      "pct": 87.04
+      "count": 55,
+      "pct": 88.71
     },
     "fiber_g": {
-      "count": 12,
-      "pct": 22.22
+      "count": 15,
+      "pct": 24.19
     },
     "protein_g": {
-      "count": 44,
-      "pct": 81.48
+      "count": 52,
+      "pct": 83.87
     },
     "salt_g": {
-      "count": 45,
-      "pct": 83.33
+      "count": 53,
+      "pct": 85.48
     },
     "saturates_g": {
-      "count": 47,
-      "pct": 87.04
+      "count": 55,
+      "pct": 88.71
     },
     "sugars_g": {
-      "count": 43,
-      "pct": 79.63
+      "count": 51,
+      "pct": 82.26
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -526,6 +526,127 @@
       "unit_price_text": "5,48 €/kg"
     },
     {
+      "allergens": "Contiene: Pescado",
+      "attributes": {
+        "can_opening": "Easy peel",
+        "country_of_origin": "España",
+        "drained_weight_g": 156,
+        "industrial": true,
+        "packaging": "Lata",
+        "preserve_characteristic": "En aceite vegetal",
+        "preserve_type": "Atún claro"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 186.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/atun-claro-en-aceite-de-girasol-carrefour-classic-pack-de-3-latas-de-52-g/R-521006151/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.6-indexed",
+      "carbohydrate_g": 0.5,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Conservas, Sopas y Precocinados",
+        "Conservas de Pescado y Marisco"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 778.0,
+      "fat_g": 10.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Atún claro (Thunnus albacares), aceite de girasol 24.2% y sal",
+      "legal_name": "Atún claro en aceite de girasol",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "CARREFOUR",
+      "name": "Atún claro en aceite de girasol Carrefour Classic pack de 3 latas de 52 g.",
+      "net_content": "210 g",
+      "nutriscore": "C",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T12:28:00+00:00",
+      "operator_address": "Interdis - TSA 91431 - 91343 MASSY Cedex - Francia",
+      "page_sha256": null,
+      "preparation_instructions": "Escurrir antes de consumir",
+      "price_currency": "EUR",
+      "price_eur": 2.35,
+      "protein_g": 24.0,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521006151",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 1.5,
+      "saturates_g": 1.3,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar fresco y seco. Una vez abierto, conservar en un recipiente alimentario entre 0ºC y +4 ºC y consumir en 48 horas.",
+      "sugars_g": 0.5,
+      "unit_price_text": "15,06 €/kg"
+    },
+    {
+      "allergens": "Contiene: Pescado",
+      "attributes": {
+        "can_opening": "Easy peel",
+        "country_of_origin": "España",
+        "drained_weight_g": 156,
+        "packaging": "Lata",
+        "preserve_characteristic": "En aceite de oliva",
+        "preserve_type": "Atún claro en aceite de oliva"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 196.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/atun-claro-en-aceite-de-oliva-classic-carrefour-pack-de-3-latas-de-52-g/R-521006173/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.6-indexed",
+      "carbohydrate_g": 0.5,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Conservas, Sopas y Precocinados",
+        "Conservas de Pescado y Marisco"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 818.0,
+      "fat_g": 12.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Atún claro (Thunnus albacares), aceite de oliva 24.2% y sal",
+      "legal_name": "Atún claro en aceite de oliva",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "CARREFOUR",
+      "name": "Atún claro en aceite de oliva Classic Carrefour pack de 3 latas de 52 g.",
+      "net_content": "210 g",
+      "nutriscore": "C",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T12:28:00+00:00",
+      "operator_address": "Interdis - TSA 91431 - 91343 MASSY Cedex - Francia",
+      "page_sha256": null,
+      "preparation_instructions": "Escurrir antes de consumir",
+      "price_currency": "EUR",
+      "price_eur": 2.79,
+      "protein_g": 22.0,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521006173",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 1.5,
+      "saturates_g": 1.9,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar fresco y seco. Una vez abierto, conservar en un recipiente alimentario entre 0ºC y +4 ºC y consumir en 48 horas.",
+      "sugars_g": 0.5,
+      "unit_price_text": "17,88 €/kg"
+    },
+    {
       "allergens": null,
       "attributes": {
         "conservation_mode": "Temperatura ambiente",
@@ -645,6 +766,67 @@
       "storage_conditions": "Almacenar en lugar fresco y seco. Preservar de la luz solar.",
       "sugars_g": 0.0,
       "unit_price_text": "1,88 €/kg"
+    },
+    {
+      "allergens": "Contiene: Pescado",
+      "attributes": {
+        "can_opening": "Abrefácil",
+        "country_of_origin": "España",
+        "drained_weight_g": 312,
+        "industrial": true,
+        "packaging": "Lata",
+        "preserve_characteristic": "En aceite de oliva",
+        "preserve_type": "Atún claro en aceite de oliva"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 196.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/atun-claro-en-aceite-de-oliva-classic-carrefour-pack-de-3-latas-de-104-g/R-521029278/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.6-indexed",
+      "carbohydrate_g": 0.5,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Conservas, Sopas y Precocinados",
+        "Conservas de Pescado y Marisco"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 818.0,
+      "fat_g": 12.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Atún claro (Thunnus albacares), aceite de oliva 29.5% y sal",
+      "legal_name": "Atún claro en aceite de oliva",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "CARREFOUR",
+      "name": "Atún claro en aceite de oliva Classic Carrefour pack de 3 latas de 104 g.",
+      "net_content": "450 g",
+      "nutriscore": "C",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T12:28:00+00:00",
+      "operator_address": "Interdis - TSA 91431 - 91343 MASSY Cedex - Francia",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 4.95,
+      "protein_g": 22.0,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521029278",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 1.2,
+      "saturates_g": 1.9,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar protegido del calor y de la humedad. Una vez abierto, conservar en un recipiente alimentario entre 0ºC y +4ºC y consumir en 48 horas.",
+      "sugars_g": 0.5,
+      "unit_price_text": "15,87 €/kg"
     },
     {
       "allergens": null,
@@ -1068,160 +1250,6 @@
       "storage_conditions": "Almacenar en lugar fresco, seco y alejado de la luz.",
       "sugars_g": null,
       "unit_price_text": "3,79 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "oil_type": "Aceite de oliva intenso",
-        "package_format": "Botella"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 900.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-intenso-1-carrefour-1-l/R-526600670/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.0",
-      "carbohydrate_g": null,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 3700.0,
-      "fat_g": 100.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Aceite de oliva refinado, aceite de oliva virgen",
-      "legal_name": "Aceite de oliva-Contiene exclusivamente aceites de oliva refinados y aceites de oliva vírgenes.Aceite que contiene exclusivamente aceites de oliva que se hayan sometido a un tratamiento de refinado y de aceites obtenidos directamente de aceitunas.",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Aceite de oliva intenso 1º Carrefour 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_PARTIAL",
-      "observed_at": "2026-08-20T10:35:00+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 3.99,
-      "protein_g": null,
-      "provenance_note": "All populated product fields were observed directly on the official carrefour.es product page; external sources may only have seeded the candidate URL.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "526600670",
-      "salt_g": null,
-      "saturates_g": 14.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Almacenar en lugar fresco, seco y alejado de la luz.",
-      "sugars_g": null,
-      "unit_price_text": "3,99 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "package_format": "Pack",
-        "soft_drink_type": "Sabores con gas",
-        "vegan": true
-      },
-      "availability": null,
-      "brand": "7UP",
-      "calories_kcal": 0.6,
-      "canonical_url": "https://www.carrefour.es/supermercado/7up-zero-de-lima-limon-sin-azucar-pack-2-botellas-2-l/R-526627352/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.0",
-      "carbohydrate_g": 0.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 3.0,
-      "fat_g": 0.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Agua carbonatada, correctores de acidez: E-330, E-296 y E-331, aromas, edulcorantes: aspartamo y acesulfamo K, conservador: E-211. Contiene una fuente de fenilalanina.",
-      "legal_name": "Bebida refrescante aromatizada con edulcorantes y aromas naturales de lima y limón. Sin azúcares.",
-      "mandatory_mentions": "Contiene una fuente de fenilalanina.",
-      "manufacturer_packer_importer": "COMPAÑIA DE BEBIDAS PEPSICO SL",
-      "name": "7UP Zero de lima-limón sin azúcar pack 2 botellas 2 l.",
-      "net_content": "4000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:35:00+00:00",
-      "operator_address": "CALLE MARIE CURIE, 7 PLANTA 1, EDIFICIO 8 VITORIA-GASTEIZ, ALAVA",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 3.35,
-      "protein_g": 0.0,
-      "provenance_note": "All populated product fields were observed directly on the official carrefour.es product page; external sources may only have seeded the candidate URL.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "526627352",
-      "salt_g": 0.04,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Proteger de la luz solar y de olores agresivos. No congelar. Conservar en lugar limpio, fresco y seco. Evitar el contacto directo con el suelo.",
-      "sugars_g": 0.0,
-      "unit_price_text": "0,84 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "conservation_mode": "Refrigerado",
-        "juice_format": "1L",
-        "juice_type": "Limón",
-        "refrigerated": true
-      },
-      "availability": "InStock",
-      "brand": "CARREFOUR",
-      "calories_kcal": 49.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.0",
-      "carbohydrate_g": 11.0,
-      "category_path": [
-        "Inicio",
-        "Supermercado",
-        "Bebidas",
-        "Aguas y Zumos",
-        "Zumos Refrigerados"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 208.0,
-      "fat_g": null,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": "8431876162769",
-      "http_status": 200,
-      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/158263_00_1.jpg",
-      "ingredients": "Agua, zumo de limón 17%, azúcar, pulpa de limón 7%.",
-      "legal_name": "Bebida refrescante de zumo de limón, con pulpa, flash pasteurizado, refrigerado",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Limonada Carrefour botella 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": "E",
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_PARTIAL",
-      "observed_at": "2026-08-20T10:23:16.999047+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
-      "page_sha256": "48c97292cafe0cf4cdc09fcaf89ead98ec6706e6da2a2831e54c7a2f1e2313b2",
-      "preparation_instructions": "Agitar suavemente antes de abrir y servir frío",
-      "price_currency": "EUR",
-      "price_eur": 1.99,
-      "protein_g": null,
-      "provenance_note": "All populated product fields were observed directly on the official carrefour.es product page; external sources may only have seeded the candidate URL.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "530362942",
-      "salt_g": 0.03,
-      "saturates_g": null,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en el frigorífico entre 0º C y +6º C. Una vez abierta, consumir en 4 días.",
-      "sugars_g": 11.0,
-      "unit_price_text": "1,99 €/l"
     }
   ],
   "source": "https://www.carrefour.es",
