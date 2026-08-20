@@ -8,10 +8,10 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
-from alcampo_detail_enricher import BASE, Detail, candidate_urls, parse_fields
+from alcampo_detail_enricher import BASE, UA, Detail, candidate_urls, parse_fields
 from nutrition_validation import validate_nutrition
 
-VERSION = "alcampo-detail-browser-v1.0"
+VERSION = "alcampo-detail-browser-v1.1"
 
 
 def load_targets(path: Path, limit: int) -> list[tuple[str, str | None]]:
@@ -82,7 +82,16 @@ async def run(targets: list[tuple[str, str | None]], out: Path, concurrency: int
     out.mkdir(parents=True, exist_ok=True)
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(locale="es-ES", timezone_id="Europe/Madrid")
+        # Alcampo's edge/WAF treats Playwright's default HeadlessChrome UA differently
+        # from a normal browser UA. The network probe proved that the same headless
+        # Chromium instance can render a product page when using the ordinary Chrome UA.
+        context = await browser.new_context(
+            locale="es-ES",
+            timezone_id="Europe/Madrid",
+            user_agent=UA,
+            viewport={"width": 1280, "height": 720},
+            extra_http_headers={"Accept-Language": "es-ES,es;q=0.9"},
+        )
         sem = asyncio.Semaphore(max(1, concurrency))
         results: list[Detail | None] = [None] * len(targets)
 
