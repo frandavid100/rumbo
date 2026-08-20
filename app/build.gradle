@@ -14,8 +14,8 @@ android {
         applicationId = "es.david.rumbo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 92
-        versionName = "0.78.5"
+        versionCode = 93
+        versionName = "0.78.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -65,11 +65,4 @@ dependencies {
     testImplementation "junit:junit:4.13.2"
     androidTestImplementation "androidx.compose.ui:ui-test-junit4"
     debugImplementation "androidx.compose.ui:ui-test-manifest"
-}
-
-tasks.withType(Test).configureEach {
-    testLogging {
-        exceptionFormat = "full"
-        showStandardStreams = true
-    }
 }
