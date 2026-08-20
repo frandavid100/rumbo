@@ -44,26 +44,41 @@ jobs:
           import json,re
           d=json.load(open('tools/catalog/fixtures/alcampo_root_children_latest.json',encoding='utf-8'))
           deny=re.compile(r'\b(vino|vinos|cerveza|cervezas|licor|licores|whisky|whiskey|ron|ginebra|vodka|brandy|cognac|champagne|cava|sidra|vermut|vermouth|sangr[ií]a|espirituosas?|bebidas?\s+alcoh[oó]licas?|perfumer[ií]a|droguer[ií]a|herbolario|control\s+de\s+peso)\b',re.I)
+          def denied(name):
+              name=str(name or '')
+              if re.search(r'\bsin\s+alcohol\b',name,re.I):
+                  return False
+              return bool(deny.search(name))
           rows=[];seen=set()
           for root in d.get('roots',[]):
-              name=str(root.get('root_label') or '').strip()
-              rid=root.get('root_retailer_category_id')
-              if not rid or deny.search(name) or rid in seen: continue
-              seen.add(rid)
-              rows.append({'label':name or rid,'rid':rid,'expected':0})
+              root_name=str(root.get('root_label') or '').strip()
+              root_rid=str(root.get('root_retailer_category_id') or '').strip()
+              # Audit the direct listing of every food root, but do not recurse from it;
+              # each first-level child is a separate recursive shard below. This keeps
+              # large trees parallel and prevents a single root from timing out.
+              if root_rid and root_rid not in seen and not denied(root_name):
+                  seen.add(root_rid)
+                  rows.append({'label':root_name or root_rid,'rid':root_rid,'expected':0,'max_depth':0})
+              for child in root.get('children') or []:
+                  label=str(child.get('name') or '').strip()
+                  rid=str(child.get('retailerCategoryId') or '').strip()
+                  if not rid or rid in seen or denied(label):
+                      continue
+                  seen.add(rid)
+                  rows.append({'label':label or rid,'rid':rid,'expected':int(child.get('productCount') or 0),'max_depth':64})
           print('matrix='+json.dumps({'include':rows},ensure_ascii=False,separators=(',',':')))
           print('expected_children='+str(len(rows)))
-          print('detail_matrix='+json.dumps({'include':[{'batch':f'{i:03d}'} for i in range(96)]},separators=(',',':')))
+          print('detail_matrix='+json.dumps({'include':[{'batch':f'{i:03d}'} for i in range(128)]},separators=(',',':')))
           PY
 
   enumerate:
     needs: prepare
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 8
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,9 +86,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Enumerate one complete first-party Alcampo root tree
+      - name: Enumerate one complete first-party Alcampo taxonomy shard
         working-directory: tools/catalog
-        run: python alcampo_child_enumerate.py --label "${{ matrix.label }}" --rid "${{ matrix.rid }}" --expected "${{ matrix.expected }}" --out "alcampo-child-${{ matrix.rid }}"
+        run: python alcampo_child_enumerate.py --label "${{ matrix.label }}" --rid "${{ matrix.rid }}" --expected "${{ matrix.expected }}" --max-depth "${{ matrix.max_depth }}" --out "alcampo-child-${{ matrix.rid }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -108,7 +123,7 @@ jobs:
           test -s alcampo-sharded-full/products.jsonl
       - name: Split first-party product manifest for detail enrichment
         working-directory: tools/catalog
-        run: python alcampo_split_detail_batches.py --input alcampo-sharded-full/products.jsonl --out alcampo-detail-inputs --batches 96
+        run: python alcampo_split_detail_batches.py --input alcampo-sharded-full/products.jsonl --out alcampo-detail-inputs --batches 128
       - uses: actions/upload-artifact@v4
         with:
           name: alcampo-detail-inputs
@@ -141,7 +156,7 @@ jobs:
     if: needs.merge.result == 'success'
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 8
       matrix: ${{ fromJSON(needs.prepare.outputs.detail_matrix) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 180
