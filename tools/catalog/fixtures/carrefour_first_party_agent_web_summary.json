@@ -1,54 +1,41 @@
 {
   "retailer": "CARREFOUR",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-  "built_at": "2026-08-20T10:42:00+00:00",
+  "built_at": "2026-08-20T13:05:10.935558+00:00",
   "inventory_complete": false,
   "classification_performed": false,
+  "canonical_cumulative_summary": "tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json",
   "candidate_identity_pool": {
     "source": "RADARSUPER_CANDIDATE_IDENTITY_ONLY",
     "urls": 8451,
     "counted_as_carrefour_evidence": false
   },
-  "verified_direct_observations": {
-    "historical_playwright_products": 3,
-    "openai_web_direct_products": 15,
-    "unique_products_total": 18,
-    "nutrition_complete": 14,
-    "nutrition_partial": 4,
-    "nutrition_not_found": 0,
-    "gtin_directly_observed": 3,
-    "price_directly_observed": 18,
-    "name_directly_observed": 18,
-    "brand_directly_observed": 18,
-    "legal_name_directly_observed": 18,
-    "ingredients_directly_observed": 18,
-    "net_content_directly_observed": 18,
-    "availability_directly_observed": 3
-  },
-  "agent_web_batches": {
-    "products": 15,
-    "nutrition_complete": 11,
-    "nutrition_partial": 4,
-    "gtin": 0,
-    "image_url": 0,
-    "category_path": 0,
-    "availability": 0,
-    "price": 15,
-    "ingredients": 15,
-    "legal_name": 15,
-    "net_content": 15
+  "verified_cumulative_observations": {
+    "unique_products_total": 82,
+    "official_product_page_observations": 78,
+    "official_listing_only_observations": 4,
+    "nutrition_complete": 62,
+    "nutrition_partial": 6,
+    "nutrition_not_found": 14,
+    "field_evidence_rows": 1923,
+    "gtin_directly_observed": 4,
+    "image_url_directly_observed": 8,
+    "price_directly_observed": 82,
+    "name_directly_observed": 82
   },
   "capture_methods": {
-    "PLAYWRIGHT_SAVED_HTML": 3,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 15
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 58,
+    "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 4,
+    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 17,
+    "PLAYWRIGHT_SAVED_HTML": 3
   },
   "known_route_state": {
     "github_runner_direct_http": "BLOCKED_403",
     "official_sitemap_from_github_runner": "BLOCKED_403",
     "clean_playwright": "PARTIAL_SUCCESS_THEN_WAF",
-    "openai_web_exact_official_product_url": "WORKING_FOR_CURRENT_SAMPLE"
+    "openai_web_indexed_official_surfaces": "WORKING_INCREMENTALLY"
   },
-  "provenance_note": "The 8,451 RadarSuper-derived URLs are candidate identities only. The 18 counted products have each been observed directly on official carrefour.es product pages. No RadarSuper, Open Food Facts, AESAN or manufacturer field has been promoted to CARREFOUR_FIRST_PARTY.",
-  "scaling_note": "Exact official product URLs can currently be read through the automation web retrieval path and yield rich product text. This is not yet a repository-executable mass extraction route, so the candidate pool remains largely unverified.",
-  "next_step": "Continue direct official-page verification in batches from the candidate URL file while keeping per-field provenance; use merge_carrefour_first_party_observations.py to create a deduplicated JSONL, evidence table, summary and SQLite staging database from all first-party capture methods."
+  "provenance_note": "Only fields actually observed on official Carrefour-controlled surfaces are counted as CARREFOUR_FIRST_PARTY. The 8,451 RadarSuper-derived URLs are candidate identities only; no RadarSuper, Open Food Facts, AESAN or manufacturer field is promoted to Carrefour evidence without direct Carrefour observation.",
+  "scaling_note": "The indexed official-page retrieval route is currently productive but is not a repository-executable mass extractor. It is therefore being accumulated in auditable batches and merged with the low-concurrency browser captures. Direct GitHub-runner routes remain WAF-limited.",
+  "next_step": "Continue direct official-page verification in category-balanced batches; preserve products even when Carrefour declares no nutrition. Keep enriching image/GTIN coverage from official Carrefour surfaces and merge every batch into the canonical JSONL/evidence/SQLite staging dataset."
 }
