@@ -1,0 +1,195 @@
+name: Catalog Alcampo browser detail wave
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-alcampo-browser-detail-wave.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-browser-detail-wave-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  BASELINE_RUN: '32296518958'
+  TOTAL_PRODUCTS: '13877'
+  SHARD_SIZE: '800'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: playwright install --with-deps chromium
+      - name: Prove one known Alcampo PDP exposes declared nutrition in a normal-UA browser
+        working-directory: tools/catalog
+        run: |
+          printf '%s\n' '{"sku":"522881","name":"ALCAMPO ECOLÓGICO Tofu procedente de agricultura biológica 2 x 200 g"}' > known.jsonl
+          python alcampo_detail_browser.py --input known.jsonl --out browser-known --limit 1 --concurrency 1 --min-fetched 1 --min-valid 1
+      - name: Download stable 13,877-SKU enumeration baseline
+        run: |
+          mkdir -p seed
+          gh run download "$BASELINE_RUN" -n alcampo-food-catalog-sharded-enumeration -D seed
+          test -s seed/products.jsonl
+      - name: Representative smoke from the real baseline
+        working-directory: tools/catalog
+        run: |
+          python alcampo_detail_browser.py --input ../../seed/products.jsonl --out browser-smoke --offset 0 --limit 24 --concurrency 2 --min-fetched 18 --min-valid 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-browser-detail-smoke
+          path: |
+            tools/catalog/browser-known/
+            tools/catalog/browser-smoke/
+          retention-days: 7
+
+  prepare:
+    needs: smoke
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - id: matrix
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, math
+          total=int(os.environ['TOTAL_PRODUCTS']); size=int(os.environ['SHARD_SIZE'])
+          include=[]
+          for i,offset in enumerate(range(0,total,size)):
+              include.append({'shard':i,'offset':offset,'limit':min(size,total-offset)})
+          print('matrix='+json.dumps({'include':include},separators=(',',':')))
+          PY
+
+  detail:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: playwright install --with-deps chromium
+      - name: Download stable enumeration baseline
+        run: |
+          mkdir -p seed
+          gh run download "$BASELINE_RUN" -n alcampo-food-catalog-sharded-enumeration -D seed
+          test -s seed/products.jsonl
+      - name: Fetch first-party product detail in a real browser context
+        working-directory: tools/catalog
+        run: |
+          set +e
+          python alcampo_detail_browser.py \
+            --input ../../seed/products.jsonl \
+            --out "alcampo-browser-detail-${{ matrix.shard }}" \
+            --offset "${{ matrix.offset }}" \
+            --limit "${{ matrix.limit }}" \
+            --concurrency 3 \
+            --min-fetched 0 \
+            --min-valid 0
+          echo $? > "alcampo-browser-detail-${{ matrix.shard }}/exit_code.txt"
+          set -e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-browser-detail-result-${{ matrix.shard }}
+          path: tools/catalog/alcampo-browser-detail-${{ matrix.shard }}/
+          retention-days: 14
+          if-no-files-found: warn
+
+  merge:
+    needs: [prepare, detail]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download stable enumeration baseline
+        run: |
+          mkdir -p seed downloaded
+          gh run download "$BASELINE_RUN" -n alcampo-food-catalog-sharded-enumeration -D seed
+          test -s seed/products.jsonl
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alcampo-browser-detail-result-*
+          path: downloaded
+      - name: Merge every completed detail row, preferring valid declared nutrition
+        working-directory: tools/catalog
+        run: |
+          mkdir -p ../../alcampo-browser-detail-final
+          set +e
+          python alcampo_merge_detail_batches.py \
+            --downloaded ../../downloaded \
+            --out ../../alcampo-browser-detail-final/details.jsonl \
+            --expected-products ../../seed/products.jsonl
+          echo $? > ../../alcampo-browser-detail-final/detail_merge_exit_code.txt
+          set -e
+      - name: Build auditable Rumbo SQLite and semantic-review queue from first-party evidence
+        working-directory: tools/catalog
+        run: |
+          python alcampo_build_final_catalog.py \
+            --products ../../seed/products.jsonl \
+            --details ../../alcampo-browser-detail-final/details.jsonl \
+            --output ../../alcampo-browser-detail-final/alcampo_catalog.sqlite
+          python finalize_alcampo_classification.py \
+            ../../alcampo-browser-detail-final/alcampo_catalog.sqlite \
+            ../../seed/products.jsonl
+          python alcampo_semantic_gate.py \
+            ../../alcampo-browser-detail-final/alcampo_catalog.sqlite \
+            --reviews manual/alcampo_semantic_reviews.jsonl
+          python alcampo_prepare_semantic_review_v2.py \
+            ../../alcampo-browser-detail-final/alcampo_catalog.sqlite \
+            --observations ../../seed/products.jsonl \
+            --reviews manual/alcampo_semantic_reviews.jsonl \
+            --output ../../alcampo-browser-detail-final/semantic_review_next.jsonl \
+            --progress ../../alcampo-browser-detail-final/semantic_review_progress.json \
+            --limit 3000
+          python alcampo_export_final.py \
+            ../../alcampo-browser-detail-final/alcampo_catalog.sqlite \
+            --jsonl ../../alcampo-browser-detail-final/alcampo_catalog.jsonl \
+            --summary ../../alcampo-browser-detail-final/summary.json \
+            --detail-summary ../../alcampo-browser-detail-final/detail_merge_summary.json \
+            --enumeration-report ../../seed/enumeration_report.json
+      - name: Persist coverage and next semantic-review batch
+        run: |
+          cp alcampo-browser-detail-final/summary.json tools/catalog/fixtures/alcampo_browser_detail_full_summary_latest.json
+          cp alcampo-browser-detail-final/detail_merge_summary.json tools/catalog/fixtures/alcampo_browser_detail_merge_latest.json
+          cp alcampo-browser-detail-final/semantic_review_next.jsonl tools/catalog/fixtures/alcampo_browser_semantic_review_next.jsonl
+          cp alcampo-browser-detail-final/semantic_review_progress.json tools/catalog/fixtures/alcampo_browser_semantic_review_progress_latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_browser_*
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Alcampo browser detail wave"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-browser-detail-final
+          path: alcampo-browser-detail-final/
+          retention-days: 14
