@@ -1,142 +1,142 @@
 {
-  "built_at": "2026-08-20T14:53:56.384508+00:00",
+  "built_at": "2026-08-20T15:50:58.346224+00:00",
   "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 59,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 64,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 7,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 33,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 2406,
+    "evidence_rows": 2515,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 79,
-    "nutrition_not_found": 17,
+    "nutrition_complete": 83,
+    "nutrition_not_found": 18,
     "nutrition_partial": 6,
-    "verified_direct_products": 102,
-    "verified_first_party_products": 102,
+    "verified_direct_products": 107,
+    "verified_first_party_products": 107,
     "verified_listing_only_observations": 7,
-    "verified_product_page_observations": 95
+    "verified_product_page_observations": 100
   },
   "coverage": {
     "allergens": {
-      "count": 43,
-      "pct": 42.16
+      "count": 46,
+      "pct": 42.99
     },
     "attributes": {
-      "count": 102,
+      "count": 107,
       "pct": 100.0
     },
     "availability": {
       "count": 10,
-      "pct": 9.8
+      "pct": 9.35
     },
     "brand": {
-      "count": 90,
-      "pct": 88.24
+      "count": 95,
+      "pct": 88.79
     },
     "category_path": {
       "count": 71,
-      "pct": 69.61
+      "pct": 66.36
     },
     "gtin": {
       "count": 4,
-      "pct": 3.92
+      "pct": 3.74
     },
     "image_url": {
       "count": 8,
-      "pct": 7.84
+      "pct": 7.48
     },
     "ingredients": {
-      "count": 86,
-      "pct": 84.31
+      "count": 90,
+      "pct": 84.11
     },
     "legal_name": {
-      "count": 87,
-      "pct": 85.29
+      "count": 92,
+      "pct": 85.98
     },
     "mandatory_mentions": {
-      "count": 41,
-      "pct": 40.2
+      "count": 42,
+      "pct": 39.25
     },
     "manufacturer_packer_importer": {
-      "count": 88,
-      "pct": 86.27
+      "count": 92,
+      "pct": 85.98
     },
     "name": {
-      "count": 102,
+      "count": 107,
       "pct": 100.0
     },
     "net_content": {
-      "count": 86,
-      "pct": 84.31
+      "count": 90,
+      "pct": 84.11
     },
     "nutriscore": {
       "count": 41,
-      "pct": 40.2
+      "pct": 38.32
     },
     "nutrition_extra": {
-      "count": 88,
-      "pct": 86.27
+      "count": 93,
+      "pct": 86.92
     },
     "operator_address": {
-      "count": 88,
-      "pct": 86.27
+      "count": 92,
+      "pct": 85.98
     },
     "preparation_instructions": {
-      "count": 65,
-      "pct": 63.73
+      "count": 67,
+      "pct": 62.62
     },
     "price_eur": {
-      "count": 102,
+      "count": 107,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 87,
-      "pct": 85.29
+      "count": 91,
+      "pct": 85.05
     },
     "unit_price_text": {
-      "count": 102,
+      "count": 107,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 85,
-      "pct": 83.33
+      "count": 89,
+      "pct": 83.18
     },
     "carbohydrate_g": {
-      "count": 82,
-      "pct": 80.39
+      "count": 86,
+      "pct": 80.37
     },
     "energy_kj": {
-      "count": 85,
-      "pct": 83.33
+      "count": 89,
+      "pct": 83.18
     },
     "fat_g": {
-      "count": 84,
-      "pct": 82.35
+      "count": 88,
+      "pct": 82.24
     },
     "fiber_g": {
-      "count": 21,
-      "pct": 20.59
+      "count": 23,
+      "pct": 21.5
     },
     "protein_g": {
-      "count": 81,
-      "pct": 79.41
+      "count": 85,
+      "pct": 79.44
     },
     "salt_g": {
-      "count": 82,
-      "pct": 80.39
+      "count": 86,
+      "pct": 80.37
     },
     "saturates_g": {
-      "count": 84,
-      "pct": 82.35
+      "count": 88,
+      "pct": 82.24
     },
     "sugars_g": {
-      "count": 80,
-      "pct": 78.43
+      "count": 84,
+      "pct": 78.5
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -1015,6 +1015,62 @@
       "unit_price_text": "0,82 €/l"
     },
     {
+      "allergens": "Contiene: Cereales que contienen gluten; Puede contener: Semillas de sésamo, Soja, Mostaza",
+      "attributes": {
+        "bread_type": "Integral",
+        "conservation_mode": "Lugar fresco y seco",
+        "health_characteristic": "Integral",
+        "ingredient_types": [
+          "Trigo",
+          "Avena",
+          "Centeno"
+        ]
+      },
+      "availability": null,
+      "brand": "BIMBO",
+      "calories_kcal": 243.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/pan-de-molde-integral-sin-corteza-8-cereales-bimbo-silueta-450-g/R-521007164/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-2.2-indexed",
+      "carbohydrate_g": 38.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 1027.0,
+      "fat_g": 3.3,
+      "fetch_error": null,
+      "fiber_g": 6.2,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Harina integral de trigo (58%), agua, levadura, gluten de trigo, azúcar, copos de avena (1,6%), aceite vegetal (girasol), almidón (trigo), centeno troceado (1%), semillas de linaza (1%), harina integral de cebada malteada (1%), harina integral de triticale (1%), sal, conservadores (e 282, e 200), emulgentes (e 471, e 481, e 472e), vinagre de vino, harina integral de centeno malteado (0,2%), semillas de girasol (0,2%), harina integral de trigo malteado (0,2%), masa madre inactiva de trigo espelta integral, mijo (0,07%), harina de arroz integral (0,07%), harina integral de maíz (0,07%), sémola de alforfón (0,07%), agentes de tratamiento de la harina (e 300, e 341). Puede contener semillas de sésamo y/o soja y/o mostaza.",
+      "legal_name": "Pan de molde Sin Corteza 100% integral de trigo 91%",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Bimbo Donuts Iberia S.A.U.",
+      "name": "Pan de molde integral sin corteza 8 cereales Bimbo Silueta 450 g.",
+      "net_content": "450 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T15:50:00+00:00",
+      "operator_address": "C/ Cigoitia, nº 1 Pol. Industrial Las Mercedes 28022, Madrid (España)",
+      "page_sha256": null,
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 2.79,
+      "protein_g": 13.0,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521007164",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.98,
+      "saturates_g": 0.8,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Mantener en lugar fresco y seco.",
+      "sugars_g": 2.8,
+      "unit_price_text": "6,20 €/kg"
+    },
+    {
       "allergens": null,
       "attributes": {
         "conservation_mode": "Temperatura ambiente",
@@ -1262,59 +1318,6 @@
       "storage_conditions": "Consérvese entre 1 y 8° C",
       "sugars_g": 3.9,
       "unit_price_text": "6,55 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "origin": "España",
-        "refrigerated": true,
-        "sanitary_registration": "15.00066/M",
-        "yogurt_milk_origin": "Vaca",
-        "yogurt_type": "Sabores"
-      },
-      "availability": null,
-      "brand": "DANONE",
-      "calories_kcal": 72.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/yogur-sabor-coco-fresa-frutos-del-bosque-y-macedonia-danone-pack-de-8-unidades-de-120-g/R-521029418/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.1-indexed",
-      "carbohydrate_g": 10.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 300.0,
-      "fat_g": 2.2,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Leche fresca semidesnatada pasteurizada (92,9%), azúcar, leche en polvo desnatada, fermentos lácticos, aromas y colorantes [carmines (sabores fresa, macedonia y frutos del bosque) y curcumina (sabor macedonia)]. Origen de la leche: España.",
-      "legal_name": "8 YOGURES AROMATIZADOS: 2 SABOR A FRESA, 2 SABOR A MACEDONIA, 2 SABOR A COCO, 2 SABOR A FRUTOS DEL BOSQUE",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Danone S.A.",
-      "name": "Yogur sabor coco, fresa, frutos del bosque y macedonia Danone pack de 8 unidades de 120 g.",
-      "net_content": "960 g",
-      "nutriscore": "B",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:54:00+00:00",
-      "operator_address": "Buenos aires, 21 08029 Barcelona Barcelona",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 1.99,
-      "protein_g": 3.0,
-      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521029418",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.11,
-      "saturates_g": 1.5,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Consérvese en frío entre 2ºC y 6ºC.",
-      "sugars_g": 10.0,
-      "unit_price_text": "2,07 €/kg"
     }
   ],
   "source": "https://www.carrefour.es",
