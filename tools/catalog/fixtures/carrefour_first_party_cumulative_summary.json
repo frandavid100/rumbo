@@ -1,5 +1,5 @@
 {
-  "built_at": "2026-08-20T13:00:33.762967+00:00",
+  "built_at": "2026-08-20T13:01:28.061066+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 58,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 4,
@@ -8,7 +8,7 @@
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 1701,
+    "evidence_rows": 1705,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
     "nutrition_complete": 57,
     "nutrition_not_found": 6,
@@ -44,8 +44,8 @@
       "pct": 5.8
     },
     "image_url": {
-      "count": 4,
-      "pct": 5.8
+      "count": 8,
+      "pct": 11.59
     },
     "ingredients": {
       "count": 64,
@@ -677,7 +677,7 @@
       "fiber_g": null,
       "gtin": null,
       "http_status": null,
-      "image_url": null,
+      "image_url": "https://static.carrefour.es/hd_350x_/img_pim_food/231395_00_1.jpg",
       "ingredients": "Leche entera de vaca.",
       "legal_name": "Leche UHT entera",
       "mandatory_mentions": null,
@@ -737,7 +737,7 @@
       "fiber_g": null,
       "gtin": null,
       "http_status": null,
-      "image_url": null,
+      "image_url": "https://static.carrefour.es/hd_350x_/img_pim_food/231394_00_1.jpg",
       "ingredients": "Leche semidesnatada de vaca",
       "legal_name": "Leche UHT semidesnatada",
       "mandatory_mentions": null,
@@ -800,7 +800,7 @@
       "fiber_g": null,
       "gtin": null,
       "http_status": null,
-      "image_url": null,
+      "image_url": "https://static.carrefour.es/hd_350x_/img_pim_food/231393_00_1.jpg",
       "ingredients": "Leche desnatada de vaca",
       "legal_name": "Leche UHT semidesnatada",
       "mandatory_mentions": null,
