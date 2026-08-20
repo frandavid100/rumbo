@@ -1,143 +1,143 @@
 {
-  "built_at": "2026-08-20T23:09:11.963473+00:00",
+  "built_at": "2026-08-20T23:09:41.581864+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 113,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 116,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 11,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 54,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 4156,
+    "evidence_rows": 4235,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 130,
+    "nutrition_complete": 133,
     "nutrition_not_found": 43,
     "nutrition_partial": 15,
-    "verified_direct_products": 188,
-    "verified_first_party_products": 188,
+    "verified_direct_products": 191,
+    "verified_first_party_products": 191,
     "verified_listing_only_observations": 11,
-    "verified_product_page_observations": 177
+    "verified_product_page_observations": 180
   },
   "coverage": {
     "allergens": {
-      "count": 63,
-      "pct": 33.51
+      "count": 66,
+      "pct": 34.55
     },
     "attributes": {
-      "count": 188,
+      "count": 191,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 12.23
+      "pct": 12.04
     },
     "brand": {
-      "count": 163,
-      "pct": 86.7
+      "count": 166,
+      "pct": 86.91
     },
     "category_path": {
       "count": 115,
-      "pct": 61.17
+      "pct": 60.21
     },
     "gtin": {
       "count": 4,
-      "pct": 2.13
+      "pct": 2.09
     },
     "image_url": {
       "count": 8,
-      "pct": 4.26
+      "pct": 4.19
     },
     "ingredients": {
-      "count": 154,
-      "pct": 81.91
+      "count": 157,
+      "pct": 82.2
     },
     "legal_name": {
-      "count": 156,
-      "pct": 82.98
+      "count": 159,
+      "pct": 83.25
     },
     "mandatory_mentions": {
-      "count": 58,
-      "pct": 30.85
+      "count": 60,
+      "pct": 31.41
     },
     "manufacturer_packer_importer": {
-      "count": 157,
-      "pct": 83.51
+      "count": 160,
+      "pct": 83.77
     },
     "name": {
-      "count": 188,
+      "count": 191,
       "pct": 100.0
     },
     "net_content": {
-      "count": 152,
-      "pct": 80.85
+      "count": 155,
+      "pct": 81.15
     },
     "nutriscore": {
-      "count": 55,
-      "pct": 29.26
+      "count": 56,
+      "pct": 29.32
     },
     "nutrition_extra": {
-      "count": 174,
-      "pct": 92.55
+      "count": 177,
+      "pct": 92.67
     },
     "operator_address": {
-      "count": 157,
-      "pct": 83.51
+      "count": 160,
+      "pct": 83.77
     },
     "preparation_instructions": {
-      "count": 94,
-      "pct": 50.0
+      "count": 96,
+      "pct": 50.26
     },
     "price_eur": {
-      "count": 188,
+      "count": 191,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 154,
-      "pct": 81.91
+      "count": 157,
+      "pct": 82.2
     },
     "unit_price_text": {
-      "count": 188,
+      "count": 191,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 145,
-      "pct": 77.13
+      "count": 148,
+      "pct": 77.49
     },
     "carbohydrate_g": {
-      "count": 142,
-      "pct": 75.53
+      "count": 145,
+      "pct": 75.92
     },
     "energy_kj": {
-      "count": 145,
-      "pct": 77.13
+      "count": 148,
+      "pct": 77.49
     },
     "fat_g": {
-      "count": 138,
-      "pct": 73.4
+      "count": 141,
+      "pct": 73.82
     },
     "fiber_g": {
-      "count": 45,
-      "pct": 23.94
+      "count": 47,
+      "pct": 24.61
     },
     "protein_g": {
-      "count": 138,
-      "pct": 73.4
+      "count": 141,
+      "pct": 73.82
     },
     "salt_g": {
-      "count": 135,
-      "pct": 71.81
+      "count": 138,
+      "pct": 72.25
     },
     "saturates_g": {
-      "count": 138,
-      "pct": 73.4
+      "count": 141,
+      "pct": 73.82
     },
     "sugars_g": {
-      "count": 139,
-      "pct": 73.94
+      "count": 142,
+      "pct": 74.35
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -1101,6 +1101,58 @@
       "unit_price_text": "8,80 €/kg"
     },
     {
+      "allergens": "Contiene gluten",
+      "attributes": {
+        "flour_strength": "Fuerza (Mayor o igual a 250)",
+        "flour_type": "Trigo",
+        "flour_use": "Fritura",
+        "packaging": "Bolsa"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 339.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/harina-para-fritos-y-rebozados-carrefour-1-kg/R-521005413/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-3.5-indexed",
+      "carbohydrate_g": 71.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 1439.0,
+      "fat_g": 0.8,
+      "fetch_error": null,
+      "fiber_g": 3.0,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Harina de trigo (80%) y sémola de trigo (20%). Contiene gluten.",
+      "legal_name": "Harina de trigo especial para freir y rebozar",
+      "mandatory_mentions": "Elaborado con harina de trigo y sémola.",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A",
+      "name": "Harina para fritos y rebozados Carrefour 1 kg.",
+      "net_content": "1000 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T23:20:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": "Ideal para frituras",
+      "price_currency": "EUR",
+      "price_eur": 1.2,
+      "protein_g": 11.0,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521005413",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar preferentemente en lugar fresco y seco.",
+      "sugars_g": 1.2,
+      "unit_price_text": "1,20 €/kg"
+    },
+    {
       "allergens": "Puede contener: Cereales que contienen gluten",
       "attributes": {
         "alternative_vegetal": true,
@@ -1204,59 +1256,6 @@
       "saturates_g": 0.0,
       "source": "CARREFOUR_FIRST_PARTY",
       "storage_conditions": "Una vez abierto mantener en refrigeración y consumir en los 2-3 días siguientes",
-      "sugars_g": 0.0,
-      "unit_price_text": "2,00 €/kg"
-    },
-    {
-      "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
-      "attributes": {
-        "alternative_vegetal": true,
-        "cooked": true,
-        "drained_weight_g": 400,
-        "legume_type": "Garbanzos",
-        "packaging": "Bote"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 95.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/garbanzos-cocidos-categoria-extra-classic-carrefour-400-g/R-521005495/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.1-indexed",
-      "carbohydrate_g": 12.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 401.0,
-      "fat_g": 2.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Garbanzos, agua, sal, antioxidante: ácido cítrico y conservador (metabisulfito sódico)",
-      "legal_name": "Garbanzos cocidos",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Carrefour",
-      "name": "Garbanzos cocidos categoría extra Classic Carrefour 400 g.",
-      "net_content": "570 g",
-      "nutriscore": "A",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T11:14:00+00:00",
-      "operator_address": "Avda. de la Transición Española 36, 28108, Alcobendas (Madrid)",
-      "page_sha256": null,
-      "preparation_instructions": "ver envase",
-      "price_currency": "EUR",
-      "price_eur": 0.8,
-      "protein_g": 5.4,
-      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521005495",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.5,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en un lugar fresco y seco. Una vez abierto mantener en refrigeración y consumir antes de 2 días",
       "sugars_g": 0.0,
       "unit_price_text": "2,00 €/kg"
     }
