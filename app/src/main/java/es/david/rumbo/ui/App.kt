@@ -2365,6 +2365,17 @@ private fun repertoireProgressTarget(
                     "Nivel 2 conseguido. Para certificar el nivel 3 hay al menos un alimento sin una clasificación culinaria suficiente (${roleless.foodName ?: "alimento sin clasificar"}). No necesitas añadir otro alimento: hay que resolver esa clasificación o encontrar una composición que no lo necesite."
                 )
             }
+            diagnostic.dependencyOpportunity?.let { dependency ->
+                val existing = dependency.existingCompatibleFoodName?.let { foodName ->
+                    " Ya tienes $foodName en tu repertorio; aparecerá en la búsqueda para que puedas habilitarlo en esa comida."
+                }.orEmpty()
+                return 2 to RepertoireProgressTarget(
+                    message = "Nivel 2 conseguido. ${dependency.sourceFoodName} puede funcionar como ${dependency.sourceRole.label.lowercase()} en ${dependency.mealType.label.lowercase()}, pero necesita ${dependency.requiredRole.label.lowercase()}.$existing",
+                    buttonLabel = "Añadir ${dependency.requiredRole.label.lowercase()}",
+                    culinaryRole = dependency.requiredRole.name,
+                    mealType = dependency.mealType
+                )
+            }
             val quantity = diagnostic.issues.firstOrNull {
                 it.kind == CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE
             }
@@ -7624,7 +7635,7 @@ private fun nutritionalRoleEfficiency(food: Food, role: String): Double? {
 private fun culinaryRoleLabel(value: String): String = when (value) {
     "PLATE_CENTER" -> "Centro del plato"
     "PLATE_BASE" -> "Base del plato"
-    "SIDE" -> "Acompañamiento"
+    "SIDE" -> "Acompañamiento"\n    "SALAD_BASE" -> "Base de ensalada"
     "TOPPING" -> "Topping"
     "SAUCE_DRESSING" -> "Salsa o aliño"
     "CEREAL_BASE" -> "Base para cereal"

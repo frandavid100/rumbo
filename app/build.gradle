@@ -14,8 +14,8 @@ android {
         applicationId = "es.david.rumbo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 87
-        versionName = "0.78.0"
+        versionCode = 88
+        versionName = "0.78.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

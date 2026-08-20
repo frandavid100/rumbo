@@ -16,7 +16,18 @@ data class CulinarilySatisfactoryDayDiagnostic(
     val issues: List<CulinarySatisfactionIssue>,
     val compatibleCompanionAlreadyAvailable: Boolean,
     val unavailablePreferredRoles: Set<CulinaryRole>,
-    val searchStatus: ConstraintSearchStatus
+    val searchStatus: ConstraintSearchStatus,
+    val dependencyOpportunity: CulinaryDependencyOpportunity? = null
+)
+
+data class CulinaryDependencyOpportunity(
+    val sourceFoodId: Long,
+    val sourceFoodName: String,
+    val sourceRole: CulinaryRole,
+    val requiredRole: CulinaryRole,
+    val mealType: MealType,
+    val existingCompatibleFoodName: String? = null,
+    val hardRequirement: Boolean
 )
 
 data class CulinarilySatisfactoryDaySearchResult(
@@ -262,8 +273,97 @@ object CulinarilySatisfactoryDaySearch {
             issues = evaluation.issues,
             compatibleCompanionAlreadyAvailable = availableCompanion,
             unavailablePreferredRoles = unavailable,
-            searchStatus = status
+            searchStatus = status,
+            dependencyOpportunity = findDependencyOpportunity(activeRules, foodsById)
         )
+    }
+
+    private data class DependencyCandidate(
+        val opportunity: CulinaryDependencyOpportunity,
+        val sourceMealCount: Int,
+        val hasExistingFood: Boolean
+    )
+
+    /**
+     * Finds a general role dependency that the current meal permissions cannot satisfy.
+     * Food names never participate in the decision: they are carried only for the UI.
+     */
+    private fun findDependencyOpportunity(
+        activeRules: List<PlanningRule>,
+        foodsById: Map<Long, Food>
+    ): CulinaryDependencyOpportunity? {
+        val candidates = buildList {
+            activeRules.forEach { sourceRule ->
+                val sourceFood = foodsById[sourceRule.itemId] ?: return@forEach
+                val sourceRoles = CulinaryPolicy.roles(sourceFood)
+                sourceRule.allowedMealTypes.forEach { mealType ->
+                    val allowedSourceRoles = sourceRoles.filter {
+                        CulinaryPolicy.isAllowedForMeal(it, mealType)
+                    }
+                    val hasDependencyFreeEscape = allowedSourceRoles.any { role ->
+                        val policy = CulinaryPolicy.policy(role)
+                        policy.requiredRoles.isEmpty() &&
+                            policy.requiredAnyOfRoles.isEmpty() &&
+                            CulinarySoftPolicy.preferredCompanions(role).isEmpty()
+                    }
+                    if (hasDependencyFreeEscape) return@forEach
+
+                    allowedSourceRoles.forEach { sourceRole ->
+                        val policy = CulinaryPolicy.policy(sourceRole)
+                        val groups = buildList {
+                            policy.requiredRoles.forEach { add(true to setOf(it)) }
+                            if (policy.requiredAnyOfRoles.isNotEmpty()) {
+                                add(true to policy.requiredAnyOfRoles)
+                            }
+                            val preferred = CulinarySoftPolicy.preferredCompanions(sourceRole)
+                            if (preferred.isNotEmpty()) add(false to preferred)
+                        }
+                        groups.forEach { (hard, targetRoles) ->
+                            val enabled = activeRules.any { candidateRule ->
+                                candidateRule.itemId != sourceRule.itemId &&
+                                    mealType in candidateRule.allowedMealTypes &&
+                                    foodsById[candidateRule.itemId]?.let(CulinaryPolicy::roles)
+                                        ?.any(targetRoles::contains) == true
+                            }
+                            if (enabled) return@forEach
+
+                            val existing = activeRules.asSequence()
+                                .filter { it.itemId != sourceRule.itemId }
+                                .mapNotNull { rule -> foodsById[rule.itemId] }
+                                .firstOrNull { food ->
+                                    CulinaryPolicy.roles(food).any(targetRoles::contains)
+                                }
+                            val requiredRole = existing?.let(CulinaryPolicy::roles)
+                                ?.firstOrNull(targetRoles::contains)
+                                ?: targetRoles.minByOrNull { it.ordinal }
+                                ?: return@forEach
+                            add(
+                                DependencyCandidate(
+                                    opportunity = CulinaryDependencyOpportunity(
+                                        sourceFoodId = sourceFood.id,
+                                        sourceFoodName = sourceFood.name,
+                                        sourceRole = sourceRole,
+                                        requiredRole = requiredRole,
+                                        mealType = mealType,
+                                        existingCompatibleFoodName = existing?.name,
+                                        hardRequirement = hard
+                                    ),
+                                    sourceMealCount = sourceRule.allowedMealTypes.size,
+                                    hasExistingFood = existing != null
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        return candidates.sortedWith(
+            compareByDescending<DependencyCandidate> { it.opportunity.hardRequirement }
+                .thenByDescending { it.hasExistingFood }
+                .thenBy { it.sourceMealCount }
+                .thenBy { it.opportunity.mealType.ordinal }
+                .thenBy { it.opportunity.sourceFoodId }
+        ).firstOrNull()?.opportunity
     }
 
     private fun success(witness: CertifiedDayWitness): CulinarilySatisfactoryDaySearchResult =
