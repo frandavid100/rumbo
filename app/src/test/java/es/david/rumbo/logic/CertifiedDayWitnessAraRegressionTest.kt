@@ -140,8 +140,8 @@ class CertifiedDayWitnessAraRegressionTest {
                 dayAmounts = listOf(
                     MealDayAmounts(WeekDay.MONDAY, mapOf(
                         4042487276430228545L to 15.0,
-                        4713451237391941996L to 200.0,
-                        5427737837577403981L to 190.0
+                        4713451237391941996L to 203.0,
+                        5427737837577403981L to 188.0
                     ))
                 )
             ),
@@ -156,7 +156,7 @@ class CertifiedDayWitnessAraRegressionTest {
                 ),
                 dayAmounts = listOf(
                     MealDayAmounts(WeekDay.MONDAY, mapOf(
-                        4042487276430228545L to 15.0,
+                        4042487276430228545L to 13.0,
                         5863259172627146722L to 100.0,
                         4824921464295006360L to 5.0
                     ))
@@ -174,10 +174,10 @@ class CertifiedDayWitnessAraRegressionTest {
                 ),
                 dayAmounts = listOf(
                     MealDayAmounts(WeekDay.MONDAY, mapOf(
-                        4374284991780745501L to 80.0,
+                        4374284991780745501L to 79.0,
                         5065604127361444435L to 40.0,
                         4713451237391941996L to 140.0,
-                        5998252704584821415L to 180.0
+                        5998252704584821415L to 177.0
                     ))
                 )
             ),
@@ -192,8 +192,8 @@ class CertifiedDayWitnessAraRegressionTest {
                 ),
                 dayAmounts = listOf(
                     MealDayAmounts(WeekDay.MONDAY, mapOf(
-                        4042487276430228545L to 15.0,
-                        5863259172627146722L to 180.0,
+                        4042487276430228545L to 13.0,
+                        5863259172627146722L to 182.0,
                         4824921464295006360L to 7.0
                     ))
                 )
@@ -210,10 +210,10 @@ class CertifiedDayWitnessAraRegressionTest {
                 ),
                 dayAmounts = listOf(
                     MealDayAmounts(WeekDay.MONDAY, mapOf(
-                        5138918923368881607L to 80.0,
-                        4713451237391941996L to 175.0,
-                        5427737837577403981L to 180.0,
-                        4912645548334196354L to 240.0
+                        5138918923368881607L to 78.0,
+                        4713451237391941996L to 173.0,
+                        5427737837577403981L to 176.0,
+                        4912645548334196354L to 243.0
                     ))
                 )
             )
