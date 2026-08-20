@@ -54,10 +54,12 @@ jobs:
     needs: prepare
     strategy:
       fail-fast: false
-      max-parallel: 20
+      # Keep request pressure modest: the first-party SSR endpoint has shown
+      # intermittent WAF 202 responses when too many requests arrive together.
+      max-parallel: 16
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,7 +76,7 @@ jobs:
         run: |
           python alcampo_detail_fast_wave.py \
             --input "../../inputs/batch-${{ matrix.batch }}.jsonl" \
-            --workers 4 \
+            --workers 2 \
             --out "alcampo-fast-detail-${{ matrix.batch }}"
       - uses: actions/upload-artifact@v4
         if: always()
