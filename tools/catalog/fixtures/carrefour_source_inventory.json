@@ -19,8 +19,13 @@
         },
         {
           "path": "tools/catalog/carrefour_first_party_inventory.py",
-          "status": "canonical_first_party_staging",
-          "notes": "Extraction-only staging. Stores product fields, partial nutrition and field-level evidence fetched from carrefour.es; performs no Rumbo classification."
+          "status": "canonical_first_party_http_staging",
+          "notes": "Extraction-only HTTP staging. Stores product fields, partial nutrition and field-level evidence fetched from carrefour.es; performs no Rumbo classification. GitHub-hosted direct HTTP is currently answered with 403 by Carrefour."
+        },
+        {
+          "path": "tools/catalog/carrefour_first_party_browser_inventory.py",
+          "status": "canonical_first_party_browser_staging",
+          "notes": "Polite real-browser fallback for Carrefour product pages. Extracts only fields observed directly on carrefour.es, records per-field evidence, captures candidate first-party JSON/XHR endpoints, persists JSONL plus SQLite, rotates candidates and stops after a WAF block rather than hammering the site."
         }
       ],
       "fixtures": [
@@ -31,8 +36,20 @@
           "third_party_product_data": false
         },
         {
-          "path": "tools/catalog/fixtures/carrefour_first_party_smoke_summary.json",
-          "status": "generated_by_new_pipeline_when_available"
+          "path": "tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json",
+          "status": "latest_direct_http_first_party_probe"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_browser_inventory_latest.json",
+          "status": "latest_browser_first_party_inventory"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl",
+          "status": "cumulative_successful_first_party_product_observations"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl",
+          "status": "cumulative_per_field_first_party_evidence"
         }
       ]
     },
