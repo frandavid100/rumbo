@@ -359,6 +359,7 @@ fun RumboApp(repository: AppRepository) {
     var draftFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftDishId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftDishFoodId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var proposedDishDraft by remember { mutableStateOf<Dish?>(null) }
     var foodReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var dishReturnScreenName by rememberSaveable { mutableStateOf<String?>(null) }
     var accountChildReturn by rememberSaveable { mutableStateOf(false) }
@@ -459,6 +460,7 @@ fun RumboApp(repository: AppRepository) {
             }
             screen == Screen.ADD_DISH && dishReturnScreenName != null -> {
                 draftDishFoodId = null
+                proposedDishDraft = null
                 val destination = dishReturnScreenName!!
                 dishReturnScreenName = null
                 destination
@@ -674,6 +676,7 @@ fun RumboApp(repository: AppRepository) {
                                         text = { Text("Crear plato con este alimento") },
                                         onClick = {
                                             detailMenuExpanded = false
+                                            proposedDishDraft = null
                                             draftDishFoodId = selectedFoodId
                                             dishReturnScreenName = Screen.FOOD_DETAIL.name
                                             screenName = Screen.ADD_DISH.name
@@ -912,9 +915,12 @@ fun RumboApp(repository: AppRepository) {
                         dishReturnScreenName = Screen.HOME.name
                         screenName = Screen.DISH_DETAIL.name
                     },
-                    onSaveProposedDish = { dish ->
-                        data = repository.saveDish(dish)
-                        scope.launch { snackbarHostState.showSnackbar("Receta guardada en tus platos.") }
+                    onOpenProposedDish = { dish ->
+                        proposedDishDraft = dish
+                        draftDishFoodId = null
+                        dishReturnScreenName = Screen.HOME.name
+                        screenStateHolder.removeState(Screen.ADD_DISH.name)
+                        screenName = Screen.ADD_DISH.name
                     },
                     onAddMissingMeal = { type, day ->
                         plannerWeekName = PlanWeek.CURRENT.name
@@ -1104,11 +1110,20 @@ fun RumboApp(repository: AppRepository) {
                 }
                 screen == Screen.ADD_DISH -> DishEditorScreen(
                     foods = data.foods,
+                    initialDraft = proposedDishDraft,
                     initialFoodId = draftDishFoodId,
                     preferredFoodIds = preferredFoodIds,
+                    onOpenFood = { foodId, draft ->
+                        proposedDishDraft = draft
+                        selectedFoodId = foodId
+                        foodNavigationStack = emptyList()
+                        foodReturnScreenName = Screen.ADD_DISH.name
+                        screenName = Screen.FOOD_DETAIL.name
+                    },
                     onSave = {
                         data = repository.saveDish(it)
                         draftDishFoodId = null
+                        proposedDishDraft = null
                         selectedDishId = it.id
                         screenName = Screen.DISH_DETAIL.name
                     }
@@ -1311,6 +1326,7 @@ fun RumboApp(repository: AppRepository) {
                                 screenName = Screen.ADD_PLANNED_MEAL.name
                             },
                             onAddDish = {
+                                proposedDishDraft = null
                                 draftDishFoodId = food.id
                                 dishReturnScreenName = Screen.FOOD_DETAIL.name
                                 screenName = Screen.ADD_DISH.name
@@ -1780,7 +1796,7 @@ private fun HomeScreen(
     onOpenFood: (Long, String?) -> Unit,
     onDismissFoodSuggestion: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
-    onSaveProposedDish: (Dish) -> Unit,
+    onOpenProposedDish: (Dish) -> Unit,
     onOpenFoods: () -> Unit,
     onSaveCertifiedDayWitness: (CertifiedDayWitness) -> Unit,
     onClearCertifiedDayWitness: (CertifiedDayLevel) -> Unit,
@@ -2270,7 +2286,7 @@ private fun HomeScreen(
                     dishesById = dishesById,
                     onOpenFood = openFood,
                     onOpenDish = onOpenDish,
-                    onSaveProposedDish = onSaveProposedDish,
+                    onOpenProposedDish = onOpenProposedDish,
                     onChangeCertifiedDay = onChangeCertifiedDay,
                     isChangingCertifiedDay = isChangingCertifiedDay,
                     onSaveCertifiedDayToLibrary = onSaveCertifiedDayToLibrary,
@@ -2565,7 +2581,7 @@ private fun RepertoireAndWitnessSection(
     dishesById: Map<Long, Dish>,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
-    onSaveProposedDish: (Dish) -> Unit,
+    onOpenProposedDish: (Dish) -> Unit,
     onChangeCertifiedDay: (CertifiedDayWitness, MealType?) -> Unit,
     isChangingCertifiedDay: Boolean,
     onSaveCertifiedDayToLibrary: (CertifiedDayWitness) -> Unit,
@@ -2629,7 +2645,7 @@ private fun RepertoireAndWitnessSection(
                             dishesById = dishesById,
                             onOpenFood = onOpenFood,
                             onOpenDish = onOpenDish,
-                            onSaveProposedDish = onSaveProposedDish,
+                            onOpenProposedDish = onOpenProposedDish,
                             onChangeMeal = { onChangeCertifiedDay(certifiedDay, mealType) },
                             isChanging = isChangingCertifiedDay,
                             expanded = expandedSection == mealType.name,
@@ -3332,7 +3348,7 @@ private fun CertifiedMealWitnessCard(
     dishesById: Map<Long, Dish>,
     onOpenFood: (Long) -> Unit,
     onOpenDish: (Long) -> Unit,
-    onSaveProposedDish: (Dish) -> Unit,
+    onOpenProposedDish: (Dish) -> Unit,
     onChangeMeal: () -> Unit,
     isChanging: Boolean,
     expanded: Boolean,
@@ -3361,7 +3377,6 @@ private fun CertifiedMealWitnessCard(
         }
     ).sortedWith(compareBy<WitnessDisplayEntry> { mealCategoryOrder(it.category) }.thenBy { it.name })
     val itemCount = entries.size
-    var proposedDish by remember { mutableStateOf<List<ProposedDishIngredient>?>(null) }
     Column(Modifier.fillMaxWidth()) {
         Column(
             Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(16.dp),
@@ -3425,7 +3440,15 @@ private fun CertifiedMealWitnessCard(
                             carbohydrates = total { it.carbohydrateGrams },
                             fat = total { it.fatGrams },
                             onClick = {
-                                if (food != null) onOpenFood(food.id) else proposedDish = group
+                                if (food != null) onOpenFood(food.id) else {
+                                    onOpenProposedDish(
+                                        Dish(
+                                            id = System.currentTimeMillis(),
+                                            name = entry.name,
+                                            ingredients = group.map { DishIngredient(it.food.id, it.grams) }
+                                        )
+                                    )
+                                }
                             }
                         )
                     }
@@ -3443,70 +3466,6 @@ private fun CertifiedMealWitnessCard(
             }
         }
     }
-    proposedDish?.let { ingredients ->
-        ProposedDishEditorDialog(
-            initialName = proposedDishName(ingredients),
-            ingredients = ingredients,
-            onDismiss = { proposedDish = null },
-            onSave = { dish ->
-                onSaveProposedDish(dish)
-                proposedDish = null
-            }
-        )
-    }
-}
-
-@Composable
-private fun ProposedDishEditorDialog(
-    initialName: String,
-    ingredients: List<ProposedDishIngredient>,
-    onDismiss: () -> Unit,
-    onSave: (Dish) -> Unit
-) {
-    var name by remember(ingredients) { mutableStateOf(initialName) }
-    var amounts by remember(ingredients) {
-        mutableStateOf(ingredients.associate { it.food.id to formatDecimal(it.grams) })
-    }
-    val parsed = ingredients.mapNotNull { ingredient ->
-        parseDecimal(amounts[ingredient.food.id].orEmpty())
-            ?.takeIf { it in 0.1..5000.0 }
-            ?.let { DishIngredient(ingredient.food.id, it) }
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Guardar como receta") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.take(80) },
-                    label = { Text("Nombre del plato") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                ingredients.forEach { ingredient ->
-                    OutlinedTextField(
-                        value = amounts[ingredient.food.id].orEmpty(),
-                        onValueChange = { value -> amounts = amounts + (ingredient.food.id to value) },
-                        label = { Text(ingredient.food.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        suffix = { Text("g") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = name.isNotBlank() && parsed.size == ingredients.size,
-                onClick = {
-                    onSave(Dish(System.currentTimeMillis(), name.trim(), parsed))
-                }
-            ) { Text("Guardar receta") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
-    )
 }
 
 @Composable
@@ -8733,15 +8692,20 @@ private fun AddToMealDialog(
 private fun DishEditorScreen(
     foods: List<Food>,
     initial: Dish? = null,
+    initialDraft: Dish? = null,
     initialFoodId: Long? = null,
     preferredFoodIds: Set<Long>,
+    onOpenFood: ((Long, Dish) -> Unit)? = null,
     onSave: (Dish) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
-    var name by rememberSaveable(initial?.id) { mutableStateOf(initial?.name.orEmpty()) }
-    var ingredientAmounts by remember(initial?.id, initialFoodId) {
+    var name by rememberSaveable(initial?.id, initialDraft?.id) {
+        mutableStateOf(initial?.name ?: initialDraft?.name.orEmpty())
+    }
+    var ingredientAmounts by remember(initial?.id, initialDraft?.id, initialFoodId) {
         mutableStateOf(
             initial?.ingredients?.associate { it.foodId to formatDecimal(it.grams) }
+                ?: initialDraft?.ingredients?.associate { it.foodId to formatDecimal(it.grams) }
                 ?: initialFoodId?.let { mapOf(it to "100") }
                 ?: emptyMap<Long, String>()
         )
@@ -8815,7 +8779,28 @@ private fun DishEditorScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     SmallFoodCategoryBadge(food.category)
-                    Text(food.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        food.name,
+                        modifier = Modifier.weight(1f).then(
+                            if (onOpenFood != null) Modifier.clickable {
+                                val currentIngredients = ingredientAmounts.mapNotNull { (id, value) ->
+                                    parseDecimal(value)?.takeIf { it in 0.1..5000.0 }
+                                        ?.let { DishIngredient(id, it) }
+                                }
+                                onOpenFood(
+                                    food.id,
+                                    Dish(
+                                        id = initialDraft?.id ?: System.currentTimeMillis(),
+                                        name = name.ifBlank { "Nuevo plato" },
+                                        ingredients = currentIngredients
+                                    )
+                                )
+                            } else Modifier
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (onOpenFood != null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                    )
                     if (proportionsLocked) {
                         Text("${amount} g", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
