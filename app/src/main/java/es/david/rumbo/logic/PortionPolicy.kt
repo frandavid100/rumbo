@@ -31,6 +31,15 @@ internal fun usesPracticalUnits(grams: Double, step: Double?): Boolean {
     return abs(units - round(units)) < 0.000_001
 }
 
+internal fun practicalGramAmount(grams: Double): Double = when {
+    grams < 10.0 -> round(grams).coerceAtLeast(1.0)
+    grams <= 100.0 -> round(grams / 5.0) * 5.0
+    else -> round(grams / 10.0) * 10.0
+}
+
+internal fun usesComfortableGramAmount(grams: Double): Boolean =
+    abs(grams - practicalGramAmount(grams)) < 0.000_001
+
 enum class PortionContext {
     GENERAL_ADULT
 }
