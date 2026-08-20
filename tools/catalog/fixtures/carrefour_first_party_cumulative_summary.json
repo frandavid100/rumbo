@@ -1,142 +1,142 @@
 {
-  "built_at": "2026-08-20T12:59:02.158956+00:00",
+  "built_at": "2026-08-20T13:00:33.762967+00:00",
   "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 54,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 58,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 4,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 4,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 1591,
+    "evidence_rows": 1701,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 53,
+    "nutrition_complete": 57,
     "nutrition_not_found": 6,
     "nutrition_partial": 6,
-    "verified_direct_products": 65,
-    "verified_first_party_products": 65,
+    "verified_direct_products": 69,
+    "verified_first_party_products": 69,
     "verified_listing_only_observations": 4,
-    "verified_product_page_observations": 61
+    "verified_product_page_observations": 65
   },
   "coverage": {
     "allergens": {
-      "count": 23,
-      "pct": 35.38
+      "count": 27,
+      "pct": 39.13
     },
     "attributes": {
-      "count": 65,
+      "count": 69,
       "pct": 100.0
     },
     "availability": {
       "count": 5,
-      "pct": 7.69
+      "pct": 7.25
     },
     "brand": {
-      "count": 61,
-      "pct": 93.85
+      "count": 65,
+      "pct": 94.2
     },
     "category_path": {
-      "count": 43,
-      "pct": 66.15
+      "count": 47,
+      "pct": 68.12
     },
     "gtin": {
       "count": 4,
-      "pct": 6.15
+      "pct": 5.8
     },
     "image_url": {
       "count": 4,
-      "pct": 6.15
+      "pct": 5.8
     },
     "ingredients": {
-      "count": 60,
-      "pct": 92.31
+      "count": 64,
+      "pct": 92.75
     },
     "legal_name": {
-      "count": 60,
-      "pct": 92.31
+      "count": 64,
+      "pct": 92.75
     },
     "mandatory_mentions": {
-      "count": 23,
-      "pct": 35.38
+      "count": 24,
+      "pct": 34.78
     },
     "manufacturer_packer_importer": {
-      "count": 59,
-      "pct": 90.77
+      "count": 63,
+      "pct": 91.3
     },
     "name": {
-      "count": 65,
+      "count": 69,
       "pct": 100.0
     },
     "net_content": {
-      "count": 60,
-      "pct": 92.31
+      "count": 64,
+      "pct": 92.75
     },
     "nutriscore": {
-      "count": 28,
-      "pct": 43.08
+      "count": 32,
+      "pct": 46.38
     },
     "nutrition_extra": {
-      "count": 51,
-      "pct": 78.46
+      "count": 55,
+      "pct": 79.71
     },
     "operator_address": {
-      "count": 59,
-      "pct": 90.77
+      "count": 63,
+      "pct": 91.3
     },
     "preparation_instructions": {
-      "count": 45,
-      "pct": 69.23
+      "count": 49,
+      "pct": 71.01
     },
     "price_eur": {
-      "count": 65,
+      "count": 69,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 60,
-      "pct": 92.31
+      "count": 64,
+      "pct": 92.75
     },
     "unit_price_text": {
-      "count": 65,
+      "count": 69,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 59,
-      "pct": 90.77
+      "count": 63,
+      "pct": 91.3
     },
     "carbohydrate_g": {
-      "count": 56,
-      "pct": 86.15
+      "count": 60,
+      "pct": 86.96
     },
     "energy_kj": {
-      "count": 59,
-      "pct": 90.77
+      "count": 63,
+      "pct": 91.3
     },
     "fat_g": {
-      "count": 58,
-      "pct": 89.23
+      "count": 62,
+      "pct": 89.86
     },
     "fiber_g": {
       "count": 16,
-      "pct": 24.62
+      "pct": 23.19
     },
     "protein_g": {
-      "count": 55,
-      "pct": 84.62
+      "count": 59,
+      "pct": 85.51
     },
     "salt_g": {
-      "count": 56,
-      "pct": 86.15
+      "count": 60,
+      "pct": 86.96
     },
     "saturates_g": {
-      "count": 58,
-      "pct": 89.23
+      "count": 62,
+      "pct": 89.86
     },
     "sugars_g": {
-      "count": 54,
-      "pct": 83.08
+      "count": 58,
+      "pct": 84.06
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -647,6 +647,189 @@
       "unit_price_text": "17,88 €/kg"
     },
     {
+      "allergens": "Contiene: Leche",
+      "attributes": {
+        "country_of_origin": "España",
+        "milk_fat_type": "Entera",
+        "milk_origin": "Vaca",
+        "milk_processing": "Uperisada",
+        "presentation": "Brik",
+        "sanitary_register": "15.01710/LU"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 63.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/leche-entera-carrefour-brik-1-l/R-521006992/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.8-indexed",
+      "carbohydrate_g": 4.7,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Lácteos",
+        "Leche"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 264.0,
+      "fat_g": 3.6,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Leche entera de vaca.",
+      "legal_name": "Leche UHT entera",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Leche entera Carrefour brik 1 l.",
+      "net_content": "1000 ml",
+      "nutriscore": "B",
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T13:03:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 0.96,
+      "protein_g": 3.0,
+      "provenance_note": "All populated product-detail fields and the displayed price were observed directly on the official Carrefour product page; category breadcrumbs were observed on the official Carrefour milk listing. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521006992",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.13,
+      "saturates_g": 2.5,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar seco y fresco. Una vez abierto el envase, consérvese en el frigorífico. Es aconsejable su consumo en los 2 ó 3 días siguientes.",
+      "sugars_g": 4.7,
+      "unit_price_text": "0,96 €/l"
+    },
+    {
+      "allergens": "Contiene: Leche",
+      "attributes": {
+        "country_of_origin": "España",
+        "milk_fat_type": "Semidesnatada",
+        "milk_origin": "Vaca",
+        "milk_processing": "Uperisada",
+        "presentation": "Brik",
+        "sanitary_register": "15.01710/LU"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 46.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/leche-semidesnatada-carrefour-brik-1-l/R-521007071/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.8-indexed",
+      "carbohydrate_g": 4.7,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Lácteos",
+        "Leche"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 192.0,
+      "fat_g": 1.6,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Leche semidesnatada de vaca",
+      "legal_name": "Leche UHT semidesnatada",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Leche semidesnatada Carrefour brik 1 l.",
+      "net_content": "1000 ml",
+      "nutriscore": "B",
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T13:03:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 0.84,
+      "protein_g": 3.1,
+      "provenance_note": "All populated product-detail fields and the displayed price were observed directly on the official Carrefour product page; category breadcrumbs were observed on the official Carrefour milk listing. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521007071",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.13,
+      "saturates_g": 1.1,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar seco y fresco. Una vez abierto el envase, consérvese en el frigorífico. Es aconsejable su consumo en los 2 ó 3 días siguientes.",
+      "sugars_g": 4.7,
+      "unit_price_text": "0,84 €/l"
+    },
+    {
+      "allergens": "Contiene: Leche",
+      "attributes": {
+        "country_of_origin": "España",
+        "milk_fat_type": "Desnatada",
+        "milk_origin": "Vaca",
+        "milk_processing": "Uperisada",
+        "presentation": "Brik",
+        "sanitary_register": "15.01710/LU",
+        "source_data_quality_flags": [
+          "carrefour_legal_name_semidesnatada_conflicts_with_product_title_and_declared_fat_type_desnatada"
+        ]
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 35.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/leche-desnatada-carrefour-brik-1-l/R-521007093/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.8-indexed",
+      "carbohydrate_g": 4.8,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Lácteos",
+        "Leche"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 147.0,
+      "fat_g": 0.5,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Leche desnatada de vaca",
+      "legal_name": "Leche UHT semidesnatada",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Leche desnatada Carrefour brik 1 l.",
+      "net_content": "1000 ml",
+      "nutriscore": "B",
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T13:03:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 0.82,
+      "protein_g": 3.2,
+      "provenance_note": "All populated product-detail fields and the displayed price were observed directly on the official Carrefour product page; category breadcrumbs were observed on the official Carrefour milk listing. Carrefour itself currently exposes a legal-name/type conflict on this page; it is preserved and flagged rather than corrected. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521007093",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.13,
+      "saturates_g": 0.2,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar seco y fresco. Una vez abierto el envase, consérvese en el frigorífico. Es aconsejable su consumo en los 2 ó 3 días siguientes.",
+      "sugars_g": 4.8,
+      "unit_price_text": "0,82 €/l"
+    },
+    {
       "allergens": null,
       "attributes": {
         "conservation_mode": "Temperatura ambiente",
@@ -1102,162 +1285,6 @@
       "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
       "sugars_g": 5.4,
       "unit_price_text": "4,39 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "alternative_vegetal": true,
-        "legume_type": "Alubias",
-        "origin": "Unión Europea y fuera de la UE",
-        "packaging": "Otros envases"
-      },
-      "availability": null,
-      "brand": "LUENGO",
-      "calories_kcal": 292.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/alubia-blanca-categoria-extra-luengo-1-kg/R-522713750/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.1-indexed",
-      "carbohydrate_g": 39.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 1233.0,
-      "fat_g": 2.1,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Alubia Blanca",
-      "legal_name": "Alubia Blanca",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "LEGUMBRES LUENGO. S.A.",
-      "name": "Alubia blanca categoría extra Luengo 1 kg.",
-      "net_content": "1000 g",
-      "nutriscore": "A",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T11:14:00+00:00",
-      "operator_address": "Ctra Nacional VI, km 314. 24794 Riego de la Vega (León)",
-      "page_sha256": null,
-      "preparation_instructions": "ver envase",
-      "price_currency": "EUR",
-      "price_eur": 4.39,
-      "protein_g": 20.8,
-      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "522713750",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.02,
-      "saturates_g": 0.3,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
-      "sugars_g": 5.3,
-      "unit_price_text": "4,39 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "alternative_vegetal": true,
-        "legume_type": "Garbanzos",
-        "origin": "Unión Europea y fuera de la UE",
-        "packaging": "Otros envases"
-      },
-      "availability": null,
-      "brand": "LUENGO",
-      "calories_kcal": 348.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/garbanzo-categoria-extra-luengo-1-kg/R-522713774/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.1-indexed",
-      "carbohydrate_g": 46.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 1466.0,
-      "fat_g": 5.8,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Garbanzo",
-      "legal_name": "Garbanzo",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "LEGUMBRES LUENGO. S.A.",
-      "name": "Garbanzo categoría extra Luengo 1 kg.",
-      "net_content": "1000 g",
-      "nutriscore": "A",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:54:00+00:00",
-      "operator_address": "Ctra Nacional VI, km 314. 24794 Riego de la Vega (León)",
-      "page_sha256": null,
-      "preparation_instructions": "ver envase",
-      "price_currency": "EUR",
-      "price_eur": 4.65,
-      "protein_g": 21.0,
-      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "522713774",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.03,
-      "saturates_g": 1.1,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
-      "sugars_g": 5.4,
-      "unit_price_text": "4,65 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "alternative_vegetal": true,
-        "legume_type": "Garbanzos",
-        "origin": "Unión Europea y fuera de la UE",
-        "packaging": "Otros envases"
-      },
-      "availability": null,
-      "brand": "LUENGO",
-      "calories_kcal": 348.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/garbanzo-pedrosillano-categoria-extra-luengo-1-kg/R-526538889/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.1-indexed",
-      "carbohydrate_g": 46.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 1466.0,
-      "fat_g": 5.8,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Garbanzo Pedrosillano",
-      "legal_name": "Garbanzo Pedrosillano",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "LEGUMBRES LUENGO. S.A.",
-      "name": "Garbanzo pedrosillano categoría extra Luengo 1 kg.",
-      "net_content": "1000 g",
-      "nutriscore": "A",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:54:00+00:00",
-      "operator_address": "Ctra Nacional VI, km 314. 24794 Riego de la Vega (León)",
-      "page_sha256": null,
-      "preparation_instructions": "ver envase",
-      "price_currency": "EUR",
-      "price_eur": 3.79,
-      "protein_g": 21.0,
-      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "526538889",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.03,
-      "saturates_g": 1.1,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
-      "sugars_g": 5.4,
-      "unit_price_text": "3,79 €/kg"
     }
   ],
   "source": "https://www.carrefour.es",
