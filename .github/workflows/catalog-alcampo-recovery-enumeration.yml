@@ -1,0 +1,162 @@
+name: Catalog Alcampo low-concurrency recovery enumeration
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-alcampo-recovery-enumeration.yml'
+      - 'tools/catalog/alcampo_recovery_union.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      target_count: ${{ steps.matrix.outputs.target_count }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download known 13,877-SKU baseline
+        run: |
+          mkdir -p seed/baseline
+          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D seed/baseline
+          test -s seed/baseline/products.jsonl
+      - name: Download newest available recursive enumeration snapshot
+        run: |
+          mkdir -p seed/recursive
+          found=''
+          for run_id in $(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/catalog-alcampo-sharded-enumeration.yml/runs?branch=agent/catalog-phase1&status=completed&per_page=30" --jq '.workflow_runs[].id'); do
+            rm -rf recursive-candidate
+            mkdir -p recursive-candidate
+            if gh run download "$run_id" -n alcampo-food-catalog-sharded-enumeration -D recursive-candidate >/dev/null 2>&1 && test -s recursive-candidate/products.jsonl; then
+              cp recursive-candidate/products.jsonl seed/recursive/products.jsonl
+              cp recursive-candidate/enumeration_report.json seed/recursive/enumeration_report.json 2>/dev/null || true
+              found="$run_id"
+              break
+            fi
+          done
+          echo "recursive_seed_run=${found:-none}"
+          if [ ! -s seed/recursive/products.jsonl ]; then
+            cp seed/baseline/products.jsonl seed/recursive/products.jsonl
+          fi
+      - id: matrix
+        name: Build retry matrix from unresolved first-party taxonomy nodes
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          p=Path('tools/catalog/fixtures/alcampo_sharded_enumeration_latest.json')
+          d=json.loads(p.read_text(encoding='utf-8')) if p.exists() else {}
+          by_rid={}
+          for failed in d.get('failed') or []:
+              unresolved=failed.get('unresolved') or []
+              if unresolved:
+                  for node in unresolved:
+                      rid=str(node.get('retailer_category_id') or node.get('rid') or '').strip()
+                      if not rid: continue
+                      expected=int(node.get('source_reported_product_count') or 0)
+                      row={'label':str(node.get('label') or rid),'rid':rid,'expected':expected}
+                      if rid not in by_rid or expected>by_rid[rid]['expected']:
+                          by_rid[rid]=row
+              else:
+                  rid=str(failed.get('rid') or failed.get('retailer_category_id') or '').strip()
+                  if rid:
+                      by_rid[rid]={'label':str(failed.get('label') or rid),'rid':rid,'expected':int(failed.get('source_reported_product_count') or 0)}
+          rows=sorted(by_rid.values(),key=lambda x:(-x['expected'],x['rid']))
+          if not rows:
+              rows=[{'label':'NOOP','rid':'NONE','expected':0}]
+              target_count=0
+          else:
+              target_count=len(rows)
+          print('matrix='+json.dumps({'include':rows},ensure_ascii=False,separators=(',',':')))
+          print('target_count='+str(target_count))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-recovery-seed
+          path: seed/
+          retention-days: 7
+
+  recover:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retry one unresolved category tree with a fresh low-contention session
+        if: matrix.rid != 'NONE'
+        working-directory: tools/catalog
+        run: python alcampo_child_enumerate.py --label "${{ matrix.label }}" --rid "${{ matrix.rid }}" --expected "${{ matrix.expected }}" --max-depth 64 --out "alcampo-recovery-${{ matrix.rid }}"
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.rid != 'NONE'
+        with:
+          name: alcampo-recovery-${{ matrix.rid }}
+          path: tools/catalog/alcampo-recovery-${{ matrix.rid }}/
+          retention-days: 7
+
+  merge:
+    needs: [prepare, recover]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: alcampo-recovery-seed
+          path: seed
+      - uses: actions/download-artifact@v4
+        if: needs.prepare.outputs.target_count != '0'
+        with:
+          pattern: alcampo-recovery-*
+          path: recovered
+      - name: Union baseline, recursive snapshot and recovered nodes by stable Alcampo SKU
+        working-directory: tools/catalog
+        run: |
+          python alcampo_recovery_union.py \
+            --baseline-products ../../seed/baseline/products.jsonl \
+            --recursive-products ../../seed/recursive/products.jsonl \
+            --recovery-root ../../recovered \
+            --out alcampo-recovery-union
+      - name: Persist recovery coverage
+        run: |
+          cp tools/catalog/alcampo-recovery-union/recovery_report.json tools/catalog/fixtures/alcampo_recovery_enumeration_latest.json
+          cp tools/catalog/alcampo-recovery-union/summary.json tools/catalog/fixtures/alcampo_recovery_catalog_summary_latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_recovery_enumeration_latest.json tools/catalog/fixtures/alcampo_recovery_catalog_summary_latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Alcampo low-concurrency recovery union"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-food-catalog-recovery-enumeration
+          path: tools/catalog/alcampo-recovery-union/
+          retention-days: 14
