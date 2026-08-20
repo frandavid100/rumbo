@@ -7,6 +7,7 @@ on:
       - '.github/workflows/catalog-carrefour-first-party-fresh-inventory.yml'
       - 'tools/catalog/carrefour_first_party_inventory.py'
       - 'tools/catalog/carrefour_first_party_browser_inventory.py'
+      - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
   workflow_dispatch:
 
 permissions:
@@ -34,11 +35,17 @@ jobs:
       - name: Inventory before any other Carrefour request
         working-directory: tools/catalog
         run: |
+          EXTRA=()
+          if [ -s fixtures/carrefour_candidate_urls_radarsuper.jsonl ]; then
+            EXTRA+=(--seed-jsonl fixtures/carrefour_candidate_urls_radarsuper.jsonl)
+          fi
           python carrefour_first_party_browser_inventory.py \
             --out carrefour-first-party-fresh-inventory \
-            --delay 12 \
-            --stop-after-blocks 1 \
-            --rotate
+            --delay 15 \
+            --stop-after-blocks 2 \
+            --max-products 60 \
+            --rotate \
+            "${EXTRA[@]}"
       - name: Validate and persist successful first-party observations
         if: always()
         run: |
