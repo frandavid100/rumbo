@@ -54,9 +54,9 @@ jobs:
     needs: prepare
     strategy:
       fail-fast: false
-      # Keep request pressure modest: the first-party SSR endpoint has shown
-      # intermittent WAF 202 responses when too many requests arrive together.
-      max-parallel: 16
+      # The canonical SSR route succeeded with complete declared nutrition in smoke.
+      # Keep global pressure moderate so WAF 202 responses do not dominate the wave.
+      max-parallel: 12
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -76,7 +76,7 @@ jobs:
         run: |
           python alcampo_detail_fast_wave.py \
             --input "../../inputs/batch-${{ matrix.batch }}.jsonl" \
-            --workers 2 \
+            --workers 1 \
             --out "alcampo-fast-detail-${{ matrix.batch }}"
       - uses: actions/upload-artifact@v4
         if: always()
