@@ -1,137 +1,138 @@
 {
-  "built_at": "2026-08-20T11:57:53.877597+00:00",
+  "built_at": "2026-08-20T12:01:24.817328+00:00",
   "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 26,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 30,
+    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 1,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 741,
+    "evidence_rows": 871,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 25,
+    "nutrition_complete": 30,
     "nutrition_not_found": 0,
     "nutrition_partial": 4,
-    "verified_direct_products": 29
+    "verified_direct_products": 34
   },
   "coverage": {
     "allergens": {
-      "count": 8,
-      "pct": 27.59
+      "count": 11,
+      "pct": 32.35
     },
     "attributes": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "availability": {
       "count": 4,
-      "pct": 13.79
+      "pct": 11.76
     },
     "brand": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "category_path": {
-      "count": 5,
-      "pct": 17.24
+      "count": 10,
+      "pct": 29.41
     },
     "gtin": {
       "count": 4,
-      "pct": 13.79
+      "pct": 11.76
     },
     "image_url": {
       "count": 4,
-      "pct": 13.79
+      "pct": 11.76
     },
     "ingredients": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "legal_name": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "mandatory_mentions": {
       "count": 11,
-      "pct": 37.93
+      "pct": 32.35
     },
     "manufacturer_packer_importer": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "name": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "net_content": {
-      "count": 29,
-      "pct": 100.0
+      "count": 33,
+      "pct": 97.06
     },
     "nutriscore": {
-      "count": 16,
-      "pct": 55.17
+      "count": 18,
+      "pct": 52.94
     },
     "nutrition_extra": {
-      "count": 15,
-      "pct": 51.72
+      "count": 20,
+      "pct": 58.82
     },
     "operator_address": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "preparation_instructions": {
-      "count": 21,
-      "pct": 72.41
+      "count": 25,
+      "pct": 73.53
     },
     "price_eur": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "unit_price_text": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "carbohydrate_g": {
-      "count": 26,
-      "pct": 89.66
+      "count": 31,
+      "pct": 91.18
     },
     "energy_kj": {
-      "count": 29,
+      "count": 34,
       "pct": 100.0
     },
     "fat_g": {
-      "count": 28,
-      "pct": 96.55
+      "count": 33,
+      "pct": 97.06
     },
     "fiber_g": {
       "count": 6,
-      "pct": 20.69
+      "pct": 17.65
     },
     "protein_g": {
-      "count": 25,
-      "pct": 86.21
+      "count": 30,
+      "pct": 88.24
     },
     "salt_g": {
-      "count": 26,
-      "pct": 89.66
+      "count": 31,
+      "pct": 91.18
     },
     "saturates_g": {
-      "count": 28,
-      "pct": 96.55
+      "count": 33,
+      "pct": 97.06
     },
     "sugars_g": {
-      "count": 26,
-      "pct": 89.66
+      "count": 31,
+      "pct": 91.18
     }
   },
   "provenance_note": "Only fields observed directly on official carrefour.es pages are merged. Third-party catalogs may seed candidate URLs, but their product facts are never promoted to CARREFOUR_FIRST_PARTY.",
@@ -975,6 +976,68 @@
       "unit_price_text": "1,99 €/l"
     },
     {
+      "allergens": "Contiene: Leche",
+      "attributes": {
+        "country_of_origin": "España",
+        "lactose_free": true,
+        "milk_fat_type": "Desnatada",
+        "milk_origin": "Vaca",
+        "presentation": "Brik",
+        "sanitary_register": "ES 15.00220/BU CE; ES 15.05401/B CE"
+      },
+      "availability": null,
+      "brand": "PASCUAL",
+      "calories_kcal": 34.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/leche-desnatada-pascual-sin-lactosa-brik-1-l/R-530362992/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.2-indexed",
+      "carbohydrate_g": 4.8,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Lácteos",
+        "Leche"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 143.0,
+      "fat_g": 0.1,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Leche desnatada y Lactasa",
+      "legal_name": "Leche desnatada UHT sin lactosa",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Calidad Pascual, SAU.",
+      "name": "Leche desnatada Pascual sin lactosa brik 1 l.",
+      "net_content": "1000 ml",
+      "nutriscore": null,
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {
+        "calcium_mg": 120.0
+      },
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T11:56:00+00:00",
+      "operator_address": "Ctra. De Palencia, s/n - 09400 Aranda de Duero (Burgos)",
+      "page_sha256": null,
+      "preparation_instructions": "Una vez abierto, conservar el envase cerrado en nevera y consumir antes de 3 días.",
+      "price_currency": "EUR",
+      "price_eur": 1.53,
+      "protein_g": 3.4,
+      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "530362992",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.13,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Una vez abierto, conservar el envase cerrado en nevera y consumir antes de 3 días.",
+      "sugars_g": 4.8,
+      "unit_price_text": "1,53 €/l"
+    },
+    {
       "allergens": null,
       "attributes": {
         "bakery_type": "Gofre",
@@ -1122,64 +1185,6 @@
       "storage_conditions": "Consérvese en lugar fresco, seco y no expuesto a la luz.",
       "sugars_g": 25.0,
       "unit_price_text": "6,19 €/kg"
-    },
-    {
-      "allergens": "Puede contener: Cereales que contienen gluten",
-      "attributes": {
-        "alternative_vegetal": true,
-        "legume_type": "Lentejas",
-        "origin": "Unión Europea y fuera de la UE",
-        "packaging": "Otros envases"
-      },
-      "availability": null,
-      "brand": "LUENGO",
-      "calories_kcal": 306.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/lenteja-rapida-categoria-extra-luengo-1-kg/R-808943384/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.1-indexed",
-      "carbohydrate_g": 36.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Alimentación",
-        "Legumbres"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 1287.0,
-      "fat_g": 1.9,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Lenteja Rápida. Puede contener trazas de gluten.",
-      "legal_name": "Lenteja Rápida",
-      "mandatory_mentions": "Puede contener trazas de gluten.",
-      "manufacturer_packer_importer": "LEGUMBRES LUENGO. S.A.",
-      "name": "Lenteja rápida categoría extra Luengo 1 kg.",
-      "net_content": "1000 g",
-      "nutriscore": "A",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:54:00+00:00",
-      "operator_address": "Ctra Nacional VI, km 314. 24794 Riego de la Vega (León)",
-      "page_sha256": null,
-      "preparation_instructions": "ver envase",
-      "price_currency": "EUR",
-      "price_eur": 4.35,
-      "protein_g": 24.0,
-      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "808943384",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 0.3,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
-      "sugars_g": 1.2,
-      "unit_price_text": "4,35 €/kg"
     }
   ],
   "source": "https://www.carrefour.es",
