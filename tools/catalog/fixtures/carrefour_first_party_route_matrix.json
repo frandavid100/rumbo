@@ -1,0 +1,69 @@
+{
+  "retailer": "CARREFOUR",
+  "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
+  "updated_at": "2026-08-20T08:40:00Z",
+  "classification_performed": false,
+  "routes": [
+    {
+      "route": "www_direct_http_product_pages",
+      "host": "https://www.carrefour.es",
+      "result": "BLOCKED",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json",
+      "attempted_products": 8,
+      "successful_products": 0,
+      "reason": "HTTP 403 from Carrefour edge/WAF on GitHub-hosted runner"
+    },
+    {
+      "route": "www_direct_http_category_roots",
+      "host": "https://www.carrefour.es",
+      "result": "BLOCKED",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json",
+      "attempted_roots": 4,
+      "successful_roots": 0,
+      "reason": "HTTP 403 from Carrefour edge/WAF on GitHub-hosted runner"
+    },
+    {
+      "route": "www_clean_browser_probe",
+      "host": "https://www.carrefour.es",
+      "result": "PARTIAL_SUCCESS_THEN_WAF",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_browser_probe_latest.json",
+      "attempted_products": 8,
+      "successful_product_pages": 2,
+      "product_jsonld_pages": 2,
+      "nutrition_marker_pages": 2,
+      "notes": "A clean Playwright run proved that complete product pages can be returned before subsequent requests are blocked. The probe is being upgraded to preserve successful HTML and parse full per-field evidence offline."
+    },
+    {
+      "route": "www_sitemap_food_index",
+      "host": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
+      "result": "BLOCKED",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json",
+      "reason": "HTTP 403 from GitHub-hosted runner"
+    },
+    {
+      "route": "actforfood_direct_http_category_roots",
+      "host": "https://actforfood.carrefour.es",
+      "result": "BLOCKED",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_actforfood_http_latest.json",
+      "attempted_roots": 4,
+      "successful_roots": 0,
+      "reason": "HTTP 403 from Carrefour edge/WAF on GitHub-hosted runner"
+    },
+    {
+      "route": "actforfood_browser_known_product_pages",
+      "host": "https://actforfood.carrefour.es",
+      "result": "BLOCKED",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_actforfood_summary.json",
+      "attempted_products": 2,
+      "successful_products": 0,
+      "reason": "Browser requests on the GitHub-hosted runner were blocked by Carrefour edge/WAF"
+    }
+  ],
+  "provenance_rules": [
+    "Only fields actually observed on a Carrefour-controlled host may use source=CARREFOUR_FIRST_PARTY.",
+    "RadarSuper may seed candidate identities or URLs but its fields are never copied into Carrefour first-party evidence.",
+    "Open Food Facts data remains OPEN_FOOD_FACTS_VIA_RADARSUPER or its own source and is never relabelled as Carrefour-declared.",
+    "Rumbo nutritional or culinary classification is separate from retailer evidence and is not performed in these extraction datasets."
+  ],
+  "next_safe_step": "Use a clean, low-concurrency Playwright probe to preserve any successful Carrefour HTML before WAF blocking, then parse saved HTML offline. Do not distribute requests across runners to evade blocking."
+}
