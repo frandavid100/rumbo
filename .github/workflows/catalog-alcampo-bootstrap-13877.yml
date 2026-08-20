@@ -1,4 +1,4 @@
-name: Catalog Alcampo bootstrap 13.9k detail enrichment
+name: Catalog Alcampo bootstrap 13.9k detail enrichment (retired)
 on:
   push:
     branches: [agent/catalog-phase1]
@@ -6,145 +6,16 @@ on:
       - '.github/workflows/catalog-alcampo-bootstrap-13877.yml'
   workflow_dispatch:
 permissions:
-  contents: write
-  actions: read
+  contents: read
 concurrency:
+  # Keep the historical concurrency key so this lightweight replacement cancels
+  # the multi-hour legacy run and frees runners for the checkpointed fast wave.
   group: catalog-alcampo-bootstrap-13877-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
-  prepare:
+  retired:
     runs-on: ubuntu-24.04
-    outputs:
-      detail_matrix: ${{ steps.matrix.outputs.detail_matrix }}
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/catalog-phase1
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Download known 13,877-product first-party enumeration snapshot
-        run: |
-          mkdir -p bootstrap-enumeration
-          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D bootstrap-enumeration
-          test -s bootstrap-enumeration/products.jsonl
-          test -s bootstrap-enumeration/enumeration_report.json
-      - name: Split product manifest for detail enrichment
-        working-directory: tools/catalog
-        run: python alcampo_split_detail_batches.py --input ../../bootstrap-enumeration/products.jsonl --out ../../bootstrap-detail-inputs --batches 128
-      - id: matrix
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          print('detail_matrix='+json.dumps({'include':[{'batch':f'{i:03d}'} for i in range(128)]},separators=(',',':')))
-          PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: alcampo-bootstrap-enumeration
-          path: bootstrap-enumeration/
-          retention-days: 7
-      - uses: actions/upload-artifact@v4
-        with:
-          name: alcampo-bootstrap-detail-inputs
-          path: bootstrap-detail-inputs/
-          retention-days: 7
-
-  detail:
-    needs: prepare
-    strategy:
-      fail-fast: false
-      max-parallel: 6
-      matrix: ${{ fromJSON(needs.prepare.outputs.detail_matrix) }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/catalog-phase1
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/download-artifact@v4
-        with:
-          name: alcampo-bootstrap-detail-inputs
-          path: detail-inputs
-      - name: Fetch declared Alcampo detail and nutrition
-        working-directory: tools/catalog
-        run: python alcampo_detail_enricher.py --input "../../detail-inputs/batch-${{ matrix.batch }}.jsonl" --workers 1 --retry-rounds 3 --out "alcampo-bootstrap-detail-${{ matrix.batch }}" --min-valid 0
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: alcampo-bootstrap-detail-result-${{ matrix.batch }}
-          path: tools/catalog/alcampo-bootstrap-detail-${{ matrix.batch }}/
-          retention-days: 7
-
-  final:
-    needs: [prepare, detail]
-    if: always() && needs.prepare.result == 'success' && needs.detail.result == 'success'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/catalog-phase1
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/download-artifact@v4
-        with:
-          name: alcampo-bootstrap-enumeration
-          path: bootstrap-enumeration
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: alcampo-bootstrap-detail-result-*
-          path: downloaded-details
-      - name: Merge detail batches
-        working-directory: tools/catalog
-        run: python alcampo_merge_detail_batches.py --downloaded ../../downloaded-details --out ../../alcampo-bootstrap-final/details.jsonl --expected-products ../../bootstrap-enumeration/products.jsonl
-      - name: Build preliminary canonical SQLite
-        working-directory: tools/catalog
-        run: python alcampo_build_final_catalog.py --products ../../bootstrap-enumeration/products.jsonl --details ../../alcampo-bootstrap-final/details.jsonl --output ../../alcampo-bootstrap-final/alcampo_catalog.sqlite
-      - name: Build deterministic classification proposals
-        working-directory: tools/catalog
-        run: python finalize_alcampo_classification.py ../../alcampo-bootstrap-final/alcampo_catalog.sqlite ../../bootstrap-enumeration/products.jsonl
-      - name: Apply any persisted semantic model reviews
-        working-directory: tools/catalog
-        run: python alcampo_semantic_gate.py ../../alcampo-bootstrap-final/alcampo_catalog.sqlite --reviews manual/alcampo_semantic_reviews.jsonl
-      - name: Prepare semantic review queue
-        working-directory: tools/catalog
-        run: |
-          python alcampo_prepare_semantic_review_v2.py ../../alcampo-bootstrap-final/alcampo_catalog.sqlite \
-            --observations ../../bootstrap-enumeration/products.jsonl \
-            --reviews manual/alcampo_semantic_reviews.jsonl \
-            --output ../../alcampo-bootstrap-final/semantic_review_next.jsonl \
-            --progress ../../alcampo-bootstrap-final/semantic_review_progress.json \
-            --limit 500
-      - name: Export preliminary classified snapshot
-        working-directory: tools/catalog
-        run: python alcampo_export_final.py ../../alcampo-bootstrap-final/alcampo_catalog.sqlite --jsonl ../../alcampo-bootstrap-final/alcampo_catalog.jsonl --summary ../../alcampo-bootstrap-final/summary.json --detail-summary ../../alcampo-bootstrap-final/detail_merge_summary.json --enumeration-report ../../bootstrap-enumeration/enumeration_report.json
-      - name: Preserve source evidence
-        run: |
-          cp bootstrap-enumeration/products.jsonl alcampo-bootstrap-final/source_products.jsonl
-          cp bootstrap-enumeration/enumeration_report.json alcampo-bootstrap-final/enumeration_report.json
-      - name: Persist bootstrap coverage and semantic queue
-        run: |
-          cp alcampo-bootstrap-final/summary.json tools/catalog/fixtures/alcampo_bootstrap_final_summary_latest.json
-          cp alcampo-bootstrap-final/semantic_review_next.jsonl tools/catalog/fixtures/alcampo_bootstrap_semantic_review_next.jsonl
-          cp alcampo-bootstrap-final/semantic_review_progress.json tools/catalog/fixtures/alcampo_bootstrap_semantic_review_progress_latest.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/catalog/fixtures/alcampo_bootstrap_final_summary_latest.json \
-                  tools/catalog/fixtures/alcampo_bootstrap_semantic_review_next.jsonl \
-                  tools/catalog/fixtures/alcampo_bootstrap_semantic_review_progress_latest.json
-          if ! git diff --cached --quiet; then
-            git commit -m "catalog: persist Alcampo 13.9k bootstrap detail snapshot"
-            git pull --rebase origin agent/catalog-phase1
-            git push origin HEAD:agent/catalog-phase1
-          fi
-      - uses: actions/upload-artifact@v4
-        with:
-          name: alcampo-bootstrap-classified-snapshot
-          path: alcampo-bootstrap-final/
-          retention-days: 14
+      - run: |
+          echo 'Retired: alcampo_detail_enricher retry loops spend hours polling WAF 202 and lose partial progress on timeout.'
+          echo 'Use catalog-alcampo-fast-detail-wave.yml plus the recovery/semantic-review pipeline instead.'
