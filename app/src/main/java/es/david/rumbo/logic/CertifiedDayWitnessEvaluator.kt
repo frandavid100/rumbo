@@ -11,6 +11,7 @@ import es.david.rumbo.model.PlannedItemKind
 import es.david.rumbo.model.PlanningFrequency
 import es.david.rumbo.model.PlanningRule
 import es.david.rumbo.model.Recommendation
+import es.david.rumbo.model.resolvedGrams
 
 object CertifiedDayWitnessEvaluator {
     fun fromMenuWitness(
@@ -43,6 +44,17 @@ object CertifiedDayWitnessEvaluator {
         val activeByFood = activeRules.groupBy { it.itemId }
         val activeMealTypes = constraints.activeMealTypes
         val meals = witness.meals
+
+        if (meals.any { meal ->
+                meal.items.any { item ->
+                    val food = foodsById[item.foodId] ?: return false
+                    !usesPracticalUnits(meal.resolvedGrams(item, witness.day), food.practicalUnitStep())
+                } || meal.dishes.any { item ->
+                    val dish = dishesById[item.dishId] ?: return false
+                    !usesPracticalUnits(meal.resolvedGrams(item, witness.day), dish.practicalUnitStep())
+                }
+            }
+        ) return false
 
         if (meals.map { it.type }.toSet() != activeMealTypes) return false
         if (meals.any { it.type !in activeMealTypes }) return false
