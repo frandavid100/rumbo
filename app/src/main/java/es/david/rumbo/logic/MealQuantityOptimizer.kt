@@ -58,12 +58,7 @@ object MealQuantityOptimizer {
         val maximum: Double,
         val initial: Double,
         val perGram: Vector,
-        val step: Double? = null
-    )
-
-    private data class DiscreteRange(
-        val minimum: Double,
-        val maximum: Double
+        val allowedAmounts: List<Double>
     )
 
     fun optimize(
@@ -123,15 +118,13 @@ object MealQuantityOptimizer {
                         if (combinedScore(left) <= combinedScore(right)) high = right else low = left
                     }
                     val continuousBest = ((low + high) / 2.0).coerceIn(variable.minimum, variable.maximum)
-                    val best = variable.step?.let { step ->
-                        val first = ceil(variable.minimum / step).toLong()
-                        val last = floor(variable.maximum / step).toLong()
-                        if (first > last) continuousBest else {
-                            val center = round(continuousBest / step).toLong().coerceIn(first, last)
-                            ((center - 2)..(center + 2)).filter { it in first..last }
-                                .minByOrNull { combinedScore(it * step) }!! * step
-                        }
-                    } ?: continuousBest
+                    val nearestIndex = variable.allowedAmounts.binarySearch(continuousBest).let {
+                        if (it >= 0) it else (-it - 1).coerceIn(variable.allowedAmounts.indices)
+                    }
+                    val best = ((nearestIndex - 2)..(nearestIndex + 2))
+                        .filter { it in variable.allowedAmounts.indices }
+                        .map(variable.allowedAmounts::get)
+                        .minByOrNull(::combinedScore)!!
                     amounts[index] = best
                     actual = withoutCurrent + variable.perGram * best
                     mealActual[variable.mealId] = mealWithoutCurrent + variable.perGram * best
@@ -139,10 +132,7 @@ object MealQuantityOptimizer {
             }
 
             val rounded = amounts.mapIndexed { index, amount ->
-                variables[index].step?.let { step -> round(amount / step) * step }
-                    ?: round(amount)
-            }.mapIndexed { index, amount ->
-                amount.coerceIn(variables[index].minimum, variables[index].maximum)
+                variables[index].allowedAmounts.minByOrNull { abs(it - amount) }!!
             }
             optimizedMeals = applyDayAmounts(optimizedMeals, day, variables, rounded)
             val after = MealPlanEvaluator.assessDay(
@@ -176,21 +166,21 @@ object MealQuantityOptimizer {
                 val food = foodsById[item.foodId]
                 if (food?.hasComparableNutrition() == true) {
                     val step = food.practicalUnitStep()
-                    val range = discreteRange(
+                    val allowedAmounts = allowedAmounts(
                         item.minimumGrams, item.maximumGrams,
                         meal.resolvedGrams(item, day), step
                     )
                     add(
                         Variable(
                             meal.id, meal.type, item.foodId, false, food.name,
-                            range.minimum, range.maximum, meal.resolvedGrams(item, day),
+                            allowedAmounts.first(), allowedAmounts.last(), meal.resolvedGrams(item, day),
                             Vector(
                                 food.calories!! / 100.0,
                                 food.proteinGrams!! / 100.0,
                                 food.carbohydrateGrams!! / 100.0,
                                 food.fatGrams!! / 100.0
                             ),
-                            step = step
+                            allowedAmounts = allowedAmounts
                         )
                     )
                 }
@@ -200,16 +190,16 @@ object MealQuantityOptimizer {
                 val perGram = dish?.nutritionForGrams(foodsById, 1.0)
                 if (dish != null && perGram?.isComplete == true) {
                     val step = dish.practicalUnitStep() ?: dish.wholeUnitStep(foodsById)
-                    val range = discreteRange(
+                    val allowedAmounts = allowedAmounts(
                         item.minimumGrams, item.maximumGrams,
                         meal.resolvedGrams(item, day), step
                     )
                     add(
                         Variable(
                             meal.id, meal.type, item.dishId, true, dish.name,
-                            range.minimum, range.maximum, meal.resolvedGrams(item, day),
+                            allowedAmounts.first(), allowedAmounts.last(), meal.resolvedGrams(item, day),
                             perGram.toVector(),
-                            step = step
+                            allowedAmounts = allowedAmounts
                         )
                     )
                 }
@@ -217,23 +207,31 @@ object MealQuantityOptimizer {
         }
     }
 
-    private fun discreteRange(
+    private fun allowedAmounts(
         minimum: Double,
         maximum: Double,
         initial: Double,
         step: Double?
-    ): DiscreteRange {
-        if (step == null) return DiscreteRange(minimum, maximum)
-        val first = ceil(minimum / step).toLong().coerceAtLeast(1L)
-        val last = floor(maximum / step).toLong()
-        if (first <= last) return DiscreteRange(first * step, last * step)
+    ): List<Double> {
+        val candidates = if (step != null) {
+            val first = ceil(minimum / step).toLong().coerceAtLeast(1L)
+            val last = floor(maximum / step).toLong()
+            if (first <= last) (first..last).map { it * step } else emptyList()
+        } else {
+            buildList {
+                (1..9).forEach { add(it.toDouble()) }
+                (10..100 step 5).forEach { add(it.toDouble()) }
+                (110..5000 step 10).forEach { add(it.toDouble()) }
+            }.filter { it in minimum..maximum }
+        }
+        if (candidates.isNotEmpty()) return candidates
 
-        // The habitual unit was defined after the planning range (or is larger
-        // than that range). An indivisible unit takes precedence over stale
-        // gram bounds: retain the nearest positive whole unit as the only
-        // feasible amount instead of silently producing a fraction.
-        val nearest = round(initial / step).toLong().coerceAtLeast(1L) * step
-        return DiscreteRange(nearest, nearest)
+        // Practical units and comfortable gram steps take precedence over
+        // stale planning bounds that contain no usable amount.
+        val nearest = if (step != null) {
+            round(initial / step).toLong().coerceAtLeast(1L) * step
+        } else practicalGramAmount(initial)
+        return listOf(nearest.coerceIn(0.1, 5000.0))
     }
 
     private fun Dish.wholeUnitStep(foodsById: Map<Long, Food>): Double? {
