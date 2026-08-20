@@ -3,7 +3,7 @@
   "source": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "extractor_version": "carrefour-first-party-sitemap-1.0",
-  "built_at": "2026-08-20T10:32:38.530155+00:00",
+  "built_at": "2026-08-20T13:07:11.734515+00:00",
   "classification_performed": "false",
   "counts": {
     "sitemaps_visited": 1,

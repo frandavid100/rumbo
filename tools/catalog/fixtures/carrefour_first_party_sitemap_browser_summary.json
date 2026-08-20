@@ -3,7 +3,7 @@
   "source": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "extractor_version": "carrefour-first-party-sitemap-browser-1.0",
-  "built_at": "2026-08-20T10:33:21.146259+00:00",
+  "built_at": "2026-08-20T13:07:35.874596+00:00",
   "classification_performed": "false",
   "warmup_robots_status": 200,
   "counts": {
@@ -18,7 +18,7 @@
       "url": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
       "status": 403,
       "content_type": "text/html; charset=UTF-8",
-      "bytes": 5488,
+      "bytes": 5487,
       "error": "HTTP_403"
     }
   ],
