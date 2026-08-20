@@ -1,0 +1,49 @@
+name: Catalog Alcampo fast detail smoke
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-alcampo-fast-detail-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build known first-party sample
+        run: |
+          cat > /tmp/alcampo-fast-smoke.jsonl <<'EOF'
+          {"sku":"522881","name":"ALCAMPO ECOLÓGICO Tofu natural pack 2 uds. x 200 g."}
+          {"sku":"38829","name":"ALPRO Bebida de almendras"}
+          {"sku":"887087","name":"Producto Alcampo 887087"}
+          {"sku":"766667","name":"Producto Alcampo 766667"}
+          {"sku":"649871","name":"Producto Alcampo 649871"}
+          EOF
+      - name: Run checkpointed fast strategy
+        working-directory: tools/catalog
+        run: python alcampo_detail_fast_wave.py --input /tmp/alcampo-fast-smoke.jsonl --workers 2 --out alcampo-fast-smoke
+      - name: Persist smoke result
+        run: |
+          cp tools/catalog/alcampo-fast-smoke/summary.json tools/catalog/fixtures/alcampo_fast_detail_smoke_latest.json
+          cp tools/catalog/alcampo-fast-smoke/details.jsonl tools/catalog/fixtures/alcampo_fast_detail_smoke_details_latest.jsonl
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_fast_detail_smoke_*
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist fast Alcampo detail smoke"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-fast-detail-smoke
+          path: tools/catalog/alcampo-fast-smoke/
+          retention-days: 7
