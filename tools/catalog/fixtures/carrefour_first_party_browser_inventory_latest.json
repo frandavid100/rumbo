@@ -3,7 +3,7 @@
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "source": "https://www.carrefour.es",
   "extractor_version": "carrefour-first-party-browser-inventory-1.0",
-  "built_at": "2026-08-20T13:07:40.428630+00:00",
+  "built_at": "2026-08-20T22:07:20.281894+00:00",
   "classification_performed": "false",
   "counts": {
     "candidate_urls": 8,
