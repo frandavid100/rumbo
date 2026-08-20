@@ -10,6 +10,10 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 private const val CATALOG_ASSET_NAME = "catalog.sqlite"
+private const val CATALOG_FORMAT = "es.rumbo.catalog.sqlite"
+private const val CATALOG_FORMAT_VERSION = "1"
+private const val CATALOG_SCHEMA_VERSION = "rumbo-catalog-1"
+private val CATALOG_TOKEN = Regex("[a-z0-9][a-z0-9._-]{0,79}")
 
 object CatalogRepositoryProvider {
     fun fromAssets(context: Context): CatalogRepository = runCatching {
@@ -29,7 +33,8 @@ data class InstalledCatalog(
     val source: String,
     val catalogVersion: String?,
     val schemaVersion: String,
-    val productCount: Int
+    val productCount: Int,
+    val productIdNamespace: String
 )
 
 /** Atomic storage boundary for catalogues selected through Android's document picker. */
@@ -56,10 +61,23 @@ object CatalogImportManager {
                 temporary.delete()
                 throw IllegalArgumentException("El archivo no es un catálogo válido de Rumbo", error)
             }
-        require(metadata["schema_version"] == "rumbo-catalog-1") {
+        require(metadata["catalog_format"] == CATALOG_FORMAT &&
+            metadata["catalog_format_version"] == CATALOG_FORMAT_VERSION) {
+            "El archivo no usa el formato de catálogo de Rumbo compatible"
+        }
+        require(metadata["schema_version"] == CATALOG_SCHEMA_VERSION) {
             "La versión del catálogo no es compatible con esta versión de Rumbo"
         }
         val catalog = summary(metadata)
+        require(catalog.catalogVersion?.isNotBlank() == true) {
+            "El catálogo no declara una versión actualizable"
+        }
+        val namespaceOwner = list(context).firstOrNull {
+            it.id != catalog.id && it.productIdNamespace == catalog.productIdNamespace
+        }
+        require(namespaceOwner == null) {
+            "El espacio de productos ${catalog.productIdNamespace} ya pertenece a ${namespaceOwner?.name}"
+        }
         val target = File(directory, "${catalog.id}$EXTENSION")
         Files.move(
             temporary.toPath(), target.toPath(),
@@ -69,22 +87,26 @@ object CatalogImportManager {
     }
 
     fun delete(context: Context, catalogId: String): Boolean {
-        require(catalogId.matches(Regex("[a-z0-9][a-z0-9._-]{0,79}")))
+        require(catalogId.matches(CATALOG_TOKEN))
         val target = File(directory(context), "$catalogId$EXTENSION")
         return !target.exists() || target.delete()
     }
 
     private fun summary(metadata: Map<String, String>): InstalledCatalog {
         val id = metadata["catalog_id"]
-            ?.takeIf { it.matches(Regex("[a-z0-9][a-z0-9._-]{0,79}")) }
+            ?.takeIf { it.matches(CATALOG_TOKEN) }
             ?: error("El catálogo no declara una identidad válida")
+        val namespace = metadata["product_id_namespace"]
+            ?.takeIf { it.matches(CATALOG_TOKEN) }
+            ?: error("El catálogo no declara un espacio de productos válido")
         return InstalledCatalog(
             id = id,
             name = metadata["catalog_name"]?.takeIf { it.isNotBlank() } ?: id,
             source = metadata["catalog_identity_source"] ?: "Desconocida",
             catalogVersion = metadata["catalog_version"],
             schemaVersion = metadata["schema_version"] ?: error("Falta schema_version"),
-            productCount = metadata["product_count"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+            productCount = metadata["product_count"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0,
+            productIdNamespace = namespace
         )
     }
 }
@@ -94,7 +116,9 @@ private class CompositeCatalogRepository(
 ) : CatalogRepository {
     override fun metadata(): Map<String, String> = mapOf(
         "catalog_count" to repositories.size.toString(),
-        "schema_version" to "rumbo-catalog-1"
+        "catalog_format" to CATALOG_FORMAT,
+        "catalog_format_version" to CATALOG_FORMAT_VERSION,
+        "schema_version" to CATALOG_SCHEMA_VERSION
     )
 
     override fun retailers(): Set<String> = repositories.flatMapTo(sortedSetOf()) { it.retailers() }
@@ -113,7 +137,26 @@ private fun validateCatalogFile(file: File): Map<String, String> {
     val database = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
     return database.use {
         requireSchema(it)
-        readMetadata(it)
+        val metadata = readMetadata(it)
+        val namespace = metadata["product_id_namespace"]
+            ?.takeIf { token -> token.matches(CATALOG_TOKEN) }
+            ?: error("Falta product_id_namespace")
+        val actualCount = it.rawQuery("SELECT COUNT(*) FROM products", null).use { cursor ->
+            check(cursor.moveToFirst())
+            cursor.getInt(0)
+        }
+        require(metadata["product_count"]?.toIntOrNull() == actualCount) {
+            "El recuento de productos no coincide con el contenido"
+        }
+        val invalidIds = it.rawQuery(
+            "SELECT COUNT(*) FROM products WHERE product_id NOT LIKE ?",
+            arrayOf("$namespace:%")
+        ).use { cursor ->
+            check(cursor.moveToFirst())
+            cursor.getInt(0)
+        }
+        require(invalidIds == 0) { "Hay productos fuera del espacio de identidad declarado" }
+        metadata
     }
 }
 

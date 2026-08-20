@@ -5,6 +5,7 @@ import argparse
 import json
 import sqlite3
 import sys
+import unicodedata
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
@@ -15,6 +16,59 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from tools.catalog.bedca import BedcaClient, write_manifest
 from tools.catalog.classify import classify
 from tools.catalog.sqlite_catalog import create
+
+
+def identity_key(record: dict) -> str:
+    """Stable generic-food identity: the visible BEDCA denomination, normalized."""
+    name = unicodedata.normalize("NFKC", record["index"].name_es)
+    return " ".join(name.casefold().split())
+
+
+def record_score(record: dict) -> tuple[int, int, int, int]:
+    nutrition = record["nutrition"]
+    core = sum(nutrition.get(field) is not None for field in
+               ("calories", "protein_g", "carbohydrate_g", "fat_g", "fiber_g", "sodium_g"))
+    concrete_components = sum(
+        component.get("best_location") not in (None, "")
+        for component in record["detail"]["components"]
+    )
+    # Prefer measured energy over a value derived from macronutrients. The final
+    # tie-breaker is deliberately stable and independent of download order.
+    return (int(not nutrition.get("calories_derived", False)), core,
+            concrete_components, -int(record["index"].id))
+
+
+def deduplicate(records: list[dict]) -> tuple[list[dict], list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for record in records:
+        grouped.setdefault(identity_key(record), []).append(record)
+    selected: list[dict] = []
+    merged: list[dict] = []
+    for key, candidates in grouped.items():
+        winner = max(candidates, key=record_score)
+        stable_source_id = min((item["index"].id for item in candidates), key=int)
+        winner["stable_source_id"] = stable_source_id
+        winner["source_records"] = [
+            {
+                "source_food_id": item["index"].id,
+                "source_origin": item["index"].origin,
+                "raw_sha256": item["detail"]["raw_sha256"],
+                "selected": item is winner,
+            }
+            for item in sorted(candidates, key=lambda item: int(item["index"].id))
+        ]
+        selected.append(winner)
+        if len(candidates) > 1:
+            merged.append({
+                "identity": key,
+                "name": winner["index"].name_es,
+                "canonical_source_food_id": winner["index"].id,
+                "stable_product_id": f"bedca:{stable_source_id}",
+                "merged_source_food_ids": [item["index"].id for item in candidates],
+            })
+    selected.sort(key=lambda record: int(record["stable_source_id"]))
+    merged.sort(key=lambda item: item["identity"])
+    return selected, merged
 
 
 def parse_args() -> argparse.Namespace:
@@ -126,6 +180,8 @@ def main() -> int:
                 print(f"BEDCA {completed}/{len(foods)}", flush=True)
 
     records.sort(key=lambda record: int(record["index"].id))
+    extracted_count = len(records)
+    records, merged = deduplicate(records)
 
     create(args.output, records)
     statuses = Counter(record["classification"].status for record in records)
@@ -135,7 +191,10 @@ def main() -> int:
     report = {
         "source": "BEDCA", "purpose": "Rumbo internal development",
         "redistribution_status": "unresolved; do not publish",
-        "indexed": len(foods), "written": len(records), "failures": failures,
+        "indexed": len(foods), "normalized": extracted_count, "written": len(records),
+        "duplicates_merged": extracted_count - len(records),
+        "duplicate_groups": len(merged), "merged_records": merged,
+        "failures": failures,
         "statuses": dict(sorted(statuses.items())), "groups": dict(sorted(groups_count.items())),
         "roles": dict(sorted(roles.items())), "output_bytes": args.output.stat().st_size,
     }

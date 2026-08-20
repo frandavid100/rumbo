@@ -33,9 +33,28 @@ def main() -> int:
     integrity = db.execute("PRAGMA integrity_check").fetchone()[0]
     if integrity != "ok": failures.append(f"SQLite integrity: {integrity}")
     required = {"metadata", "products", "retailer_listings", "nutrition", "nutrient_evidence",
-                "classifications", "classification_roles"}
+                "classifications", "classification_roles", "source_records"}
     tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     if not required <= tables: failures.append(f"Missing tables: {sorted(required - tables)}")
+
+    metadata = dict(db.execute("SELECT key,value FROM metadata"))
+    expected_metadata = {
+        "catalog_format": "es.rumbo.catalog.sqlite",
+        "catalog_format_version": "1",
+        "schema_version": "rumbo-catalog-1",
+    }
+    for key, expected in expected_metadata.items():
+        if metadata.get(key) != expected:
+            failures.append(f"Invalid {key}: {metadata.get(key)!r}")
+    namespace = metadata.get("product_id_namespace", "")
+    if not namespace or db.execute(
+        "SELECT COUNT(*) FROM products WHERE product_id NOT LIKE ?", (namespace + ":%",)
+    ).fetchone()[0]:
+        failures.append("Product identifiers do not use the declared namespace")
+    duplicate_names = db.execute(
+        "SELECT COUNT(*) FROM (SELECT lower(trim(name)) FROM products GROUP BY lower(trim(name)) HAVING COUNT(*) > 1)"
+    ).fetchone()[0]
+    if duplicate_names: failures.append(f"Duplicate normalized product names: {duplicate_names}")
 
     bad_nutrition = db.execute("""SELECT COUNT(*) FROM nutrition WHERE
       calories < 0 OR calories > 1000 OR protein_g < 0 OR protein_g > 100 OR

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import unittest
 
-from tools.build_bedca_catalog import normalize
+from types import SimpleNamespace
+
+from tools.build_bedca_catalog import deduplicate, normalize
 from tools.catalog.classify import classify
 
 
@@ -33,6 +35,24 @@ class BedcaNormalizerTest(unittest.TestCase):
                                   component("FAT", "5"), component("FIBT", "4")))
         self.assertEqual(173.0, result["calories"])
         self.assertTrue(result["calories_derived"])
+
+    def test_deduplicates_names_and_keeps_stable_lowest_source_id(self):
+        def record(food_id: str, calories: float, derived: bool):
+            return {
+                "index": SimpleNamespace(id=food_id, name_es="Volador,  crudo", origin="BEDCA"),
+                "detail": {"raw_sha256": food_id, "components": [
+                    {"best_location": "1"}, {"best_location": "2"}
+                ]},
+                "nutrition": {"calories": calories, "protein_g": 21.0,
+                              "carbohydrate_g": 0.0, "fat_g": 0.3,
+                              "fiber_g": None, "sodium_g": None,
+                              "calories_derived": derived},
+            }
+        selected, merged = deduplicate([record("847", 88.0, True), record("309", 86.7, False)])
+        self.assertEqual(1, len(selected))
+        self.assertEqual("309", selected[0]["stable_source_id"])
+        self.assertEqual(86.7, selected[0]["nutrition"]["calories"])
+        self.assertEqual(["847", "309"], merged[0]["merged_source_food_ids"])
 
 
 class BedcaClassifierTest(unittest.TestCase):

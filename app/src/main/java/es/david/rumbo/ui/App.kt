@@ -7704,7 +7704,7 @@ private fun CatalogEntries(
                         protein = food?.proteinGrams ?: dishNutrition?.proteinGrams,
                         carbohydrates = food?.carbohydrateGrams ?: dishNutrition?.carbohydrateGrams,
                         fat = food?.fatGrams ?: dishNutrition?.fatGrams,
-                        modifier = Modifier.width(98.dp)
+                        modifier = Modifier.width(114.dp)
                     )
                 }
             } else if (entry.isDish) {
@@ -8448,23 +8448,23 @@ private fun SearchNutritionGrid(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Metric(
                 Icons.Default.LocalFireDepartment, "Calorías", display(calories), false,
-                Modifier.width(46.dp)
+                Modifier.width(54.dp)
             )
             Spacer(Modifier.width(6.dp))
             Metric(
                 foodCategoryIcon(FoodCategory.PROTEIN), "Proteínas", display(protein), true,
-                Modifier.width(46.dp)
+                Modifier.width(54.dp)
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Metric(
                 foodCategoryIcon(FoodCategory.CARBOHYDRATE), "Carbohidratos",
-                display(carbohydrates), false, Modifier.width(46.dp)
+                display(carbohydrates), false, Modifier.width(54.dp)
             )
             Spacer(Modifier.width(6.dp))
             Metric(
                 foodCategoryIcon(FoodCategory.FAT), "Grasas", display(fat), true,
-                Modifier.width(46.dp)
+                Modifier.width(54.dp)
             )
         }
     }

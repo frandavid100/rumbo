@@ -9,7 +9,9 @@ from .classify import Classification
 
 
 SCHEMA_VERSION = "rumbo-catalog-1"
-IMPORTER_VERSION = "bedca-1"
+CATALOG_FORMAT = "es.rumbo.catalog.sqlite"
+CATALOG_FORMAT_VERSION = "1"
+IMPORTER_VERSION = "bedca-2"
 CLASSIFIER_VERSION = "bedca-rules-1"
 
 
@@ -39,6 +41,11 @@ CREATE TABLE nutrient_evidence(
  component_name TEXT, value REAL, raw_value TEXT, unit TEXT, value_type TEXT, method TEXT,
  citation TEXT, evidence_json TEXT NOT NULL, PRIMARY KEY(product_id, component_id)
 );
+CREATE TABLE source_records(
+ product_id TEXT NOT NULL REFERENCES products, source_food_id TEXT NOT NULL,
+ source_origin TEXT, raw_sha256 TEXT NOT NULL, selected INTEGER NOT NULL,
+ PRIMARY KEY(product_id, source_food_id)
+);
 CREATE TABLE classifications(
  product_id TEXT PRIMARY KEY REFERENCES products, classifier_version TEXT NOT NULL,
  classified INTEGER NOT NULL, status TEXT NOT NULL, food_family TEXT,
@@ -65,8 +72,9 @@ def create(path: Path, records: list[dict]) -> None:
         connection.executescript(DDL)
         built_at = datetime.now(timezone.utc).isoformat()
         metadata = {
+            "catalog_format": CATALOG_FORMAT, "catalog_format_version": CATALOG_FORMAT_VERSION,
             "catalog_id": "bedca-development", "catalog_name": "BEDCA · Alimentos genéricos",
-            "catalog_version": CLASSIFIER_VERSION,
+            "catalog_version": "2", "product_id_namespace": "bedca",
             "schema_version": SCHEMA_VERSION, "importer_version": IMPORTER_VERSION,
             "classifier_version": CLASSIFIER_VERSION, "catalog_identity_source": "BEDCA",
             "nutrition_source": "BEDCA", "evidence_level": "GENERIC",
@@ -85,7 +93,7 @@ def create(path: Path, records: list[dict]) -> None:
 def _insert(db: sqlite3.Connection, record: dict, observed_at: str) -> None:
     item, detail, nutrition = record["index"], record["detail"], record["nutrition"]
     classification: Classification = record["classification"]
-    product_id = f'bedca:{item.id}'
+    product_id = f'bedca:{record.get("stable_source_id", item.id)}'
     db.execute("""INSERT INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
         product_id, None, item.name_es, item.name_en, None, None, None,
         classification.food_family, record["group_name"], "https://www.bedca.net/bdpub/",
@@ -98,6 +106,14 @@ def _insert(db: sqlite3.Connection, record: dict, observed_at: str) -> None:
         int(nutrition.get("calories_derived", False)), "GENERIC", "BEDCA", observed_at,
         100.0, "g edible portion",
     ))
+    for source_record in record.get("source_records", [{
+        "source_food_id": item.id, "source_origin": item.origin,
+        "raw_sha256": detail["raw_sha256"], "selected": True,
+    }]):
+        db.execute("INSERT INTO source_records VALUES (?,?,?,?,?)", (
+            product_id, source_record["source_food_id"], source_record["source_origin"],
+            source_record["raw_sha256"], int(source_record["selected"]),
+        ))
     for component in detail["components"]:
         component_id = component.get("c_id")
         if not component_id:
