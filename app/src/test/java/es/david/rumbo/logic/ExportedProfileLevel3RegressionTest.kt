@@ -96,12 +96,11 @@ class ExportedProfileLevel3RegressionTest {
                 planned(5877912053805521076L, CulinaryRole.PLATE_CENTER, MealType.LUNCH),
                 planned(5113321827553490261L, CulinaryRole.PLATE_BASE, MealType.LUNCH),
                 planned(4256230435931326165L, CulinaryRole.SIDE, MealType.LUNCH),
-                planned(5194589425113431274L, CulinaryRole.COOKING_MEDIUM, MealType.LUNCH)
+                planned(5916984186410301698L, CulinaryRole.DESSERT, MealType.LUNCH)
             )),
             meal(2004L, MealType.AFTERNOON_SNACK, listOf(
                 planned(5053420851366914800L, CulinaryRole.SANDWICH_BASE, MealType.AFTERNOON_SNACK),
-                planned(5140518523843252124L, CulinaryRole.SANDWICH_FILLING, MealType.AFTERNOON_SNACK),
-                planned(5916984186410301698L, CulinaryRole.DESSERT, MealType.AFTERNOON_SNACK)
+                planned(5140518523843252124L, CulinaryRole.SANDWICH_FILLING, MealType.AFTERNOON_SNACK)
             )),
             meal(2005L, MealType.DINNER, listOf(
                 planned(4908616859504657730L, CulinaryRole.PLATE_CENTER, MealType.DINNER),
