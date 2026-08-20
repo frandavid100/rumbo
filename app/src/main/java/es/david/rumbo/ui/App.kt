@@ -9706,19 +9706,15 @@ private fun FoodEditorScreen(foods: List<Food>, initial: Food? = null, onSave: (
                 }
                 if (error == null) {
                     onSave(
-                        Food(
-                            id = initial?.id ?: System.currentTimeMillis(),
-                            name = name.trim(),
-                            category = category,
-                            calories = values[0]!!,
-                            fatGrams = values[1]!!,
-                            carbohydrateGrams = values[2]!!,
-                            proteinGrams = values[3]!!,
-                            fiberGrams = parsedFiber,
-                            links = parsedLinks,
+                        mergeFoodEditorChanges(
+                            initial = initial,
+                            newId = System.currentTimeMillis(),
+                            name = name.trim(), category = category,
+                            calories = values[0]!!, fat = values[1]!!,
+                            carbohydrates = values[2]!!, protein = values[3]!!,
+                            fiber = parsedFiber, links = parsedLinks,
                             unitName = unitName.trim().ifBlank { null },
-                            unitAmount = parsedUnitAmount,
-                            wholeUnitsOnly = wholeUnitsOnly
+                            unitAmount = parsedUnitAmount, wholeUnitsOnly = wholeUnitsOnly
                         )
                     )
                 }
@@ -9726,6 +9722,50 @@ private fun FoodEditorScreen(foods: List<Food>, initial: Food? = null, onSave: (
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (isEditing) "Guardar cambios" else "Añadir alimento") }
     }
+}
+
+internal fun mergeFoodEditorChanges(
+    initial: Food?,
+    newId: Long,
+    name: String,
+    category: FoodCategory,
+    calories: Double,
+    fat: Double,
+    carbohydrates: Double,
+    protein: Double,
+    fiber: Double?,
+    links: List<String>,
+    unitName: String?,
+    unitAmount: Double?,
+    wholeUnitsOnly: Boolean
+): Food {
+    val editable = Food(
+        id = initial?.id ?: newId,
+        name = name,
+        category = category,
+        calories = calories,
+        fatGrams = fat,
+        carbohydrateGrams = carbohydrates,
+        proteinGrams = protein,
+        fiberGrams = fiber,
+        links = links,
+        unitName = unitName,
+        unitAmount = unitAmount,
+        wholeUnitsOnly = wholeUnitsOnly
+    )
+    return initial?.copy(
+        name = editable.name,
+        category = editable.category,
+        calories = editable.calories,
+        fatGrams = editable.fatGrams,
+        carbohydrateGrams = editable.carbohydrateGrams,
+        proteinGrams = editable.proteinGrams,
+        fiberGrams = editable.fiberGrams,
+        links = editable.links,
+        unitName = editable.unitName,
+        unitAmount = editable.unitAmount,
+        wholeUnitsOnly = editable.wholeUnitsOnly
+    ) ?: editable
 }
 
 private fun normalizeSearch(value: String): String = java.text.Normalizer
