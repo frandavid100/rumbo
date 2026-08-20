@@ -270,17 +270,28 @@ object CulinaryLevel3CompositionSearch {
         }
 
         val share = mealShares[mealType] ?: 0.0
-        return raw
+        val buckets = raw
             .distinctBy { candidate ->
                 candidate.meal.items.joinToString(",") { "${it.foodId}@${it.minimumGrams}-${it.maximumGrams}" }
             }
             .groupBy { it.fruit to it.vegetable }
-            .values
+        return buckets.values
             .flatMap { bucket ->
-                bucket.sortedWith(
+                val ranked = bucket.sortedWith(
                     compareBy<MealCandidate> { rangeScore(it.attainable, recommendation, share) }
                         .thenBy { preferredScore(it.preferredVector, recommendation, share) }
-                ).take(MAX_MEAL_CANDIDATES_PER_BUCKET)
+                )
+                // Pure nutrient ranking can fill the whole shortlist with near
+                // duplicates from one family. Preserve the best representatives
+                // of every repetition concept so the day-level variety check has
+                // real alternatives to combine later.
+                val diverse = ranked
+                    .flatMap { candidate -> candidate.rolesByConcept.keys.map { it to candidate } }
+                    .groupBy({ it.first }, { it.second })
+                    .values
+                    .flatMap { candidates -> candidates.take(2) }
+                (ranked.take(MAX_MEAL_CANDIDATES_PER_BUCKET) + diverse)
+                    .distinctBy { it.meal.items.map(PlannedFood::foodId) }
             }
             .sortedBy { rangeScore(it.attainable, recommendation, share) }
     }
