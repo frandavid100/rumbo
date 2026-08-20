@@ -11,7 +11,7 @@ on:
       - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl'
-      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_field_evidence.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.summary.json'
   workflow_dispatch:
 
@@ -43,9 +43,9 @@ jobs:
           for f in fixtures/carrefour_first_party_agent_web_products*.jsonl; do
             if [ -s "$f" ]; then PRODUCTS+=("$f"); fi
           done
-          if [ -s fixtures/carrefour_first_party_agent_web_field_evidence.jsonl ]; then
-            EVIDENCE+=(fixtures/carrefour_first_party_agent_web_field_evidence.jsonl)
-          fi
+          for f in fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl; do
+            if [ -s "$f" ]; then EVIDENCE+=("$f"); fi
+          done
           python merge_carrefour_first_party_observations.py \
             --products "${PRODUCTS[@]}" \
             --evidence "${EVIDENCE[@]}" \
@@ -54,6 +54,37 @@ jobs:
             --out-evidence fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
             --summary fixtures/carrefour_first_party_cumulative_summary.json \
             --sqlite carrefour-first-party-cumulative.sqlite
+      - name: Keep source inventory status synchronized with cumulative evidence
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary_path = Path('fixtures/carrefour_first_party_cumulative_summary.json')
+          inventory_path = Path('fixtures/carrefour_source_inventory.json')
+          summary = json.loads(summary_path.read_text(encoding='utf-8'))
+          inventory = json.loads(inventory_path.read_text(encoding='utf-8'))
+          status = inventory.setdefault('current_first_party_status', {})
+          counts = summary.get('counts', {})
+          verified = int(counts.get('verified_direct_products', 0) or 0)
+          status['inventory_complete'] = bool(summary.get('inventory_complete', False))
+          status['successful_first_party_product_pages_cumulative'] = verified
+          status['first_party_field_evidence_rows_cumulative'] = int(counts.get('evidence_rows', 0) or 0)
+          status['candidate_identity_urls_external_only'] = int(
+              counts.get('external_candidate_identity_urls_not_counted_as_first_party',
+                         status.get('candidate_identity_urls_external_only', 0)) or 0
+          )
+          status['cumulative_summary_fixture'] = str(summary_path)
+          status['notes'] = (
+              f'Current cumulative staging contains {verified} products verified from official Carrefour pages. '
+              'External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.'
+          )
+          built_at = str(summary.get('built_at') or '')
+          if built_at:
+              inventory['updated_at'] = built_at[:10]
+          inventory_path.write_text(json.dumps(inventory, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
       - name: Persist compact auditable staging
         run: |
           git config user.name "github-actions[bot]"
@@ -61,7 +92,8 @@ jobs:
           git add \
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
             tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
-            tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json
+            tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json \
+            tools/catalog/fixtures/carrefour_source_inventory.json
           if ! git diff --cached --quiet; then
             git commit -m "catalog: merge Carrefour first-party observations"
             git pull --rebase origin agent/catalog-phase1
