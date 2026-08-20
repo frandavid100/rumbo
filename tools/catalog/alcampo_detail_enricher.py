@@ -19,7 +19,7 @@ from nutrition_validation import validate_nutrition
 
 BASE = "https://www.compraonline.alcampo.es"
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/127 Safari/537.36"
-VERSION = "alcampo-detail-http-v2.1"
+VERSION = "alcampo-detail-http-v2.2"
 _TLS = threading.local()
 
 
@@ -56,9 +56,37 @@ def section(text: str, start_patterns: tuple[str,...], stop_patterns: tuple[str,
         if m: starts.append((m.start(),m.end()))
     if not starts: return None
     _, start=min(starts)
-    end=min([m.start() for p in stop_patterns for m in [re.search(p,text[start:],re.I)] if m] or [len(text)-start]) + start
+    stops=[]
+    tail=text[start:]
+    for p in stop_patterns:
+        m=re.search(p,tail,re.I)
+        if m: stops.append(m.start())
+    end=start+(min(stops) if stops else len(tail))
     value=text[start:end].strip(" :-|\n\t")
     return value[:max_len].strip() or None
+
+
+def clean_html_fragment(value: str | None) -> str | None:
+    if not value: return None
+    value=re.sub(r"<br\s*/?>","\n",value,flags=re.I)
+    value=re.sub(r"<[^>]+>"," ",value)
+    value=htmlmod.unescape(value).replace("\xa0"," ")
+    value=re.sub(r"[ \t\r\f\v]+"," ",value)
+    value=re.sub(r"\n\s*","\n",value)
+    return value.strip() or None
+
+
+def table_value(body: str, labels: tuple[str,...]) -> str | None:
+    """Read a labelled two-cell product characteristic without swallowing later rows."""
+    for label in labels:
+        pattern=(
+            r"<tr[^>]*>\s*<t[dh][^>]*>\s*"+label+
+            r"\s*</t[dh]>\s*<t[dh][^>]*>(.*?)</t[dh]>\s*</tr>"
+        )
+        m=re.search(pattern,body,re.I|re.S)
+        if m:
+            return clean_html_fragment(m.group(1))
+    return None
 
 
 def parse_nutrition(text: str):
@@ -75,9 +103,6 @@ def parse_nutrition(text: str):
         m=re.search(p+r"[^0-9]{0,60}([0-9]+(?:[.,][0-9]+)?)\s*kcal\b",nt,re.I)
         if m: kcal=number(m.group(1)); break
     basis=None
-    # Alcampo uses several equivalent table headings: "por 100 g", "100g" or
-    # a standalone "100 ml" column. Restrict the fallback to the nutrition section
-    # so a pack-size mention elsewhere cannot be mistaken for the declaration basis.
     for pattern in (
         r"(?:por|cada)\s*100\s*(g|ml)\b",
         r"(?:^|\n)\s*100\s*(g|ml)\b",
@@ -102,9 +127,21 @@ def parse_fields(body: str):
     ingredients=section(text,(r"\nIngredientes\s*:?",r"^Ingredientes\s*:?"),(
         r"\nAl[eé]rgenos\b",r"\nDatos nutricionales?\b",r"\nInformaci[oó]n nutricional\b",r"\nCaracter[ií]sticas\b",r"\nConservaci[oó]n\b",r"\nAlmacenamiento\b",r"\nPreparaci[oó]n\b"
     ),max_len=8000)
-    legal=section(text,(r"\nDenominaci[oó]n legal(?: del alimento)?\s*:?",r"\nDenominaci[oó]n del alimento\s*:?"),(
-        r"\nIngredientes\b",r"\nAl[eé]rgenos\b",r"\nDatos nutricionales?\b",r"\nCaracter[ií]sticas\b",r"\nConservaci[oó]n\b"
-    ),max_len=2000)
+    if ingredients:
+        ingredients=re.sub(r"^Ingredientes\s*:\s*","",ingredients,flags=re.I).strip() or None
+
+    # Prefer the exact characteristics-table cell. The old visible-text fallback could
+    # accidentally include every subsequent row (net amount, Nutriscore, claims, etc.).
+    legal=table_value(body,(r"Denominaci[oó]n\s+legal(?:\s+del\s+alimento)?",r"Denominaci[oó]n\s+del\s+alimento"))
+    if not legal:
+        legal=section(text,(r"\nDenominaci[oó]n legal(?: del alimento)?\s*:?",r"\nDenominaci[oó]n del alimento\s*:?"),(
+            r"\nCantidad neta\b",r"\nSigno de estimaci[oó]n\b",r"\nNutriscore\b",
+            r"\nDeclaraci[oó]n nutricional\b",r"\nDenominaci[oó]n de origen\b",
+            r"\nOtros datos\b",r"\nVegano\b",r"\nIngredientes\b",r"\nAl[eé]rgenos\b",
+            r"\nDatos nutricionales?\b",r"\nCaracter[ií]sticas\b",r"\nConservaci[oó]n\b",
+            r"\nPreparaci[oó]n\b",
+        ),max_len=1000)
+
     gtin=None
     for p in (r'"gtin13"\s*:\s*"(\d{8,14})"',r'"gtin"\s*:\s*"(\d{8,14})"',r'"ean"\s*:\s*"(\d{8,14})"',r'"barcode"\s*:\s*"(\d{8,14})"'):
         m=re.search(p,body,re.I)
@@ -112,7 +149,15 @@ def parse_fields(body: str):
     title=None
     m=re.search(r"<h1[^>]*>(.*?)</h1>",body,re.I|re.S)
     if m:
-        tmp=re.sub(r"<[^>]+>"," ",m.group(1)); title=re.sub(r"\s+"," ",htmlmod.unescape(tmp)).strip() or None
+        title=clean_html_fragment(m.group(1))
+    if not title:
+        m=re.search(r'<script[^>]+data-test=["\']product-details-structured-data["\'][^>]*>(.*?)</script>',body,re.I|re.S)
+        if m:
+            try:
+                obj=json.loads(htmlmod.unescape(m.group(1)))
+                if isinstance(obj,dict) and isinstance(obj.get("name"),str): title=obj["name"].strip() or None
+            except Exception:
+                pass
     nutrition=parse_nutrition(text)
     return text,title,gtin,legal,ingredients,nutrition
 
@@ -164,9 +209,6 @@ def _request(opener, url: str, referer: str):
 
 
 def _prime(opener):
-    # A normal first-party navigation establishes the anonymous session cookies used
-    # by CloudFront/AWS WAF. Failure is harmless: the product request remains the source
-    # of truth and will run through the normal retry path.
     try:
         status,_,_,body=_request(opener,BASE+"/categories/alimentaci%C3%B3n/OCC10",BASE+"/")
         return status != 202 and not ("window.gokuProps" in body and len(body)<10000)
@@ -174,82 +216,110 @@ def _prime(opener):
         return False
 
 
-def fetch_one(sku: str, attempts=10) -> Detail:
-    url=f"{BASE}/products/x/{urllib.parse.quote(str(sku),safe='')}"
+def product_slug(name: str | None) -> str | None:
+    if not name: return None
+    value=htmlmod.unescape(str(name)).strip().lower()
+    value=re.sub(r"[^\w]+","-",value,flags=re.UNICODE).strip("-_")
+    return value or None
+
+
+def candidate_urls(sku: str, name_hint: str | None) -> list[str]:
+    urls=[]
+    slug=product_slug(name_hint)
+    if slug:
+        urls.append(f"{BASE}/products/{urllib.parse.quote(slug,safe='-')}/{urllib.parse.quote(str(sku),safe='')}")
+    urls.append(f"{BASE}/products/x/{urllib.parse.quote(str(sku),safe='')}")
+    return list(dict.fromkeys(urls))
+
+
+def fetch_one(sku: str, name_hint: str | None=None, attempts=10) -> Detail:
+    urls=candidate_urls(sku,name_hint)
     last=None
+    last_url=urls[-1]
     opener=_thread_opener()
     if not getattr(_TLS,"primed",False):
         _TLS.primed=_prime(opener)
     pending_streak=0
-    for attempt in range(1,attempts+1):
-        try:
-            status,final,raw,body=_request(opener,url,BASE+"/")
-            if status==202 or ("window.gokuProps" in body and len(body)<10000):
-                last=f"WAF_PENDING_{status}"; pending_streak+=1
-                # A challenge can become sticky to an anonymous session. After a short
-                # streak, rotate the cookie jar and prime a fresh first-party session.
-                if pending_streak in (3,6):
-                    opener=_thread_opener(reset=True); _TLS.primed=_prime(opener)
-                time.sleep(min(0.8*attempt,7)); continue
-            pending_streak=0
-            text,name,gtin,legal,ingredients,nt=parse_fields(body)
-            if all(nt[k] is not None for k in ("calories","protein_g","carbohydrate_g","fat_g")):
-                vr=validate_nutrition(nt["calories"],nt["protein_g"],nt["carbohydrate_g"],nt["fat_g"],nt["fiber_g"],nt["salt_g"])
-                ns="DECLARED_VALID" if vr.valid else "DECLARED_INVALID:"+",".join(vr.reasons)
-            else: ns="DECLARED_INCOMPLETE"
-            return Detail(str(sku),url,final,status,name,gtin,legal,ingredients,nt["calories"],nt["protein_g"],nt["carbohydrate_g"],nt["fat_g"],nt["fiber_g"],nt["salt_g"],nt.get("basis"),ns,None,len(raw))
-        except HTTPError as exc:
-            try: preview=exc.read().decode("utf-8",errors="replace")[:200]
-            except Exception: preview=""
-            last=f"HTTP_{exc.code}:{preview}"
-            if exc.code in (403,408,425,429,500,502,503,504):
-                if exc.code in (403,429) and attempt in (3,6):
-                    opener=_thread_opener(reset=True); _TLS.primed=_prime(opener)
-                time.sleep(min(attempt*1.2,8)); continue
-            break
-        except (URLError, TimeoutError) as exc:
-            last=f"{type(exc).__name__}:{exc}"; time.sleep(min(attempt*1.0,7))
-        except Exception as exc:
-            last=f"{type(exc).__name__}:{exc}"; time.sleep(min(attempt*1.0,7))
-    return Detail(str(sku),url,None,None,None,None,None,None,None,None,None,None,None,None,None,"FETCH_ERROR",last,0)
+    per_url=max(3,(attempts+len(urls)-1)//len(urls))
+    for url_index,url in enumerate(urls):
+        last_url=url
+        for local_attempt in range(1,per_url+1):
+            global_attempt=url_index*per_url+local_attempt
+            try:
+                status,final,raw,body=_request(opener,url,BASE+"/")
+                if status==202 or ("window.gokuProps" in body and len(body)<10000):
+                    last=f"WAF_PENDING_{status}"; pending_streak+=1
+                    if pending_streak in (3,6):
+                        opener=_thread_opener(reset=True); _TLS.primed=_prime(opener)
+                    time.sleep(min(0.7*global_attempt,6)); continue
+                pending_streak=0
+                text,name,gtin,legal,ingredients,nt=parse_fields(body)
+                if all(nt[k] is not None for k in ("calories","protein_g","carbohydrate_g","fat_g")):
+                    vr=validate_nutrition(nt["calories"],nt["protein_g"],nt["carbohydrate_g"],nt["fat_g"],nt["fiber_g"],nt["salt_g"])
+                    ns="DECLARED_VALID" if vr.valid else "DECLARED_INVALID:"+",".join(vr.reasons)
+                else: ns="DECLARED_INCOMPLETE"
+                return Detail(str(sku),url,final,status,name,gtin,legal,ingredients,nt["calories"],nt["protein_g"],nt["carbohydrate_g"],nt["fat_g"],nt["fiber_g"],nt["salt_g"],nt.get("basis"),ns,None,len(raw))
+            except HTTPError as exc:
+                try: preview=exc.read().decode("utf-8",errors="replace")[:200]
+                except Exception: preview=""
+                last=f"HTTP_{exc.code}:{preview}"
+                # A guessed slug can be stale or differ from the retailer's canonical
+                # transliteration. Move immediately to the stable /products/x/<sku> route.
+                if exc.code in (404,410) and url_index < len(urls)-1:
+                    break
+                if exc.code in (403,408,425,429,500,502,503,504):
+                    if exc.code in (403,429) and local_attempt in (3,6):
+                        opener=_thread_opener(reset=True); _TLS.primed=_prime(opener)
+                    time.sleep(min(global_attempt*1.0,7)); continue
+                break
+            except (URLError, TimeoutError) as exc:
+                last=f"{type(exc).__name__}:{exc}"; time.sleep(min(global_attempt*0.8,6))
+            except Exception as exc:
+                last=f"{type(exc).__name__}:{exc}"; time.sleep(min(global_attempt*0.8,6))
+    return Detail(str(sku),last_url,None,None,None,None,None,None,None,None,None,None,None,None,None,"FETCH_ERROR",last,0)
 
 
-def load_skus(path: Path | None, explicit: list[str], limit: int):
-    skus=[]
+def load_targets(path: Path | None, explicit: list[str], limit: int):
+    targets: dict[str,str|None]={}
     if path:
         for line in path.read_text(encoding="utf-8").splitlines():
             if not line.strip(): continue
             row=json.loads(line); sku=row.get("sku") or row.get("retailer_sku")
-            if sku is not None: skus.append(str(sku))
-    skus.extend(str(x) for x in explicit)
-    skus=list(dict.fromkeys(skus))
-    return skus[:limit] if limit else skus
+            if sku is not None:
+                key=str(sku)
+                targets[key]=str(row.get("name") or "").strip() or targets.get(key)
+    for sku in explicit:
+        targets.setdefault(str(sku),None)
+    rows=list(targets.items())
+    return rows[:limit] if limit else rows
 
 
-def fetch_batch(skus:list[str],workers:int,attempts:int):
+def fetch_batch(targets:list[tuple[str,str|None]],workers:int,attempts:int):
     results=[]
-    def one(s): return fetch_one(s,attempts=attempts)
+    def one(t): return fetch_one(t[0],t[1],attempts=attempts)
     with cf.ThreadPoolExecutor(max_workers=max(1,workers)) as ex:
-        for d in ex.map(one,skus): results.append(d)
+        for d in ex.map(one,targets): results.append(d)
     return results
 
 
-def run(out:Path,skus:list[str],workers:int,retry_rounds:int=2):
+def run(out:Path,targets:list[tuple[str,str|None]],workers:int,retry_rounds:int=2):
     out.mkdir(parents=True,exist_ok=True)
-    details=fetch_batch(skus,workers,10)
+    name_by_sku=dict(targets)
+    details=fetch_batch(targets,workers,10)
     for round_no in range(1,retry_rounds+1):
         failed=[d.sku for d in details if d.error is not None and (d.error.startswith("WAF_PENDING_") or d.error.startswith("HTTP_403") or d.error.startswith("HTTP_429") or "Timeout" in d.error)]
         if not failed: break
         print(f"retry_round={round_no} transient_failures={len(failed)}",flush=True)
         time.sleep(min(2.0*round_no,6.0))
-        retried={d.sku:d for d in fetch_batch(failed,max(1,min(workers,2)),12)}
+        retry_targets=[(sku,name_by_sku.get(sku)) for sku in failed]
+        retried={d.sku:d for d in fetch_batch(retry_targets,max(1,min(workers,2)),12)}
         details=[retried.get(d.sku,d) if d.sku in retried else d for d in details]
     valid=sum(x.nutrition_status=="DECLARED_VALID" for x in details); err=sum(x.error is not None for x in details)
-    print(f"progress={len(details)}/{len(skus)} valid={valid} errors={err}",flush=True)
+    print(f"progress={len(details)}/{len(targets)} valid={valid} errors={err}",flush=True)
     with (out/"details.jsonl").open("w",encoding="utf-8") as f:
         for d in details: f.write(json.dumps(asdict(d),ensure_ascii=False)+"\n")
     counts={
-        "requested":len(skus),
+        "requested":len(targets),
         "fetched":sum(d.error is None for d in details),
         "errors":sum(d.error is not None for d in details),
         "with_name":sum(bool(d.name) for d in details),
@@ -262,12 +332,12 @@ def run(out:Path,skus:list[str],workers:int,retry_rounds:int=2):
         "declared_invalid_nutrition":sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
         "downloaded_html_bytes":sum(d.html_bytes for d in details),
     }
-    summary={"source":BASE,"version":VERSION,"counts":counts}
+    summary={"source":BASE,"version":VERSION,"counts":counts,"canonical_slug_fallback":True}
     (out/"summary.json").write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(summary,ensure_ascii=False,indent=2)); return summary
 
 
 def main():
     p=argparse.ArgumentParser();p.add_argument("--input",type=Path);p.add_argument("--sku",action="append",default=[]);p.add_argument("--limit",type=int,default=0);p.add_argument("--workers",type=int,default=4);p.add_argument("--retry-rounds",type=int,default=2);p.add_argument("--out",type=Path,default=Path("alcampo-detail-output"));p.add_argument("--min-valid",type=int,default=0)
-    a=p.parse_args(); skus=load_skus(a.input,a.sku,a.limit); s=run(a.out,skus,a.workers,a.retry_rounds); return 0 if s["counts"]["declared_valid_nutrition"]>=a.min_valid else 2
+    a=p.parse_args(); targets=load_targets(a.input,a.sku,a.limit); s=run(a.out,targets,a.workers,a.retry_rounds); return 0 if s["counts"]["declared_valid_nutrition"]>=a.min_valid else 2
 if __name__=="__main__": raise SystemExit(main())
