@@ -1,0 +1,76 @@
+name: Catalog Carrefour first-party smoke
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-first-party-smoke.yml'
+      - 'tools/catalog/carrefour_first_party_inventory.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carrefour-first-party-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Extract Carrefour first-party evidence
+        working-directory: tools/catalog
+        run: |
+          python carrefour_first_party_inventory.py \
+            --out carrefour-first-party-smoke \
+            --max-pages 1 \
+            --max-products 80 \
+            --workers 6 \
+            --seed-url 'https://www.carrefour.es/supermercado/limonada-carrefour-botella-1-l/R-530362942/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/bocaditos-carrefour-370-g/R-682401711/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/leche-condensada-carrefour-397-g/R-521003205/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/pizza-de-jamon-y-queso-carrefour-580-g/R-prod600097/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/gofre-azucarado-carrefour-classic-pack-de-6-unidades-de-55-g/R-544101780/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p' \
+            --seed-url 'https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p'
+
+      - name: Show coverage
+        run: |
+          python - <<'PY'
+          import json
+          p='tools/catalog/carrefour-first-party-smoke/summary.json'
+          d=json.load(open(p,encoding='utf-8'))
+          print(json.dumps({'counts':d['counts'],'coverage':d['coverage'],'nutrition':d['nutrition_field_coverage'],'discovery':d['discovery_diagnostics']},ensure_ascii=False,indent=2))
+          if d['counts']['fetched'] < 1:
+              raise SystemExit('No Carrefour product page could be fetched directly')
+          PY
+
+      - name: Persist compact first-party report
+        run: |
+          cp tools/catalog/carrefour-first-party-smoke/summary.json tools/catalog/fixtures/carrefour_first_party_smoke_summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/carrefour_first_party_smoke_summary.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Carrefour first-party smoke"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+
+      - name: Upload auditable first-party smoke
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-first-party-smoke
+          path: tools/catalog/carrefour-first-party-smoke/
+          retention-days: 7
+          if-no-files-found: error
