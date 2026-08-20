@@ -33,9 +33,6 @@ def collect_with_fresh_session_retries(label: str, rid: str, attempts: int = 6):
     best_meta = None
     for attempt in range(1, attempts + 1):
         products, meta = collect_root(label, rid, 0)
-        # Prefer the attempt that exposed the most products; on a tie prefer the one
-        # that exposed more child taxonomy, because descendants remain independently
-        # addressable even if a later pageToken was transiently pending.
         score = (len(products), len(meta.get("child_categories") or []))
         best_score = (
             len(best_products),
@@ -96,11 +93,6 @@ def recursive_collect(root_label: str, root_rid: str, max_depth: int = 64):
         if depth >= max_depth:
             continue
 
-        # Child taxonomy comes from page 1 and is independently addressable. Do not
-        # discard it merely because a later pageToken on the parent remained pending;
-        # traversing descendants both improves coverage and preserves the evidence needed
-        # to diagnose the one unresolved parent node. Completeness still remains false
-        # until every such parent error is cleared.
         for child in children:
             if not isinstance(child, dict):
                 continue
@@ -134,8 +126,8 @@ def main() -> int:
     p.add_argument("--out", type=Path, required=True)
     a = p.parse_args()
 
-    products, node_audit, unresolved, missing_ids = recursive_collect(a.label, a.rid, max_depth=max(0, a.max_depth))
-    # write_outputs performs the existing first-party alcohol filter and creates JSONL + SQLite.
+    max_depth=max(0,a.max_depth)
+    products, node_audit, unresolved, missing_ids = recursive_collect(a.label, a.rid, max_depth=max_depth)
     root_meta = [{
         "label": a.label,
         "retailer_category_id": a.rid,
@@ -144,17 +136,17 @@ def main() -> int:
         "unresolved_categories": unresolved,
         "children_without_retailer_category_id": missing_ids,
         "deduplication_identity": "retailer_sku_else_product_id",
-        "max_depth": max(0, a.max_depth),
+        "max_depth": max_depth,
     }]
     summary = write_outputs(a.out, products, root_meta)
     got = summary["counts"]["food_products"]
 
-    # Alcampo's productCount is retained only as source diagnostics. It is not a valid
-    # completeness denominator for the active regional assortment: direct API traversal
-    # can exhaust pageTokens cleanly at a different count. Completeness is therefore
-    # defined by exhausting every category node this shard is responsible for without
-    # API errors. Descendants intentionally outside max_depth are audited by other shards.
-    ok = not unresolved and not missing_ids and got > 0
+    # Aggregate roots can legitimately expose only descendants. A direct-only root shard
+    # is complete when its API request itself exhausted cleanly and exposed child taxonomy,
+    # even if it has zero direct food listings; those children are separate scheduled shards.
+    root_has_children = bool(node_audit and int(node_audit[0].get("children_discovered") or 0) > 0)
+    has_expected_content = got > 0 or (max_depth == 0 and root_has_children)
+    ok = not unresolved and not missing_ids and has_expected_content
     check = {
         "label": a.label,
         "rid": a.rid,
@@ -166,7 +158,8 @@ def main() -> int:
         "unresolved": unresolved,
         "missing_retailer_ids": missing_ids,
         "deduplication_identity": "retailer_sku_else_product_id",
-        "max_depth": max(0, a.max_depth),
+        "max_depth": max_depth,
+        "aggregate_root_with_children": bool(max_depth == 0 and root_has_children),
         "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
         "source_product_count_is_diagnostic_only": True,
         "ok": ok,
