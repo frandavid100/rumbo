@@ -3,19 +3,19 @@
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "source": "https://www.carrefour.es",
   "extractor_version": "carrefour-first-party-browser-inventory-1.0",
-  "built_at": "2026-08-20T08:42:17.651884+00:00",
+  "built_at": "2026-08-20T08:59:47.672794+00:00",
   "classification_performed": "false",
   "counts": {
     "candidate_urls": 8,
-    "attempted": 1,
+    "attempted": 2,
     "fetched": 0,
-    "blocked": 1,
-    "fetch_errors": 1,
+    "blocked": 2,
+    "fetch_errors": 2,
     "nutrition_complete": 0,
     "nutrition_partial": 0,
     "nutrition_not_found": 0,
     "evidence_rows": 0,
-    "network_responses": 8,
+    "network_responses": 13,
     "json_xhr_fetch_responses": 0
   },
   "coverage": {
@@ -136,5 +136,6 @@
   },
   "network_json_candidates": [],
   "sample": [],
-  "provenance_note": "Every populated product field in this dataset was observed directly on carrefour.es in a real browser session. Third-party data may seed candidate URLs only and is never copied as Carrefour evidence."
+  "provenance_note": "Every populated product field in this dataset was observed directly on carrefour.es in a real browser session. Third-party data may seed candidate URLs only and is never copied as Carrefour evidence.",
+  "quality_note": "Nutri-Score is retained only when the extracted product value is a single grade A-E. Generic marketplace/page-chrome text is removed from product attributes. Raw captured HTML remains the audit source."
 }
