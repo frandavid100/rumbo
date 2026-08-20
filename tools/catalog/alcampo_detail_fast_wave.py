@@ -5,6 +5,7 @@ import concurrent.futures as cf
 import json
 import os
 import threading
+import urllib.parse
 from dataclasses import asdict
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -12,19 +13,16 @@ from urllib.error import HTTPError, URLError
 import alcampo_detail_enricher as base
 from nutrition_validation import validate_nutrition
 
-VERSION = "alcampo-detail-fast-wave-v1"
+VERSION = "alcampo-detail-fast-wave-v1.1"
 _TLS = threading.local()
 
 
 def opener(reset: bool = False):
     if reset or not getattr(_TLS, "opener", None):
+        # Product-detail probes proved that a browser-UA request to /products/x/<sku>
+        # can return the complete SSR page without any category priming. Avoid the
+        # extra priming request because each request consumes scarce WAF headroom.
         _TLS.opener = base._new_opener()
-        # Priming is useful when it works but must never turn a fast wave into a
-        # long retry loop. One first-party category request per fresh session only.
-        try:
-            base._prime(_TLS.opener)
-        except Exception:
-            pass
     return _TLS.opener
 
 
@@ -44,14 +42,25 @@ def parse_success(sku: str, requested_url: str, status: int, final: str, raw: by
     )
 
 
+def stable_url(sku: str) -> str:
+    return f"{base.BASE}/products/x/{urllib.parse.quote(str(sku), safe='')}"
+
+
 def fetch_fast(sku: str, name_hint: str | None):
-    urls = base.candidate_urls(str(sku), name_hint)
+    # The stable x route redirects to Alcampo's exact canonical slug and was verified
+    # to return the same complete SSR detail page. Use it first so a normal success is
+    # one network request, not two guessed routes.
+    guessed = base.candidate_urls(str(sku), name_hint)
+    urls = [stable_url(str(sku))]
+    for u in guessed:
+        if u not in urls:
+            urls.append(u)
+    # At most two first-party requests per product in a fast wave. A later wave on a
+    # fresh runner is a better retry strategy than repeatedly polling one WAF session.
+    urls = urls[:2]
     last = None
     last_url = urls[-1]
     op = opener()
-    # Exactly one request per candidate URL. If the WAF returns 202, reset the
-    # cookie jar before the stable /products/x/<sku> fallback rather than burning
-    # minutes polling the same pending session.
     for idx, url in enumerate(urls):
         last_url = url
         try:
@@ -119,7 +128,7 @@ def summarize(details, requested: int):
             "declared_invalid_nutrition": sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
             "downloaded_html_bytes": sum(d.html_bytes for d in details),
         },
-        "policy": "ONE_REQUEST_PER_CANONICAL_CANDIDATE_FRESH_SESSION_ON_PENDING_CHECKPOINT_EACH_RESULT",
+        "policy": "STABLE_X_ROUTE_FIRST_MAX_TWO_FIRST_PARTY_REQUESTS_CHECKPOINT_EACH_RESULT",
     }
 
 
@@ -144,7 +153,7 @@ def main():
                     detail = fut.result()
                 except Exception as exc:
                     detail = base.Detail(
-                        str(sku), f"{base.BASE}/products/x/{sku}", None, None, None, None, None, None,
+                        str(sku), stable_url(str(sku)), None, None, None, None, None, None,
                         None, None, None, None, None, None, None, "FETCH_ERROR", f"WORKER:{type(exc).__name__}:{exc}", 0
                     )
                 details.append(detail)
