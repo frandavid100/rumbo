@@ -1,137 +1,137 @@
 {
-  "built_at": "2026-08-20T11:08:39.601624+00:00",
+  "built_at": "2026-08-20T11:09:52.814530+00:00",
   "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 21,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 26,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 612,
+    "evidence_rows": 741,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 20,
+    "nutrition_complete": 25,
     "nutrition_not_found": 0,
     "nutrition_partial": 4,
-    "verified_direct_products": 24
+    "verified_direct_products": 29
   },
   "coverage": {
     "allergens": {
-      "count": 4,
-      "pct": 16.67
+      "count": 8,
+      "pct": 27.59
     },
     "attributes": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "availability": {
       "count": 4,
-      "pct": 16.67
+      "pct": 13.79
     },
     "brand": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "category_path": {
       "count": 5,
-      "pct": 20.83
+      "pct": 17.24
     },
     "gtin": {
       "count": 4,
-      "pct": 16.67
+      "pct": 13.79
     },
     "image_url": {
       "count": 4,
-      "pct": 16.67
+      "pct": 13.79
     },
     "ingredients": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "legal_name": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "mandatory_mentions": {
-      "count": 10,
-      "pct": 41.67
+      "count": 11,
+      "pct": 37.93
     },
     "manufacturer_packer_importer": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "name": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "net_content": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "nutriscore": {
-      "count": 11,
-      "pct": 45.83
+      "count": 16,
+      "pct": 55.17
     },
     "nutrition_extra": {
-      "count": 10,
-      "pct": 41.67
+      "count": 15,
+      "pct": 51.72
     },
     "operator_address": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "preparation_instructions": {
-      "count": 17,
-      "pct": 70.83
+      "count": 21,
+      "pct": 72.41
     },
     "price_eur": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "unit_price_text": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "carbohydrate_g": {
-      "count": 21,
-      "pct": 87.5
+      "count": 26,
+      "pct": 89.66
     },
     "energy_kj": {
-      "count": 24,
+      "count": 29,
       "pct": 100.0
     },
     "fat_g": {
-      "count": 23,
-      "pct": 95.83
+      "count": 28,
+      "pct": 96.55
     },
     "fiber_g": {
       "count": 6,
-      "pct": 25.0
+      "pct": 20.69
     },
     "protein_g": {
-      "count": 20,
-      "pct": 83.33
+      "count": 25,
+      "pct": 86.21
     },
     "salt_g": {
-      "count": 21,
-      "pct": 87.5
+      "count": 26,
+      "pct": 89.66
     },
     "saturates_g": {
-      "count": 23,
-      "pct": 95.83
+      "count": 28,
+      "pct": 96.55
     },
     "sugars_g": {
-      "count": 21,
-      "pct": 87.5
+      "count": 26,
+      "pct": 89.66
     }
   },
   "provenance_note": "Only fields observed directly on official carrefour.es pages are merged. Third-party catalogs may seed candidate URLs, but their product facts are never promoted to CARREFOUR_FIRST_PARTY.",
@@ -187,6 +187,165 @@
       "storage_conditions": "Conservar en lugar fresco y seco.",
       "sugars_g": 55.0,
       "unit_price_text": "5,67 €/kg"
+    },
+    {
+      "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
+      "attributes": {
+        "alternative_vegetal": true,
+        "drained_weight_g": 400,
+        "legume_type": "Garbanzos",
+        "no_added_salt": true,
+        "packaging": "Bote"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 97.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/garbanzos-cocidos-sin-sal-anadida-categoria-extra-classic-carrefour-400-g/R-521005485/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.1-indexed",
+      "carbohydrate_g": 12.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 408.0,
+      "fat_g": 1.9,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Garbanzos, agua, antioxidante: ácido cítrico y conservador (metabisulfito sódico)",
+      "legal_name": "Garbanzos cocidos",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Carrefour",
+      "name": "Garbanzos cocidos sin sal añadida categoría extra Classic Carrefour 400 g.",
+      "net_content": "570 g",
+      "nutriscore": "A",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T11:14:00+00:00",
+      "operator_address": "Avda. de la Transición Española 36, 28108, Alcobendas (Madrid)",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 0.8,
+      "protein_g": 5.4,
+      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521005485",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.04,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Una vez abierto mantener en refrigeración y consumir en los 2-3 días siguientes",
+      "sugars_g": 0.0,
+      "unit_price_text": "2,00 €/kg"
+    },
+    {
+      "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
+      "attributes": {
+        "alternative_vegetal": true,
+        "cooked": true,
+        "drained_weight_g": 400,
+        "legume_type": "Garbanzos",
+        "packaging": "Bote"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 95.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/garbanzos-cocidos-categoria-extra-classic-carrefour-400-g/R-521005495/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.1-indexed",
+      "carbohydrate_g": 12.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 401.0,
+      "fat_g": 2.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Garbanzos, agua, sal, antioxidante: ácido cítrico y conservador (metabisulfito sódico)",
+      "legal_name": "Garbanzos cocidos",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Carrefour",
+      "name": "Garbanzos cocidos categoría extra Classic Carrefour 400 g.",
+      "net_content": "570 g",
+      "nutriscore": "A",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T11:14:00+00:00",
+      "operator_address": "Avda. de la Transición Española 36, 28108, Alcobendas (Madrid)",
+      "page_sha256": null,
+      "preparation_instructions": "ver envase",
+      "price_currency": "EUR",
+      "price_eur": 0.8,
+      "protein_g": 5.4,
+      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521005495",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.5,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en un lugar fresco y seco. Una vez abierto mantener en refrigeración y consumir antes de 2 días",
+      "sugars_g": 0.0,
+      "unit_price_text": "2,00 €/kg"
+    },
+    {
+      "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
+      "attributes": {
+        "alternative_vegetal": true,
+        "cooked": true,
+        "drained_weight_g": 400,
+        "legume_type": "Garbanzos",
+        "packaging": "Bote"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 96.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/garbanzos-con-verduras-cocidas-classic-carrefour-400-g/R-521005508/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.1-indexed",
+      "carbohydrate_g": 12.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 401.0,
+      "fat_g": 1.9,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Garbanzos (46%), verduras en proporción variable (26%) (zanahorias y coles de Bruselas), agua, antioxidante: ácido cítrico y conservador (metabisulfito sódico)",
+      "legal_name": "Garbanzos cocidos con verduras",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Carrefour",
+      "name": "Garbanzos con verduras cocidas Classic Carrefour 400 g.",
+      "net_content": "570 g",
+      "nutriscore": "A",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T11:14:00+00:00",
+      "operator_address": "Avda. de la Transición Española 36, 28108, Alcobendas (Madrid)",
+      "page_sha256": null,
+      "preparation_instructions": "ver envase",
+      "price_currency": "EUR",
+      "price_eur": 1.24,
+      "protein_g": 5.4,
+      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521005508",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.5,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Una vez abierto mantener en refrigeración y consumir en los 2-3 días siguientes",
+      "sugars_g": 0.0,
+      "unit_price_text": "3,10 €/kg"
     },
     {
       "allergens": null,
@@ -455,6 +614,58 @@
       "source": "CARREFOUR_FIRST_PARTY",
       "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
       "sugars_g": 5.4,
+      "unit_price_text": "4,39 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "alternative_vegetal": true,
+        "legume_type": "Alubias",
+        "origin": "Unión Europea y fuera de la UE",
+        "packaging": "Otros envases"
+      },
+      "availability": null,
+      "brand": "LUENGO",
+      "calories_kcal": 292.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/alubia-blanca-categoria-extra-luengo-1-kg/R-522713750/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-1.1-indexed",
+      "carbohydrate_g": 39.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 1233.0,
+      "fat_g": 2.1,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Alubia Blanca",
+      "legal_name": "Alubia Blanca",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "LEGUMBRES LUENGO. S.A.",
+      "name": "Alubia blanca categoría extra Luengo 1 kg.",
+      "net_content": "1000 g",
+      "nutriscore": "A",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T11:14:00+00:00",
+      "operator_address": "Ctra Nacional VI, km 314. 24794 Riego de la Vega (León)",
+      "page_sha256": null,
+      "preparation_instructions": "ver envase",
+      "price_currency": "EUR",
+      "price_eur": 4.39,
+      "protein_g": 20.8,
+      "provenance_note": "All populated product fields were observed on the official carrefour.es product page. The retrieval layer may serve an indexed crawl, so price is an observed Carrefour value but is not asserted as live/current.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "522713750",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.02,
+      "saturates_g": 0.3,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
+      "sugars_g": 5.3,
       "unit_price_text": "4,39 €/kg"
     },
     {
@@ -969,206 +1180,6 @@
       "storage_conditions": "Consérvese en lugar fresco, seco y oscuro.",
       "sugars_g": 1.2,
       "unit_price_text": "4,35 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "certificate": "Agricultura ecológica UE",
-        "oil_type": "Aceite de coco",
-        "organic": true,
-        "package_format": "Tarro",
-        "vegan": true,
-        "vegetarian": true
-      },
-      "availability": null,
-      "brand": "NATURGREEN",
-      "calories_kcal": 900.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-coco-ecologico-naturgreen-430-ml/R-843001140/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.0",
-      "carbohydrate_g": 0.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 3700.0,
-      "fat_g": 100.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Grasa de coco ecológico*. *Ingrediente procedente de la Agricultura Ecológica.",
-      "legal_name": "Grasa de coco ecológico",
-      "mandatory_mentions": "Puede estar en estado líquido o sólido, dependiendo de la temperatura ambiente, sin que ello afecte a su propiedades nutritivas.",
-      "manufacturer_packer_importer": "Laboratorios Almond SL",
-      "name": "Aceite de coco ecológico Naturgreen 430 ml.",
-      "net_content": "400 g, 430 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:35:00+00:00",
-      "operator_address": "Parque Empresarial Cabecicos Blancos Avda. Cabecicos Blancos, Parcela 18.2.B 30892 Librilla - Murcia - Spain",
-      "page_sha256": null,
-      "preparation_instructions": "Conservar en un lugar fresco, seco y aislado del suelo",
-      "price_currency": "EUR",
-      "price_eur": 8.35,
-      "protein_g": 0.0,
-      "provenance_note": "All populated product fields were observed directly on the official carrefour.es product page; external sources may only have seeded the candidate URL.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "843001140",
-      "salt_g": 0.0,
-      "saturates_g": 95.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar protegido de la luz, en ambiente fresco y seco. Si desea que permanezca en estado sólido manténgalo en frigorífico.",
-      "sugars_g": 0.0,
-      "unit_price_text": "19,42 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {},
-      "availability": "InStock",
-      "brand": "CARREFOUR",
-      "calories_kcal": 653.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/mayonesa-carrefour-envase-500-ml-475g/R-VC4AECOMM-013524/p",
-      "capture_method": "PLAYWRIGHT_SAVED_HTML",
-      "capture_probe_version": "carrefour-first-party-browser-probe-1.2",
-      "carbohydrate_g": 1.6,
-      "category_path": [
-        "Inicio",
-        "Supermercado",
-        "La Despensa",
-        "Alimentación",
-        "Salsas y Tomate Frito"
-      ],
-      "energy_kj": 2685.0,
-      "fat_g": 71.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": "8410086310306",
-      "http_status": 200,
-      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/013524_00_1.jpg",
-      "ingredients": "Aceite de girasol (70%), agua, yema de huevo (6%), vinagre de vino, azúcar, sal, zumo de limón concentrado, estabilizante: goma xantana, conservador: sorbato potásico, concentrado de zanahoria y calabaza, aromas. Puede contener trazas de mostaza y leche .",
-      "legal_name": "Mayonesa",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Mayonesa Carrefour envase 500 ml 475g.",
-      "net_content": "500 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T08:51:20.121301+00:00",
-      "operator_address": "Av. de la Transición Española, 36, 28108 Alcobendas, Madrid",
-      "page_sha256": "cdb2fcdb69ed32a975765318533811c634c65f70b9d2e88356c64fe025df1cc1",
-      "preparation_instructions": "Conservar en un lugar fresco, seco y aislado del suelo",
-      "price_currency": "EUR",
-      "price_eur": 1.43,
-      "protein_g": 0.8,
-      "retailer": "CARREFOUR",
-      "retailer_sku": "VC4AECOMM-013524",
-      "salt_g": 1.0,
-      "saturates_g": 7.4,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en ligar fresco y seco al abrigo de la luz y del calor. Una vez abierto, conservar en frigorífico un máximo de un mes.",
-      "sugars_g": 1.3,
-      "unit_price_text": "3,01 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "package_format": "Botella PET",
-        "soft_drink_type": "Sabores con gas"
-      },
-      "availability": null,
-      "brand": "SEVEN UP",
-      "calories_kcal": 19.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/7up-de-lima-limon-botella-2-l/R-VC4AECOMM-398607/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.0",
-      "carbohydrate_g": 4.7,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 82.0,
-      "fat_g": 0.0,
-      "fetch_error": null,
-      "fiber_g": 0.0,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Agua carbonatada, azúcar, acidulantes (E-330, E-296), aroma natural de lima y limón con otros aromas naturales, regulador de acidez (E-331), edulcorantes (acesulfamo K, sucralosa).",
-      "legal_name": "Bebida refrescante aromatizada con aromas naturales. Con azúcar y edulcorantes.",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "COMPAÑIA DE BEBIDAS PEPSICO SL",
-      "name": "7UP de lima-limón botella 2 l.",
-      "net_content": "2000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T10:35:00+00:00",
-      "operator_address": "CALLE MARIE CURIE, 7 PLANTA 1, EDIFICIO 8 VITORIA-GASTEIZ, ALAVA",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 1.91,
-      "protein_g": 0.0,
-      "provenance_note": "All populated product fields were observed directly on the official carrefour.es product page; external sources may only have seeded the candidate URL.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "VC4AECOMM-398607",
-      "salt_g": 0.04,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Proteger de la luz solar y de olores agresivos. No congelar. Conservar en lugar limpio, seco y fresco. Evitar el contacto directo con el suelo.",
-      "sugars_g": 4.7,
-      "unit_price_text": "0,95 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "certificate": "Agricultura ecológica UE",
-        "conservation_mode": "Temperatura ambiente",
-        "oil_type": "Aceite de coco",
-        "organic": true,
-        "package_format": "Tarro"
-      },
-      "availability": null,
-      "brand": "CARREFOUR BIO",
-      "calories_kcal": 818.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-coco-ecologico-carrefour-bio-460-ml/R-VC4AECOMM-509896/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.0",
-      "carbohydrate_g": null,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 3363.0,
-      "fat_g": 91.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "100% manteca de coco virgen ecológica. Puede contener trazas de frutos de cáscara, cereales que contienen gluten, soja, sésamo y mostaza.",
-      "legal_name": "Manteca de coco virgen procedente de la agricultura ecológica, de Filipinas.",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Aceite de coco ecológico Carrefour Bio 460 ml.",
-      "net_content": "460 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_PARTIAL",
-      "observed_at": "2026-08-20T10:35:00+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": "Ideal para la preparación de platos dulces y salados como grasa alternativa para cocinar. Utilización en frío y en caliente (pero evitar que humee).",
-      "price_currency": "EUR",
-      "price_eur": 6.55,
-      "protein_g": null,
-      "provenance_note": "All populated product fields were observed directly on the official carrefour.es product page; external sources may only have seeded the candidate URL.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "VC4AECOMM-509896",
-      "salt_g": null,
-      "saturates_g": 83.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en lugar fresco y resguardado de la luz.",
-      "sugars_g": null,
-      "unit_price_text": "14,24 €/l"
     }
   ],
   "source": "https://www.carrefour.es",
