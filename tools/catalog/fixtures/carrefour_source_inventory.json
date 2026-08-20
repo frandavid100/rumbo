@@ -6,6 +6,11 @@
     "first_party_carrefour": {
       "canonical_source": "https://www.carrefour.es",
       "evidence_source_id": "CARREFOUR_FIRST_PARTY",
+      "discovery": {
+        "robots_txt": "https://www.carrefour.es/robots.txt",
+        "official_food_sitemap_index": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
+        "notes": "Carrefour declares the food sitemap index in its own robots.txt. Use it as the canonical first-party product identity/URL discovery route before category crawling."
+      },
       "pipelines": [
         {
           "path": "tools/catalog/carrefour_catalog_importer.py",
@@ -18,6 +23,11 @@
           "notes": "Direct Playwright Carrefour adapter. Historical smoke discovered categories but zero product URLs; useful as a probe, not as the canonical first-party dataset."
         },
         {
+          "path": "tools/catalog/carrefour_first_party_sitemap.py",
+          "status": "canonical_first_party_identity_inventory",
+          "notes": "Traverses Carrefour's official sitemap-food index, records retailer SKU, canonical product URL and sitemap last-modified evidence, and persists JSONL plus SQLite without any Rumbo classification."
+        },
+        {
           "path": "tools/catalog/carrefour_first_party_inventory.py",
           "status": "canonical_first_party_http_staging",
           "notes": "Extraction-only HTTP staging. Stores product fields, partial nutrition and field-level evidence fetched from carrefour.es; performs no Rumbo classification. GitHub-hosted direct HTTP is currently answered with 403 by Carrefour."
@@ -25,7 +35,7 @@
         {
           "path": "tools/catalog/carrefour_first_party_browser_inventory.py",
           "status": "canonical_first_party_browser_staging",
-          "notes": "Polite real-browser fallback for Carrefour product pages. Extracts only fields observed directly on carrefour.es, records per-field evidence, captures candidate first-party JSON/XHR endpoints, persists JSONL plus SQLite, rotates candidates and stops after a WAF block rather than hammering the site."
+          "notes": "Polite real-browser fallback for Carrefour product pages. Extracts only fields observed directly on carrefour.es, records per-field evidence, captures candidate first-party JSON/XHR endpoints, persists JSONL plus SQLite, and stops after a WAF block rather than hammering the site."
         }
       ],
       "fixtures": [
@@ -34,6 +44,14 @@
           "status": "historical_direct_smoke",
           "counts": {"discovered": 0, "fetched": 0},
           "third_party_product_data": false
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_sitemap_summary.json",
+          "status": "official_sitemap_inventory_summary"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_sitemap_products.jsonl",
+          "status": "official_sitemap_product_identity_inventory"
         },
         {
           "path": "tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json",
