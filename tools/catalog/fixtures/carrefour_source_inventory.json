@@ -13,7 +13,7 @@
     "browser_status": "PARTIAL_SUCCESS_THEN_WAF",
     "classification_performed_in_first_party_staging": false,
     "notes": "Current cumulative staging contains 92 products verified from official Carrefour surfaces: 88 product-page observations and 4 listing-only observations. External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.",
-    "first_party_field_evidence_rows_cumulative": 2177,
+    "first_party_field_evidence_rows_cumulative": 2186,
     "cumulative_summary_fixture": "fixtures/carrefour_first_party_cumulative_summary.json",
     "verified_first_party_products_cumulative": 92,
     "first_party_listing_only_products_cumulative": 4
