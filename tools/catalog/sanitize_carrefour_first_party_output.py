@@ -10,6 +10,10 @@ import carrefour_first_party_browser_inventory as browser
 
 
 GENERIC_PRODUCT_TYPE = re.compile(r"vendidos?\s+por\s+terceros|marketplace", re.I)
+# Legacy extractor versions used prefix matching for `Tipo de leche` and could
+# turn the real Carrefour label `Tipo de leche tratada / Entera` into the bogus
+# value `tratada`. Keep this explicit and narrow so real declared values remain.
+INVALID_LEGACY_MILK_TYPE = {"tratada"}
 
 
 def valid_nutriscore(value) -> str | None:
@@ -28,7 +32,13 @@ def sanitize_row(row: dict) -> dict:
         product_type = attributes.get("product_type")
         if product_type and GENERIC_PRODUCT_TYPE.search(str(product_type)):
             attributes.pop("product_type", None)
+        milk_type = attributes.get("milk_type")
+        if milk_type and str(milk_type).strip().casefold() in INVALID_LEGACY_MILK_TYPE:
+            attributes.pop("milk_type", None)
         row["attributes"] = attributes
+    extra = row.get("nutrition_extra")
+    if extra is not None and not isinstance(extra, dict):
+        row["nutrition_extra"] = {}
     return row
 
 
@@ -48,7 +58,7 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Remove demonstrably generic Carrefour page chrome from extracted first-party product fields.")
+    ap = argparse.ArgumentParser(description="Remove demonstrably generic or legacy-parser Carrefour artifacts from first-party fields.")
     ap.add_argument("directory")
     args = ap.parse_args()
 
@@ -66,7 +76,9 @@ def main() -> int:
             continue
         if field == "attributes" and not row.get("attributes"):
             continue
-        if field in {"nutriscore", "attributes"}:
+        if field == "nutrition_extra" and not row.get("nutrition_extra"):
+            continue
+        if field in {"nutriscore", "attributes", "nutrition_extra"}:
             item = dict(item)
             item["value"] = row.get(field)
         evidence.append(item)
@@ -81,11 +93,14 @@ def main() -> int:
         coverage = summary.setdefault("coverage", {})
         coverage["nutriscore"] = base.coverage(rows, "nutriscore")
         coverage["attributes"] = base.coverage(rows, "attributes")
+        coverage["nutrition_extra"] = base.coverage(rows, "nutrition_extra")
         summary.setdefault("counts", {})["evidence_rows"] = len(evidence)
+        summary.setdefault("counts", {})["nutrition_extra_products"] = sum(bool(row.get("nutrition_extra")) for row in rows)
         summary["sample"] = [row for row in rows if not row.get("fetch_error")][:10]
         summary["quality_note"] = (
             "Nutri-Score is retained only when the extracted product value is a single grade A-E. "
-            "Generic marketplace/page-chrome text is removed from product attributes. Raw captured HTML remains the audit source."
+            "Generic marketplace/page-chrome text and the known legacy milk-label prefix artifact are removed from product attributes. "
+            "Raw captured HTML remains the audit source."
         )
         summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
