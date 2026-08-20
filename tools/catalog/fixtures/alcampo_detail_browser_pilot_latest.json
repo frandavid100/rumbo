@@ -1,8 +1,9 @@
 {
   "source": "https://www.compraonline.alcampo.es",
-  "version": "alcampo-detail-browser-v1.2",
+  "version": "alcampo-detail-browser-v1.3",
   "offset": 0,
   "concurrency": 2,
+  "session_policy": "FRESH_CONTEXT_PER_PRODUCT",
   "counts": {
     "requested": 60,
     "fetched": 2,
