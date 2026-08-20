@@ -4,13 +4,14 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-alcampo-browser-detail-wave.yml'
+      - 'tools/catalog/alcampo_detail_browser.py'
   workflow_dispatch:
 permissions:
   contents: write
   actions: read
 concurrency:
   group: catalog-alcampo-browser-detail-wave-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   GH_TOKEN: ${{ github.token }}
@@ -41,10 +42,20 @@ jobs:
           mkdir -p seed
           gh run download "$BASELINE_RUN" -n alcampo-food-catalog-sharded-enumeration -D seed
           test -s seed/products.jsonl
-      - name: Representative smoke from the real baseline
+      - name: Build a catalogue-wide stratified smoke sample
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          rows=[x for x in Path('seed/products.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
+          n=24
+          idx=sorted(set(round(i*(len(rows)-1)/(n-1)) for i in range(n)))
+          Path('seed/smoke-sample.jsonl').write_text('\n'.join(rows[i] for i in idx)+'\n',encoding='utf-8')
+          print('sample_indexes',idx)
+          PY
+      - name: Representative smoke from across the real baseline
         working-directory: tools/catalog
         run: |
-          python alcampo_detail_browser.py --input ../../seed/products.jsonl --out browser-smoke --offset 0 --limit 24 --concurrency 2 --min-fetched 18 --min-valid 1
+          python alcampo_detail_browser.py --input ../../seed/smoke-sample.jsonl --out browser-smoke --offset 0 --limit 24 --concurrency 2 --min-fetched 16 --min-valid 8
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -52,6 +63,7 @@ jobs:
           path: |
             tools/catalog/browser-known/
             tools/catalog/browser-smoke/
+            seed/smoke-sample.jsonl
           retention-days: 7
 
   prepare:
@@ -64,7 +76,7 @@ jobs:
         shell: bash
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json, os, math
+          import json, os
           total=int(os.environ['TOTAL_PRODUCTS']); size=int(os.environ['SHARD_SIZE'])
           include=[]
           for i,offset in enumerate(range(0,total,size)):
@@ -94,7 +106,7 @@ jobs:
           mkdir -p seed
           gh run download "$BASELINE_RUN" -n alcampo-food-catalog-sharded-enumeration -D seed
           test -s seed/products.jsonl
-      - name: Fetch first-party product detail in a real browser context
+      - name: Fetch first-party product detail in isolated real-browser sessions
         working-directory: tools/catalog
         run: |
           set +e
@@ -103,7 +115,7 @@ jobs:
             --out "alcampo-browser-detail-${{ matrix.shard }}" \
             --offset "${{ matrix.offset }}" \
             --limit "${{ matrix.limit }}" \
-            --concurrency 3 \
+            --concurrency 2 \
             --min-fetched 0 \
             --min-valid 0
           echo $? > "alcampo-browser-detail-${{ matrix.shard }}/exit_code.txt"
@@ -174,6 +186,8 @@ jobs:
             --summary ../../alcampo-browser-detail-final/summary.json \
             --detail-summary ../../alcampo-browser-detail-final/detail_merge_summary.json \
             --enumeration-report ../../seed/enumeration_report.json
+          cp ../../seed/products.jsonl ../../alcampo-browser-detail-final/source_products.jsonl
+          cp ../../seed/enumeration_report.json ../../alcampo-browser-detail-final/enumeration_report.json
       - name: Persist coverage and next semantic-review batch
         run: |
           cp alcampo-browser-detail-final/summary.json tools/catalog/fixtures/alcampo_browser_detail_full_summary_latest.json
