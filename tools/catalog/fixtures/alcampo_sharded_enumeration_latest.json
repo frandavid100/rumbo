@@ -1,23 +1,23 @@
 {
-  "root_shards_expected": 10,
-  "root_shards_seen": 1,
-  "root_shards_missing": 9,
-  "root_shards_failed": 1,
+  "root_shards_expected": 108,
+  "root_shards_seen": 8,
+  "root_shards_missing": 100,
+  "root_shards_failed": 3,
   "failed": [
     {
-      "label": "Veganos",
-      "rid": "OC09112021",
-      "source_reported_product_count": 0,
-      "food_products_recursive_union": 171,
-      "recursive_categories_visited": 17,
-      "api_error_categories": 4,
+      "label": "Zumos de Frutas",
+      "rid": "OC1102",
+      "source_reported_product_count": 305,
+      "food_products_recursive_union": 199,
+      "recursive_categories_visited": 13,
+      "api_error_categories": 2,
       "children_without_retailer_category_id": 0,
       "unresolved": [
         {
-          "label": "Bebidas de almendra veganas",
-          "retailer_category_id": "OCV16031003",
+          "label": "Néctar",
+          "retailer_category_id": "OC63310711",
           "depth": 2,
-          "source_reported_product_count": 16,
+          "source_reported_product_count": 80,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -28,38 +28,10 @@
           "children_traversed": true
         },
         {
-          "label": "Burger vegana",
-          "retailer_category_id": "OC0911202113",
+          "label": "Concentrados",
+          "retailer_category_id": "OC63310722",
           "depth": 2,
-          "source_reported_product_count": 10,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Tofu y Seitán",
-          "retailer_category_id": "OC0911202115",
-          "depth": 2,
-          "source_reported_product_count": 2,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Desayunos veganos",
-          "retailer_category_id": "OC091120213",
-          "depth": 2,
-          "source_reported_product_count": 31,
+          "source_reported_product_count": 32,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -77,14 +49,78 @@
       "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
       "source_product_count_is_diagnostic_only": true,
       "ok": false
+    },
+    {
+      "label": "Bebidas",
+      "rid": "OCC11",
+      "source_reported_product_count": 0,
+      "food_products_recursive_union": 905,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Bebidas",
+          "retailer_category_id": "OCC11",
+          "depth": 0,
+          "source_reported_product_count": null,
+          "direct_unique_products": 1800,
+          "pages": 6,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 14,
+          "children_traversed": false
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": true,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Frescos",
+      "rid": "OC2112",
+      "source_reported_product_count": 0,
+      "food_products_recursive_union": 1799,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Frescos",
+          "retailer_category_id": "OC2112",
+          "depth": 0,
+          "source_reported_product_count": null,
+          "direct_unique_products": 1800,
+          "pages": 6,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 10,
+          "children_traversed": false
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": true,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
     }
   ],
-  "recursive_category_nodes_visited": 17,
+  "recursive_category_nodes_visited": 33,
   "api_error_categories": 4,
   "children_without_retailer_category_id": 0,
-  "source_reported_product_count_sum_diagnostic_only": 0,
-  "product_rows_before_global_dedup": 171,
-  "unique_products_after_dedup": 171,
+  "source_reported_product_count_sum_diagnostic_only": 805,
+  "product_rows_before_global_dedup": 3218,
+  "unique_products_after_dedup": 2773,
   "deduplication_identity": "retailer_sku_else_product_id",
   "minimum_products_sanity_floor": 5000,
   "completeness_basis": "all_scheduled_root_shards_plus_recursive_first_party_category_tree_plus_pageToken_exhaustion_then_listing_identity_dedup",
