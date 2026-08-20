@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/catalog-carrefour-first-party-cumulative.yml'
       - 'tools/catalog/merge_carrefour_first_party_observations.py'
+      - 'tools/catalog/annotate_carrefour_first_party_summary.py'
       - 'tools/catalog/summarize_carrefour_first_party.py'
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
       - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
@@ -54,6 +55,12 @@ jobs:
             --out-evidence fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
             --summary fixtures/carrefour_first_party_cumulative_summary.json \
             --sqlite carrefour-first-party-cumulative.sqlite
+      - name: Annotate product-page versus listing-only observation scope
+        working-directory: tools/catalog
+        run: |
+          python annotate_carrefour_first_party_summary.py \
+            --products fixtures/carrefour_first_party_products_cumulative.jsonl \
+            --summary fixtures/carrefour_first_party_cumulative_summary.json
       - name: Keep source inventory status synchronized with cumulative evidence
         working-directory: tools/catalog
         run: |
@@ -67,9 +74,13 @@ jobs:
           inventory = json.loads(inventory_path.read_text(encoding='utf-8'))
           status = inventory.setdefault('current_first_party_status', {})
           counts = summary.get('counts', {})
-          verified = int(counts.get('verified_direct_products', 0) or 0)
+          verified = int(counts.get('verified_first_party_products', counts.get('verified_direct_products', 0)) or 0)
+          product_pages = int(counts.get('verified_product_page_observations', verified) or 0)
+          listing_only = int(counts.get('verified_listing_only_observations', 0) or 0)
           status['inventory_complete'] = bool(summary.get('inventory_complete', False))
-          status['successful_first_party_product_pages_cumulative'] = verified
+          status['verified_first_party_products_cumulative'] = verified
+          status['successful_first_party_product_pages_cumulative'] = product_pages
+          status['first_party_listing_only_products_cumulative'] = listing_only
           status['first_party_field_evidence_rows_cumulative'] = int(counts.get('evidence_rows', 0) or 0)
           status['candidate_identity_urls_external_only'] = int(
               counts.get('external_candidate_identity_urls_not_counted_as_first_party',
@@ -77,7 +88,8 @@ jobs:
           )
           status['cumulative_summary_fixture'] = str(summary_path)
           status['notes'] = (
-              f'Current cumulative staging contains {verified} products verified from official Carrefour pages. '
+              f'Current cumulative staging contains {verified} products verified from official Carrefour surfaces: '
+              f'{product_pages} product-page observations and {listing_only} listing-only observations. '
               'External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.'
           )
           built_at = str(summary.get('built_at') or '')
