@@ -7,11 +7,50 @@ from pathlib import Path
 import carrefour_first_party_inventory as base
 import carrefour_first_party_browser_inventory as browser
 
-VERSION = "carrefour-first-party-saved-html-1.0"
+VERSION = "carrefour-first-party-saved-html-1.1"
+
+# Conservative whitelist of product-specific labels observed on Carrefour product
+# pages. These remain raw declared characteristics; they are not Rumbo roles or
+# classifications. Unknown labels are deliberately not guessed.
+ATTRIBUTE_LABELS = {
+    "health_characteristic": ["Característica salud", "Caracteristica salud"],
+    "elaboration": ["Elaboración", "Elaboracion"],
+    "packaging": ["Envase"],
+    "format": ["Formato"],
+    "origin": ["Origen", "País de origen", "Pais de origen"],
+    "variety": ["Variedad"],
+    "caliber": ["Calibre"],
+    "oil_type_mayonnaise": ["Tipo de aceite(Mayonesas)", "Tipo de aceite (Mayonesas)"],
+    "milk_type": ["Tipo de leche"],
+    "milk_treatment": ["Tratamiento de la leche"],
+    "meat_breed": ["Raza"],
+}
 
 
 def nonempty(value):
     return value not in (None, "", [], {})
+
+
+def augment_declared_attributes(row: dict, evidence: list[dict], text: str) -> None:
+    attributes = dict(row.get("attributes") or {})
+    for key, labels in ATTRIBUTE_LABELS.items():
+        value = base.labelled_value(text, labels)
+        if nonempty(value):
+            attributes[key] = value
+    row["attributes"] = attributes
+
+    # Keep a single field-level evidence item matching the final declared map.
+    evidence[:] = [item for item in evidence if item.get("field") != "attributes"]
+    if attributes:
+        evidence.append({
+            "retailer_sku": row.get("retailer_sku"),
+            "field": "attributes",
+            "value": attributes,
+            "source": base.SOURCE,
+            "evidence_type": "DECLARED",
+            "source_url": row.get("canonical_url"),
+            "observed_at": row.get("observed_at"),
+        })
 
 
 def main():
@@ -38,6 +77,7 @@ def main():
         status = item.get("status")
         text = base.html_to_text(raw)
         row, ev = browser.extract_from_html(url, final_url, status, raw, text)
+        augment_declared_attributes(row, ev, text)
         row["capture_method"] = "PLAYWRIGHT_SAVED_HTML"
         row["capture_probe_version"] = summary.get("version")
         rows.append(row)
@@ -81,9 +121,11 @@ def main():
         "coverage": {field: base.coverage(rows, field) for field in fields},
         "nutrition_field_coverage": {field: base.coverage(rows, field) for field in nutrition_fields},
         "sample": rows[:10],
+        "declared_attribute_keys": sorted(ATTRIBUTE_LABELS),
         "provenance_note": (
             "Every populated field was parsed offline from HTML captured directly from a successful Carrefour product-page "
-            "response in Playwright. No third-party field is copied into this dataset."
+            "response in Playwright. Product characteristics are retained as raw declared attributes, not Rumbo classifications. "
+            "No third-party field is copied into this dataset."
         ),
     }
     (out / "summary.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
