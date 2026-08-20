@@ -10,8 +10,7 @@ on:
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
       - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl'
-      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products.jsonl'
-      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products_batch2.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_agent_web_field_evidence.jsonl'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.summary.json'
   workflow_dispatch:
@@ -41,9 +40,7 @@ jobs:
         run: |
           PRODUCTS=(fixtures/carrefour_first_party_products_cumulative.jsonl)
           EVIDENCE=(fixtures/carrefour_first_party_field_evidence_cumulative.jsonl)
-          for f in \
-            fixtures/carrefour_first_party_agent_web_products.jsonl \
-            fixtures/carrefour_first_party_agent_web_products_batch2.jsonl; do
+          for f in fixtures/carrefour_first_party_agent_web_products*.jsonl; do
             if [ -s "$f" ]; then PRODUCTS+=("$f"); fi
           done
           if [ -s fixtures/carrefour_first_party_agent_web_field_evidence.jsonl ]; then
@@ -60,7 +57,7 @@ jobs:
       - name: Persist compact auditable staging
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "4189828+github-actions[bot]@users.noreply.github.com"
           git add \
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
             tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
