@@ -19,11 +19,12 @@ import kotlin.math.round
 /**
  * Deterministic bounded repair from a certified COMPLETE day to level 3.
  *
- * Every accepted intermediate state remains COMPLETE. The repair changes the
- * smallest local cause first, but it may normalize several quantity violations
- * together when fixing them one by one would merely make the optimiser push a
- * different occurrence to an extreme. Broad generation remains a later
- * fallback and is never evidence of insufficiency.
+ * The initial and returned witnesses are COMPLETE. Intermediate states may be
+ * nutritionally incomplete: fixing a culinary quantity can temporarily move a
+ * macro outside tolerance, and a later substitution can restore it. Requiring
+ * every intermediate step to remain COMPLETE makes those valid multi-step
+ * repairs unreachable. Broad generation remains a later fallback and is never
+ * evidence of insufficiency.
  */
 object CulinarilySatisfactoryWitnessRepair {
     private const val BEAM_WIDTH = 48
@@ -46,6 +47,15 @@ object CulinarilySatisfactoryWitnessRepair {
         ) return null
 
         fun promoted(candidate: CertifiedDayWitness): CertifiedDayWitness? {
+            if (!CertifiedDayWitnessEvaluator.isComplete(
+                    candidate.copy(level = CertifiedDayLevel.COMPLETE),
+                    rules,
+                    foodsById,
+                    dishesById,
+                    recommendation,
+                    mealShares
+                )
+            ) return null
             val level3 = candidate.copy(
                 level = CertifiedDayLevel.CULINARILY_SATISFACTORY,
                 fingerprint = candidate.meals.hashCode()
@@ -78,7 +88,7 @@ object CulinarilySatisfactoryWitnessRepair {
                     mealShares,
                     portionContext
                 ).forEach { variant ->
-                    val accepted = optimizeAndKeepComplete(
+                    val accepted = optimizeCandidate(
                         variant,
                         rules,
                         foodsById,
@@ -521,7 +531,7 @@ object CulinarilySatisfactoryWitnessRepair {
             )
         }
 
-    private fun optimizeAndKeepComplete(
+    private fun optimizeCandidate(
         witness: CertifiedDayWitness,
         rules: List<PlanningRule>,
         foodsById: Map<Long, Food>,
@@ -544,12 +554,7 @@ object CulinarilySatisfactoryWitnessRepair {
             meals = optimized,
             fingerprint = optimized.hashCode()
         )
-        if (!candidate.isStructurallyValid()) return null
-        return candidate.takeIf {
-            CertifiedDayWitnessEvaluator.isComplete(
-                it, rules, foodsById, dishesById, recommendation, mealShares
-            )
-        }
+        return candidate.takeIf { it.isStructurallyValid() }
     }
 
     private fun score(
