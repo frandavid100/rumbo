@@ -1,0 +1,69 @@
+{
+  "retailer": "CARREFOUR",
+  "policy": "PER_FIELD_PROVENANCE_REQUIRED",
+  "updated_at": "2026-08-20",
+  "sources": {
+    "first_party_carrefour": {
+      "canonical_source": "https://www.carrefour.es",
+      "evidence_source_id": "CARREFOUR_FIRST_PARTY",
+      "pipelines": [
+        {
+          "path": "tools/catalog/carrefour_catalog_importer.py",
+          "status": "legacy_direct",
+          "notes": "Direct urllib Carrefour scraper; limited roots and mixes extraction with classification. Preserve for history, do not use as the canonical first-party staging format."
+        },
+        {
+          "path": "tools/catalog/direct_retailer_catalog.py",
+          "status": "legacy_direct_probe",
+          "notes": "Direct Playwright Carrefour adapter. Historical smoke discovered categories but zero product URLs; useful as a probe, not as the canonical first-party dataset."
+        },
+        {
+          "path": "tools/catalog/carrefour_first_party_inventory.py",
+          "status": "canonical_first_party_staging",
+          "notes": "Extraction-only staging. Stores product fields, partial nutrition and field-level evidence fetched from carrefour.es; performs no Rumbo classification."
+        }
+      ],
+      "fixtures": [
+        {
+          "path": "tools/catalog/fixtures/carrefour_direct_smoke_summary.json",
+          "status": "historical_direct_smoke",
+          "counts": {"discovered": 0, "fetched": 0},
+          "third_party_product_data": false
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_smoke_summary.json",
+          "status": "generated_by_new_pipeline_when_available"
+        }
+      ]
+    },
+    "radarsuper_mirror": {
+      "canonical_source": "https://radarsuper.com/carrefour",
+      "evidence_source_id": "RADARSUPER",
+      "pipelines": [
+        "tools/catalog/carrefour_radar_catalog_importer.py",
+        "tools/catalog/carrefour_radar_catalog_importer_v2.py"
+      ],
+      "status": "candidate_identity_and_legacy_catalog_only",
+      "rules": [
+        "May seed candidate Carrefour product URLs/identities.",
+        "Never copy a RadarSuper field into CARREFOUR_FIRST_PARTY evidence.",
+        "Open Food Facts nutrition surfaced by RadarSuper remains OPEN_FOOD_FACTS_VIA_RADARSUPER and is never DECLARED Carrefour evidence."
+      ],
+      "latest_known": {
+        "fixture": "tools/catalog/fixtures/carrefour_quality_latest_summary.json",
+        "unique_product_urls": 8449,
+        "identified": 8372,
+        "nutrition_source": {"OPEN_FOOD_FACTS_VIA_RADARSUPER": 1571}
+      }
+    },
+    "open_food_facts": {
+      "status": "third_party_nutrition",
+      "rule": "Never relabel as Carrefour-declared nutrition."
+    },
+    "aesan_or_manufacturer": {
+      "status": "third_party_or_external",
+      "rule": "Keep separate provenance; not part of the Carrefour first-party pass."
+    }
+  },
+  "classification_policy": "Extraction is independent of Rumbo classification. Automatic proposals are not manual semantic review and are not first-party retailer evidence."
+}
