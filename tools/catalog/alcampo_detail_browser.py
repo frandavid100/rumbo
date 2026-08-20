@@ -11,7 +11,7 @@ from playwright.async_api import async_playwright
 from alcampo_detail_enricher import BASE, UA, Detail, candidate_urls, parse_fields
 from nutrition_validation import validate_nutrition
 
-VERSION = "alcampo-detail-browser-v1.2"
+VERSION = "alcampo-detail-browser-v1.3"
 
 
 def load_targets(path: Path, offset: int, limit: int) -> list[tuple[str, str | None]]:
@@ -49,13 +49,43 @@ def parsed_detail(sku: str, requested: str, final: str, status: int | None, body
 
 
 def ordered_urls(sku: str, name: str | None) -> list[str]:
-    # /products/x/SKU is retailer-stable and Alcampo redirects it to the current
-    # canonical slug. Prefer it over guessing the slug from a catalogue name.
     x = f"{BASE}/products/x/{sku}"
     return list(dict.fromkeys([x, *candidate_urls(sku, name)]))
 
 
-async def fetch_one(context, sku: str, name: str | None) -> Detail:
+async def new_context(browser):
+    context = await browser.new_context(
+        locale="es-ES",
+        timezone_id="Europe/Madrid",
+        user_agent=UA,
+        viewport={"width": 1280, "height": 720},
+        service_workers="block",
+        extra_http_headers={"Accept-Language": "es-ES,es;q=0.9"},
+    )
+
+    async def route_handler(route):
+        req = route.request
+        # The PDP is server rendered. Avoid third-party trackers and heavy binary
+        # resources, which dramatically multiply requests and previously poisoned a
+        # shared WAF session after the first two successful products.
+        if req.resource_type in {"image", "media", "font"}:
+            await route.abort()
+            return
+        if not req.url.startswith(BASE) and req.resource_type not in {"document"}:
+            await route.abort()
+            return
+        await route.continue_()
+
+    await context.route("**/*", route_handler)
+    return context
+
+
+async def fetch_one(browser, sku: str, name: str | None) -> Detail:
+    # Each product gets a fresh browser context/cookie jar. The first browser-wave
+    # smoke fetched exactly the first two concurrent PDPs, then every subsequent
+    # navigation in the shared context returned HTTP 405. Isolating contexts keeps
+    # one product's WAF/session state from contaminating the next product.
+    context = await new_context(browser)
     page = await context.new_page()
     urls = ordered_urls(sku, name)
     last_error = None
@@ -63,28 +93,30 @@ async def fetch_one(context, sku: str, name: str | None) -> Detail:
     try:
         for url in urls:
             last_url = url
-            for attempt in range(3):
+            for attempt in range(2):
                 try:
-                    response = await page.goto(url, wait_until="domcontentloaded", timeout=35000)
+                    response = await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                     status = response.status if response else None
                     body = await page.content()
                     if status == 202:
                         last_error = "PENDING_202"
-                        await asyncio.sleep(1.5 + attempt * 2)
+                        await asyncio.sleep(1.0 + attempt * 2)
                         continue
                     if status in (404, 410):
+                        last_error = f"HTTP_{status}"
                         break
                     if status is not None and status >= 400:
                         last_error = f"HTTP_{status}"
-                        await asyncio.sleep(1.5 + attempt)
+                        await asyncio.sleep(1.0 + attempt)
                         continue
                     return parsed_detail(sku, url, page.url, status, body)
                 except Exception as exc:
                     last_error = f"{type(exc).__name__}:{exc}"
-                    await asyncio.sleep(1.5 + attempt)
+                    await asyncio.sleep(1.0 + attempt)
         return Detail(sku, last_url, None, None, None, None, None, None, None, None, None, None, None, None, None, "FETCH_ERROR", last_error, 0)
     finally:
         await page.close()
+        await context.close()
 
 
 async def run(targets: list[tuple[str, str | None]], out: Path, concurrency: int, offset: int) -> dict:
@@ -92,25 +124,14 @@ async def run(targets: list[tuple[str, str | None]], out: Path, concurrency: int
     details: list[Detail] = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        # Alcampo's edge/WAF serves the real PDP to this ordinary Chrome UA while
-        # the Playwright HeadlessChrome default is rejected with 403.
-        context = await browser.new_context(
-            locale="es-ES",
-            timezone_id="Europe/Madrid",
-            user_agent=UA,
-            viewport={"width": 1280, "height": 720},
-            extra_http_headers={"Accept-Language": "es-ES,es;q=0.9"},
-        )
         sem = asyncio.Semaphore(max(1, concurrency))
 
         async def worker(target):
             async with sem:
-                return await fetch_one(context, target[0], target[1])
+                return await fetch_one(browser, target[0], target[1])
 
         tasks = [asyncio.create_task(worker(t)) for t in targets]
         path = out / "details.jsonl"
-        # Stream each completed product immediately so an interrupted shard remains
-        # salvageable by GitHub Actions' always() artifact step.
         with path.open("w", encoding="utf-8", buffering=1) as f:
             for n, task in enumerate(asyncio.as_completed(tasks), 1):
                 try:
@@ -124,7 +145,6 @@ async def run(targets: list[tuple[str, str | None]], out: Path, concurrency: int
                     fetched = sum(x.error is None for x in details)
                     print(f"checkpoint={n}/{len(targets)} offset={offset} fetched={fetched} valid={valid}", flush=True)
 
-        await context.close()
         await browser.close()
 
     counts = {
@@ -138,7 +158,7 @@ async def run(targets: list[tuple[str, str | None]], out: Path, concurrency: int
         "declared_incomplete_nutrition": sum(d.nutrition_status == "DECLARED_INCOMPLETE" for d in details),
         "declared_invalid_nutrition": sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
     }
-    summary = {"source": BASE, "version": VERSION, "offset": offset, "concurrency": concurrency, "counts": counts}
+    summary = {"source": BASE, "version": VERSION, "offset": offset, "concurrency": concurrency, "session_policy": "FRESH_CONTEXT_PER_PRODUCT", "counts": counts}
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return summary
