@@ -62,7 +62,15 @@ data class ResolvedPortionPolicy(
     val referenceSource: PortionReferenceSource
 ) {
     fun isHardValid(grams: Double): Boolean = grams in minimum..maximum
-    fun isSatisfactory(grams: Double): Boolean = grams in satisfactoryMinimum..satisfactoryMaximum
+    fun isSatisfactory(grams: Double): Boolean {
+        // Catalogue portions and optimized menu amounts are commonly rounded.
+        // A small boundary discrepancy is not a culinary defect. Keep the
+        // tolerance proportional to the product/role reference and bounded so
+        // genuinely disproportionate quantities remain invalid.
+        val tolerance = (referenceGrams * 0.05).coerceIn(5.0, 15.0)
+        return grams >= satisfactoryMinimum - tolerance &&
+            grams <= satisfactoryMaximum + tolerance
+    }
 }
 
 /**

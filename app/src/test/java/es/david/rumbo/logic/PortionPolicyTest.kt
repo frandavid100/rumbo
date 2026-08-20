@@ -184,6 +184,22 @@ class PortionPolicyTest {
         assertTrue(resolved.satisfactoryMaximum < 255.0)
     }
 
+    @Test
+    fun smallGramRoundingDoesNotBecomeACulinaryQuantityFailure() {
+        val fruit = food(9, 180.0, setOf("DESSERT"))
+        val resolved = PortionPolicyResolver.resolve(
+            fruit,
+            CulinaryRole.DESSERT,
+            MealType.BREAKFAST,
+            Recommendation(1875, 154, 198, 52, "test"),
+            MealDistributionPolicy.defaults
+        )
+
+        assertTrue(resolved.satisfactoryMinimum > 85.0)
+        assertTrue(resolved.isSatisfactory(85.0))
+        assertTrue(!resolved.isSatisfactory(50.0))
+    }
+
     private fun food(id: Long, basis: Double, roles: Set<String>) = Food(
         id = id,
         name = "F$id",

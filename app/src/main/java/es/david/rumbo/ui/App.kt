@@ -2380,16 +2380,6 @@ private fun repertoireProgressTarget(
                     mealType = dependency.mealType
                 )
             }
-            val quantity = diagnostic.issues.firstOrNull {
-                it.kind == CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE
-            }
-            if (quantity != null) {
-                return 2 to RepertoireProgressTarget(
-                    message = "Nivel 2 conseguido. La cantidad de ${quantity.foodName ?: "uno de tus alimentos"} en ${quantity.mealType.label.lowercase()} queda fuera del intervalo culinario configurado. Rumbo puede sustituir esa comida por otra combinación.",
-                    buttonLabel = "Cambiar ${quantity.mealType.label.lowercase()}",
-                    retryMealType = quantity.mealType
-                )
-            }
             val soft = diagnostic.issues.firstOrNull {
                 it.kind == CulinarySatisfactionIssueKind.SOFT_RELATION_UNSATISFIED
             }
@@ -2410,6 +2400,14 @@ private fun repertoireProgressTarget(
                         mealType = soft.mealType
                     )
                 }
+            }
+            if (diagnostic.issues.all {
+                    it.kind == CulinarySatisfactionIssueKind.QUANTITY_OUTSIDE_SATISFACTORY_RANGE
+                }
+            ) {
+                return 2 to RepertoireProgressTarget(
+                    "Nivel 2 conseguido: Rumbo ha encontrado y guardado un día completo."
+                )
             }
             return 2 to RepertoireProgressTarget(
                 message = "Nivel 2 conseguido. Esta propuesta todavía no puede certificarse como culinariamente satisfactoria. Rumbo puede buscar una combinación distinta con tu repertorio actual.",
