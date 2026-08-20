@@ -191,6 +191,7 @@ object CulinarySatisfactionEvaluator {
             )
         }
 
+        val isCompositeMeal = occurrences.size > 1
         val eligibleRoles = occurrences.map { occurrence ->
             occurrence.roles.filterTo(linkedSetOf()) { role ->
                 CulinaryPolicy.isAllowedForMeal(role, meal.type) &&
@@ -201,7 +202,16 @@ object CulinarySatisfactionEvaluator {
                     recommendation,
                     mealShares,
                     portionContext
-                ).isSatisfactory(occurrence.grams)
+                ).let { policy ->
+                    policy.isSatisfactory(occurrence.grams) ||
+                        // A small amount can be a legitimate component of a
+                        // composed meal. It only blocks level 3 when it also
+                        // violates the hard role range. Upper satisfactory
+                        // limits remain strict so disproportionate portions are
+                        // still rejected.
+                        (isCompositeMeal && occurrence.grams < policy.satisfactoryMinimum &&
+                            policy.isHardValid(occurrence.grams))
+                }
             }
         }
         if (eligibleRoles.any { it.isEmpty() }) {
