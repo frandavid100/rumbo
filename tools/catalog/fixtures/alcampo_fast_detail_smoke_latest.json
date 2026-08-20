@@ -1,0 +1,20 @@
+{
+  "source": "https://www.compraonline.alcampo.es",
+  "version": "alcampo-detail-fast-wave-v1.1",
+  "counts": {
+    "requested": 5,
+    "completed_rows": 5,
+    "fetched": 2,
+    "errors": 3,
+    "with_name": 2,
+    "with_gtin": 0,
+    "with_legal_name": 2,
+    "with_ingredients": 2,
+    "with_nutrition_basis": 2,
+    "declared_valid_nutrition": 2,
+    "declared_incomplete_nutrition": 0,
+    "declared_invalid_nutrition": 0,
+    "downloaded_html_bytes": 1238758
+  },
+  "policy": "STABLE_X_ROUTE_FIRST_MAX_TWO_FIRST_PARTY_REQUESTS_CHECKPOINT_EACH_RESULT"
+}
