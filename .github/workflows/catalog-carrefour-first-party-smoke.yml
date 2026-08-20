@@ -16,6 +16,9 @@ concurrency:
   group: carrefour-first-party-smoke
   cancel-in-progress: true
 
+env:
+  PROBE_REVISION: '2'
+
 jobs:
   smoke:
     runs-on: ubuntu-24.04
