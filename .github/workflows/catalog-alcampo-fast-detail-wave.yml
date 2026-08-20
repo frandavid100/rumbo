@@ -1,0 +1,174 @@
+name: Catalog Alcampo fast first-party detail wave
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-alcampo-fast-detail-wave.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-fast-detail-wave-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download stable 13,877-SKU first-party Alcampo listing baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p baseline
+          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D baseline
+          test -s baseline/products.jsonl
+      - name: Split into fresh-runner microbatches
+        working-directory: tools/catalog
+        run: python alcampo_split_detail_batches.py --input ../../baseline/products.jsonl --out ../../inputs --batches 256
+      - id: matrix
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          print('matrix='+json.dumps({'include':[{'batch':f'{i:03d}'} for i in range(256)]},separators=(',',':')))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-fast-wave-baseline
+          path: baseline/
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-fast-wave-inputs
+          path: inputs/
+          retention-days: 7
+
+  detail:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: alcampo-fast-wave-inputs
+          path: inputs
+      - name: Fetch each product once per canonical route and checkpoint immediately
+        working-directory: tools/catalog
+        run: |
+          python alcampo_detail_fast_wave.py \
+            --input "../../inputs/batch-${{ matrix.batch }}.jsonl" \
+            --workers 4 \
+            --out "alcampo-fast-detail-${{ matrix.batch }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-fast-detail-result-${{ matrix.batch }}
+          path: tools/catalog/alcampo-fast-detail-${{ matrix.batch }}/
+          retention-days: 7
+          if-no-files-found: warn
+
+  merge:
+    needs: [prepare, detail]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: alcampo-fast-wave-baseline
+          path: baseline
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alcampo-fast-detail-result-*
+          path: downloaded-details
+      - name: Merge all completed rows without pretending failures are evidence
+        working-directory: tools/catalog
+        run: |
+          mkdir -p ../../alcampo-fast-final
+          set +e
+          python alcampo_merge_detail_batches.py \
+            --downloaded ../../downloaded-details \
+            --out ../../alcampo-fast-final/details.jsonl \
+            --expected-products ../../baseline/products.jsonl
+          code=$?
+          set -e
+          echo "$code" > ../../alcampo-fast-final/detail_merge_exit_code.txt
+          touch ../../alcampo-fast-final/details.jsonl
+      - name: Build canonical SQLite and proposal-only classification
+        working-directory: tools/catalog
+        run: |
+          python alcampo_build_final_catalog.py \
+            --products ../../baseline/products.jsonl \
+            --details ../../alcampo-fast-final/details.jsonl \
+            --output ../../alcampo-fast-final/alcampo_catalog.sqlite
+          python finalize_alcampo_classification.py \
+            ../../alcampo-fast-final/alcampo_catalog.sqlite \
+            ../../baseline/products.jsonl
+          python alcampo_semantic_gate.py \
+            ../../alcampo-fast-final/alcampo_catalog.sqlite \
+            --reviews manual/alcampo_semantic_reviews.jsonl
+      - name: Prepare actual model semantic review queue for recovered usable products
+        working-directory: tools/catalog
+        run: |
+          python alcampo_prepare_semantic_review_v2.py \
+            ../../alcampo-fast-final/alcampo_catalog.sqlite \
+            --observations ../../baseline/products.jsonl \
+            --reviews manual/alcampo_semantic_reviews.jsonl \
+            --output ../../alcampo-fast-final/semantic_review_next.jsonl \
+            --progress ../../alcampo-fast-final/semantic_review_progress.json \
+            --limit 3000
+      - name: Export and preserve evidence
+        working-directory: tools/catalog
+        run: |
+          python alcampo_export_final.py \
+            ../../alcampo-fast-final/alcampo_catalog.sqlite \
+            --jsonl ../../alcampo-fast-final/alcampo_catalog.jsonl \
+            --summary ../../alcampo-fast-final/summary.json \
+            --detail-summary ../../alcampo-fast-final/detail_merge_summary.json \
+            --enumeration-report ../../baseline/enumeration_report.json
+          cp ../../baseline/products.jsonl ../../alcampo-fast-final/source_products.jsonl
+          cp ../../baseline/enumeration_report.json ../../alcampo-fast-final/enumeration_report.json
+      - name: Persist coverage and semantic queue
+        run: |
+          cp alcampo-fast-final/summary.json tools/catalog/fixtures/alcampo_fast_detail_summary_latest.json
+          cp alcampo-fast-final/detail_merge_summary.json tools/catalog/fixtures/alcampo_fast_detail_merge_latest.json
+          cp alcampo-fast-final/semantic_review_next.jsonl tools/catalog/fixtures/alcampo_fast_semantic_review_next.jsonl
+          cp alcampo-fast-final/semantic_review_progress.json tools/catalog/fixtures/alcampo_fast_semantic_review_progress_latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_fast_*
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist fast Alcampo detail wave"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-fast-detail-classified-snapshot
+          path: alcampo-fast-final/
+          retention-days: 14
