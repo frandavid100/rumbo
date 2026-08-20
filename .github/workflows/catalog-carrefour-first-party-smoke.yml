@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/catalog-carrefour-first-party-smoke.yml'
       - 'tools/catalog/carrefour_first_party_inventory.py'
+      - 'tools/catalog/carrefour_first_party_browser_probe.py'
   workflow_dispatch:
 
 permissions:
@@ -27,7 +28,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Extract Carrefour first-party evidence
+      - name: Direct HTTP first-party probe
+        continue-on-error: true
         working-directory: tools/catalog
         run: |
           python carrefour_first_party_inventory.py \
@@ -44,33 +46,56 @@ jobs:
             --seed-url 'https://www.carrefour.es/supermercado/palitos-de-mar-carrefour-450-g/R-521034877/p' \
             --seed-url 'https://www.carrefour.es/supermercado/pappardelle-al-ragu-findus-300-g/R-VC4AECOMM-701721/p'
 
-      - name: Show coverage
+      - name: Install Playwright Chromium
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Browser first-party product probe
+        working-directory: tools/catalog
+        run: python carrefour_first_party_browser_probe.py --out carrefour-first-party-browser-probe --concurrency 2
+
+      - name: Show and validate probes
         run: |
           python - <<'PY'
-          import json
-          p='tools/catalog/carrefour-first-party-smoke/summary.json'
-          d=json.load(open(p,encoding='utf-8'))
-          print(json.dumps({'counts':d['counts'],'coverage':d['coverage'],'nutrition':d['nutrition_field_coverage'],'discovery':d['discovery_diagnostics']},ensure_ascii=False,indent=2))
-          if d['counts']['fetched'] < 1:
-              raise SystemExit('No Carrefour product page could be fetched directly')
+          import json, pathlib
+          for path in [
+              pathlib.Path('tools/catalog/carrefour-first-party-smoke/summary.json'),
+              pathlib.Path('tools/catalog/carrefour-first-party-browser-probe/summary.json'),
+          ]:
+              if path.exists():
+                  d=json.load(open(path,encoding='utf-8'))
+                  print('\n',path)
+                  print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
+                  if 'coverage' in d:
+                      print(json.dumps(d.get('coverage',{}),ensure_ascii=False,indent=2))
+          b=json.load(open('tools/catalog/carrefour-first-party-browser-probe/summary.json',encoding='utf-8'))
+          if b['counts']['usable_pages'] < 1:
+              raise SystemExit('Carrefour product pages are not usable from the GitHub browser runner')
           PY
 
-      - name: Persist compact first-party report
+      - name: Persist compact first-party reports
+        if: always()
         run: |
-          cp tools/catalog/carrefour-first-party-smoke/summary.json tools/catalog/fixtures/carrefour_first_party_smoke_summary.json
+          mkdir -p tools/catalog/fixtures
+          test ! -f tools/catalog/carrefour-first-party-smoke/summary.json || cp tools/catalog/carrefour-first-party-smoke/summary.json tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json
+          test ! -f tools/catalog/carrefour-first-party-browser-probe/summary.json || cp tools/catalog/carrefour-first-party-browser-probe/summary.json tools/catalog/fixtures/carrefour_first_party_browser_probe_latest.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/catalog/fixtures/carrefour_first_party_smoke_summary.json
+          git add tools/catalog/fixtures/carrefour_first_party_http_smoke_summary.json tools/catalog/fixtures/carrefour_first_party_browser_probe_latest.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
-            git commit -m "catalog: persist Carrefour first-party smoke"
+            git commit -m "catalog: persist Carrefour first-party probes"
             git pull --rebase origin agent/catalog-phase1
             git push origin HEAD:agent/catalog-phase1
           fi
 
-      - name: Upload auditable first-party smoke
+      - name: Upload auditable first-party probes
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: carrefour-first-party-smoke
-          path: tools/catalog/carrefour-first-party-smoke/
+          name: carrefour-first-party-probes
+          path: |
+            tools/catalog/carrefour-first-party-smoke/
+            tools/catalog/carrefour-first-party-browser-probe/
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: warn
