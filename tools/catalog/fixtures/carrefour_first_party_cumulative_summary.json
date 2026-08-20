@@ -1,142 +1,142 @@
 {
-  "built_at": "2026-08-20T14:51:12.742604+00:00",
+  "built_at": "2026-08-20T14:53:56.384508+00:00",
   "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 62,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 59,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 7,
-    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 26,
+    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 33,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 2291,
+    "evidence_rows": 2406,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 75,
+    "nutrition_complete": 79,
     "nutrition_not_found": 17,
     "nutrition_partial": 6,
-    "verified_direct_products": 98,
-    "verified_first_party_products": 98,
+    "verified_direct_products": 102,
+    "verified_first_party_products": 102,
     "verified_listing_only_observations": 7,
-    "verified_product_page_observations": 91
+    "verified_product_page_observations": 95
   },
   "coverage": {
     "allergens": {
-      "count": 40,
-      "pct": 40.82
+      "count": 43,
+      "pct": 42.16
     },
     "attributes": {
-      "count": 98,
+      "count": 102,
       "pct": 100.0
     },
     "availability": {
       "count": 10,
-      "pct": 10.2
+      "pct": 9.8
     },
     "brand": {
-      "count": 86,
-      "pct": 87.76
+      "count": 90,
+      "pct": 88.24
     },
     "category_path": {
-      "count": 67,
-      "pct": 68.37
+      "count": 71,
+      "pct": 69.61
     },
     "gtin": {
       "count": 4,
-      "pct": 4.08
+      "pct": 3.92
     },
     "image_url": {
       "count": 8,
-      "pct": 8.16
+      "pct": 7.84
     },
     "ingredients": {
-      "count": 82,
-      "pct": 83.67
+      "count": 86,
+      "pct": 84.31
     },
     "legal_name": {
-      "count": 83,
-      "pct": 84.69
+      "count": 87,
+      "pct": 85.29
     },
     "mandatory_mentions": {
-      "count": 40,
-      "pct": 40.82
+      "count": 41,
+      "pct": 40.2
     },
     "manufacturer_packer_importer": {
-      "count": 84,
-      "pct": 85.71
+      "count": 88,
+      "pct": 86.27
     },
     "name": {
-      "count": 98,
+      "count": 102,
       "pct": 100.0
     },
     "net_content": {
-      "count": 82,
-      "pct": 83.67
+      "count": 86,
+      "pct": 84.31
     },
     "nutriscore": {
-      "count": 38,
-      "pct": 38.78
+      "count": 41,
+      "pct": 40.2
     },
     "nutrition_extra": {
-      "count": 84,
-      "pct": 85.71
+      "count": 88,
+      "pct": 86.27
     },
     "operator_address": {
-      "count": 84,
-      "pct": 85.71
+      "count": 88,
+      "pct": 86.27
     },
     "preparation_instructions": {
-      "count": 62,
-      "pct": 63.27
+      "count": 65,
+      "pct": 63.73
     },
     "price_eur": {
-      "count": 98,
+      "count": 102,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 83,
-      "pct": 84.69
+      "count": 87,
+      "pct": 85.29
     },
     "unit_price_text": {
-      "count": 98,
+      "count": 102,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 81,
-      "pct": 82.65
+      "count": 85,
+      "pct": 83.33
     },
     "carbohydrate_g": {
-      "count": 78,
-      "pct": 79.59
+      "count": 82,
+      "pct": 80.39
     },
     "energy_kj": {
-      "count": 81,
-      "pct": 82.65
+      "count": 85,
+      "pct": 83.33
     },
     "fat_g": {
-      "count": 80,
-      "pct": 81.63
+      "count": 84,
+      "pct": 82.35
     },
     "fiber_g": {
       "count": 21,
-      "pct": 21.43
+      "pct": 20.59
     },
     "protein_g": {
-      "count": 77,
-      "pct": 78.57
+      "count": 81,
+      "pct": 79.41
     },
     "salt_g": {
-      "count": 78,
-      "pct": 79.59
+      "count": 82,
+      "pct": 80.39
     },
     "saturates_g": {
-      "count": 80,
-      "pct": 81.63
+      "count": 84,
+      "pct": 82.35
     },
     "sugars_g": {
-      "count": 76,
-      "pct": 77.55
+      "count": 80,
+      "pct": 78.43
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -765,22 +765,24 @@
     {
       "allergens": "Contiene: Leche",
       "attributes": {
+        "conservation_mode": "Lugar fresco y seco",
         "country_of_origin": "España",
         "milk_fat_type": "Entera",
         "milk_origin": "Vaca",
         "milk_processing": "Uperisada",
+        "origin_country": "España",
         "presentation": "Brik",
-        "sanitary_register": "15.01710/LU"
+        "sanitary_register": "15.01710/LU",
+        "sanitary_registration": "15.01710/LU"
       },
       "availability": null,
       "brand": "CARREFOUR",
       "calories_kcal": 63.0,
       "canonical_url": "https://www.carrefour.es/supermercado/leche-entera-carrefour-brik-1-l/R-521006992/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.8-indexed",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-2.1-indexed",
       "carbohydrate_g": 4.7,
       "category_path": [
-        "Carrefour.es",
         "Supermercado",
         "La Despensa",
         "Lácteos",
@@ -804,14 +806,14 @@
       "nutrition_basis": "100 ml",
       "nutrition_extra": {},
       "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T13:03:00+00:00",
+      "observed_at": "2026-08-20T14:52:48.597552+00:00",
       "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
       "page_sha256": null,
       "preparation_instructions": "Lugar fresco y seco",
       "price_currency": "EUR",
       "price_eur": 0.96,
       "protein_g": 3.0,
-      "provenance_note": "All populated product-detail fields and the displayed price were observed directly on the official Carrefour product page; category breadcrumbs were observed on the official Carrefour milk listing. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
       "retailer": "CARREFOUR",
       "retailer_sku": "521006992",
       "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
@@ -825,22 +827,87 @@
     {
       "allergens": "Contiene: Leche",
       "attributes": {
+        "conservation_mode": "Lugar fresco y seco",
+        "milk_fat_type": "Desnatada",
+        "milk_origin": "Vaca",
+        "milk_processing": "Uperisada",
+        "origin_country": "España",
+        "presentation": "Brik",
+        "sanitary_registration": "15.01710/LU"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 38.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/leche-desnatada-con-calcio-carrefour-brik-1-l/R-521006998/p",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-2.1-indexed",
+      "carbohydrate_g": 4.8,
+      "category_path": [
+        "Supermercado",
+        "La Despensa",
+        "Lácteos",
+        "Leche"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 163.0,
+      "fat_g": 0.4,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Leche desnatada, proteinas lácteas (leche), sales de calcio de la leche y vitaminas A,D, E y ácido fólico.",
+      "legal_name": "Leche UHT desnatada, enriquecida con proteínas, calcio, vitaminas A, D, E y ácido fólico.",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Leche desnatada con calcio Carrefour brik 1 l.",
+      "net_content": "1000 ml",
+      "nutriscore": "A",
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {
+        "calcium_mg": 160.0,
+        "folic_acid_ug": 20.0
+      },
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T14:52:48.597552+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 1.02,
+      "protein_g": 3.9,
+      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521006998",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.13,
+      "saturates_g": 0.3,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar seco y fresco. Una vez abierto el envase, consérvese en el frigorífico. Es aconsejable su consumo en los 2 ó 3 días siguientes.",
+      "sugars_g": 4.8,
+      "unit_price_text": "1,02 €/l"
+    },
+    {
+      "allergens": "Contiene: Leche",
+      "attributes": {
+        "conservation_mode": "Lugar fresco y seco",
         "country_of_origin": "España",
         "milk_fat_type": "Semidesnatada",
         "milk_origin": "Vaca",
         "milk_processing": "Uperisada",
+        "origin_country": "España",
         "presentation": "Brik",
-        "sanitary_register": "15.01710/LU"
+        "sanitary_register": "15.01710/LU",
+        "sanitary_registration": "15.01710/LU"
       },
       "availability": null,
       "brand": "CARREFOUR",
       "calories_kcal": 46.0,
       "canonical_url": "https://www.carrefour.es/supermercado/leche-semidesnatada-carrefour-brik-1-l/R-521007071/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.8-indexed",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-2.1-indexed",
       "carbohydrate_g": 4.7,
       "category_path": [
-        "Carrefour.es",
         "Supermercado",
         "La Despensa",
         "Lácteos",
@@ -864,14 +931,14 @@
       "nutrition_basis": "100 ml",
       "nutrition_extra": {},
       "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T13:03:00+00:00",
+      "observed_at": "2026-08-20T14:52:48.597552+00:00",
       "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
       "page_sha256": null,
       "preparation_instructions": "Lugar fresco y seco",
       "price_currency": "EUR",
       "price_eur": 0.84,
       "protein_g": 3.1,
-      "provenance_note": "All populated product-detail fields and the displayed price were observed directly on the official Carrefour product page; category breadcrumbs were observed on the official Carrefour milk listing. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
       "retailer": "CARREFOUR",
       "retailer_sku": "521007071",
       "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
@@ -885,12 +952,15 @@
     {
       "allergens": "Contiene: Leche",
       "attributes": {
+        "conservation_mode": "Lugar fresco y seco",
         "country_of_origin": "España",
         "milk_fat_type": "Desnatada",
         "milk_origin": "Vaca",
         "milk_processing": "Uperisada",
+        "origin_country": "España",
         "presentation": "Brik",
         "sanitary_register": "15.01710/LU",
+        "sanitary_registration": "15.01710/LU",
         "source_data_quality_flags": [
           "carrefour_legal_name_semidesnatada_conflicts_with_product_title_and_declared_fat_type_desnatada"
         ]
@@ -899,11 +969,10 @@
       "brand": "CARREFOUR",
       "calories_kcal": 35.0,
       "canonical_url": "https://www.carrefour.es/supermercado/leche-desnatada-carrefour-brik-1-l/R-521007093/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-1.8-indexed",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-2.1-indexed",
       "carbohydrate_g": 4.8,
       "category_path": [
-        "Carrefour.es",
         "Supermercado",
         "La Despensa",
         "Lácteos",
@@ -927,14 +996,14 @@
       "nutrition_basis": "100 ml",
       "nutrition_extra": {},
       "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T13:03:00+00:00",
+      "observed_at": "2026-08-20T14:52:48.597552+00:00",
       "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
       "page_sha256": null,
       "preparation_instructions": "Lugar fresco y seco",
       "price_currency": "EUR",
       "price_eur": 0.82,
       "protein_g": 3.2,
-      "provenance_note": "All populated product-detail fields and the displayed price were observed directly on the official Carrefour product page; category breadcrumbs were observed on the official Carrefour milk listing. Carrefour itself currently exposes a legal-name/type conflict on this page; it is preserved and flagged rather than corrected. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
+      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. The retrieval layer may serve an indexed crawl, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
       "retailer": "CARREFOUR",
       "retailer_sku": "521007093",
       "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
@@ -1246,66 +1315,6 @@
       "storage_conditions": "Consérvese en frío entre 2ºC y 6ºC.",
       "sugars_g": 10.0,
       "unit_price_text": "2,07 €/kg"
-    },
-    {
-      "allergens": "Contiene: Leche",
-      "attributes": {
-        "cheese_curing": "Madurado",
-        "cheese_format": "Loncha",
-        "cheese_variety": "Mozzarella",
-        "conservation_mode": "Refrigerado",
-        "milk_origin": "Vaca",
-        "refrigerated": true,
-        "sanitary_register": "NL Z 0507 EG"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 293.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/queso-mozzarella-en-lonchas-carrefour-200-g/R-521030724/p",
-      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
-      "capture_probe_version": "agent-web-direct-2.0-indexed",
-      "carbohydrate_g": 1.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "Frescos",
-        "Quesos"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 1219.0,
-      "fat_g": 21.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Leche pasteurizada de vaca, sal, fermentos lácticos, coagulante de leche microbiano.",
-      "legal_name": "Mozzarella, aproximadamente 10 lonchas. Queso de pasta hilada.",
-      "mandatory_mentions": "Una vez abierto consumir rápidamente. Envasado en atmósfera protectora.",
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Queso mozzarella en lonchas Carrefour 200 g.",
-      "net_content": "200 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T13:20:00+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid (España)",
-      "page_sha256": null,
-      "preparation_instructions": "Refrigerado",
-      "price_currency": "EUR",
-      "price_eur": 1.8,
-      "protein_g": 25.0,
-      "provenance_note": "All populated fields were observed directly on official Carrefour product/category pages. Indexed crawl lag is possible, so price/availability are not asserted as live/current.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521030724",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 1.0,
-      "saturates_g": 15.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar refrigerado a un máximo de 7 ºC.",
-      "sugars_g": 1.0,
-      "unit_price_text": "9,00 €/kg"
     }
   ],
   "source": "https://www.carrefour.es",
