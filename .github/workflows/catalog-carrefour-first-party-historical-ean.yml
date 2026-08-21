@@ -1,0 +1,57 @@
+name: Catalog Carrefour historical first-party EAN probe
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-first-party-historical-ean.yml'
+      - 'tools/catalog/carrefour_first_party_historical_ean.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carrefour-first-party-historical-ean
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PDF parser
+        run: pip install pypdf
+      - name: Probe official Carrefour historical documents
+        working-directory: tools/catalog
+        run: |
+          python carrefour_first_party_historical_ean.py \
+            --out fixtures/carrefour_first_party_historical_ean_evidence.jsonl \
+            --summary fixtures/carrefour_first_party_historical_ean_summary.json
+      - name: Persist historical evidence separately from current product staging
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "4189828+github-actions[bot]@users.noreply.github.com"
+          git add \
+            tools/catalog/fixtures/carrefour_first_party_historical_ean_evidence.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_historical_ean_summary.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Carrefour historical first-party EAN evidence"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - name: Upload historical EAN evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-first-party-historical-ean
+          path: |
+            tools/catalog/fixtures/carrefour_first_party_historical_ean_evidence.jsonl
+            tools/catalog/fixtures/carrefour_first_party_historical_ean_summary.json
+          retention-days: 7
+          if-no-files-found: error
