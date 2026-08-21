@@ -1,143 +1,143 @@
 {
-  "built_at": "2026-08-21T00:00:55.965803+00:00",
+  "built_at": "2026-08-21T00:03:28.104562+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 139,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 144,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 11,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 54,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 4730,
+    "evidence_rows": 4864,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 146,
+    "nutrition_complete": 151,
     "nutrition_not_found": 50,
     "nutrition_partial": 18,
-    "verified_direct_products": 214,
-    "verified_first_party_products": 214,
+    "verified_direct_products": 219,
+    "verified_first_party_products": 219,
     "verified_listing_only_observations": 11,
-    "verified_product_page_observations": 203
+    "verified_product_page_observations": 208
   },
   "coverage": {
     "allergens": {
-      "count": 73,
-      "pct": 34.11
+      "count": 77,
+      "pct": 35.16
     },
     "attributes": {
-      "count": 214,
+      "count": 219,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 10.75
+      "pct": 10.5
     },
     "brand": {
-      "count": 189,
-      "pct": 88.32
+      "count": 194,
+      "pct": 88.58
     },
     "category_path": {
       "count": 116,
-      "pct": 54.21
+      "pct": 52.97
     },
     "gtin": {
       "count": 4,
-      "pct": 1.87
+      "pct": 1.83
     },
     "image_url": {
       "count": 8,
-      "pct": 3.74
+      "pct": 3.65
     },
     "ingredients": {
-      "count": 180,
-      "pct": 84.11
+      "count": 185,
+      "pct": 84.47
     },
     "legal_name": {
-      "count": 182,
-      "pct": 85.05
+      "count": 187,
+      "pct": 85.39
     },
     "mandatory_mentions": {
-      "count": 64,
-      "pct": 29.91
+      "count": 66,
+      "pct": 30.14
     },
     "manufacturer_packer_importer": {
-      "count": 183,
-      "pct": 85.51
+      "count": 188,
+      "pct": 85.84
     },
     "name": {
-      "count": 214,
+      "count": 219,
       "pct": 100.0
     },
     "net_content": {
-      "count": 178,
-      "pct": 83.18
+      "count": 183,
+      "pct": 83.56
     },
     "nutriscore": {
-      "count": 59,
-      "pct": 27.57
+      "count": 61,
+      "pct": 27.85
     },
     "nutrition_extra": {
-      "count": 200,
-      "pct": 93.46
+      "count": 205,
+      "pct": 93.61
     },
     "operator_address": {
-      "count": 183,
-      "pct": 85.51
+      "count": 188,
+      "pct": 85.84
     },
     "preparation_instructions": {
-      "count": 100,
-      "pct": 46.73
+      "count": 104,
+      "pct": 47.49
     },
     "price_eur": {
-      "count": 214,
+      "count": 219,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 180,
-      "pct": 84.11
+      "count": 185,
+      "pct": 84.47
     },
     "unit_price_text": {
-      "count": 214,
+      "count": 219,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 164,
-      "pct": 76.64
+      "count": 169,
+      "pct": 77.17
     },
     "carbohydrate_g": {
-      "count": 161,
-      "pct": 75.23
+      "count": 166,
+      "pct": 75.8
     },
     "energy_kj": {
-      "count": 164,
-      "pct": 76.64
+      "count": 169,
+      "pct": 77.17
     },
     "fat_g": {
-      "count": 155,
-      "pct": 72.43
+      "count": 160,
+      "pct": 73.06
     },
     "fiber_g": {
-      "count": 55,
-      "pct": 25.7
+      "count": 60,
+      "pct": 27.4
     },
     "protein_g": {
-      "count": 157,
-      "pct": 73.36
+      "count": 162,
+      "pct": 73.97
     },
     "salt_g": {
-      "count": 154,
-      "pct": 71.96
+      "count": 159,
+      "pct": 72.6
     },
     "saturates_g": {
-      "count": 154,
-      "pct": 71.96
+      "count": 159,
+      "pct": 72.6
     },
     "sugars_g": {
-      "count": 158,
-      "pct": 73.83
+      "count": 163,
+      "pct": 74.43
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -763,6 +763,64 @@
       "unit_price_text": "5,67 €/kg"
     },
     {
+      "allergens": "Contiene: Leche, Cereales que contienen gluten",
+      "attributes": {
+        "cereal_format": "Fibra",
+        "cereal_ingredient": "Chocolate",
+        "cereal_type": "Otros cereales",
+        "conservation_mode": "Lugar fresco y seco",
+        "packaging": "Caja",
+        "product": [
+          "Chocolate",
+          "Cereales",
+          "Fibra"
+        ]
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 395,
+      "canonical_url": "https://www.carrefour.es/supermercado/cereales-con-chocolate-fibra-carrefour-classic-500-g/R-521003349/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-3.9-indexed",
+      "carbohydrate_g": 67,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 1665,
+      "fat_g": 7.2,
+      "fetch_error": null,
+      "fiber_g": 9.7,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Trigo integral 74%, virutas de chocolate negro 17% (azúcar, pasta de cacao, manteca de cacao, emulgente: lecitinas), azúcar, extracto de malta de cebada, sal. Puede contener trazas de cacahuetes, frutos de cascara, leche, soja, granos de sesamo, mostaza y altramuces.",
+      "legal_name": "Copos de trigo integral, laminados y tostados, con virutas de chocolate negro.",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Interdis",
+      "name": "Cereales con chocolate Fibra Carrefour Classic 500 g.",
+      "net_content": "500 g",
+      "nutriscore": "C",
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-21T00:15:00+00:00",
+      "operator_address": "TSA 91431 - 91343 MASSY Cedex - France NºCristal 09 69 39 7000",
+      "page_sha256": null,
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 2.95,
+      "protein_g": 11,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible; missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521003349",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.45,
+      "saturates_g": 3.4,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en un lugar fresco y seco.",
+      "sugars_g": 17,
+      "unit_price_text": "5,90 €/kg"
+    },
+    {
       "allergens": null,
       "attributes": {
         "jam_type": "Básicas",
@@ -1204,58 +1262,6 @@
       "storage_conditions": "Conservese en lugar fresco y seco",
       "sugars_g": 95.0,
       "unit_price_text": "2,49 €/kg"
-    },
-    {
-      "allergens": "Contiene gluten",
-      "attributes": {
-        "flour_strength": "Fuerza (Mayor o igual a 250)",
-        "flour_type": "Trigo",
-        "flour_use": "Fritura",
-        "packaging": "Bolsa"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 339.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/harina-para-fritos-y-rebozados-carrefour-1-kg/R-521005413/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-3.5-indexed",
-      "carbohydrate_g": 71.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 1439.0,
-      "fat_g": 0.8,
-      "fetch_error": null,
-      "fiber_g": 3.0,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Harina de trigo (80%) y sémola de trigo (20%). Contiene gluten.",
-      "legal_name": "Harina de trigo especial para freir y rebozar",
-      "mandatory_mentions": "Elaborado con harina de trigo y sémola.",
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A",
-      "name": "Harina para fritos y rebozados Carrefour 1 kg.",
-      "net_content": "1000 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T23:20:00+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": "Ideal para frituras",
-      "price_currency": "EUR",
-      "price_eur": 1.2,
-      "protein_g": 11.0,
-      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521005413",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar preferentemente en lugar fresco y seco.",
-      "sugars_g": 1.2,
-      "unit_price_text": "1,20 €/kg"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
