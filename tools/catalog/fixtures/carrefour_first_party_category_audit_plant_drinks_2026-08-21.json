@@ -1,0 +1,52 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T13:29:00+00:00",
+  "scope": "Current Carrefour + Carrefour Bio own-brand identities surfaced by the official Bebida Vegetal category and its official brand/type facets; this is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/lacteos/bebida-vegetal-carrefour/F-12d4Z10si/c",
+  "official_observed_counts": {
+    "carrefour_brand": 15,
+    "carrefour_bio_brand": 5,
+    "own_brand_total": 20
+  },
+  "verification": {
+    "identities_accounted_for": 20,
+    "product_page_observations": 18,
+    "listing_only_observations": 2,
+    "unresolved_own_brand_identities": 0
+  },
+  "carrefour_brand_skus": [
+    "VC4AECOMM-554220",
+    "823818524",
+    "VC4AECOMM-554219",
+    "823818537",
+    "VC4AECOMM-554218",
+    "VC4AECOMM-554214",
+    "823818539",
+    "VC4AECOMM-716449",
+    "823818545",
+    "VC4AECOMM-716455",
+    "VC4AECOMM-716425",
+    "VC4AECOMM-716444",
+    "VC4AECOMM-152271",
+    "VC4AECOMM-716462",
+    "VC4AECOMM-308018"
+  ],
+  "carrefour_bio_skus": [
+    "VC4AECOMM-580534",
+    "VC4AECOMM-580529",
+    "VC4AECOMM-580537",
+    "845900442",
+    "VC4AECOMM-702504"
+  ],
+  "listing_only_skus": [
+    "VC4AECOMM-716444",
+    "VC4AECOMM-716462"
+  ],
+  "notes": [
+    "The official category currently reports 15 Carrefour-brand and 5 Carrefour Bio products.",
+    "The apparent 'Otras bebidas vegetales' edge identities are a soy cooking preparation (Carrefour) and an organic coconut cooking cream (Carrefour Bio); both were verified on official product pages and retained because extraction follows retailer catalog identity rather than Rumbo classification.",
+    "No external product facts were used to satisfy this checkpoint. Indexed official-page retrieval can lag, so prices are evidence of Carrefour-published values, not assertions of live availability."
+  ],
+  "classification_performed": false
+}
