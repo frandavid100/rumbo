@@ -1,0 +1,29 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T15:12:00+00:00",
+  "scope": "Current indexed official Carrefour Caldos, Sopas y Pure category with the product facet Crema applied, restricted to the Carrefour-brand identities reported by the official brand facet. This is a bounded checkpoint, not a full-catalog claim.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/conservas-sopas-y-precocinados/caldos-sopas-y-pure-crema/F-10q5Zp8n8/c",
+  "official_observed_counts": {
+    "crema_total_all_brands": 7,
+    "carrefour_brand": 4
+  },
+  "verification": {
+    "carrefour_identities_accounted_for": 4,
+    "product_page_observations": 4,
+    "listing_only_observations": 0,
+    "unresolved_carrefour_identities": 0
+  },
+  "verified_skus": [
+    "VC4AECOMM-114181",
+    "VC4AECOMM-114188",
+    "VC4AECOMM-114178",
+    "VC4AECOMM-114182"
+  ],
+  "notes": [
+    "The official Crema facet reports 7 products across brands and exactly 4 Carrefour-brand products; all four current Carrefour identities have official product-page observations.",
+    "The four products expose complete core nutrition, ingredients, legal denomination, net content, operator/manufacturer data, preparation and refrigerated-storage metadata.",
+    "No external product facts were used. Missing explicit allergen fields are not inferred from ingredient text. Indexed page retrieval may lag, so price is Carrefour-published evidence rather than a live-availability assertion."
+  ],
+  "classification_performed": false
+}
