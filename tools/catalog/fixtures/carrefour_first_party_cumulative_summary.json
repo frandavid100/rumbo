@@ -1,104 +1,104 @@
 {
-  "built_at": "2026-08-21T21:02:11.452438+00:00",
+  "built_at": "2026-08-21T21:04:21.589532+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
     "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 238,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 15,
-    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 134,
+    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 142,
     "OPENAI_WEB_OFFICIAL_PRODUCT_INDEXED": 2,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 9418,
+    "evidence_rows": 9538,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
     "nutrition_complete": 307,
-    "nutrition_not_found": 62,
+    "nutrition_not_found": 70,
     "nutrition_partial": 30,
-    "verified_direct_products": 399,
-    "verified_first_party_products": 399,
+    "verified_direct_products": 407,
+    "verified_first_party_products": 407,
     "verified_listing_only_observations": 15,
-    "verified_product_page_observations": 384
+    "verified_product_page_observations": 392
   },
   "coverage": {
     "allergens": {
       "count": 162,
-      "pct": 40.6
+      "pct": 39.8
     },
     "attributes": {
-      "count": 398,
+      "count": 406,
       "pct": 99.75
     },
     "availability": {
       "count": 25,
-      "pct": 6.27
+      "pct": 6.14
     },
     "brand": {
-      "count": 370,
-      "pct": 92.73
+      "count": 378,
+      "pct": 92.87
     },
     "category_path": {
-      "count": 245,
-      "pct": 61.4
+      "count": 253,
+      "pct": 62.16
     },
     "gtin": {
       "count": 4,
-      "pct": 1.0
+      "pct": 0.98
     },
     "image_url": {
       "count": 16,
-      "pct": 4.01
+      "pct": 3.93
     },
     "ingredients": {
       "count": 356,
-      "pct": 89.22
+      "pct": 87.47
     },
     "legal_name": {
-      "count": 357,
-      "pct": 89.47
+      "count": 365,
+      "pct": 89.68
     },
     "mandatory_mentions": {
-      "count": 134,
-      "pct": 33.58
+      "count": 142,
+      "pct": 34.89
     },
     "manufacturer_packer_importer": {
-      "count": 358,
-      "pct": 89.72
+      "count": 366,
+      "pct": 89.93
     },
     "name": {
-      "count": 399,
+      "count": 407,
       "pct": 100.0
     },
     "net_content": {
-      "count": 349,
-      "pct": 87.47
+      "count": 357,
+      "pct": 87.71
     },
     "nutriscore": {
       "count": 128,
-      "pct": 32.08
+      "pct": 31.45
     },
     "nutrition_extra": {
       "count": 344,
-      "pct": 86.22
+      "pct": 84.52
     },
     "operator_address": {
-      "count": 358,
-      "pct": 89.72
+      "count": 366,
+      "pct": 89.93
     },
     "preparation_instructions": {
       "count": 224,
-      "pct": 56.14
+      "pct": 55.04
     },
     "price_eur": {
-      "count": 399,
+      "count": 407,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 355,
-      "pct": 88.97
+      "count": 363,
+      "pct": 89.19
     },
     "unit_price_text": {
-      "count": 399,
+      "count": 407,
       "pct": 100.0
     }
   },
@@ -106,39 +106,39 @@
   "nutrition_field_coverage": {
     "calories_kcal": {
       "count": 338,
-      "pct": 84.71
+      "pct": 83.05
     },
     "carbohydrate_g": {
       "count": 332,
-      "pct": 83.21
+      "pct": 81.57
     },
     "energy_kj": {
       "count": 338,
-      "pct": 84.71
+      "pct": 83.05
     },
     "fat_g": {
       "count": 322,
-      "pct": 80.7
+      "pct": 79.12
     },
     "fiber_g": {
       "count": 132,
-      "pct": 33.08
+      "pct": 32.43
     },
     "protein_g": {
       "count": 322,
-      "pct": 80.7
+      "pct": 79.12
     },
     "salt_g": {
       "count": 326,
-      "pct": 81.7
+      "pct": 80.1
     },
     "saturates_g": {
       "count": 318,
-      "pct": 79.7
+      "pct": 78.13
     },
     "sugars_g": {
       "count": 328,
-      "pct": 82.21
+      "pct": 80.59
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -315,6 +315,112 @@
       "storage_conditions": "Una vez abierto conservar en el frigorífico y consumir en 3-4 días.",
       "sugars_g": 9.8,
       "unit_price_text": "2,99 €/l"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "mineral_composition_mg_l": {
+          "bicarbonates": 231.8,
+          "calcium": 15.9,
+          "chlorides": 26.7,
+          "dry_residue_180c": 286.0,
+          "potassium": 3.1,
+          "sodium": 92.9
+        },
+        "mineralization": "Débil",
+        "package_presentation": "0,5 l",
+        "packaging": "Botella PET",
+        "water_class": "Agua sin gas"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "canonical_url": "https://www.carrefour.es/supermercado/agua-mineral-carrefour-classic-50-cl/R-520661025/p",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-7.1-indexed",
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "Bebidas",
+        "Aguas y Zumos",
+        "Agua"
+      ],
+      "direct_page_observed": true,
+      "gtin": null,
+      "image_url": null,
+      "ingredients": null,
+      "legal_name": "Agua Mineral Natural Mineralización Débil",
+      "mandatory_mentions": "Agua de mineralización débil. Composición Química (mg/L): Residuo seco (a 180°C): 286; Bicarbonatos: 231,8; Sodio: 92,9; Cloruros: 26.7; Calcio: 15,9; Potasio: 3.1. Laboratorio Dr Oliver Rodés. Enero 2023. Agua sometida a una técnica de adsorción autorizada.",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Agua mineral Carrefour Classic 50 cl.",
+      "net_content": "500.0 ml",
+      "nutriscore": null,
+      "nutrition_basis": null,
+      "nutrition_status": "NOT_DECLARED",
+      "observed_at": "2026-08-21T21:08:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 0.29,
+      "provenance_note": "All populated fields were observed on official Carrefour product/category pages via indexed retrieval. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "520661025",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Lugar seco y fresco, protegido de la luz solar y de olores agresivos.",
+      "unit_price_text": "0,58 €/l"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "mineral_composition_mg_l": {
+          "bicarbonates": 231.8,
+          "calcium": 15.9,
+          "chlorides": 26.7,
+          "dry_residue_180c": 286.0,
+          "potassium": 3.1,
+          "sodium": 92.9
+        },
+        "mineralization": "Débil",
+        "package_presentation": "1,5 l",
+        "packaging": "Botella PET",
+        "water_class": "Agua sin gas"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "canonical_url": "https://www.carrefour.es/supermercado/agua-mineral-carrefour-classic-15-l/R-520661062/p",
+      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
+      "capture_probe_version": "agent-web-direct-7.1-indexed",
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "Bebidas",
+        "Aguas y Zumos",
+        "Agua"
+      ],
+      "direct_page_observed": true,
+      "gtin": null,
+      "image_url": null,
+      "ingredients": null,
+      "legal_name": "Agua Mineral Natural Mineralización Débil",
+      "mandatory_mentions": "Agua de mineralización débil. Composición Química (mg/L): Residuo seco (a 180°C): 286; Bicarbonatos: 231,8; Sodio: 92,9; Cloruros: 26.7; Calcio: 15,9; Potasio: 3.1. Laboratorio Dr Oliver Rodés. Enero 2023. Agua sometida a una técnica de adsorción autorizada.",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Agua mineral Carrefour Classic 1,5 l.",
+      "net_content": "1500.0 ml",
+      "nutriscore": null,
+      "nutrition_basis": null,
+      "nutrition_status": "NOT_DECLARED",
+      "observed_at": "2026-08-21T21:08:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 0.39,
+      "provenance_note": "All populated fields were observed on official Carrefour product/category pages via indexed retrieval. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "520661062",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Lugar seco y fresco, protegido de la luz solar y de olores agresivos.",
+      "unit_price_text": "0,26 €/l"
     },
     {
       "allergens": null,
@@ -1151,118 +1257,6 @@
       "storage_conditions": "Conservar protegido de la humedad, del calor (entre 18ºC y 20ºC) y de malos olores.",
       "sugars_g": 20,
       "unit_price_text": "25,62 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "chocolate_type": "Con leche",
-        "gluten_free": true,
-        "industrial": true,
-        "packaging": "Otros envases",
-        "vegetarian": true
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 539.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/chocolate-con-leche-carrefour-classic-sin-gluten-150-g/R-521004209/p",
-      "capture_method": "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED",
-      "capture_probe_version": "agent-web-direct-2.9-indexed",
-      "carbohydrate_g": 57.0,
-      "category_path": [
-        "Supermercado",
-        "La Despensa",
-        "Dulce",
-        "Bombones y Chocolates"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 2251.0,
-      "fat_g": 31.0,
-      "fetch_error": null,
-      "fiber_g": 2.0,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Azúcar, leche entera en polvo 23%, manteca de cacao, pasta de cacao, suero lácteo en polvo, emulgente: lecitinas, aroma natural de vainilla. Cacao: 30% mínimo. Puede contener trazas de soja y frutos de cáscara.",
-      "legal_name": "Chocolate con leche extrafino",
-      "mandatory_mentions": "Sin gluten",
-      "manufacturer_packer_importer": "CARREFOUR FRANCIA",
-      "name": "Chocolate con leche Carrefour Classic sin gluten 150 g.",
-      "net_content": "150 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T21:58:00+00:00",
-      "operator_address": "Interdis TSA 91431-91343 MASSY CEDEX FRANCE Nº CRISTAL 0969397006",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 1.32,
-      "protein_g": 7.0,
-      "provenance_note": "All populated fields were observed on official Carrefour product and/or category pages via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521004209",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.2,
-      "saturates_g": 22.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en lugar fresco y seco, alejado de olores extraños.",
-      "sugars_g": 55.0,
-      "unit_price_text": "8,80 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "country_of_origin": "España",
-        "packaging": "Brik",
-        "sugar_format": "Grano",
-        "sugar_type": "Morena"
-      },
-      "availability": null,
-      "brand": "AZUCARERA",
-      "calories_kcal": 380.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/azucar-moreno-de-cana-integral-azucarera-800-g/R-521004632/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-3.6-indexed",
-      "carbohydrate_g": 95.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 1615.0,
-      "fat_g": 0.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Azucar",
-      "legal_name": "Azúcar Moreno de caña integral",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "AB Azucarera Iberia, S.L",
-      "name": "Azúcar moreno de caña integral Azucarera 800 g.",
-      "net_content": "800 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {
-        "polyols_g": 0.0
-      },
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T23:28:00+00:00",
-      "operator_address": "Avenida de Manoteras,46 28050 Madrid",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 1.99,
-      "protein_g": 0.0,
-      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible; missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521004632",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservese en lugar fresco y seco",
-      "sugars_g": 95.0,
-      "unit_price_text": "2,49 €/kg"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
