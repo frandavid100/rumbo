@@ -1,0 +1,33 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T21:08:00+00:00",
+  "scope": "Current indexed official Carrefour Agua category with the carrefour brand facet and the 'Conservar en un lugar fresco, seco y aislado del suelo' facet applied. This is a bounded checkpoint, not a full-catalog claim.",
+  "official_category_url": "https://www.carrefour.es/supermercado/bebidas/aguas-y-zumos/agua-carrefour-conservar-en-un-lugar-fresco-seco-y-aislado-del-suelo/F-1x8qoZ10siZ11e1/c",
+  "official_observed_counts": {
+    "carrefour_water": 10
+  },
+  "verification": {
+    "carrefour_identities_accounted_for": 8,
+    "product_page_observations": 8,
+    "listing_only_observations": 0,
+    "unresolved_carrefour_identities": 2
+  },
+  "verified_products": [
+    {"sku": "520661025", "name": "Agua mineral Carrefour Classic 50 cl."},
+    {"sku": "520661062", "name": "Agua mineral Carrefour Classic 1,5 l."},
+    {"sku": "530014489", "name": "Agua mineral con gas Carrefour Classic 1,25 l."},
+    {"sku": "530014491", "name": "Agua mineral con gas Carrefour Classic 50 cl."},
+    {"sku": "prod840294", "name": "Agua mineral Carrefour tapón deportivo 75 cl"},
+    {"sku": "VC4AECOMM-435350", "name": "Agua mineral Carrefour Classic 1 l."},
+    {"sku": "521028194", "name": "Agua mineral Carrefour Classic 5 l."},
+    {"sku": "521009490", "name": "Agua mineral Carrefour Classic 8 l."}
+  ],
+  "notes": [
+    "The official bounded facet reports ten Carrefour-brand water products; the indexed listing exposed eight product identities in this capture, leaving two identities unresolved rather than inventing them.",
+    "All eight exposed identities have official Carrefour product-page observations with legal name, net content, operator/manufacturer, storage information and declared mineral composition where present.",
+    "These water pages do not expose the standard macronutrient table, so nutrition_status is NOT_DECLARED. Mineral composition is preserved as first-party product attributes and mandatory-mention text, not converted into inferred macronutrients.",
+    "No external product facts were used. Missing allergen, GTIN, image and nutrition fields are not inferred."
+  ],
+  "classification_performed": false
+}
