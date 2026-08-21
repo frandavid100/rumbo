@@ -11,6 +11,7 @@ from sanitize_carrefour_first_party_output import sanitize_row
 
 SOURCE = "CARREFOUR_FIRST_PARTY"
 EMPTY = (None, "", [], {})
+CORRECTION_CLEAR_FIELDS_KEY = "_clear_fields"
 
 DECLARED_FIELDS = {
     "gtin", "brand", "legal_name", "ingredients", "allergens", "net_content",
@@ -23,6 +24,10 @@ OBSERVED_FIELDS = {
     "retailer_sku", "canonical_url", "name", "image_url", "category_path",
     "price_eur", "price_currency", "unit_price_text", "availability",
 }
+# Correction batches may retract previously merged evidence when a later audit proves
+# that a captured field was generic, truncated or otherwise invalid. Identity keys are
+# deliberately excluded: a correction must never silently turn one product into another.
+CORRECTABLE_FIELDS = ((DECLARED_FIELDS | OBSERVED_FIELDS) - {"retailer_sku", "canonical_url", "name"}) | {"nutrition_status"}
 COVERAGE_FIELDS = [
     "gtin", "name", "brand", "image_url", "category_path", "price_eur", "unit_price_text",
     "availability", "legal_name", "ingredients", "allergens", "net_content",
@@ -54,11 +59,41 @@ def nonempty(value: Any) -> bool:
     return value not in EMPTY
 
 
+def apply_field_corrections(row: dict) -> dict:
+    """Apply explicit, auditable field retractions and strip correction metadata."""
+    corrected = dict(row)
+    requested = corrected.pop(CORRECTION_CLEAR_FIELDS_KEY, [])
+    if requested in EMPTY:
+        return corrected
+    if not isinstance(requested, list) or not all(isinstance(field, str) for field in requested):
+        raise ValueError(f"{CORRECTION_CLEAR_FIELDS_KEY} must be a list of field names")
+    invalid = sorted(set(requested) - CORRECTABLE_FIELDS)
+    if invalid:
+        raise ValueError(f"Unsupported first-party field retraction(s): {', '.join(invalid)}")
+    for field in requested:
+        corrected[field] = None
+    return corrected
+
+
 def merge_product(old: dict, new: dict) -> dict:
-    """Merge two direct Carrefour observations without letting nulls erase evidence."""
+    """Merge two direct Carrefour observations without letting nulls erase evidence.
+
+    The sole exception is an explicit `_clear_fields` correction. This is required so
+    a later audit can retract demonstrably bad evidence from the recursively persisted
+    cumulative staging dataset instead of letting a stale value survive forever.
+    """
     merged = dict(old)
+    requested_clear = new.get(CORRECTION_CLEAR_FIELDS_KEY, [])
+    if requested_clear not in EMPTY:
+        if not isinstance(requested_clear, list) or not all(isinstance(field, str) for field in requested_clear):
+            raise ValueError(f"{CORRECTION_CLEAR_FIELDS_KEY} must be a list of field names")
+        invalid = sorted(set(requested_clear) - CORRECTABLE_FIELDS)
+        if invalid:
+            raise ValueError(f"Unsupported first-party field retraction(s): {', '.join(invalid)}")
+        for field in requested_clear:
+            merged[field] = None
     for key, value in new.items():
-        if not nonempty(value):
+        if key == CORRECTION_CLEAR_FIELDS_KEY or not nonempty(value):
             continue
         if key == "attributes" and isinstance(value, dict):
             attrs = dict(merged.get("attributes") or {})
@@ -70,6 +105,7 @@ def merge_product(old: dict, new: dict) -> dict:
             merged[key] = extra
         else:
             merged[key] = value
+    merged.pop(CORRECTION_CLEAR_FIELDS_KEY, None)
     return sanitize_row(merged)
 
 
@@ -98,7 +134,7 @@ def merge_products(paths: list[Path]) -> list[dict]:
             if key in by_key:
                 by_key[key] = merge_product(by_key[key], row)
             else:
-                by_key[key] = row
+                by_key[key] = sanitize_row(apply_field_corrections(row))
     return sorted(by_key.values(), key=lambda row: str(row.get("retailer_sku") or row.get("canonical_url") or ""))
 
 
@@ -133,11 +169,18 @@ def generated_evidence(rows: list[dict]) -> list[dict]:
 
 
 def merge_evidence(rows: list[dict], evidence_paths: list[Path]) -> list[dict]:
-    valid_skus = {row.get("retailer_sku") for row in rows}
+    rows_by_sku = {row.get("retailer_sku"): row for row in rows if row.get("retailer_sku")}
+    valid_skus = set(rows_by_sku)
     merged: dict[tuple[str, str, str], dict] = {}
     for path in evidence_paths:
         for item in read_jsonl(path):
-            if item.get("source") != SOURCE or item.get("retailer_sku") not in valid_skus:
+            sku = item.get("retailer_sku")
+            field = item.get("field")
+            if item.get("source") != SOURCE or sku not in valid_skus:
+                continue
+            # A corrected cumulative product is authoritative for whether a field still
+            # exists. Do not retain stale evidence rows for an explicitly retracted value.
+            if field in DECLARED_FIELDS | OBSERVED_FIELDS and not nonempty(rows_by_sku[sku].get(field)):
                 continue
             merged[evidence_signature(item)] = item
     for item in generated_evidence(rows):
