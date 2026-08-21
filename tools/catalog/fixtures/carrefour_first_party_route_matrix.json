@@ -1,7 +1,7 @@
 {
   "retailer": "CARREFOUR",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-  "updated_at": "2026-08-20T21:10:00Z",
+  "updated_at": "2026-08-21T00:05:00Z",
   "classification_performed": false,
   "routes": [
     {
@@ -72,6 +72,19 @@
       "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_agent_web_products_batch27_actforfood_fish.jsonl",
       "verified_product_pages": 3,
       "notes": "Indexed retrieval exposes official Act for Food Carrefour product and category pages despite direct runner WAF blocking. Product pages observed on 2026-08-20 exposed retailer SKU, name, price, unit price and detailed fresh-food attributes such as species, farming zone, cut and state; indexed category pages exposed broad assortment and recent observed listing prices. Only rendered official Carrefour facts are persisted, with crawl-lag metadata."
+    },
+    {
+      "route": "official_historical_gluten_free_pdf_ean_lists",
+      "host": [
+        "https://static.carrefour.es",
+        "https://www.carrefour.es"
+      ],
+      "result": "USABLE_HISTORICAL_ONLY",
+      "verified_fixture": "tools/catalog/fixtures/carrefour_first_party_historical_ean_summary.json",
+      "documents_attempted": 3,
+      "documents_fetched": 3,
+      "unique_historical_gtins": 214,
+      "notes": "Three official Carrefour historical gluten-free/FACE PDF lists were fetched successfully from GitHub Actions and expose EAN/GTIN values. They are retained as first-party historical identity evidence only. They are not merged into current product rows unless a separate exact current identity check proves the same commercial product."
     }
   ],
   "provenance_rules": [
@@ -79,7 +92,8 @@
     "RadarSuper may seed candidate identities or URLs but its fields are never copied into Carrefour first-party evidence.",
     "Open Food Facts data remains OPEN_FOOD_FACTS_VIA_RADARSUPER or its own source and is never relabelled as Carrefour-declared.",
     "Rumbo nutritional or culinary classification is separate from retailer evidence and is not performed in these extraction datasets.",
-    "Indexed official-page retrieval is accepted as first-party evidence only for fields actually rendered from the official Carrefour page; its freshness is explicitly qualified."
+    "Indexed official-page retrieval is accepted as first-party evidence only for fields actually rendered from the official Carrefour page; its freshness is explicitly qualified.",
+    "Historical Carrefour documents may contribute HISTORICAL_DECLARED_GTIN evidence, but historical GTINs are never promoted to current products without a separate exact current identity check."
   ],
-  "next_safe_step": "Continue low-volume, diverse first-party capture through indexed official Carrefour and Act for Food product/category pages, preserving crawl-lag metadata. Prefer Act for Food indexed pages when they expose fresher assortment or fresh-food attributes. Use clean low-concurrency Playwright opportunistically to capture GTIN/image and saved HTML when the WAF allows it. Do not distribute requests across runners to evade blocking."
+  "next_safe_step": "Continue low-volume, diverse first-party capture through indexed official Carrefour and Act for Food product/category pages, preserving crawl-lag metadata. Prefer Act for Food indexed pages when they expose fresher assortment or fresh-food attributes. Use clean low-concurrency Playwright opportunistically to capture GTIN/image and saved HTML when the WAF allows it. Use historical official EAN documents only as identity candidates for exact current-product verification; never infer current GTIN by name similarity alone. Do not distribute requests across runners to evade blocking."
 }
