@@ -1,144 +1,144 @@
 {
-  "built_at": "2026-08-21T21:49:00.146019+00:00",
+  "built_at": "2026-08-21T23:52:17.261122+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 242,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 258,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 15,
-    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 142,
+    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 144,
     "OPENAI_WEB_OFFICIAL_PRODUCT_INDEXED": 2,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 9634,
+    "evidence_rows": 10095,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 311,
+    "nutrition_complete": 329,
     "nutrition_not_found": 70,
     "nutrition_partial": 30,
-    "verified_direct_products": 411,
-    "verified_first_party_products": 411,
+    "verified_direct_products": 429,
+    "verified_first_party_products": 429,
     "verified_listing_only_observations": 15,
-    "verified_product_page_observations": 396
+    "verified_product_page_observations": 414
   },
   "coverage": {
     "allergens": {
-      "count": 162,
-      "pct": 39.42
+      "count": 165,
+      "pct": 38.46
     },
     "attributes": {
-      "count": 410,
-      "pct": 99.76
+      "count": 428,
+      "pct": 99.77
     },
     "availability": {
       "count": 25,
-      "pct": 6.08
+      "pct": 5.83
     },
     "brand": {
-      "count": 382,
-      "pct": 92.94
+      "count": 400,
+      "pct": 93.24
     },
     "category_path": {
-      "count": 254,
-      "pct": 61.8
+      "count": 272,
+      "pct": 63.4
     },
     "gtin": {
       "count": 4,
-      "pct": 0.97
+      "pct": 0.93
     },
     "image_url": {
       "count": 16,
-      "pct": 3.89
+      "pct": 3.73
     },
     "ingredients": {
-      "count": 360,
-      "pct": 87.59
+      "count": 378,
+      "pct": 88.11
     },
     "legal_name": {
-      "count": 369,
-      "pct": 89.78
+      "count": 387,
+      "pct": 90.21
     },
     "mandatory_mentions": {
-      "count": 144,
-      "pct": 35.04
+      "count": 145,
+      "pct": 33.8
     },
     "manufacturer_packer_importer": {
-      "count": 368,
-      "pct": 89.54
+      "count": 386,
+      "pct": 89.98
     },
     "name": {
-      "count": 411,
+      "count": 429,
       "pct": 100.0
     },
     "net_content": {
-      "count": 361,
-      "pct": 87.83
+      "count": 379,
+      "pct": 88.34
     },
     "nutriscore": {
-      "count": 129,
-      "pct": 31.39
+      "count": 133,
+      "pct": 31.0
     },
     "nutrition_extra": {
-      "count": 344,
-      "pct": 83.7
+      "count": 362,
+      "pct": 84.38
     },
     "operator_address": {
-      "count": 368,
-      "pct": 89.54
+      "count": 386,
+      "pct": 89.98
     },
     "preparation_instructions": {
-      "count": 224,
-      "pct": 54.5
+      "count": 227,
+      "pct": 52.91
     },
     "price_eur": {
-      "count": 411,
+      "count": 429,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 367,
-      "pct": 89.29
+      "count": 385,
+      "pct": 89.74
     },
     "unit_price_text": {
-      "count": 411,
+      "count": 429,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 342,
-      "pct": 83.21
+      "count": 360,
+      "pct": 83.92
     },
     "carbohydrate_g": {
-      "count": 336,
-      "pct": 81.75
+      "count": 354,
+      "pct": 82.52
     },
     "energy_kj": {
-      "count": 342,
-      "pct": 83.21
+      "count": 360,
+      "pct": 83.92
     },
     "fat_g": {
-      "count": 326,
-      "pct": 79.32
+      "count": 344,
+      "pct": 80.19
     },
     "fiber_g": {
-      "count": 136,
-      "pct": 33.09
+      "count": 154,
+      "pct": 35.9
     },
     "protein_g": {
-      "count": 326,
-      "pct": 79.32
+      "count": 344,
+      "pct": 80.19
     },
     "salt_g": {
-      "count": 330,
-      "pct": 80.29
+      "count": 348,
+      "pct": 81.12
     },
     "saturates_g": {
-      "count": 322,
-      "pct": 78.35
+      "count": 340,
+      "pct": 79.25
     },
     "sugars_g": {
-      "count": 332,
-      "pct": 80.78
+      "count": 350,
+      "pct": 81.59
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -1210,53 +1210,55 @@
     {
       "allergens": null,
       "attributes": {
-        "chocolate_type": "Negro",
-        "conservation_mode": "Lugar fresco y seco",
-        "packaging": "Sobre"
+        "packaging": "Bolsa",
+        "potato_chip_type": "Onduladas"
       },
       "availability": null,
-      "brand": "CARREFOUR SELECTION",
-      "calories_kcal": 622,
-      "canonical_url": "https://www.carrefour.es/supermercado/chocolate-negro-80-cacao-seleccion-carrefour-80-g/R-521004082/p",
+      "brand": "CARREFOUR",
+      "calories_kcal": 553.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/patatas-fritas-onduladas-sensation-carrefour-170-g/R-521003682/p",
       "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-3.8-indexed",
-      "carbohydrate_g": 26,
-      "category_path": null,
+      "capture_probe_version": "agent-web-direct-7.3-indexed",
+      "carbohydrate_g": 49.0,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Aperitivos",
+        "Patatas Fritas"
+      ],
       "direct_page_observed": true,
-      "energy_kj": 2575,
-      "fat_g": 51,
-      "fetch_error": null,
-      "fiber_g": 12,
+      "energy_kj": 2303.0,
+      "fat_g": 36.0,
+      "fiber_g": 3.2,
       "gtin": null,
-      "http_status": null,
       "image_url": null,
-      "ingredients": "Pasta de cacao (habas de cacao de origen Costa de Marfil), azúcar, manteca de cacao, aroma natural de vainilla. Cacao: 80% mínimo. Puede contener trazas de frutos de cáscara, cereales que contienen gluten y leche. *Habas de cacao proceden del programa transparence cacao.",
-      "legal_name": "Chocolate negro",
-      "mandatory_mentions": "Puede contener trazas de frutos de cáscara, cereales que contienen gluten y leche. *Habas de cacao proceden del programa TRANSPARENCE CACAO.",
+      "ingredients": "Patatas (63%), aceite de girasol (36%) y sal.",
+      "legal_name": "Patatas fritas",
+      "mandatory_mentions": null,
       "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Chocolate negro 80% cacao Selección Carrefour 80 g.",
-      "net_content": "80 g",
+      "name": "Patatas fritas onduladas Sensation Carrefour 170 g.",
+      "net_content": "170 g",
       "nutriscore": null,
       "nutrition_basis": "100 g",
       "nutrition_extra": {},
       "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T23:58:00+00:00",
-      "operator_address": "Av. de la Transición Española, 36 28108 Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": "Lugar fresco y seco",
+      "observed_at": "2026-08-21T23:58:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
+      "preparation_instructions": null,
       "price_currency": "EUR",
-      "price_eur": 2.05,
-      "protein_g": 9.5,
-      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible; missing fields are not inferred or filled from external sources.",
+      "price_eur": 1.24,
+      "protein_g": 6.6,
+      "provenance_note": "All populated fields were observed on official Carrefour-controlled product/category pages via indexed retrieval. Missing fields are not inferred or filled from external sources.",
       "retailer": "CARREFOUR",
-      "retailer_sku": "521004082",
+      "retailer_sku": "521003682",
       "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0,
-      "saturates_g": 31,
+      "salt_g": 0.92,
+      "saturates_g": 3.6,
       "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar protegido de la humedad, del calor (entre 18ºC y 20ºC) y de malos olores.",
-      "sugars_g": 20,
-      "unit_price_text": "25,62 €/kg"
+      "storage_conditions": "Conservar en lugar fresco y seco. Evítese la proximidad de fuentes de calor en el producto. Preservar de la luz.",
+      "sugars_g": 0.5,
+      "unit_price_text": "7,29 €/kg"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
