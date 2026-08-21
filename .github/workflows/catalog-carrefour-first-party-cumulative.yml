@@ -118,3 +118,6 @@ jobs:
           path: tools/catalog/carrefour-first-party-cumulative.sqlite
           retention-days: 7
           if-no-files-found: error
+
+# A source-only edit to this workflow is also a safe refresh trigger when an upstream
+# GITHUB_TOKEN commit cannot fan out into another Actions workflow.
