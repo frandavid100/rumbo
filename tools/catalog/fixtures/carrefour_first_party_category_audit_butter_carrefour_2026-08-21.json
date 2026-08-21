@@ -1,0 +1,29 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T15:58:00+00:00",
+  "scope": "Current indexed official Carrefour Lacteos category with both the carrefour brand facet and Mantequilla product facet applied. This is a bounded checkpoint, not a full-catalog claim.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/lacteos-carrefour-mantequilla/F-10tjZ10siZ10ti/c",
+  "official_observed_counts": {
+    "carrefour_butter": 5
+  },
+  "verification": {
+    "carrefour_identities_accounted_for": 5,
+    "product_page_observations": 5,
+    "listing_only_observations": 0,
+    "unresolved_carrefour_identities": 0
+  },
+  "verified_products": [
+    {"sku": "fprod1350157", "name": "Mantequilla pastilla sin sal Carrefour Classic 250 g."},
+    {"sku": "fprod1350153", "name": "Mantequilla pastilla con sal Carrefour Classic 250 g."},
+    {"sku": "fprod1350155", "name": "Mantequilla Carrefour 250 g."},
+    {"sku": "fprod1350154", "name": "Mantequilla light con sal Carrefour 250 g."},
+    {"sku": "871004960", "name": "Mantequilla fácil de untar 82% MG sin sal Carrefour Classic 250 g."}
+  ],
+  "notes": [
+    "The official combined facets currently report exactly five Carrefour-brand butter products and render all five identities in the category listing.",
+    "All five identities have official Carrefour product-page observations with complete core nutrition and legal/product metadata.",
+    "No external product facts were used. Missing explicit allergen fields are not inferred from ingredient text. Indexed retrieval may lag, so prices are Carrefour-published evidence rather than live-availability assertions."
+  ],
+  "classification_performed": false
+}
