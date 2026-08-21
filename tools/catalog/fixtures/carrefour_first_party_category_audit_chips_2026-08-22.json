@@ -1,0 +1,46 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T23:58:00+00:00",
+  "scope": "Current indexed official Carrefour Patatas Fritas category with Carrefour-family brands. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/aperitivos/patatas-fritas-marca-carrefour/F-125aZ12cng/c",
+  "official_observed_counts": {
+    "carrefour_brand": 17,
+    "carrefour_bio_brand": 2,
+    "carrefour_selection_brand": 2,
+    "carrefour_family_total": 21
+  },
+  "verification": {
+    "product_page_observations_persisted": 18,
+    "unresolved_identities_in_current_snapshot": 3,
+    "coverage_pct_of_current_carrefour_family_snapshot": 85.71
+  },
+  "verified_skus": [
+    "796400335",
+    "prod1070117",
+    "540201778",
+    "521003684",
+    "prod1022999",
+    "521003682",
+    "VC4AECOMM-502317",
+    "711911126",
+    "VC4AECOMM-132467",
+    "521003713",
+    "prod1070119",
+    "VC4AECOMM-239547",
+    "VC4AECOMM-171040",
+    "VC4AECOMM-733287",
+    "VC4AECOMM-733283",
+    "712515147",
+    "VC4AECOMM-088644",
+    "VC4AECOMM-610156"
+  ],
+  "notes": [
+    "The current indexed official Carrefour category reports 21 Carrefour-family potato-chip products: 17 Carrefour, 2 Carrefour Bio and 2 Carrefour Selection.",
+    "Eighteen identities now have official indexed Carrefour product-page evidence with declared nutrition and ingredients persisted in the first-party staging batch.",
+    "Three current category identities remain unresolved at product-page level in this checkpoint; no facts are inferred for them.",
+    "The official category also exposes bounded subcategory counts including Lisas 8, Sabores 5, Onduladas 4, Gourmet 3 and Paja 1; these labels may overlap with brand/product filters and are not used to infer missing product identities.",
+    "No external product facts were used. Missing GTINs/images/allergens are not inferred. Prices from indexed official Carrefour pages are recorded as Carrefour-published evidence with crawl-lag possible, not asserted as live availability."
+  ],
+  "classification_performed": false
+}
