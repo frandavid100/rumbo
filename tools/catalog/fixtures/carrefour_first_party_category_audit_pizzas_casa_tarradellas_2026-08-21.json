@@ -1,0 +1,34 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T19:50:00+00:00",
+  "scope": "Current indexed official Carrefour La Despensa > Conservas, Sopas y Precocinados > Pizzas category with the Casa Tarradellas brand filter applied. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/conservas-sopas-y-precocinados/pizzas-casa-tarradellas/F-11xgZ10fk/c",
+  "official_observed_counts": {
+    "casa_tarradellas_brand": 15,
+    "pizzas_total_all_brands": 43
+  },
+  "verification": {
+    "casa_tarradellas_identities_accounted_for_this_checkpoint": 8,
+    "product_page_observations_added": 8,
+    "listing_only_observations_added": 0,
+    "unresolved_casa_tarradellas_identities": 7
+  },
+  "verified_skus": [
+    "521030231",
+    "521030233",
+    "766604849",
+    "521030221",
+    "521030225",
+    "521030235",
+    "VC4AECOMM-625158",
+    "prod841051"
+  ],
+  "notes": [
+    "The current official Casa Tarradellas Pizzas facet reports 15 products. Eight product identities visible in the indexed category rendering have now been backed by official Carrefour product-page observations in batch 68.",
+    "Seven Casa Tarradellas pizza identities remain unresolved at this checkpoint because the indexed category rendering exposes only eight product cards despite reporting 15 total products. They must be recovered through additional indexed facet/query surfaces rather than inferred.",
+    "All eight newly captured product pages expose declared nutrition, ingredients, legal name, net content, operator/manufacturer data and preparation/storage information. Missing GTIN, image URL, availability and normalized allergen fields are retained as missing rather than inferred.",
+    "No external product facts were used. Indexed retrieval may lag, so observed prices are Carrefour-published evidence rather than assertions of live local availability."
+  ],
+  "classification_performed": false
+}
