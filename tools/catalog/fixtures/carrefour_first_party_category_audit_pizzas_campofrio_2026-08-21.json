@@ -1,0 +1,35 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T20:15:00+00:00",
+  "scope": "Current indexed official Carrefour La Despensa > Conservas, Sopas y Precocinados > Pizzas category with the Campofrio brand filter applied. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/conservas-sopas-y-precocinados/pizzas-campofrio/F-11xgZ12zj/c",
+  "official_observed_counts": {
+    "campofrio_brand": 9,
+    "pizzas_total_all_brands": 43
+  },
+  "verification": {
+    "campofrio_identities_accounted_for": 9,
+    "product_page_observations": 9,
+    "listing_only_observations": 0,
+    "unresolved_campofrio_identities": 0
+  },
+  "verified_skus": [
+    "521033038",
+    "521030202",
+    "521033046",
+    "prod221960",
+    "prod810321",
+    "675801637",
+    "835604862",
+    "VC4AECOMM-402930",
+    "VC4AECOMM-237271"
+  ],
+  "notes": [
+    "The current official Campofrio Pizzas facet reports 9 products; all 9 current facet identities are backed by official Carrefour product-page observations in batch 67.",
+    "Older Carrefour Campofrio campaign/shop-in-shop surfaces expose additional pizza identities that are not in the current Pizzas brand facet. Those historical/campaign identities remain valid first-party candidate surfaces but are deliberately not counted in this bounded current-category checkpoint.",
+    "All nine current-facet observations preserve Carrefour-declared nutrition and product facts. Missing GTIN, image URL or availability fields remain missing rather than inferred.",
+    "No external product facts were used. Indexed retrieval may lag, so observed prices are Carrefour-published evidence rather than assertions of live local availability."
+  ],
+  "classification_performed": false
+}
