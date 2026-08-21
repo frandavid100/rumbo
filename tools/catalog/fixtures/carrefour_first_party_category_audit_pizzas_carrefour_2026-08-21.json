@@ -35,6 +35,7 @@
     "The current official Carrefour-brand Pizzas facet reports 15 products; all 15 identities are now backed by official indexed Carrefour product-page observations across batches 65 and 66.",
     "The parent Pizzas category currently reports 43 products across all brands; this audit closes only the Carrefour-brand subset, not the full multi-brand category.",
     "The Margarita product currently exposes ingredients and product metadata but no numeric nutrition table in the indexed product-page rendering; missing nutrition is retained as missing rather than inferred.",
+    "The 2x225 g jamón y queso product currently declares protein=27 g/100 g on the official Carrefour page; the value is preserved verbatim as first-party evidence even though it is arithmetically suspicious and should be handled by downstream QA rather than silently corrected.",
     "No external product facts were used. Indexed retrieval may lag, so observed prices are Carrefour-published evidence rather than assertions of live availability."
   ],
   "classification_performed": false
