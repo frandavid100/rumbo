@@ -1,0 +1,30 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T20:58:00+00:00",
+  "scope": "Current indexed official Carrefour Colas category with the carrefour brand facet applied. This is a bounded checkpoint, not a full-catalog claim.",
+  "official_category_url": "https://www.carrefour.es/supermercado/bebidas/refrescos/colas-marca-carrefour/F-109mZ12cng/c",
+  "official_observed_counts": {
+    "carrefour_cola": 6
+  },
+  "verification": {
+    "carrefour_identities_accounted_for": 6,
+    "product_page_observations": 6,
+    "listing_only_observations": 0,
+    "unresolved_carrefour_identities": 0
+  },
+  "verified_products": [
+    {"sku": "VC4AECOMM-720284", "name": "Cola Carrefour Classic' lata 33 cl."},
+    {"sku": "VC4AECOMM-720300", "name": "Cola Carrefour Classic' zero lata 33 cl."},
+    {"sku": "VC4AECOMM-720323", "name": "Cola Carrefour Classic' zero azúcar sin cafeína lata 33 cl."},
+    {"sku": "VC4AECOMM-720311", "name": "Cola Carrefour Classic' botella 2 l."},
+    {"sku": "VC4AECOMM-720271", "name": "Cola Carrefour Classic' zero botella 2 l."},
+    {"sku": "VC4AECOMM-720332", "name": "Cola Classic' Carrefour Zero sin cafeína botella 2 l."}
+  ],
+  "notes": [
+    "The official Carrefour-brand cola facet currently reports exactly six Carrefour-brand products and renders all six identities in the category listing.",
+    "All six identities have official Carrefour product-page observations. Carrefour currently exposes energy, carbohydrate, sugars and salt for these pages but omits fat/protein values, so nutrition remains DECLARED_PARTIAL rather than inferring zeroes.",
+    "No external product facts were used. Missing allergen, GTIN and image fields are not inferred. Indexed retrieval may lag, so prices are Carrefour-published evidence rather than live-availability assertions."
+  ],
+  "classification_performed": false
+}
