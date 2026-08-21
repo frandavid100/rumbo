@@ -1,0 +1,41 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-22T00:28:00+00:00",
+  "scope": "Current indexed official Carrefour Pan de Molde category filtered to Carrefour brand. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/panaderia-bolleria-y-pasteleria/pan-de-molde-marca-carrefour/F-13aqzZ12cng/c",
+  "official_observed_counts": {
+    "carrefour_brand_total": 23,
+    "blanco_filter_count": 8,
+    "integral_filter_count": 4,
+    "otros_tipos_filter_count": 3,
+    "semillas_filter_count": 4
+  },
+  "verification_this_pass": {
+    "product_page_observations_persisted": 13,
+    "current_category_identities_not_resolved_in_this_pass": 10,
+    "coverage_pct_of_current_category_snapshot_this_pass": 56.52
+  },
+  "verified_skus": [
+    "VC4AECOMM-436738",
+    "VC4AECOMM-401083",
+    "VC4AECOMM-435346",
+    "VC4AECOMM-401046",
+    "VC4AECOMM-470192",
+    "VC4AECOMM-401035",
+    "VC4AECOMM-401058",
+    "870200674",
+    "VC4AECOMM-178467",
+    "VC4AECOMM-455780",
+    "VC4AECOMM-744293",
+    "VC4AECOMM-744308",
+    "VC4AECOMM-605654"
+  ],
+  "notes": [
+    "Thirteen current Carrefour-brand pan-de-molde identities now have official indexed product-page observations persisted in this batch.",
+    "Two gluten-free product pages omit fibre in the visible nutrition table and are therefore persisted as DECLARED_PARTIAL rather than inventing a fibre value.",
+    "Current category availability is stored only when explicitly visible (for example temporary out-of-stock); absence of a status is not converted into in-stock.",
+    "No external product facts were used. Missing GTINs/images/fields are not inferred. Prices from indexed official Carrefour pages are Carrefour-published evidence with crawl-lag possible, not asserted as live prices."
+  ],
+  "classification_performed": false
+}
