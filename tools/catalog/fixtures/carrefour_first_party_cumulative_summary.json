@@ -1,143 +1,143 @@
 {
-  "built_at": "2026-08-20T23:11:25.956437+00:00",
+  "built_at": "2026-08-21T00:00:55.965803+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 132,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 139,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 11,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 54,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 4547,
+    "evidence_rows": 4730,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 139,
+    "nutrition_complete": 146,
     "nutrition_not_found": 50,
     "nutrition_partial": 18,
-    "verified_direct_products": 207,
-    "verified_first_party_products": 207,
+    "verified_direct_products": 214,
+    "verified_first_party_products": 214,
     "verified_listing_only_observations": 11,
-    "verified_product_page_observations": 196
+    "verified_product_page_observations": 203
   },
   "coverage": {
     "allergens": {
-      "count": 71,
-      "pct": 34.3
+      "count": 73,
+      "pct": 34.11
     },
     "attributes": {
-      "count": 207,
+      "count": 214,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 11.11
+      "pct": 10.75
     },
     "brand": {
-      "count": 182,
-      "pct": 87.92
+      "count": 189,
+      "pct": 88.32
     },
     "category_path": {
-      "count": 115,
-      "pct": 55.56
+      "count": 116,
+      "pct": 54.21
     },
     "gtin": {
       "count": 4,
-      "pct": 1.93
+      "pct": 1.87
     },
     "image_url": {
       "count": 8,
-      "pct": 3.86
+      "pct": 3.74
     },
     "ingredients": {
-      "count": 173,
-      "pct": 83.57
+      "count": 180,
+      "pct": 84.11
     },
     "legal_name": {
-      "count": 175,
-      "pct": 84.54
+      "count": 182,
+      "pct": 85.05
     },
     "mandatory_mentions": {
-      "count": 60,
-      "pct": 28.99
+      "count": 64,
+      "pct": 29.91
     },
     "manufacturer_packer_importer": {
-      "count": 176,
-      "pct": 85.02
+      "count": 183,
+      "pct": 85.51
     },
     "name": {
-      "count": 207,
+      "count": 214,
       "pct": 100.0
     },
     "net_content": {
-      "count": 171,
-      "pct": 82.61
+      "count": 178,
+      "pct": 83.18
     },
     "nutriscore": {
-      "count": 57,
-      "pct": 27.54
+      "count": 59,
+      "pct": 27.57
     },
     "nutrition_extra": {
-      "count": 193,
-      "pct": 93.24
+      "count": 200,
+      "pct": 93.46
     },
     "operator_address": {
-      "count": 176,
-      "pct": 85.02
+      "count": 183,
+      "pct": 85.51
     },
     "preparation_instructions": {
-      "count": 96,
-      "pct": 46.38
+      "count": 100,
+      "pct": 46.73
     },
     "price_eur": {
-      "count": 207,
+      "count": 214,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 173,
-      "pct": 83.57
+      "count": 180,
+      "pct": 84.11
     },
     "unit_price_text": {
-      "count": 207,
+      "count": 214,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 157,
-      "pct": 75.85
+      "count": 164,
+      "pct": 76.64
     },
     "carbohydrate_g": {
-      "count": 154,
-      "pct": 74.4
+      "count": 161,
+      "pct": 75.23
     },
     "energy_kj": {
-      "count": 157,
-      "pct": 75.85
+      "count": 164,
+      "pct": 76.64
     },
     "fat_g": {
-      "count": 148,
-      "pct": 71.5
+      "count": 155,
+      "pct": 72.43
     },
     "fiber_g": {
-      "count": 48,
-      "pct": 23.19
+      "count": 55,
+      "pct": 25.7
     },
     "protein_g": {
-      "count": 150,
-      "pct": 72.46
+      "count": 157,
+      "pct": 73.36
     },
     "salt_g": {
-      "count": 147,
-      "pct": 71.01
+      "count": 154,
+      "pct": 71.96
     },
     "saturates_g": {
-      "count": 147,
-      "pct": 71.01
+      "count": 154,
+      "pct": 71.96
     },
     "sugars_g": {
-      "count": 151,
-      "pct": 72.95
+      "count": 158,
+      "pct": 73.83
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -1045,6 +1045,57 @@
     {
       "allergens": null,
       "attributes": {
+        "chocolate_type": "Negro",
+        "conservation_mode": "Lugar fresco y seco",
+        "packaging": "Sobre"
+      },
+      "availability": null,
+      "brand": "CARREFOUR SELECTION",
+      "calories_kcal": 622,
+      "canonical_url": "https://www.carrefour.es/supermercado/chocolate-negro-80-cacao-seleccion-carrefour-80-g/R-521004082/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-3.8-indexed",
+      "carbohydrate_g": 26,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 2575,
+      "fat_g": 51,
+      "fetch_error": null,
+      "fiber_g": 12,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Pasta de cacao (habas de cacao de origen Costa de Marfil), azúcar, manteca de cacao, aroma natural de vainilla. Cacao: 80% mínimo. Puede contener trazas de frutos de cáscara, cereales que contienen gluten y leche. *Habas de cacao proceden del programa transparence cacao.",
+      "legal_name": "Chocolate negro",
+      "mandatory_mentions": "Puede contener trazas de frutos de cáscara, cereales que contienen gluten y leche. *Habas de cacao proceden del programa TRANSPARENCE CACAO.",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Chocolate negro 80% cacao Selección Carrefour 80 g.",
+      "net_content": "80 g",
+      "nutriscore": null,
+      "nutrition_basis": "100 g",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-20T23:58:00+00:00",
+      "operator_address": "Av. de la Transición Española, 36 28108 Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 2.05,
+      "protein_g": 9.5,
+      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible; missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "521004082",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0,
+      "saturates_g": 31,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar protegido de la humedad, del calor (entre 18ºC y 20ºC) y de malos olores.",
+      "sugars_g": 20,
+      "unit_price_text": "25,62 €/kg"
+    },
+    {
+      "allergens": null,
+      "attributes": {
         "chocolate_type": "Con leche",
         "gluten_free": true,
         "industrial": true,
@@ -1205,60 +1256,6 @@
       "storage_conditions": "Conservar preferentemente en lugar fresco y seco.",
       "sugars_g": 1.2,
       "unit_price_text": "1,20 €/kg"
-    },
-    {
-      "allergens": "Puede contener: Cereales que contienen gluten",
-      "attributes": {
-        "alternative_vegetal": true,
-        "cooked": true,
-        "drained_weight_g": 400,
-        "legume_type": "Lentejas",
-        "no_added_salt": true,
-        "packaging": "Frasco cristal"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 86.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/lentejas-cocidas-categoria-extra-classic-carrefour-sin-sal-anadida-400-g/R-521005483/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-2.6-indexed",
-      "carbohydrate_g": 13.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 364.0,
-      "fat_g": 0.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Lentejas, agua y antioxidantes (EDTA y ácido ascórbico)",
-      "legal_name": "Lenteja cocida",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Carrefour",
-      "name": "Lentejas cocidas categoría extra Classic Carrefour sin sal añadida 400 g.",
-      "net_content": "570 g",
-      "nutriscore": "A",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T19:56:00+00:00",
-      "operator_address": "Avda. de la Transición Española 36, 28108, Alcobendas (Madrid)",
-      "page_sha256": null,
-      "preparation_instructions": "ver envase",
-      "price_currency": "EUR",
-      "price_eur": 0.9,
-      "protein_g": 6.3,
-      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521005483",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.1,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Una vez abierto mantener en refrigeración y consumir en los 2-3 días siguientes",
-      "sugars_g": 0.0,
-      "unit_price_text": "2,25 €/kg"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
