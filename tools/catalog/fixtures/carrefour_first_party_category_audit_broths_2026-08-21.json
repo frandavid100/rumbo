@@ -1,0 +1,35 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T14:55:00+00:00",
+  "scope": "Current indexed official Carrefour Caldos, Sopas y Pure category with the product facet Caldo applied. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/conservas-sopas-y-precocinados/caldos-sopas-y-pure-caldo/F-10q5Z11pz/c",
+  "official_observed_counts": {
+    "carrefour_brand": 6,
+    "carrefour_bio_brand": 1,
+    "caldo_total": 7
+  },
+  "verification": {
+    "identities_accounted_for": 7,
+    "product_page_observations": 6,
+    "listing_only_observations": 1,
+    "unresolved_identities_in_current_snapshot": 0
+  },
+  "verified_skus": [
+    "VC4AECOMM-437635",
+    "VC4AECOMM-549103",
+    "VC4AECOMM-549108",
+    "VC4AECOMM-549101",
+    "VC4AECOMM-025216",
+    "VC4AECOMM-437655",
+    "VC4AECOMM-549106"
+  ],
+  "listing_only_skus": ["VC4AECOMM-437655"],
+  "notes": [
+    "The official category snapshot reports 7 Caldo products: 6 Carrefour and 1 Carrefour Bio.",
+    "Six identities have official indexed Carrefour product-page evidence. The current link for VC4AECOMM-437655 redirects to the parent category, so only its official listing identity, price, unit price and temporary-out-of-stock state are persisted.",
+    "VC4AECOMM-549101 remains supported by a recent indexed official Carrefour product-page snapshot even though following the current category link now redirects; its retrieval is explicitly marked as crawl-lag-possible.",
+    "No external product facts were used. Missing nutrition fields are not inferred as zero. Prices from indexed product pages are Carrefour-published evidence, not assertions of live availability."
+  ],
+  "classification_performed": false
+}
