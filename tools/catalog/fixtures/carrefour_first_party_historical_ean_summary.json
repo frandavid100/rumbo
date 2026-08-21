@@ -1,0 +1,48 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "built_at": "2026-08-21T00:04:22.972485+00:00",
+  "purpose": "Historical first-party EAN/GTIN discovery only; never a current-product assertion without a separate exact identity check.",
+  "documents": [
+    {
+      "label": "Carrefour No Gluten product list (2017 static archive)",
+      "url": "https://static.carrefour.es/crs/cdn_static/c4corp-front/documentos/crf-no-gluten/20170704/images/nogluten/listados_no-gluten.pdf",
+      "source_date": "2017-07-04",
+      "http_status": 200,
+      "fetch_error": null,
+      "bytes": 476015,
+      "extracted_gtin_occurrences": 94,
+      "unique_gtins": 90
+    },
+    {
+      "label": "Carrefour FACE gluten-free product list (legacy)",
+      "url": "https://www.carrefour.es/_includes/pdfs/productos-singluten-listaface.pdf",
+      "source_date": null,
+      "http_status": 200,
+      "fetch_error": null,
+      "bytes": 26035,
+      "extracted_gtin_occurrences": 99,
+      "unique_gtins": 99
+    },
+    {
+      "label": "Carrefour FACE gluten-free product list (2014-02-06)",
+      "url": "https://www.carrefour.es/_includes/pdfs/productos-singluten-listaface_20140206.pdf",
+      "source_date": "2014-02-06",
+      "http_status": 200,
+      "fetch_error": null,
+      "bytes": 17356,
+      "extracted_gtin_occurrences": 138,
+      "unique_gtins": 138
+    }
+  ],
+  "counts": {
+    "documents_attempted": 3,
+    "documents_fetched": 3,
+    "evidence_rows": 327,
+    "unique_gtins": 214
+  },
+  "http_status_counts": {
+    "200": 3
+  },
+  "safe_for_current_product_merge": false
+}
