@@ -1,143 +1,144 @@
 {
-  "built_at": "2026-08-21T10:57:15.818804+00:00",
+  "built_at": "2026-08-21T12:16:03.029050+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 198,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 201,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 11,
     "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 85,
+    "OPENAI_WEB_OFFICIAL_PRODUCT_INDEXED": 1,
     "PLAYWRIGHT_SAVED_HTML": 3
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 6973,
+    "evidence_rows": 7096,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 228,
+    "nutrition_complete": 232,
     "nutrition_not_found": 56,
     "nutrition_partial": 20,
-    "verified_direct_products": 304,
-    "verified_first_party_products": 304,
+    "verified_direct_products": 308,
+    "verified_first_party_products": 308,
     "verified_listing_only_observations": 11,
-    "verified_product_page_observations": 293
+    "verified_product_page_observations": 297
   },
   "coverage": {
     "allergens": {
-      "count": 115,
-      "pct": 37.83
+      "count": 117,
+      "pct": 37.99
     },
     "attributes": {
-      "count": 304,
+      "count": 308,
       "pct": 100.0
     },
     "availability": {
       "count": 23,
-      "pct": 7.57
+      "pct": 7.47
     },
     "brand": {
-      "count": 275,
-      "pct": 90.46
+      "count": 280,
+      "pct": 90.91
     },
     "category_path": {
-      "count": 153,
-      "pct": 50.33
+      "count": 155,
+      "pct": 50.32
     },
     "gtin": {
       "count": 4,
-      "pct": 1.32
+      "pct": 1.3
     },
     "image_url": {
       "count": 16,
-      "pct": 5.26
+      "pct": 5.19
     },
     "ingredients": {
-      "count": 264,
-      "pct": 86.84
+      "count": 269,
+      "pct": 87.34
     },
     "legal_name": {
-      "count": 265,
-      "pct": 87.17
+      "count": 270,
+      "pct": 87.66
     },
     "mandatory_mentions": {
       "count": 90,
-      "pct": 29.61
+      "pct": 29.22
     },
     "manufacturer_packer_importer": {
-      "count": 266,
-      "pct": 87.5
+      "count": 271,
+      "pct": 87.99
     },
     "name": {
-      "count": 304,
+      "count": 308,
       "pct": 100.0
     },
     "net_content": {
-      "count": 258,
-      "pct": 84.87
+      "count": 263,
+      "pct": 85.39
     },
     "nutriscore": {
-      "count": 85,
-      "pct": 27.96
+      "count": 89,
+      "pct": 28.9
     },
     "nutrition_extra": {
-      "count": 290,
-      "pct": 95.39
+      "count": 294,
+      "pct": 95.45
     },
     "operator_address": {
-      "count": 266,
-      "pct": 87.5
+      "count": 271,
+      "pct": 87.99
     },
     "preparation_instructions": {
-      "count": 155,
-      "pct": 50.99
+      "count": 160,
+      "pct": 51.95
     },
     "price_eur": {
-      "count": 304,
+      "count": 308,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 263,
-      "pct": 86.51
+      "count": 268,
+      "pct": 87.01
     },
     "unit_price_text": {
-      "count": 304,
+      "count": 308,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 248,
-      "pct": 81.58
+      "count": 253,
+      "pct": 82.14
     },
     "carbohydrate_g": {
-      "count": 245,
-      "pct": 80.59
+      "count": 250,
+      "pct": 81.17
     },
     "energy_kj": {
-      "count": 248,
-      "pct": 81.58
+      "count": 253,
+      "pct": 82.14
     },
     "fat_g": {
-      "count": 238,
-      "pct": 78.29
+      "count": 243,
+      "pct": 78.9
     },
     "fiber_g": {
-      "count": 95,
-      "pct": 31.25
+      "count": 96,
+      "pct": 31.17
     },
     "protein_g": {
-      "count": 241,
-      "pct": 79.28
+      "count": 246,
+      "pct": 79.87
     },
     "salt_g": {
-      "count": 238,
-      "pct": 78.29
+      "count": 242,
+      "pct": 78.57
     },
     "saturates_g": {
-      "count": 237,
-      "pct": 77.96
+      "count": 242,
+      "pct": 78.57
     },
     "sugars_g": {
-      "count": 242,
-      "pct": 79.61
+      "count": 246,
+      "pct": 79.87
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
