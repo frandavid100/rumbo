@@ -1,0 +1,41 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T17:46:33+00:00",
+  "scope": "Current indexed official Carrefour La Despensa > Conservas, Sopas y Precocinados > Pizzas category with the Carrefour brand filter applied. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/conservas-sopas-y-precocinados/pizzas-carrefour/F-11xgZ10si/c",
+  "official_observed_counts": {
+    "carrefour_brand": 15,
+    "pizzas_total_all_brands": 43
+  },
+  "verification": {
+    "carrefour_identities_accounted_for": 15,
+    "product_page_observations": 15,
+    "listing_only_observations": 0,
+    "unresolved_carrefour_identities": 0
+  },
+  "verified_skus": [
+    "521030210",
+    "521030213",
+    "521030200",
+    "819114640",
+    "521030208",
+    "521030215",
+    "fprod1360349",
+    "VC4AECOMM-459353",
+    "VC4AECOMM-676946",
+    "521030206",
+    "521030204",
+    "fprod1370030",
+    "649302137",
+    "819256046",
+    "prod841618"
+  ],
+  "notes": [
+    "The current official Carrefour-brand Pizzas facet reports 15 products; all 15 identities are now backed by official indexed Carrefour product-page observations across batches 65 and 66.",
+    "The parent Pizzas category currently reports 43 products across all brands; this audit closes only the Carrefour-brand subset, not the full multi-brand category.",
+    "The Margarita product currently exposes ingredients and product metadata but no numeric nutrition table in the indexed product-page rendering; missing nutrition is retained as missing rather than inferred.",
+    "No external product facts were used. Indexed retrieval may lag, so observed prices are Carrefour-published evidence rather than assertions of live availability."
+  ],
+  "classification_performed": false
+}
