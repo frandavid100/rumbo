@@ -1,0 +1,28 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-21T14:00:00+00:00",
+  "scope": "Current indexed official Carrefour Nata category with the Carrefour brand facet applied. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/lacteos/nata-carrefour/F-15nkZ10si/c",
+  "official_observed_counts": {
+    "carrefour_brand_current_indexed_snapshot": 3
+  },
+  "verification": {
+    "identities_accounted_for": 3,
+    "product_page_observations": 3,
+    "listing_only_observations": 0,
+    "unresolved_identities_in_current_snapshot": 0
+  },
+  "verified_skus": [
+    "VC4AECOMM-465821",
+    "prod1120698",
+    "521031874"
+  ],
+  "notes": [
+    "The official category page retrieved during this audit reported 3 Carrefour-brand products and exposed all three product links.",
+    "Other indexed Carrefour category/search snapshots from recent crawls report larger Carrefour-brand counts (up to 8), so this checkpoint deliberately claims completeness only for the current indexed snapshot and does not retract previously observed first-party products.",
+    "All three linked product pages exposed price, unit price, full core nutrition, ingredients, legal denomination, net content and additional product metadata; allergens were persisted only when Carrefour exposed an explicit allergen field.",
+    "No external product facts were used. Indexed official-page retrieval can lag, so prices are evidence of Carrefour-published values, not assertions of live availability."
+  ],
+  "classification_performed": false
+}
