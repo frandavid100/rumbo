@@ -10,7 +10,7 @@ from sanitize_carrefour_first_party_output import sanitize_row
 
 
 FIELDS = [
-    "gtin", "name", "brand", "image_url", "category_path", "price_eur", "unit_price_text", "availability",
+    "retailer_sku", "canonical_url", "gtin", "name", "brand", "image_url", "category_path", "price_eur", "unit_price_text", "availability",
     "legal_name", "ingredients", "allergens", "net_content", "storage_conditions", "preparation_instructions",
     "operator_address", "manufacturer_packer_importer", "mandatory_mentions", "nutriscore", "attributes",
     "nutrition_extra",
