@@ -1,0 +1,31 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-22T03:56:00+00:00",
+  "scope": "Current indexed official Carrefour Huevos category with the carrefour brand facet applied. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/huevos-carrefour/F-16mzZ10si/c",
+  "official_observed_counts": {"carrefour_facet_total": 8},
+  "verification": {
+    "identities_accounted_for": 8,
+    "product_page_observations": 8,
+    "listing_only_observations": 0,
+    "unresolved_identities": 0
+  },
+  "verified_products": [
+    {"sku":"VC4AECOMM-307898","name":"Huevos Frescos Carrefour El Mercado 24 ud."},
+    {"sku":"VC4AECOMM-307927","name":"Huevos Frescos Carrefour El Mercado 12 ud."},
+    {"sku":"VC4AECOMM-307935","name":"Huevos de gallinas criadas en suelo Carrefour El Mercado 12 ud."},
+    {"sku":"prod840199","name":"Huevos M-L ecológicos Carrefour Bio 6 ud."},
+    {"sku":"VC4AECOMM-497495","name":"Clara de huevo pasteurizada Carrefour Classic' 1 l."},
+    {"sku":"VC4AECOMM-307925","name":"Huevos Frescos Carrefour El Mercado 12 ud."},
+    {"sku":"VC4AECOMM-307947","name":"Huevos de gallinas criadas en suelo Carrefour El Mercado 6 ud."},
+    {"sku":"VC4AECOMM-243267","name":"Clara de huevo pasteurizada Carrefour Classic' 320 ml."}
+  ],
+  "notes": [
+    "All eight identities in the current official carrefour-filtered egg category have direct official indexed Carrefour product-page observations.",
+    "The official facet currently includes the 6-unit ecological product whose product page itself publishes Marca=CARREFOUR and Bio=Sí; the evidence preserves Carrefour's own metadata rather than normalizing the brand from the title.",
+    "Products without a nutrition table remain in first-party inventory; complete nutrition is not required to retain an identity.",
+    "No external facts were used. Indexed retrieval may lag, so prices are Carrefour-published evidence rather than assertions of live local availability."
+  ],
+  "classification_performed": false
+}
