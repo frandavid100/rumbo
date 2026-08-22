@@ -13,6 +13,8 @@ on:
       - 'tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl'
+      - 'catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl'
+      - 'catalog/fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.summary.json'
   workflow_dispatch:
 
@@ -45,6 +47,12 @@ jobs:
             if [ -s "$f" ]; then PRODUCTS+=("$f"); fi
           done
           for f in fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl; do
+            if [ -s "$f" ]; then EVIDENCE+=("$f"); fi
+          done
+          for f in ../../catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl; do
+            if [ -s "$f" ]; then PRODUCTS+=("$f"); fi
+          done
+          for f in ../../catalog/fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl; do
             if [ -s "$f" ]; then EVIDENCE+=("$f"); fi
           done
           python merge_carrefour_first_party_observations.py \
@@ -119,5 +127,5 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-# Safe manual refresh marker: 2026-08-22T13:55Z. A source-only edit to this workflow is a
+# Safe manual refresh marker: 2026-08-22T14:00Z. A source-only edit to this workflow is a
 # refresh trigger when an upstream token-authored commit cannot fan out into another Actions workflow.
