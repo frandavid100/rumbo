@@ -1,0 +1,30 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-22T02:48:00+00:00",
+  "scope": "Current indexed official Carrefour Infusiones y Tés category with the Verde product facet and Carrefour brand count. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/desayuno/infusiones-y-tes-verde/F-18ny9Z1jzq/c",
+  "official_observed_counts": {
+    "carrefour_brand_green_tea": 5
+  },
+  "verification": {
+    "carrefour_identities_accounted_for": 5,
+    "product_page_observations": 5,
+    "listing_only_observations": 0,
+    "unresolved_carrefour_identities": 0
+  },
+  "verified_products": [
+    {"sku":"prod690071","name":"Té verde en bolsitas Carrefour Classic 30 ud."},
+    {"sku":"VC4AECOMM-599704","name":"Té verde con jengibre y limón en bolsitas Carrefour Classic 25 ud."},
+    {"sku":"VC4AECOMM-599700","name":"Té verde con matcha en bolsitas Carrefour Classic 25 ud."},
+    {"sku":"prod690061","name":"Té verde con limón en bolsitas Carrefour Classic 30 ud."},
+    {"sku":"VC4AECOMM-672228","name":"Té verde hierbabuena en bolsitas Carrefour Classic 20 ud."}
+  ],
+  "notes": [
+    "The official Verde facet currently reports five Carrefour-brand products; Carrefour Bio is a separate brand facet and is not counted in this checkpoint.",
+    "All five Carrefour identities have direct official indexed Carrefour product-page evidence.",
+    "Where Carrefour publishes a nutrition table for the prepared infusion but omits salt, the observation is preserved as DECLARED_PARTIAL rather than inferring zero.",
+    "No external product facts were used; indexed retrieval may lag, so prices are Carrefour-published evidence rather than assertions of live availability."
+  ],
+  "classification_performed": false
+}
