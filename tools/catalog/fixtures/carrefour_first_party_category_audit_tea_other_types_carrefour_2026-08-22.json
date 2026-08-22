@@ -1,0 +1,29 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-22T02:49:00+00:00",
+  "scope": "Current indexed official Carrefour Infusiones y Tés category with the Otros tipos de té product facet. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/desayuno/infusiones-y-tes-otros-tipos-de-te/F-18ny9Z1jkf/c",
+  "official_observed_counts": {
+    "carrefour_brand_other_tea_types": 4
+  },
+  "verification": {
+    "carrefour_identities_accounted_for": 4,
+    "product_page_observations": 4,
+    "listing_only_observations": 0,
+    "unresolved_carrefour_identities": 0
+  },
+  "verified_products": [
+    {"sku":"521003120","name":"Té English Breakfast en bolsitas Carrefour Classic 50 ud."},
+    {"sku":"prod690062","name":"Té negro descafeinado en bolsitas Carrefour Classic 30 ud."},
+    {"sku":"prod690063","name":"Té negro Chai en bolsitas Carrefour Classic 30 ud."},
+    {"sku":"prod690023","name":"Té negro Earl Grey en bolsitas Carrefour Classic 30 ud."}
+  ],
+  "notes": [
+    "The official Otros tipos de té facet currently reports four Carrefour-brand products; all four identities have direct official indexed Carrefour product-page evidence.",
+    "The English Breakfast page currently exposes product/legal/ingredient metadata but no nutrition table; it is therefore retained with NOT_DECLARED nutrition rather than discarded.",
+    "Where Carrefour publishes a prepared-infusion nutrition table but omits salt, the observation is preserved as DECLARED_PARTIAL rather than inferring zero.",
+    "No external product facts were used; indexed retrieval may lag, so prices are Carrefour-published evidence rather than assertions of live availability."
+  ],
+  "classification_performed": false
+}
