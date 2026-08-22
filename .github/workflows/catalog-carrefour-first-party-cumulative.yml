@@ -119,5 +119,5 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-# Safe manual refresh marker: 2026-08-22T11:02Z. A source-only edit to this workflow is a
+# Safe manual refresh marker: 2026-08-22T11:59Z. A source-only edit to this workflow is a
 # refresh trigger when an upstream token-authored commit cannot fan out into another Actions workflow.
