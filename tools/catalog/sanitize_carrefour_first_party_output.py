@@ -25,6 +25,12 @@ def valid_nutriscore(value) -> str | None:
 
 def sanitize_row(row: dict) -> dict:
     row = dict(row)
+    # Product-field names are schema identifiers and can never contain '='.
+    # Dropping such keys makes the cumulative staging resilient to accidental
+    # JSONL transcription typos without manufacturing or altering a real field.
+    for key in list(row):
+        if "=" in str(key):
+            row.pop(key, None)
     row["nutriscore"] = valid_nutriscore(row.get("nutriscore"))
     attributes = row.get("attributes")
     if isinstance(attributes, dict):
@@ -99,7 +105,7 @@ def main() -> int:
         summary["sample"] = [row for row in rows if not row.get("fetch_error")][:10]
         summary["quality_note"] = (
             "Nutri-Score is retained only when the extracted product value is a single grade A-E. "
-            "Generic marketplace/page-chrome text and the known legacy milk-label prefix artifact are removed from product attributes. "
+            "Generic marketplace/page-chrome text, malformed schema keys and the known legacy milk-label prefix artifact are removed from product attributes. "
             "Raw captured HTML remains the audit source."
         )
         summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
