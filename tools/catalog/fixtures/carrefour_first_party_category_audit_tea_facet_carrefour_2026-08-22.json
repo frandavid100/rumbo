@@ -1,0 +1,27 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-22T03:20:00+00:00",
+  "scope": "Current indexed official Carrefour Infusiones y Tés category with the Té product facet and Carrefour brand count. This is a bounded category checkpoint, not a claim that the full Carrefour catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/desayuno/infusiones-y-tes-te/F-18ny9Z132k/c",
+  "official_observed_counts": {"carrefour_brand_tea": 4},
+  "verification": {
+    "carrefour_identities_accounted_for": 4,
+    "product_page_observations": 4,
+    "listing_only_observations": 0,
+    "unresolved_carrefour_identities": 0
+  },
+  "verified_products": [
+    {"sku":"VC4AECOMM-677410","name":"Té de melocotón en sticks Carrefour Sensation 12 ud."},
+    {"sku":"VC4AECOMM-677398","name":"Te frío al limón en sticks Carrefour Sensation 12 ud."},
+    {"sku":"prod700109","name":"Te verde Matcha en sticks Carrefour Sensation 10 ud."},
+    {"sku":"521010894","name":"Té verde con mango y lichi en bolsitas Carrefour Sensation 25 ud."}
+  ],
+  "notes": [
+    "The official Té facet reports four Carrefour-brand products and all four have direct official indexed product-page evidence.",
+    "The two instant stick drinks expose only a subset of the usual nutrition panel and are retained as DECLARED_PARTIAL; no absent macro is inferred as zero.",
+    "The matcha and mango-litchi pages expose ingredients and legal/product metadata but no nutrition table, so they are retained rather than discarded.",
+    "No external product facts were used; indexed retrieval may lag, so price evidence is not asserted as live availability."
+  ],
+  "classification_performed": false
+}
