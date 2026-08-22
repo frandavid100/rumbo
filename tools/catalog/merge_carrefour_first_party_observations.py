@@ -29,7 +29,7 @@ OBSERVED_FIELDS = {
 # deliberately excluded: a correction must never silently turn one product into another.
 CORRECTABLE_FIELDS = ((DECLARED_FIELDS | OBSERVED_FIELDS) - {"retailer_sku", "canonical_url", "name"}) | {"nutrition_status"}
 COVERAGE_FIELDS = [
-    "gtin", "name", "brand", "image_url", "category_path", "price_eur", "unit_price_text",
+    "retailer_sku", "canonical_url", "gtin", "name", "brand", "image_url", "category_path", "price_eur", "unit_price_text",
     "availability", "legal_name", "ingredients", "allergens", "net_content",
     "storage_conditions", "preparation_instructions", "operator_address",
     "manufacturer_packer_importer", "mandatory_mentions", "nutriscore", "attributes",
