@@ -119,5 +119,5 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-# A source-only edit to this workflow is also a safe refresh trigger when an upstream
-# GITHUB_TOKEN commit cannot fan out into another Actions workflow.
+# Safe manual refresh marker: 2026-08-22T02:54Z. A source-only edit to this workflow is a
+# refresh trigger when an upstream token-authored commit cannot fan out into another Actions workflow.
