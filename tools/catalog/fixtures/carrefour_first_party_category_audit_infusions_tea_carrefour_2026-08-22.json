@@ -1,0 +1,46 @@
+{
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "audited_at": "2026-08-22T03:44:00+00:00",
+  "scope": "Current indexed official Carrefour Infusiones y Tés category with the Carrefour brand facet applied. This is a bounded category checkpoint, not a claim that the full Carrefour food catalog is inventoried.",
+  "official_category_url": "https://www.carrefour.es/supermercado/la-despensa/desayuno/infusiones-y-tes-carrefour/F-18ny9Z10si/c",
+  "official_observed_counts": {
+    "carrefour_brand_total": 38,
+    "by_product_facet": {
+      "Otras infusiones": 16,
+      "Verde": 5,
+      "Otros tipos de té": 4,
+      "Té": 4,
+      "Manzanilla": 2,
+      "Negro": 2,
+      "Blanco": 1,
+      "Cola de caballo": 1,
+      "Poleo-Menta": 1,
+      "Rojo": 1,
+      "Tila": 1
+    }
+  },
+  "verification": {
+    "identities_accounted_for": 37,
+    "product_page_observations": 35,
+    "listing_only_observations": 2,
+    "unresolved_identities_in_current_snapshot": 1
+  },
+  "listing_only_products": [
+    {"sku":"VC4AECOMM-672235","name":"Infusión de tomillo en bolsitas Carrefour Classic 20 ud."},
+    {"sku":"VC4AECOMM-765257","name":"Infusión de menta-poleo en bolsitas Carrefour Classic 20 ud."}
+  ],
+  "unresolved_current_listing_identity": {
+    "name":"Infusión Buenos Días con manzanilla, menta y anís verde en bolsitas Carrefour Sensation 30 ud.",
+    "price_eur":2.09,
+    "unit_price_text":"56,49 €/kg",
+    "reason":"The current official Carrefour listing is observed, but this capture did not expose a stable Carrefour SKU or canonical product URL. The row is therefore not promoted into cumulative product staging yet."
+  },
+  "notes": [
+    "The current official Carrefour brand facet reports 38 products. The mutually exclusive product-facet counts shown by Carrefour sum to 38 and provide a bounded completeness check.",
+    "Thirty-five identities have official Carrefour product-page observations and two more have stable official listing identities/URLs but no retrievable detail page in the current indexed capture.",
+    "One current listing product (Buenos Días) remains unresolved because no stable Carrefour product key was exposed; no external identity or inferred SKU was used to fill the gap.",
+    "No external product facts were used. Missing nutrition fields are not inferred as zero. Indexed retrieval may lag, so prices are Carrefour-published evidence rather than assertions of live local availability."
+  ],
+  "classification_performed": false
+}
