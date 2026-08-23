@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build a discovery-only queue of Carrefour candidate URLs not yet directly verified.
 
-The candidate input may come from external discovery sources such as RadarSuper.  This
-script NEVER promotes those hints to Carrefour first-party evidence.  It only removes
+The candidate input may come from external discovery sources such as RadarSuper. This
+script NEVER promotes those hints to Carrefour first-party evidence. It only removes
 SKUs already present in the verified cumulative first-party staging and emits a bounded,
 deterministic work queue plus counts for auditing.
 """
@@ -11,8 +11,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterable
+
+
+SKU_IN_URL_RE = re.compile(r"/R-([^/]+)/p(?:$|[?#])", re.IGNORECASE)
 
 
 def read_jsonl(path: Path) -> Iterable[dict[str, Any]]:
@@ -38,12 +42,22 @@ def norm_sku(value: Any) -> str | None:
     return text or None
 
 
+def candidate_sku(row: dict[str, Any]) -> str | None:
+    for key in ("retailer_sku_candidate", "retailer_sku", "sku", "product_id"):
+        sku = norm_sku(row.get(key))
+        if sku:
+            return sku
+    url = str(row.get("canonical_url") or row.get("url") or "").strip()
+    match = SKU_IN_URL_RE.search(url)
+    return norm_sku(match.group(1)) if match else None
+
+
 def candidate_key(row: dict[str, Any]) -> tuple[int, int, str, str]:
-    # Prefer candidates that carry an external GTIN hint because it can help identity
-    # resolution later, but keep that hint strictly external/discovery-only.
-    has_gtin_hint = 0 if norm_sku(row.get("gtin")) else 1
-    has_name_hint = 0 if str(row.get("name_hint") or "").strip() else 1
-    name = str(row.get("name_hint") or "").casefold()
+    # Prefer candidates that carry an external GTIN/name hint when available, while
+    # keeping every hint strictly external/discovery-only.
+    has_gtin_hint = 0 if norm_sku(row.get("gtin_hint_external")) else 1
+    has_name_hint = 0 if str(row.get("name_hint_external") or "").strip() else 1
+    name = str(row.get("name_hint_external") or "").casefold()
     sku = norm_sku(row.get("retailer_sku")) or ""
     return (has_gtin_hint, has_name_hint, name, sku)
 
@@ -89,7 +103,7 @@ def main() -> None:
     by_sku: dict[str, dict[str, Any]] = {}
     missing_sku = 0
     for row in candidate_rows:
-        sku = norm_sku(row.get("retailer_sku"))
+        sku = candidate_sku(row)
         if not sku:
             missing_sku += 1
             continue
@@ -108,9 +122,9 @@ def main() -> None:
             "candidate_source": str(row.get("candidate_source") or "EXTERNAL_DISCOVERY_ONLY"),
             "candidate_source_url": row.get("candidate_source_url"),
             "retailer_sku": sku,
-            "gtin_hint_external": norm_sku(row.get("gtin")),
-            "name_hint_external": row.get("name_hint"),
-            "canonical_url_candidate": row.get("canonical_url"),
+            "gtin_hint_external": norm_sku(row.get("gtin") or row.get("ean") or row.get("barcode")),
+            "name_hint_external": row.get("name_hint") or row.get("name"),
+            "canonical_url_candidate": row.get("canonical_url") or row.get("url"),
             "canonical_url_verified": False,
             "selection_reason": "NOT_YET_DIRECTLY_VERIFIED",
             "evidence_status": "DISCOVERY_ONLY_NOT_CARREFOUR_EVIDENCE",
@@ -146,11 +160,13 @@ def main() -> None:
             "queue_rows_emitted": len(selected_rows),
             "queue_limit": args.limit,
             "unverified_with_external_gtin_hint": sum(1 for row in unverified if row.get("gtin_hint_external")),
+            "unverified_with_external_name_hint": sum(1 for row in unverified if row.get("name_hint_external")),
         },
         "queue_order": "external GTIN hint first, then name hint, then casefolded name and retailer SKU",
         "notes": [
             "This queue is only a prioritization aid for direct official Carrefour verification.",
             "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
+            "RadarSuper export currently carries retailer_sku_candidate plus official-looking URL seeds; those remain external hints until direct Carrefour observation.",
         ],
     }
     args.summary.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
