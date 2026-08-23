@@ -2,6 +2,7 @@
   "retailer": "CARREFOUR",
   "policy": "PER_FIELD_PROVENANCE_REQUIRED",
   "updated_at": "2026-08-23",
+  "source_inventory_reconciled_at": "2026-08-23",
   "current_first_party_status": {
     "inventory_complete": false,
     "candidate_identity_urls_external_only": 8451,
@@ -14,7 +15,7 @@
     "classification_performed_in_first_party_staging": false,
     "notes": "Current cumulative staging contains 711 products verified from official Carrefour surfaces: 696 product-page observations and 15 listing-only observations. External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.",
     "first_party_field_evidence_rows_cumulative": 17042,
-    "cumulative_summary_fixture": "fixtures/carrefour_first_party_cumulative_summary.json",
+    "cumulative_summary_fixture": "tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json",
     "verified_first_party_products_cumulative": 711,
     "first_party_listing_only_products_cumulative": 15
   },
@@ -73,6 +74,16 @@
           "notes": "Parses only HTML captured directly from successful Carrefour responses and emits product JSONL, field evidence and SQLite."
         },
         {
+          "path": "tools/catalog/carrefour_first_party_historical_ean.py",
+          "status": "historical_first_party_identifier_archive",
+          "notes": "Extracts EAN/GTIN evidence from Carrefour-owned historical static documents. Current archive contains 214 unique GTINs; these are historical evidence only and must not be merged as current product assertions without an exact identity check."
+        },
+        {
+          "path": "tools/catalog/merge_carrefour_first_party_observations.py",
+          "status": "canonical_cumulative_merge_and_provenance_gate",
+          "notes": "Merges only CARREFOUR_FIRST_PARTY observations whose source URLs are on Carrefour-controlled domains, deduplicates by retailer SKU and preserves per-field evidence. External candidate data is rejected as evidence."
+        },
+        {
           "path": "tools/catalog/sanitize_carrefour_first_party_output.py",
           "status": "first_party_extraction_quality_gate",
           "notes": "Rejects demonstrably generic page chrome from product-specific fields while retaining raw captured HTML as audit evidence."
@@ -81,6 +92,11 @@
           "path": "tools/catalog/summarize_carrefour_first_party.py",
           "status": "first_party_summary_only",
           "notes": "Summarizes extraction coverage; does not enrich or classify products."
+        },
+        {
+          "path": "tools/catalog/annotate_carrefour_first_party_summary.py",
+          "status": "first_party_summary_annotation_only",
+          "notes": "Adds audit annotations to first-party summaries; does not create retailer evidence or Rumbo classifications."
         },
         {
           "path": "tools/catalog/carrefour_first_party_actforfood_inventory.py",
@@ -94,8 +110,46 @@
         ".github/workflows/catalog-carrefour-first-party-browser.yml",
         ".github/workflows/catalog-carrefour-first-party-fresh-inventory.yml",
         ".github/workflows/catalog-carrefour-first-party-cumulative.yml",
+        ".github/workflows/catalog-carrefour-first-party-historical-ean.yml",
         ".github/workflows/catalog-carrefour-first-party-actforfood.yml",
         ".github/workflows/catalog-carrefour-first-party-actforfood-http.yml"
+      ],
+      "legacy_workflows": [
+        {
+          "path": ".github/workflows/catalog-carrefour-food.yml",
+          "status": "legacy_catalog_pipeline",
+          "notes": "Predates the strict per-field first-party staging contract; outputs must not be treated as canonical first-party evidence without provenance review."
+        },
+        {
+          "path": ".github/workflows/catalog-carrefour-food-full-once.yml",
+          "status": "legacy_full_catalog_run",
+          "notes": "Historical full-run wrapper; not canonical first-party staging."
+        },
+        {
+          "path": ".github/workflows/catalog-carrefour-manual-build-once.yml",
+          "status": "legacy_manual_build",
+          "notes": "Contains Rumbo/manual build logic and is not retailer evidence."
+        },
+        {
+          "path": ".github/workflows/catalog-carrefour-quality.yml",
+          "status": "legacy_quality_pipeline",
+          "notes": "Quality/classification-era pipeline; keep separate from retailer extraction evidence."
+        },
+        {
+          "path": ".github/workflows/catalog-carrefour-quality-smoke.yml",
+          "status": "legacy_quality_smoke",
+          "notes": "Quality/classification smoke test; not retailer evidence."
+        },
+        {
+          "path": ".github/workflows/catalog-carrefour-quality-run-once.yml",
+          "status": "legacy_quality_run_once",
+          "notes": "Quality/classification run; not retailer evidence."
+        },
+        {
+          "path": ".github/workflows/catalog-direct-carrefour-then-alcampo.yml",
+          "status": "legacy_cross_retailer_direct_pipeline",
+          "notes": "Historical cross-retailer workflow. Carrefour observations require field-level first-party provenance before canonical merge."
+        }
       ],
       "fixtures": [
         {
@@ -158,6 +212,49 @@
         {
           "path": "tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl",
           "status": "cumulative_per_field_first_party_evidence"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json",
+          "status": "cumulative_first_party_coverage_summary"
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_historical_ean_evidence.jsonl",
+          "status": "historical_carrefour_owned_document_gtin_evidence",
+          "safe_for_current_product_merge": false
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_historical_ean_summary.json",
+          "status": "historical_gtin_archive_summary",
+          "unique_historical_gtins": 214,
+          "safe_for_current_product_merge": false
+        },
+        {
+          "path": "tools/catalog/fixtures/carrefour_first_party_agent_web_field_evidence.jsonl",
+          "status": "early_per_field_first_party_evidence_batch"
+        }
+      ],
+      "fixture_families": [
+        {
+          "glob": "tools/catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl",
+          "status": "official_surface_observation_batches",
+          "notes": "Incremental observations collected from official Carrefour product/category/indexed surfaces. Includes explicit correction/retraction batches. The cumulative merge still validates source id and Carrefour-controlled URL before promotion."
+        },
+        {
+          "glob": "tools/catalog/fixtures/carrefour_first_party_category_audit_*.json",
+          "status": "official_category_or_facet_coverage_audits",
+          "notes": "Coverage/accounting artifacts for official Carrefour category/facet observations; they do not independently manufacture product fields."
+        },
+        {
+          "glob": "tools/catalog/fixtures/carrefour_first_party_*summary*.json",
+          "status": "first_party_diagnostics_and_coverage_summaries",
+          "notes": "Summaries are audit metadata, not product-field evidence unless a corresponding evidence row exists."
+        }
+      ],
+      "legacy_or_duplicate_paths": [
+        {
+          "path": "catalog/fixtures/carrefour_first_party_agent_web_products_batch45_soups_broths.jsonl",
+          "status": "legacy_duplicate_outside_canonical_merge_root",
+          "notes": "Located outside tools/catalog/fixtures and therefore outside the canonical cumulative glob. Do not count it as additional coverage until reconciled against the canonical observations."
         }
       ]
     },
