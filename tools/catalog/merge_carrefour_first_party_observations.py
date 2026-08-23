@@ -4,12 +4,14 @@ import argparse
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import carrefour_first_party_inventory as base
 import carrefour_first_party_browser_inventory as browser
 from sanitize_carrefour_first_party_output import sanitize_row
 
 SOURCE = "CARREFOUR_FIRST_PARTY"
+OFFICIAL_CARREFOUR_ROOT = "carrefour.es"
 EMPTY = (None, "", [], {})
 CORRECTION_CLEAR_FIELDS_KEY = "_clear_fields"
 
@@ -57,6 +59,32 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def nonempty(value: Any) -> bool:
     return value not in EMPTY
+
+
+def official_carrefour_host(host: Any) -> bool:
+    if not host:
+        return False
+    clean = str(host).strip().lower().rstrip(".")
+    return clean == OFFICIAL_CARREFOUR_ROOT or clean.endswith(f".{OFFICIAL_CARREFOUR_ROOT}")
+
+
+def source_host_for(url: Any) -> str | None:
+    if not url:
+        return None
+    try:
+        return (urlparse(str(url)).hostname or "").lower() or None
+    except ValueError:
+        return None
+
+
+def official_carrefour_url(url: Any) -> bool:
+    if not url:
+        return False
+    try:
+        parsed = urlparse(str(url))
+    except ValueError:
+        return False
+    return parsed.scheme in {"http", "https"} and official_carrefour_host(parsed.hostname)
 
 
 def apply_field_corrections(row: dict) -> dict:
@@ -127,10 +155,18 @@ def merge_products(paths: list[Path]) -> list[dict]:
                 continue
             if raw.get("fetch_error"):
                 continue
+            url = raw.get("canonical_url")
+            # `CARREFOUR_FIRST_PARTY` is a provenance assertion, not merely a label.
+            # Refuse to promote a row unless its canonical evidence URL belongs to a
+            # Carrefour-controlled hostname. External catalogs may seed the URL, but
+            # their facts never pass this gate.
+            if not official_carrefour_url(url):
+                continue
             key = product_key(raw)
             if not key:
                 continue
             row = sanitize_row(raw)
+            row["source_host"] = source_host_for(url)
             if key in by_key:
                 by_key[key] = merge_product(by_key[key], row)
             else:
@@ -149,7 +185,7 @@ def generated_evidence(rows: list[dict]) -> list[dict]:
         sku = row.get("retailer_sku")
         url = row.get("canonical_url")
         observed_at = row.get("observed_at")
-        if not sku or not url:
+        if not sku or not official_carrefour_url(url):
             continue
         observed_evidence_type = (
             "OBSERVED_PRODUCT_PAGE" if row.get("direct_page_observed") else "OBSERVED_LISTING"
@@ -165,7 +201,7 @@ def generated_evidence(rows: list[dict]) -> list[dict]:
                 "source": SOURCE,
                 "evidence_type": "DECLARED" if field in DECLARED_FIELDS else observed_evidence_type,
                 "source_url": url,
-                "source_host": row.get("source_host"),
+                "source_host": source_host_for(url),
                 "observed_at": observed_at,
                 "capture_method": row.get("capture_method"),
                 "direct_page_observed": bool(row.get("direct_page_observed")),
@@ -180,11 +216,14 @@ def merge_evidence(rows: list[dict], evidence_paths: list[Path]) -> list[dict]:
     valid_skus = set(rows_by_sku)
     merged: dict[tuple[str, str, str], dict] = {}
     for path in evidence_paths:
-        for item in read_jsonl(path):
+        for raw_item in read_jsonl(path):
+            item = dict(raw_item)
             sku = item.get("retailer_sku")
             field = item.get("field")
-            if item.get("source") != SOURCE or sku not in valid_skus:
+            source_url = item.get("source_url")
+            if item.get("source") != SOURCE or sku not in valid_skus or not official_carrefour_url(source_url):
                 continue
+            item["source_host"] = source_host_for(source_url)
             # A corrected cumulative product is authoritative for whether a field still
             # exists. Do not retain stale evidence rows for an explicitly retracted value.
             if field in DECLARED_FIELDS | OBSERVED_FIELDS and not nonempty(rows_by_sku[sku].get(field)):
@@ -241,7 +280,7 @@ def build_summary(rows: list[dict], evidence: list[dict], candidate_count: int) 
         "nutrition_field_coverage": {field: base.coverage(rows, field) for field in NUTRITION_FIELDS},
         "sample": rows[:20],
         "provenance_note": (
-            "Only fields observed directly on official carrefour.es pages are merged. Third-party catalogs may seed candidate URLs, "
+            "Only fields tied to an official Carrefour-controlled canonical/source URL are merged. Third-party catalogs may seed candidate URLs, "
             "but their product facts are never promoted to CARREFOUR_FIRST_PARTY."
         ),
     }
