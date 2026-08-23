@@ -1,8 +1,8 @@
 {
-  "built_at": "2026-08-23T20:09:31.449943+00:00",
+  "built_at": "2026-08-23T21:09:33.220671+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 8,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 571,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 576,
     "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_INDEXED": 1,
     "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_PAGE": 2,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 17,
@@ -13,40 +13,40 @@
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 18125,
+    "evidence_rows": 18238,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 573,
-    "nutrition_not_found": 116,
+    "nutrition_complete": 577,
+    "nutrition_not_found": 117,
     "nutrition_partial": 64,
-    "verified_direct_products": 753,
-    "verified_first_party_products": 753,
+    "verified_direct_products": 758,
+    "verified_first_party_products": 758,
     "verified_listing_only_observations": 15,
-    "verified_product_page_observations": 738
+    "verified_product_page_observations": 743
   },
   "coverage": {
     "allergens": {
-      "count": 316,
-      "pct": 41.97
+      "count": 318,
+      "pct": 41.95
     },
     "attributes": {
-      "count": 747,
-      "pct": 99.2
+      "count": 752,
+      "pct": 99.21
     },
     "availability": {
-      "count": 90,
-      "pct": 11.95
+      "count": 95,
+      "pct": 12.53
     },
     "brand": {
-      "count": 721,
-      "pct": 95.75
+      "count": 725,
+      "pct": 95.65
     },
     "canonical_url": {
-      "count": 753,
+      "count": 758,
       "pct": 100.0
     },
     "category_path": {
       "count": 499,
-      "pct": 66.27
+      "pct": 65.83
     },
     "gtin": {
       "count": 5,
@@ -54,102 +54,102 @@
     },
     "image_url": {
       "count": 22,
-      "pct": 2.92
+      "pct": 2.9
     },
     "ingredients": {
-      "count": 692,
-      "pct": 91.9
+      "count": 697,
+      "pct": 91.95
     },
     "legal_name": {
-      "count": 698,
-      "pct": 92.7
+      "count": 703,
+      "pct": 92.74
     },
     "mandatory_mentions": {
       "count": 247,
-      "pct": 32.8
+      "pct": 32.59
     },
     "manufacturer_packer_importer": {
-      "count": 693,
-      "pct": 92.03
+      "count": 698,
+      "pct": 92.08
     },
     "name": {
-      "count": 753,
+      "count": 758,
       "pct": 100.0
     },
     "net_content": {
-      "count": 694,
-      "pct": 92.16
+      "count": 698,
+      "pct": 92.08
     },
     "nutriscore": {
       "count": 223,
-      "pct": 29.61
+      "pct": 29.42
     },
     "nutrition_extra": {
       "count": 621,
-      "pct": 82.47
+      "pct": 81.93
     },
     "operator_address": {
-      "count": 695,
-      "pct": 92.3
+      "count": 700,
+      "pct": 92.35
     },
     "preparation_instructions": {
-      "count": 444,
-      "pct": 58.96
+      "count": 446,
+      "pct": 58.84
     },
     "price_eur": {
-      "count": 753,
+      "count": 758,
       "pct": 100.0
     },
     "retailer_sku": {
-      "count": 753,
+      "count": 758,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 692,
-      "pct": 91.9
+      "count": 697,
+      "pct": 91.95
     },
     "unit_price_text": {
-      "count": 753,
+      "count": 758,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 637,
-      "pct": 84.59
+      "count": 641,
+      "pct": 84.56
     },
     "carbohydrate_g": {
-      "count": 630,
-      "pct": 83.67
+      "count": 634,
+      "pct": 83.64
     },
     "energy_kj": {
-      "count": 635,
-      "pct": 84.33
+      "count": 639,
+      "pct": 84.3
     },
     "fat_g": {
-      "count": 616,
-      "pct": 81.81
+      "count": 620,
+      "pct": 81.79
     },
     "fiber_g": {
       "count": 298,
-      "pct": 39.58
+      "pct": 39.31
     },
     "protein_g": {
-      "count": 618,
-      "pct": 82.07
+      "count": 622,
+      "pct": 82.06
     },
     "salt_g": {
-      "count": 597,
-      "pct": 79.28
+      "count": 601,
+      "pct": 79.29
     },
     "saturates_g": {
-      "count": 611,
-      "pct": 81.14
+      "count": 615,
+      "pct": 81.13
     },
     "sugars_g": {
-      "count": 621,
-      "pct": 82.47
+      "count": 625,
+      "pct": 82.45
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -264,6 +264,52 @@
       "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price is an observed Carrefour value but is not asserted as live/current. Missing fields are not inferred or filled from external sources.",
       "retailer": "CARREFOUR",
       "retailer_sku": "520660263",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 14.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
+      "storage_conditions": "Preservar del calor y del exceso de luz",
+      "sugars_g": 0.0,
+      "unit_price_text": "5,19 €/l"
+    },
+    {
+      "attributes": {
+        "oil_type": "Aceite de oliva intenso",
+        "packaging": "Botella"
+      },
+      "availability": "InStock",
+      "brand": "LA MASIA",
+      "calories_kcal": 824.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-intenso-1-la-masia-1-l/R-520660265/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-11.0-unverified-queue-beverages-vinegars",
+      "carbohydrate_g": 0.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 3389.0,
+      "fat_g": 92.0,
+      "fetch_error": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Aceite de oliva virgen extra y aceite de oliva refinado.",
+      "legal_name": "Aceite de oliva — contiene exclusivamente aceites de oliva refinados y aceites de oliva vírgenes",
+      "manufacturer_packer_importer": "Empresa Alimentación YBARRA",
+      "name": "Aceite de oliva intenso 1º La Masía 1 l.",
+      "net_content": "1000 ml",
+      "nutriscore": null,
+      "nutrition_basis": "100 ml",
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-23T21:10:00+00:00",
+      "operator_address": "Carretera Isla Menor, km. 1,8. 41703 Dos Hermanas (Sevilla)",
+      "page_sha256": null,
+      "price_currency": "EUR",
+      "price_eur": 5.19,
+      "protein_g": 0.0,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible; missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "520660265",
       "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
       "salt_g": 0.0,
       "saturates_g": 14.0,
@@ -1186,118 +1232,52 @@
       "unit_price_text": "0,90 €/l"
     },
     {
-      "allergens": null,
+      "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
       "attributes": {
-        "juice_type": [
-          "Néctar",
-          "Zumo"
-        ],
-        "nectar_added_sugar_type": "Azúcar",
-        "packaging": "Botella PET",
-        "vegan": true
+        "food_origin": "Denominación de origen protegida Italia.",
+        "packaging": "Botella cristal",
+        "vinegar_type": "Balsámico"
       },
-      "availability": null,
-      "brand": "GRANINI",
-      "calories_kcal": 45.0,
-      "canonical_url": "https://actforfood.carrefour.es/supermercado/nectar-de-pina-granini-botella-15-l/R-520660898/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE",
-      "capture_probe_version": "agent-web-direct-3.1-indexed",
-      "carbohydrate_g": 10.0,
+      "availability": "InStock",
+      "brand": "BORGES",
+      "calories_kcal": 111.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/vinagre-balsamico-de-modena-borges-250-ml/R-520660396/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-11.0-unverified-queue-beverages-vinegars",
+      "carbohydrate_g": 22.0,
       "category_path": null,
       "direct_page_observed": true,
-      "energy_kj": 188.0,
+      "energy_kj": 471.0,
       "fat_g": 0.0,
       "fetch_error": null,
-      "fiber_g": null,
       "gtin": null,
       "http_status": null,
       "image_url": null,
-      "ingredients": "Zumo de piña a partir de concentrado, agua, azúcar, acidulante: ácido cítrico, estabilizante: pectina, vitamina C.",
-      "legal_name": "Néctar de piña hecho a partir de concentrado con vitamina C.",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Eckes-Granini Ibérica, S.A.U.",
-      "name": "Néctar de piña Granini botella 1,5 l.",
-      "net_content": "1500 ml",
+      "ingredients": "Vinagre de vino, mosto de uva cocido, colorante E-150d. Contiene sulfitos.",
+      "legal_name": "Vinagre Balsámico de Módena.",
+      "manufacturer_packer_importer": "Borges Branded Foods S.L.U.",
+      "name": "Vinagre balsámico de módena Borges 250 ml.",
+      "net_content": "250 ml",
       "nutriscore": null,
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {
-        "vitamin_c_mg": 16.0
-      },
+      "nutrition_basis": "100 g",
       "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T22:14:00+00:00",
-      "operator_address": "Avda Diagonal, nº 514, 1er piso, puerta 1,2. 08006, Barcelona, Spain",
+      "observed_at": "2026-08-23T21:10:00+00:00",
+      "operator_address": "Avda. Josep Trepat, 38 25300 Tàrrega (Lleida)",
       "page_sha256": null,
-      "preparation_instructions": null,
       "price_currency": "EUR",
-      "price_eur": 4.35,
-      "protein_g": 0.0,
-      "provenance_note": "All populated fields were observed directly on an official actforfood.carrefour.es product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "price_eur": 2.45,
+      "protein_g": 0.7,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible; missing fields are not inferred or filled from external sources.",
       "retailer": "CARREFOUR",
-      "retailer_sku": "520660898",
+      "retailer_sku": "520660396",
       "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
+      "salt_g": 0.05,
       "saturates_g": 0.0,
       "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "actforfood.carrefour.es",
-      "storage_conditions": "Una vez abierto conservar en el frigorífico y consumir en 3-4 días.",
-      "sugars_g": 10.0,
-      "unit_price_text": "2,90 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "bottle_format": "1l",
-        "juice_type": "Néctar",
-        "nectar_added_sugar_type": "Azúcar",
-        "package_presentation": "1l",
-        "packaging": "Botella PET",
-        "vegan": true,
-        "vegetarian": true
-      },
-      "availability": null,
-      "brand": "GRANINI",
-      "calories_kcal": 45.0,
-      "canonical_url": "https://actforfood.carrefour.es/supermercado/nectar-de-pera-granini-seleccion-botella-1-l/R-520660961/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE",
-      "capture_probe_version": "agent-web-direct-3.1-indexed",
-      "carbohydrate_g": 10.7,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 190.0,
-      "fat_g": 0.5,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Agua, zumo de pera a partir de zumo de pera concentrado (24%), puré de pera (25%), azúcar, acidulante: ácido cítrico, aroma natural, vitamina C.",
-      "legal_name": "Bebida a base de zumo de pera hecha parcialmente a partir de concentrado",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Eckes-Granini Ibérica, S.A.U.",
-      "name": "Néctar de pera Granini Selección botella 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T22:14:00+00:00",
-      "operator_address": "Avda Diagonal, nº 514, 1er piso, puerta 1,2. 08006, Barcelona, Spain",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 2.99,
-      "protein_g": 0.5,
-      "provenance_note": "All populated fields were observed directly on an official actforfood.carrefour.es product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660961",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 0.1,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "actforfood.carrefour.es",
-      "storage_conditions": "Una vez abierto conservar en el frigorífico y consumir en 3-4 días.",
-      "sugars_g": 9.8,
-      "unit_price_text": "2,99 €/l"
+      "source_host": "www.carrefour.es",
+      "storage_conditions": "Conservar a temperatura ambiente. Almacenar en un lugar fresco y seco, lejos de la luz solar.",
+      "sugars_g": 22.0,
+      "unit_price_text": "9,80 €/l"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
