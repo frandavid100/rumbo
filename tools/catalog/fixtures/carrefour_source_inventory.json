@@ -25,6 +25,7 @@
       "evidence_source_id": "CARREFOUR_FIRST_PARTY",
       "allowed_evidence_types": [
         "DECLARED",
+        "OBSERVED_PRODUCT_PAGE",
         "OBSERVED_LISTING"
       ],
       "discovery": {
