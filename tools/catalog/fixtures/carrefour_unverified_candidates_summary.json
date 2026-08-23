@@ -4,13 +4,16 @@
     "verified_input": "CARREFOUR_FIRST_PARTY",
     "output_is_first_party_evidence": false
   },
+  "verified_inputs_used": [
+    "fixtures/carrefour_first_party_products_cumulative.jsonl"
+  ],
   "counts": {
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 741,
-    "candidate_ids_already_verified": 644,
-    "candidate_ids_not_yet_verified": 7807,
+    "verified_first_party_unique_skus": 744,
+    "candidate_ids_already_verified": 647,
+    "candidate_ids_not_yet_verified": 7804,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -23,6 +26,7 @@
   "notes": [
     "This queue is only a prioritization aid for direct official Carrefour verification.",
     "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
-    "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL."
+    "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL.",
+    "Pending direct first-party batch fixtures may be included as verified inputs so the queue remains current before the cumulative merge commit lands."
   ]
 }
