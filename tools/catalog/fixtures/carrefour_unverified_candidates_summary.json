@@ -6,18 +6,20 @@
   },
   "counts": {
     "candidate_rows": 8451,
-    "candidate_unique_skus": 0,
-    "candidate_rows_missing_sku": 8451,
+    "candidate_unique_skus": 8451,
+    "candidate_rows_missing_sku": 0,
     "verified_first_party_unique_skus": 741,
     "candidate_skus_already_verified": 0,
-    "candidate_skus_not_yet_verified": 0,
-    "queue_rows_emitted": 0,
+    "candidate_skus_not_yet_verified": 8451,
+    "queue_rows_emitted": 250,
     "queue_limit": 250,
-    "unverified_with_external_gtin_hint": 0
+    "unverified_with_external_gtin_hint": 0,
+    "unverified_with_external_name_hint": 0
   },
   "queue_order": "external GTIN hint first, then name hint, then casefolded name and retailer SKU",
   "notes": [
     "This queue is only a prioritization aid for direct official Carrefour verification.",
-    "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script."
+    "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
+    "RadarSuper export currently carries retailer_sku_candidate plus official-looking URL seeds; those remain external hints until direct Carrefour observation."
   ]
 }
