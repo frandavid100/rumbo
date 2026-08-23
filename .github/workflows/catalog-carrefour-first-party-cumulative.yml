@@ -43,6 +43,21 @@ jobs:
           python-version: '3.12'
       - name: Install parser dependency
         run: pip install playwright
+      - name: Repair audited malformed batch typo in workspace
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('fixtures/carrefour_first_party_agent_web_products_batch75_ice_cream.jsonl')
+          text = path.read_text(encoding='utf-8')
+          old = '"calories_kcal=209.0"'
+          new = '"calories_kcal":209.0'
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exactly one audited batch75 typo, found {count}')
+          path.write_text(text.replace(old, new), encoding='utf-8')
+          print('Repaired audited batch75 calories_kcal delimiter typo')
+          PY
       - name: Validate persisted JSONL observations
         working-directory: tools/catalog
         run: |
@@ -59,6 +74,7 @@ jobs:
               '../../catalog/fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl',
           ]
           seen = set()
+          errors = []
           for pattern in patterns:
               for name in sorted(glob.glob(pattern)):
                   if name in seen or not Path(name).is_file():
@@ -70,7 +86,9 @@ jobs:
                       try:
                           json.loads(line)
                       except json.JSONDecodeError as exc:
-                          raise SystemExit(f'INVALID_JSONL {name}:{line_no}: {exc}')
+                          errors.append(f'{name}:{line_no}: {exc}')
+          if errors:
+              raise SystemExit('INVALID_JSONL\n' + '\n'.join(errors))
           print(f'Validated {len(seen)} JSONL files')
           PY
       - name: Merge every verified first-party observation and build auditable staging
@@ -149,7 +167,8 @@ jobs:
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
             tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
             tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json \
-            tools/catalog/fixtures/carrefour_source_inventory.json
+            tools/catalog/fixtures/carrefour_source_inventory.json \
+            tools/catalog/fixtures/carrefour_first_party_agent_web_products_batch75_ice_cream.jsonl
           if ! git diff --cached --quiet; then
             git commit -m "catalog: merge Carrefour first-party observations"
             git pull --rebase origin agent/catalog-phase1
@@ -164,9 +183,11 @@ jobs:
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl
             tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl
             tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json
+            tools/catalog/fixtures/carrefour_source_inventory.json
+            tools/catalog/fixtures/carrefour_first_party_agent_web_products_batch75_ice_cream.jsonl
           retention-days: 7
           if-no-files-found: error
 
-# Safe manual refresh marker: 2026-08-23T10:11Z. Pull-request execution is a read-only
+# Safe manual refresh marker: 2026-08-23T10:15Z. Pull-request execution is a read-only
 # fallback that builds and uploads the current cumulative staging when connector-authored
 # pushes do not fan out into Actions; it never persists from the PR job.
