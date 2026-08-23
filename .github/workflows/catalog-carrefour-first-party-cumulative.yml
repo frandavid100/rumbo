@@ -43,6 +43,36 @@ jobs:
           python-version: '3.12'
       - name: Install parser dependency
         run: pip install playwright
+      - name: Validate persisted JSONL observations
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import glob, json
+          from pathlib import Path
+
+          patterns = [
+              'fixtures/carrefour_first_party_products_cumulative.jsonl',
+              'fixtures/carrefour_first_party_field_evidence_cumulative.jsonl',
+              'fixtures/carrefour_first_party_agent_web_products*.jsonl',
+              'fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl',
+              '../../catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl',
+              '../../catalog/fixtures/carrefour_first_party_agent_web_field_evidence*.jsonl',
+          ]
+          seen = set()
+          for pattern in patterns:
+              for name in sorted(glob.glob(pattern)):
+                  if name in seen or not Path(name).is_file():
+                      continue
+                  seen.add(name)
+                  for line_no, line in enumerate(Path(name).read_text(encoding='utf-8').splitlines(), 1):
+                      if not line.strip():
+                          continue
+                      try:
+                          json.loads(line)
+                      except json.JSONDecodeError as exc:
+                          raise SystemExit(f'INVALID_JSONL {name}:{line_no}: {exc}')
+          print(f'Validated {len(seen)} JSONL files')
+          PY
       - name: Merge every verified first-party observation and build auditable staging
         working-directory: tools/catalog
         run: |
@@ -137,6 +167,6 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-# Safe manual refresh marker: 2026-08-23T10:08Z. Pull-request execution is a read-only
+# Safe manual refresh marker: 2026-08-23T10:11Z. Pull-request execution is a read-only
 # fallback that builds and uploads the current cumulative staging when connector-authored
 # pushes do not fan out into Actions; it never persists from the PR job.
