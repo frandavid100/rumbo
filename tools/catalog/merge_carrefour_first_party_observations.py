@@ -151,6 +151,9 @@ def generated_evidence(rows: list[dict]) -> list[dict]:
         observed_at = row.get("observed_at")
         if not sku or not url:
             continue
+        observed_evidence_type = (
+            "OBSERVED_PRODUCT_PAGE" if row.get("direct_page_observed") else "OBSERVED_LISTING"
+        )
         for field in sorted(DECLARED_FIELDS | OBSERVED_FIELDS):
             value = row.get(field)
             if not nonempty(value):
@@ -160,10 +163,14 @@ def generated_evidence(rows: list[dict]) -> list[dict]:
                 "field": field,
                 "value": value,
                 "source": SOURCE,
-                "evidence_type": "DECLARED" if field in DECLARED_FIELDS else "OBSERVED_LISTING",
+                "evidence_type": "DECLARED" if field in DECLARED_FIELDS else observed_evidence_type,
                 "source_url": url,
+                "source_host": row.get("source_host"),
                 "observed_at": observed_at,
                 "capture_method": row.get("capture_method"),
+                "direct_page_observed": bool(row.get("direct_page_observed")),
+                "listing_only_observed": bool(row.get("listing_only_observed")),
+                "retrieval_freshness": row.get("retrieval_freshness"),
             })
     return evidence
 
