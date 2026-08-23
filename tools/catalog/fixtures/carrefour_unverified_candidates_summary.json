@@ -6,20 +6,23 @@
   },
   "counts": {
     "candidate_rows": 8451,
-    "candidate_unique_skus": 8451,
-    "candidate_rows_missing_sku": 0,
+    "candidate_unique_carrefour_url_ids": 8451,
+    "candidate_rows_missing_product_id": 0,
     "verified_first_party_unique_skus": 741,
-    "candidate_skus_already_verified": 0,
-    "candidate_skus_not_yet_verified": 8451,
+    "candidate_ids_already_verified": 644,
+    "candidate_ids_not_yet_verified": 7807,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
     "unverified_with_external_name_hint": 0
   },
-  "queue_order": "external GTIN hint first, then name hint, then casefolded name and retailer SKU",
+  "candidate_id_source_counts": {
+    "CARREFOUR_URL_CANDIDATE": 8451
+  },
+  "queue_order": "external GTIN hint first, then name hint, then casefolded name and Carrefour URL product ID",
   "notes": [
     "This queue is only a prioritization aid for direct official Carrefour verification.",
     "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
-    "RadarSuper export currently carries retailer_sku_candidate plus official-looking URL seeds; those remain external hints until direct Carrefour observation."
+    "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL."
   ]
 }
