@@ -138,6 +138,8 @@ jobs:
               f'{product_pages} product-page observations and {listing_only} listing-only observations. '
               'External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.'
           )
+          first_party = inventory.setdefault('sources', {}).setdefault('first_party_carrefour', {})
+          first_party['allowed_evidence_types'] = ['DECLARED', 'OBSERVED_PRODUCT_PAGE', 'OBSERVED_LISTING']
           built_at = str(summary.get('built_at') or '')
           if built_at:
               inventory['updated_at'] = built_at[:10]
