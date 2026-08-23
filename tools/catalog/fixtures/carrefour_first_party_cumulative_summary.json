@@ -1,5 +1,5 @@
 {
-  "built_at": "2026-08-23T11:49:32.960311+00:00",
+  "built_at": "2026-08-23T11:50:41.412510+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 7,
     "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 495,
@@ -13,7 +13,7 @@
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 16124,
+    "evidence_rows": 16134,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
     "nutrition_complete": 507,
     "nutrition_not_found": 116,
@@ -45,16 +45,16 @@
       "pct": 100.0
     },
     "category_path": {
-      "count": 464,
-      "pct": 68.24
+      "count": 466,
+      "pct": 68.53
     },
     "gtin": {
       "count": 5,
       "pct": 0.74
     },
     "image_url": {
-      "count": 19,
-      "pct": 2.79
+      "count": 22,
+      "pct": 3.24
     },
     "ingredients": {
       "count": 618,
