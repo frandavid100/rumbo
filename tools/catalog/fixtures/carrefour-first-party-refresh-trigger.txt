@@ -1,3 +1,2 @@
 Refresh cumulative Carrefour first-party staging from all currently persisted verified observation batches.
-Diagnostic rerun: validate every JSONL input before merging.
-Audited repair rerun: correct the batch75 calories delimiter in the workflow workspace before validation.
+Final validation rerun after permanently correcting the audited batch75 JSONL typo.
