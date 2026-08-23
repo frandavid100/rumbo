@@ -1,5 +1,5 @@
 {
-  "built_at": "2026-08-23T19:16:02.699854+00:00",
+  "built_at": "2026-08-23T19:58:15.006859+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 8,
     "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 559,
@@ -13,7 +13,7 @@
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 17826,
+    "evidence_rows": 17834,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
     "nutrition_complete": 562,
     "nutrition_not_found": 115,
@@ -65,8 +65,8 @@
       "pct": 92.58
     },
     "mandatory_mentions": {
-      "count": 240,
-      "pct": 32.39
+      "count": 242,
+      "pct": 32.66
     },
     "manufacturer_packer_importer": {
       "count": 681,
@@ -85,16 +85,16 @@
       "pct": 30.09
     },
     "nutrition_extra": {
-      "count": 608,
-      "pct": 82.05
+      "count": 609,
+      "pct": 82.19
     },
     "operator_address": {
       "count": 683,
       "pct": 92.17
     },
     "preparation_instructions": {
-      "count": 435,
-      "pct": 58.7
+      "count": 436,
+      "pct": 58.84
     },
     "price_eur": {
       "count": 741,
@@ -668,7 +668,8 @@
         "mineralization": "Débil",
         "package_presentation": "1,5 l",
         "packaging": "Botella PET",
-        "water_class": "Agua sin gas"
+        "water_class": "Agua sin gas",
+        "water_type": "Agua sin gas"
       },
       "availability": null,
       "brand": "CARREFOUR",
@@ -693,10 +694,18 @@
       "net_content": "1500.0 ml",
       "nutriscore": null,
       "nutrition_basis": null,
+      "nutrition_extra": {
+        "bicarbonate_mg_l": 231.8,
+        "calcium_mg_l": 15.9,
+        "chloride_mg_l": 26.7,
+        "dry_residue_mg_l": 286.0,
+        "potassium_mg_l": 3.1,
+        "sodium_mg_l": 92.9
+      },
       "nutrition_status": "NOT_DECLARED",
       "observed_at": "2026-08-21T21:08:00+00:00",
       "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
-      "preparation_instructions": null,
+      "preparation_instructions": "Conservar en un lugar fresco, seco y aislado del suelo",
       "price_currency": "EUR",
       "price_eur": 0.39,
       "provenance_note": "All populated fields were observed on official Carrefour product/category pages via indexed retrieval. Missing fields are not inferred or filled from external sources.",
