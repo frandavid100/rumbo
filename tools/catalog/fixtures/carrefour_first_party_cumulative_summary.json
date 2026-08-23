@@ -1,5 +1,5 @@
 {
-  "built_at": "2026-08-23T19:13:22.731944+00:00",
+  "built_at": "2026-08-23T19:15:26.942853+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 8,
     "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 559,
@@ -205,6 +205,7 @@
       "salt_g": 0.0,
       "saturates_g": 16.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
       "unit_price_text": "6,95 €/l"
@@ -258,6 +259,7 @@
       "salt_g": 0.0,
       "saturates_g": 16.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
       "unit_price_text": "6,95 €/l"
@@ -311,6 +313,7 @@
       "salt_g": 0.0,
       "saturates_g": 16.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
       "unit_price_text": "6,95 €/l"
@@ -372,6 +375,7 @@
       "salt_g": 0.0,
       "saturates_g": 16.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
       "unit_price_text": "4,70 €/l"
@@ -423,6 +427,7 @@
       "salt_g": 0.07,
       "saturates_g": 0.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco y protegido de la luz solar directa.",
       "sugars_g": 15.0,
       "unit_price_text": "5,08 €/l"
@@ -476,6 +481,7 @@
       "salt_g": 0.0,
       "saturates_g": 0.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco y seco, protegido de la luz solar directa.",
       "sugars_g": 1.0,
       "unit_price_text": "0,90 €/l"
@@ -533,6 +539,7 @@
       "salt_g": 0.0,
       "saturates_g": 0.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "actforfood.carrefour.es",
       "storage_conditions": "Una vez abierto conservar en el frigorífico y consumir en 3-4 días.",
       "sugars_g": 10.0,
       "unit_price_text": "2,90 €/l"
@@ -588,6 +595,7 @@
       "salt_g": 0.0,
       "saturates_g": 0.1,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "actforfood.carrefour.es",
       "storage_conditions": "Una vez abierto conservar en el frigorífico y consumir en 3-4 días.",
       "sugars_g": 9.8,
       "unit_price_text": "2,99 €/l"
@@ -642,6 +650,7 @@
       "retailer_sku": "520661025",
       "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Lugar seco y fresco, protegido de la luz solar y de olores agresivos.",
       "unit_price_text": "0,58 €/l"
     },
@@ -695,6 +704,7 @@
       "retailer_sku": "520661062",
       "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Lugar seco y fresco, protegido de la luz solar y de olores agresivos.",
       "unit_price_text": "0,26 €/l"
     },
@@ -751,6 +761,7 @@
       "salt_g": 0.0,
       "saturates_g": 10.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Se aconseja mantener el envase correctamente cerrado, en un lugar fresco, alejado de fuentes de calor y de la luz, a una temperatura entre 10ºC y 25ºC.",
       "sugars_g": 0.0,
       "unit_price_text": "1,71 €/l"
@@ -816,6 +827,7 @@
       "salt_g": null,
       "saturates_g": null,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": null,
       "unit_price_text": "15,00 €/kg"
@@ -875,6 +887,7 @@
       "salt_g": 0.1,
       "saturates_g": 5.1,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": 0.5,
       "unit_price_text": "14,36 €/kg"
@@ -941,6 +954,7 @@
       "salt_g": 0.1,
       "saturates_g": 6.1,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": 0.5,
       "unit_price_text": "15,40 €/kg"
@@ -996,6 +1010,7 @@
       "salt_g": null,
       "saturates_g": null,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": null,
       "unit_price_text": "14,76 €/kg"
@@ -1050,6 +1065,7 @@
       "salt_g": null,
       "saturates_g": null,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": null,
       "unit_price_text": "9,08 €/kg"
@@ -1121,6 +1137,7 @@
       "salt_g": null,
       "saturates_g": null,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": null,
       "unit_price_text": "11,40 €/kg"
@@ -1189,6 +1206,7 @@
       "salt_g": 0.1,
       "saturates_g": 4.9,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": 0.5,
       "unit_price_text": "10,20 €/kg"
@@ -1243,6 +1261,7 @@
       "salt_g": 0.1,
       "saturates_g": 4.9,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": 0.5,
       "unit_price_text": "9,36 €/kg"
@@ -1300,6 +1319,7 @@
       "salt_g": 0.53,
       "saturates_g": 0.0,
       "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y seco. Una vez abierto, consumir en 6 semanas.",
       "sugars_g": 3.0,
       "unit_price_text": "19,45 €/kg"
