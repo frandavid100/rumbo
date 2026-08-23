@@ -3,7 +3,7 @@
 
 The candidate input may come from external discovery sources such as RadarSuper. This
 script NEVER promotes those hints to Carrefour first-party evidence. It only removes
-product IDs already present in the verified cumulative first-party staging and emits a
+product IDs already present in one or more verified first-party JSONL inputs and emits a
 bounded, deterministic work queue plus counts for auditing.
 """
 
@@ -69,7 +69,13 @@ def candidate_key(row: dict[str, Any]) -> tuple[int, int, str, str]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--candidates", default="fixtures/carrefour_candidate_urls_radarsuper.jsonl", type=Path)
-    parser.add_argument("--verified", default="fixtures/carrefour_first_party_products_cumulative.jsonl", type=Path)
+    parser.add_argument(
+        "--verified",
+        default=[Path("fixtures/carrefour_first_party_products_cumulative.jsonl")],
+        nargs="+",
+        type=Path,
+        help="One or more verified first-party product JSONL files. Missing paths are ignored.",
+    )
     parser.add_argument("--output", default="fixtures/carrefour_unverified_candidates_head.jsonl", type=Path)
     parser.add_argument("--summary", default="fixtures/carrefour_unverified_candidates_summary.json", type=Path)
     parser.add_argument("--limit", type=int, default=250)
@@ -78,7 +84,13 @@ def main() -> None:
     if args.limit < 1:
         raise SystemExit("--limit must be >= 1")
 
-    verified_rows = list(read_jsonl(args.verified))
+    verified_rows: list[dict[str, Any]] = []
+    verified_inputs_used: list[str] = []
+    for path in args.verified:
+        if not path.exists():
+            continue
+        verified_inputs_used.append(str(path))
+        verified_rows.extend(read_jsonl(path))
     verified_skus = {
         sku
         for row in verified_rows
@@ -141,6 +153,7 @@ def main() -> None:
             "verified_input": "CARREFOUR_FIRST_PARTY",
             "output_is_first_party_evidence": False,
         },
+        "verified_inputs_used": verified_inputs_used,
         "counts": {
             "candidate_rows": len(candidate_rows),
             "candidate_unique_carrefour_url_ids": len(by_sku),
@@ -159,6 +172,7 @@ def main() -> None:
             "This queue is only a prioritization aid for direct official Carrefour verification.",
             "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
             "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL.",
+            "Pending direct first-party batch fixtures may be included as verified inputs so the queue remains current before the cumulative merge commit lands.",
         ],
     }
     args.summary.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
