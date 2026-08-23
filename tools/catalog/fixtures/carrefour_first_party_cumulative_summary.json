@@ -1,8 +1,8 @@
 {
-  "built_at": "2026-08-23T19:11:56.472587+00:00",
+  "built_at": "2026-08-23T19:13:22.731944+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 8,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 555,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 559,
     "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_INDEXED": 1,
     "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_PAGE": 2,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 17,
@@ -13,143 +13,143 @@
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 17729,
+    "evidence_rows": 17826,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 560,
+    "nutrition_complete": 562,
     "nutrition_not_found": 115,
-    "nutrition_partial": 62,
-    "verified_direct_products": 737,
-    "verified_first_party_products": 737,
+    "nutrition_partial": 64,
+    "verified_direct_products": 741,
+    "verified_first_party_products": 741,
     "verified_listing_only_observations": 15,
-    "verified_product_page_observations": 722
+    "verified_product_page_observations": 726
   },
   "coverage": {
     "allergens": {
-      "count": 314,
-      "pct": 42.61
+      "count": 316,
+      "pct": 42.65
     },
     "attributes": {
-      "count": 731,
+      "count": 735,
       "pct": 99.19
     },
     "availability": {
       "count": 90,
-      "pct": 12.21
+      "pct": 12.15
     },
     "brand": {
-      "count": 705,
-      "pct": 95.66
+      "count": 709,
+      "pct": 95.68
     },
     "canonical_url": {
-      "count": 737,
+      "count": 741,
       "pct": 100.0
     },
     "category_path": {
       "count": 494,
-      "pct": 67.03
+      "pct": 66.67
     },
     "gtin": {
       "count": 5,
-      "pct": 0.68
+      "pct": 0.67
     },
     "image_url": {
       "count": 22,
-      "pct": 2.99
+      "pct": 2.97
     },
     "ingredients": {
-      "count": 676,
-      "pct": 91.72
+      "count": 680,
+      "pct": 91.77
     },
     "legal_name": {
-      "count": 682,
-      "pct": 92.54
+      "count": 686,
+      "pct": 92.58
     },
     "mandatory_mentions": {
-      "count": 238,
-      "pct": 32.29
+      "count": 240,
+      "pct": 32.39
     },
     "manufacturer_packer_importer": {
-      "count": 677,
-      "pct": 91.86
+      "count": 681,
+      "pct": 91.9
     },
     "name": {
-      "count": 737,
+      "count": 741,
       "pct": 100.0
     },
     "net_content": {
-      "count": 678,
-      "pct": 91.99
+      "count": 682,
+      "pct": 92.04
     },
     "nutriscore": {
-      "count": 219,
-      "pct": 29.72
+      "count": 223,
+      "pct": 30.09
     },
     "nutrition_extra": {
-      "count": 604,
-      "pct": 81.95
+      "count": 608,
+      "pct": 82.05
     },
     "operator_address": {
-      "count": 679,
-      "pct": 92.13
+      "count": 683,
+      "pct": 92.17
     },
     "preparation_instructions": {
       "count": 435,
-      "pct": 59.02
+      "pct": 58.7
     },
     "price_eur": {
-      "count": 737,
+      "count": 741,
       "pct": 100.0
     },
     "retailer_sku": {
-      "count": 737,
+      "count": 741,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 676,
-      "pct": 91.72
+      "count": 680,
+      "pct": 91.77
     },
     "unit_price_text": {
-      "count": 737,
+      "count": 741,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 622,
-      "pct": 84.4
+      "count": 626,
+      "pct": 84.48
     },
     "carbohydrate_g": {
-      "count": 615,
-      "pct": 83.45
+      "count": 619,
+      "pct": 83.54
     },
     "energy_kj": {
-      "count": 620,
-      "pct": 84.12
+      "count": 624,
+      "pct": 84.21
     },
     "fat_g": {
-      "count": 602,
-      "pct": 81.68
+      "count": 605,
+      "pct": 81.65
     },
     "fiber_g": {
       "count": 297,
-      "pct": 40.3
+      "pct": 40.08
     },
     "protein_g": {
-      "count": 603,
-      "pct": 81.82
+      "count": 607,
+      "pct": 81.92
     },
     "salt_g": {
-      "count": 582,
-      "pct": 78.97
+      "count": 586,
+      "pct": 79.08
     },
     "saturates_g": {
-      "count": 597,
-      "pct": 81.0
+      "count": 600,
+      "pct": 80.97
     },
     "sugars_g": {
-      "count": 606,
-      "pct": 82.23
+      "count": 610,
+      "pct": 82.32
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
@@ -375,6 +375,57 @@
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
       "unit_price_text": "4,70 €/l"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "packaging": "Botella cristal",
+        "product": "Vinagre balsámico",
+        "product_origin": "Italia",
+        "storage_mode": "Lugar fresco y seco",
+        "vinegar_characteristic": "Módena",
+        "vinegar_type": "Otros tipos de vinagre"
+      },
+      "availability": null,
+      "brand": "CARREFOUR",
+      "calories_kcal": 82.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/vinagre-balsamico-de-modena-igp-carrefour-sensation-500-ml/R-520660378/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-10.0-indexed-vinegars",
+      "carbohydrate_g": 15.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 352.0,
+      "fat_g": 0.0,
+      "fiber_g": null,
+      "gtin": null,
+      "image_url": null,
+      "ingredients": "Vinagre de vino (contiene sulfitos), mosto de uva concentrado, acidez 6%",
+      "legal_name": "Vinagre balsámico de Módena",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Centros comerciales Carrefour España S.A.",
+      "name": "Vinagre balsámico de módena IGP Carrefour Sensation 500 ml.",
+      "net_content": "500 ml",
+      "nutriscore": "C",
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-23T19:18:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid Tfno.: 914 908 900",
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 2.54,
+      "protein_g": 0.7,
+      "provenance_note": "All populated fields were observed on an official Carrefour-controlled product page via indexed retrieval. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "520660378",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.07,
+      "saturates_g": 0.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar fresco y seco y protegido de la luz solar directa.",
+      "sugars_g": 15.0,
+      "unit_price_text": "5,08 €/l"
     },
     {
       "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
@@ -1252,61 +1303,6 @@
       "storage_conditions": "Conservar en lugar fresco y seco. Una vez abierto, consumir en 6 semanas.",
       "sugars_g": 3.0,
       "unit_price_text": "19,45 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "coffee_presentation": "Soluble o instantáneo",
-        "coffee_product": "Café",
-        "packaging": "Sobre",
-        "roast_type": "Natural"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 297.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/cafe-soluble-classic-en-sobres-carrefour-25-unidades-de-2-g/R-521003059/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-8.2-indexed",
-      "carbohydrate_g": 49.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Desayuno",
-        "Cafés"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 1250.0,
-      "fat_g": 0.0,
-      "fiber_g": 22.0,
-      "gtin": null,
-      "image_url": null,
-      "ingredients": "Café soluble",
-      "legal_name": "Café soluble",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros comerciales Carrefour,S.A",
-      "name": "Café soluble classic en sobres Carrefour 25 unidades de 2 g.",
-      "net_content": "50 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-22T09:51:00+00:00",
-      "operator_address": "Av. de la Transición Española, 36, 28108 Alcobendas, Madrid",
-      "preparation_instructions": "Lugar fresco y seco",
-      "price_currency": "EUR",
-      "price_eur": 2.85,
-      "protein_g": 15.0,
-      "provenance_note": "All populated fields were observed on official Carrefour-controlled product/category pages via indexed retrieval. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521003059",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.53,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en lugar fresco y seco.",
-      "sugars_g": 3.0,
-      "unit_price_text": "57,00 €/kg"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
