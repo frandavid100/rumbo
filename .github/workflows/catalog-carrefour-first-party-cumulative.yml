@@ -132,7 +132,7 @@ jobs:
               counts.get('external_candidate_identity_urls_not_counted_as_first_party',
                          status.get('candidate_identity_urls_external_only', 0)) or 0
           )
-          status['cumulative_summary_fixture'] = str(summary_path)
+          status['cumulative_summary_fixture'] = f'tools/catalog/{summary_path.as_posix()}'
           status['notes'] = (
               f'Current cumulative staging contains {verified} products verified from official Carrefour surfaces: '
               f'{product_pages} product-page observations and {listing_only} listing-only observations. '
