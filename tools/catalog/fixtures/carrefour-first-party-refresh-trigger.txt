@@ -1,0 +1,1 @@
+Refresh cumulative Carrefour first-party staging from all currently persisted verified observation batches.
