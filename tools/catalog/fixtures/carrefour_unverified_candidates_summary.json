@@ -1,0 +1,23 @@
+{
+  "source_boundary": {
+    "candidate_input": "EXTERNAL_DISCOVERY_ONLY",
+    "verified_input": "CARREFOUR_FIRST_PARTY",
+    "output_is_first_party_evidence": false
+  },
+  "counts": {
+    "candidate_rows": 8451,
+    "candidate_unique_skus": 0,
+    "candidate_rows_missing_sku": 8451,
+    "verified_first_party_unique_skus": 741,
+    "candidate_skus_already_verified": 0,
+    "candidate_skus_not_yet_verified": 0,
+    "queue_rows_emitted": 0,
+    "queue_limit": 250,
+    "unverified_with_external_gtin_hint": 0
+  },
+  "queue_order": "external GTIN hint first, then name hint, then casefolded name and retailer SKU",
+  "notes": [
+    "This queue is only a prioritization aid for direct official Carrefour verification.",
+    "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script."
+  ]
+}
