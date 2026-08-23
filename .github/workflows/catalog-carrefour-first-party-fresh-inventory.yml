@@ -124,3 +124,5 @@ jobs:
           path: tools/catalog/carrefour-first-party-fresh-inventory/
           retention-days: 7
           if-no-files-found: warn
+
+# Safe manual refresh marker: 2026-08-23T06:57Z.
