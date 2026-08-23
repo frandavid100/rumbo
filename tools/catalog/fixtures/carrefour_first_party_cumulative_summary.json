@@ -1,8 +1,8 @@
 {
-  "built_at": "2026-08-23T19:58:15.006859+00:00",
+  "built_at": "2026-08-23T20:06:11.619189+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 8,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 559,
+    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 562,
     "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_INDEXED": 1,
     "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_PAGE": 2,
     "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 17,
@@ -13,40 +13,40 @@
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 17834,
+    "evidence_rows": 17909,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 562,
+    "nutrition_complete": 565,
     "nutrition_not_found": 115,
     "nutrition_partial": 64,
-    "verified_direct_products": 741,
-    "verified_first_party_products": 741,
+    "verified_direct_products": 744,
+    "verified_first_party_products": 744,
     "verified_listing_only_observations": 15,
-    "verified_product_page_observations": 726
+    "verified_product_page_observations": 729
   },
   "coverage": {
     "allergens": {
       "count": 316,
-      "pct": 42.65
+      "pct": 42.47
     },
     "attributes": {
-      "count": 735,
+      "count": 738,
       "pct": 99.19
     },
     "availability": {
       "count": 90,
-      "pct": 12.15
+      "pct": 12.1
     },
     "brand": {
-      "count": 709,
-      "pct": 95.68
+      "count": 712,
+      "pct": 95.7
     },
     "canonical_url": {
-      "count": 741,
+      "count": 744,
       "pct": 100.0
     },
     "category_path": {
-      "count": 494,
-      "pct": 66.67
+      "count": 495,
+      "pct": 66.53
     },
     "gtin": {
       "count": 5,
@@ -54,108 +54,280 @@
     },
     "image_url": {
       "count": 22,
-      "pct": 2.97
+      "pct": 2.96
     },
     "ingredients": {
-      "count": 680,
-      "pct": 91.77
+      "count": 683,
+      "pct": 91.8
     },
     "legal_name": {
-      "count": 686,
-      "pct": 92.58
+      "count": 689,
+      "pct": 92.61
     },
     "mandatory_mentions": {
-      "count": 242,
+      "count": 243,
       "pct": 32.66
     },
     "manufacturer_packer_importer": {
-      "count": 681,
-      "pct": 91.9
+      "count": 684,
+      "pct": 91.94
     },
     "name": {
-      "count": 741,
+      "count": 744,
       "pct": 100.0
     },
     "net_content": {
-      "count": 682,
-      "pct": 92.04
+      "count": 685,
+      "pct": 92.07
     },
     "nutriscore": {
       "count": 223,
-      "pct": 30.09
+      "pct": 29.97
     },
     "nutrition_extra": {
-      "count": 609,
-      "pct": 82.19
+      "count": 612,
+      "pct": 82.26
     },
     "operator_address": {
-      "count": 683,
-      "pct": 92.17
+      "count": 686,
+      "pct": 92.2
     },
     "preparation_instructions": {
-      "count": 436,
-      "pct": 58.84
+      "count": 438,
+      "pct": 58.87
     },
     "price_eur": {
-      "count": 741,
+      "count": 744,
       "pct": 100.0
     },
     "retailer_sku": {
-      "count": 741,
+      "count": 744,
       "pct": 100.0
     },
     "storage_conditions": {
-      "count": 680,
-      "pct": 91.77
+      "count": 683,
+      "pct": 91.8
     },
     "unit_price_text": {
-      "count": 741,
+      "count": 744,
       "pct": 100.0
     }
   },
   "inventory_complete": false,
   "nutrition_field_coverage": {
     "calories_kcal": {
-      "count": 626,
-      "pct": 84.48
+      "count": 629,
+      "pct": 84.54
     },
     "carbohydrate_g": {
-      "count": 619,
-      "pct": 83.54
+      "count": 622,
+      "pct": 83.6
     },
     "energy_kj": {
-      "count": 624,
-      "pct": 84.21
+      "count": 627,
+      "pct": 84.27
     },
     "fat_g": {
-      "count": 605,
-      "pct": 81.65
+      "count": 608,
+      "pct": 81.72
     },
     "fiber_g": {
-      "count": 297,
-      "pct": 40.08
+      "count": 298,
+      "pct": 40.05
     },
     "protein_g": {
-      "count": 607,
-      "pct": 81.92
+      "count": 610,
+      "pct": 81.99
     },
     "salt_g": {
-      "count": 586,
-      "pct": 79.08
+      "count": 589,
+      "pct": 79.17
     },
     "saturates_g": {
-      "count": 600,
-      "pct": 80.97
+      "count": 603,
+      "pct": 81.05
     },
     "sugars_g": {
-      "count": 610,
-      "pct": 82.32
+      "count": 613,
+      "pct": 82.39
     }
   },
   "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
   "provenance_note": "Only fields observed directly on official Carrefour-controlled pages are merged. Third-party catalogs may seed candidate URLs, but their product facts are never promoted to CARREFOUR_FIRST_PARTY. Indexed official-page retrieval is explicitly marked because crawl lag is possible.",
   "retailer": "CARREFOUR",
   "sample": [
+    {
+      "allergens": null,
+      "attributes": {
+        "halal": true,
+        "oil_type": "Aceite de oliva suave",
+        "package_presentation": "1l",
+        "packaging": "Botella PET",
+        "vegan": true,
+        "vegetarian": true
+      },
+      "availability": null,
+      "brand": "LA ESPAÑOLA",
+      "calories_kcal": 822,
+      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-suave-04-la-espanola-1-l/R-520660257/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-10.1-unverified-queue-oils",
+      "carbohydrate_g": 0.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 3381,
+      "fat_g": 91.0,
+      "fetch_error": null,
+      "fiber_g": 0.0,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Aceite de Oliva Refinado y Aceite de Oliva Virgen. Aceite que contiene exclusivamente aceites de oliva que se hayan sometido a un tratamiento de refinado y de aceites obtenidos directamente de aceitunas.",
+      "legal_name": "Aceite de oliva que contiene exclusivamente aceites de oliva refinados y aceites de oliva vírgenes",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Acesur",
+      "name": "Aceite de oliva suave 0,4º La Española 1 l.",
+      "net_content": "1000 ml",
+      "nutriscore": null,
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {
+        "monounsaturated_fat_g": 71.0,
+        "polyunsaturated_fat_g": 8.0,
+        "vitamin_e_mg": 18.0,
+        "vitamin_e_reference_intake_percent": 150.0
+      },
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-23T20:15:00+00:00",
+      "operator_address": "Ctra. de La Carolina, 29 - 23220 Vilches - Jaén",
+      "page_sha256": null,
+      "preparation_instructions": "Conservar en un lugar fresco, seco y aislado del suelo",
+      "price_currency": "EUR",
+      "price_eur": 6.69,
+      "protein_g": 0.0,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price is an observed Carrefour value but is not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "520660257",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 12.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
+      "storage_conditions": "Mantener alejado de la luz y del calor.",
+      "sugars_g": 0.0,
+      "unit_price_text": "6,69 €/l"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "oil_type": "Aceite de oliva",
+        "package_presentation": "1l",
+        "packaging": "Botella"
+      },
+      "availability": null,
+      "brand": "LA MASIA",
+      "calories_kcal": 824,
+      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-04-la-masia-1-l/R-520660263/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-10.1-unverified-queue-oils",
+      "carbohydrate_g": 0.0,
+      "category_path": [
+        "Carrefour.es",
+        "Supermercado",
+        "La Despensa",
+        "Aceites y vinagres"
+      ],
+      "direct_page_observed": true,
+      "energy_kj": 3389,
+      "fat_g": 92.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Aceite de oliva refinado y aceite de oliva virgen extra.",
+      "legal_name": "Aceite de oliva — contiene exclusivamente aceites de oliva refinados y aceites de oliva vírgenes",
+      "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Oleo Masía, S.A.",
+      "name": "Aceite de oliva 0,4º La Masía 1 l.",
+      "net_content": "1 l",
+      "nutriscore": null,
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-23T20:15:00+00:00",
+      "operator_address": "Carretera Isla Menor, km. 1,8. 41703 Dos Hermanas (Sevilla)",
+      "page_sha256": null,
+      "preparation_instructions": null,
+      "price_currency": "EUR",
+      "price_eur": 5.19,
+      "protein_g": 0.0,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price is an observed Carrefour value but is not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "520660263",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 14.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
+      "storage_conditions": "Preservar del calor y del exceso de luz",
+      "sugars_g": 0.0,
+      "unit_price_text": "5,19 €/l"
+    },
+    {
+      "allergens": null,
+      "attributes": {
+        "eu_organic_certificate": true,
+        "food_origin": "Puente de Génave, Sierra de Segura. Jaén.",
+        "oil_type": "Aceite de oliva virgen extra",
+        "organic": true,
+        "package_presentation": "0,5l",
+        "packaging": "Botella cristal"
+      },
+      "availability": null,
+      "brand": "CARREFOUR BIO",
+      "calories_kcal": 825,
+      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-virgen-extra-ecologico-carrefour-bio-500-ml/R-520660281/p",
+      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
+      "capture_probe_version": "agent-web-direct-10.1-unverified-queue-oils",
+      "carbohydrate_g": 0.0,
+      "category_path": null,
+      "direct_page_observed": true,
+      "energy_kj": 3389,
+      "fat_g": 92.0,
+      "fetch_error": null,
+      "fiber_g": null,
+      "gtin": null,
+      "http_status": null,
+      "image_url": null,
+      "ingredients": "Aceite de Oliva Virgen Extra Ecológico",
+      "legal_name": "Aceite de Oliva Virgen Extra Ecológico",
+      "mandatory_mentions": "Aceite de Oliva Virgen Extra: Aceite de oliva de categoria superior obtenido directamente de aceitunas y sólo mediante procedimientos mecánicos.",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
+      "name": "Aceite de oliva virgen extra ecológico Carrefour Bio 500 ml.",
+      "net_content": "500 ml",
+      "nutriscore": null,
+      "nutrition_basis": "100 ml",
+      "nutrition_extra": {},
+      "nutrition_status": "DECLARED_COMPLETE",
+      "observed_at": "2026-08-23T20:15:00+00:00",
+      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
+      "page_sha256": null,
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 4.99,
+      "protein_g": 0.0,
+      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price is an observed Carrefour value but is not asserted as live/current. Missing fields are not inferred or filled from external sources.",
+      "retailer": "CARREFOUR",
+      "retailer_sku": "520660281",
+      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
+      "salt_g": 0.0,
+      "saturates_g": 13.0,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "source_host": "www.carrefour.es",
+      "storage_conditions": "Conservar en lugar fresco y oscuro.",
+      "sugars_g": 0.0,
+      "unit_price_text": "9,98 €/l"
+    },
     {
       "allergens": null,
       "attributes": {
@@ -1150,188 +1322,6 @@
       "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
       "sugars_g": null,
       "unit_price_text": "11,40 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "coffee_characteristics": [
-          "Arábica",
-          "Robusta"
-        ],
-        "coffee_presentation": "Molido",
-        "coffee_product": "Café",
-        "coffee_varieties": [
-          "Arábica",
-          "Robusta"
-        ],
-        "country_of_origin": "España",
-        "decaffeinated": true,
-        "packaging": "Otros envases",
-        "processing": "Industrial",
-        "product_type": "Café",
-        "production": "Industrial",
-        "roast_type": "Mezcla"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 322.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/cafe-molido-mezcla-descafeinado-carrefour-classic-250-g/R-521003004/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-8.4-indexed",
-      "carbohydrate_g": 13.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Desayuno",
-        "Cafés"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 1326.0,
-      "fat_g": 12.0,
-      "fiber_g": 56.0,
-      "gtin": null,
-      "image_url": null,
-      "ingredients": "Café descafeinado y azúcar. El café torrefacto ha sido tostado con azúcares.",
-      "legal_name": "Café molido descafeinado de tueste natural (50%) y torrefacto (50%)",
-      "mandatory_mentions": "El contenido de sal obedece exclusivamente al sodio presente de forma natural",
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour, S.A.",
-      "name": "Café molido mezcla descafeinado Carrefour Classic 250 g.",
-      "net_content": "250 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-22T07:56:00+00:00",
-      "operator_address": "Av. de la Transición Española, 36, 28108 Alcobendas, Madrid",
-      "preparation_instructions": "Conservar en un lugar fresco, seco y aislado del suelo",
-      "price_currency": "EUR",
-      "price_eur": 2.55,
-      "protein_g": 12.6,
-      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521003004",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.1,
-      "saturates_g": 4.9,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
-      "sugars_g": 0.5,
-      "unit_price_text": "10,20 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "coffee_presentation": "Molido",
-        "coffee_product": "Café",
-        "country_of_origin": "España",
-        "packaging": "Otros envases",
-        "processing": "Industrial",
-        "roast_type": "Mezcla"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 331.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/cafe-molido-mezcla-carrefour-classic-250-g/R-521003035/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-3.4-indexed",
-      "carbohydrate_g": 14.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 1366.0,
-      "fat_g": 12.0,
-      "fetch_error": null,
-      "fiber_g": 51.0,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Café y azúcar. El café torrefacto ha sido tostado con azúcares.",
-      "legal_name": "Café molido de tueste natural (50%) y torrefacto (50%)",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour, S.A.",
-      "name": "Café molido mezcla Carrefour Classic 250 g.",
-      "net_content": "250 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-20T23:14:00+00:00",
-      "operator_address": "Av. de la Transición Española, 36, 28108 Alcobendas, Madrid",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 2.34,
-      "protein_g": 17.0,
-      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521003035",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.1,
-      "saturates_g": 4.9,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Conservar en lugar fresco y seco, alejado del suelo.",
-      "sugars_g": 0.5,
-      "unit_price_text": "9,36 €/kg"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "coffee_presentation": "Soluble o instantáneo",
-        "coffee_product": "Café",
-        "country_of_origin": "España",
-        "packaging": "Otros envases",
-        "product_type": "Café",
-        "roast_type": "Natural"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 297.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/cafe-soluble-natural-carrefour-classic-200-g/R-521003045/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-8.4-indexed",
-      "carbohydrate_g": 49.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Desayuno",
-        "Cafés"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 1250.0,
-      "fat_g": 0.0,
-      "fiber_g": 22.0,
-      "gtin": null,
-      "image_url": null,
-      "ingredients": "Café soluble",
-      "legal_name": "Café soluble",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour, S.A.",
-      "name": "Café soluble natural Carrefour Classic 200 g.",
-      "net_content": "200 g",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-22T07:56:00+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108 Alcobendas, Madrid (España)",
-      "preparation_instructions": "Lugar fresco y seco",
-      "price_currency": "EUR",
-      "price_eur": 3.89,
-      "protein_g": 15.0,
-      "provenance_note": "All populated fields were observed directly on an official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price/availability are observed Carrefour values but are not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "521003045",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.53,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Conservar en lugar fresco y seco. Una vez abierto, consumir en 6 semanas.",
-      "sugars_g": 3.0,
-      "unit_price_text": "19,45 €/kg"
     }
   ],
   "source": "CARREFOUR_OFFICIAL_HOSTS",
