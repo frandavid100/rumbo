@@ -1,0 +1,35 @@
+{
+  "retailer": "CARREFOUR",
+  "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
+  "verified_at": "2026-08-24T19:11:39Z",
+  "inventory_complete": false,
+  "classification_performed": false,
+  "counts": {
+    "verified_first_party_products": 1167,
+    "verified_product_page_observations": 1152,
+    "verified_listing_only_observations": 15,
+    "nutrition_complete": 909,
+    "nutrition_partial": 79,
+    "nutrition_not_found": 179,
+    "evidence_rows": 28179,
+    "external_candidate_identity_urls_not_counted_as_first_party": 8451
+  },
+  "verification": {
+    "workflow": "Catalog Carrefour first-party cumulative report",
+    "workflow_run_id": 32766707781,
+    "workflow_run_number": 305,
+    "workflow_conclusion": "success",
+    "artifact_id": 9534688130,
+    "artifact_sha256": "121b9e191089bff3d4677c09c070a6762a150f47b58a7c993b81421de37a1701",
+    "checked_out_ref": "agent/catalog-phase1",
+    "checked_out_commit": "0b9ccca0afc58ae81008bc86740fd21dbfe88754",
+    "jsonl_files_validated": 247
+  },
+  "run_changes": {
+    "new_direct_queue_batches": [155, 156, 157, 158, 159],
+    "new_direct_products_persisted_in_batches": 30,
+    "sqlite_projection_fix_commit": "7af251a7f80582a1567b17f30603ea7c731a8828",
+    "sqlite_projection_note": "Structured retailer-declared values remain structured in canonical JSONL/evidence and are serialized losslessly only for the compact SQLite TEXT projection."
+  },
+  "provenance_note": "Counts come from a successful cumulative CI merge of persisted CARREFOUR_FIRST_PARTY observations. External candidate catalogs remain discovery-only and are not counted as Carrefour evidence without direct observation."
+}
