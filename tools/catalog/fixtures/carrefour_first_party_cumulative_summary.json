@@ -1,5 +1,5 @@
 {
-  "built_at": "2026-08-24T13:29:13.635236+00:00",
+  "built_at": "2026-08-24T13:30:43.464738+00:00",
   "capture_methods": {
     "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 8,
     "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 822,
@@ -14,7 +14,7 @@
   },
   "classification_performed": false,
   "counts": {
-    "evidence_rows": 24509,
+    "evidence_rows": 24517,
     "external_candidate_identity_urls_not_counted_as_first_party": 8451,
     "nutrition_complete": 773,
     "nutrition_not_found": 172,
