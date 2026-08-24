@@ -115,6 +115,7 @@
     "fixtures/carrefour_first_party_agent_web_products_batch158_unverified_sauce_oils_cookies_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch159_unverified_dairy_snacks_coffee_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch15_branded_cheese.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_batch160_unverified_head_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch16_pasta_rice_frozen_fish.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch17_yogurt.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch18_eggs_milk.jsonl",
@@ -255,10 +256,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1167,
-    "candidate_ids_already_verified": 1058,
+    "verified_first_party_unique_skus": 1174,
+    "candidate_ids_already_verified": 1065,
     "candidate_ids_terminal_route_excluded": 9,
-    "candidate_ids_not_yet_verified": 7384,
+    "candidate_ids_not_yet_verified": 7377,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -272,7 +273,7 @@
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2796,
+    "food_like": 2789,
     "uncertain": 4481,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
