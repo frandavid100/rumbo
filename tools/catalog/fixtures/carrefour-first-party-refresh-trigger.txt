@@ -1,0 +1,2 @@
+Refresh cumulative Carrefour first-party staging from all currently persisted verified observation batches.
+Include every verified batch currently present on agent/catalog-phase1, including the latest 2026-08-24 observations.
