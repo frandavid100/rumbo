@@ -97,6 +97,7 @@
     "fixtures/carrefour_first_party_agent_web_products_batch145_current_legumes_wraps_dairy_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch145_official_infusions_category_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch145_unverified_sauces_20260824.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_batch146_current_dairy_calcium_lactosefree_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch146_official_galletas_category_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch147_unverified_cacao_cereals_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch148_official_cereales_category_20260824.jsonl",
@@ -248,10 +249,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1129,
-    "candidate_ids_already_verified": 1020,
+    "verified_first_party_unique_skus": 1137,
+    "candidate_ids_already_verified": 1028,
     "candidate_ids_terminal_route_excluded": 9,
-    "candidate_ids_not_yet_verified": 7422,
+    "candidate_ids_not_yet_verified": 7414,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -265,7 +266,7 @@
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2834,
+    "food_like": 2826,
     "uncertain": 4481,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
