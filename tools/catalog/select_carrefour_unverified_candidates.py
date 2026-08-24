@@ -3,8 +3,9 @@
 
 The candidate input may come from external discovery sources such as RadarSuper. This
 script NEVER promotes those hints to Carrefour first-party evidence. It only removes
-product IDs already present in one or more verified first-party JSONL inputs and emits a
-bounded, deterministic work queue plus counts for auditing.
+product IDs already present in one or more verified first-party JSONL inputs, excludes
+candidate IDs whose official Carrefour route has a persisted terminal outcome, and emits
+a bounded, deterministic work queue plus counts for auditing.
 """
 
 from __future__ import annotations
@@ -76,6 +77,15 @@ def main() -> None:
         type=Path,
         help="One or more verified first-party product JSONL files. Missing paths are ignored.",
     )
+    parser.add_argument(
+        "--terminal-outcomes",
+        default=Path("fixtures/carrefour_first_party_candidate_route_outcomes.jsonl"),
+        type=Path,
+        help=(
+            "Persisted official-route observations for discovery candidates. Rows with "
+            "terminal=true exclude that Carrefour product ID from future verification queues."
+        ),
+    )
     parser.add_argument("--output", default="fixtures/carrefour_unverified_candidates_head.jsonl", type=Path)
     parser.add_argument("--summary", default="fixtures/carrefour_unverified_candidates_summary.json", type=Path)
     parser.add_argument("--limit", type=int, default=250)
@@ -99,6 +109,21 @@ def main() -> None:
         if sku
     }
 
+    terminal_rows = list(read_jsonl(args.terminal_outcomes))
+    terminal_skus = {
+        sku
+        for row in terminal_rows
+        if bool(row.get("terminal"))
+        for sku in [norm_sku(row.get("retailer_sku"))]
+        if sku
+    }
+    terminal_outcome_counts: dict[str, int] = {}
+    for row in terminal_rows:
+        if not bool(row.get("terminal")):
+            continue
+        outcome = str(row.get("outcome") or "UNKNOWN_TERMINAL")
+        terminal_outcome_counts[outcome] = terminal_outcome_counts.get(outcome, 0) + 1
+
     candidate_rows = list(read_jsonl(args.candidates))
     by_sku: dict[str, tuple[dict[str, Any], str]] = {}
     missing_sku = 0
@@ -113,9 +138,13 @@ def main() -> None:
 
     unverified: list[dict[str, Any]] = []
     already_verified = 0
+    terminal_excluded = 0
     for sku, (row, id_source) in by_sku.items():
         if sku in verified_skus:
             already_verified += 1
+            continue
+        if sku in terminal_skus:
+            terminal_excluded += 1
             continue
         selected = {
             "retailer": "CARREFOUR",
@@ -151,15 +180,18 @@ def main() -> None:
         "source_boundary": {
             "candidate_input": "EXTERNAL_DISCOVERY_ONLY",
             "verified_input": "CARREFOUR_FIRST_PARTY",
+            "terminal_outcome_input": "CARREFOUR_FIRST_PARTY_ROUTE_OUTCOME_NOT_PRODUCT_EVIDENCE",
             "output_is_first_party_evidence": False,
         },
         "verified_inputs_used": verified_inputs_used,
+        "terminal_outcomes_input": str(args.terminal_outcomes) if args.terminal_outcomes.exists() else None,
         "counts": {
             "candidate_rows": len(candidate_rows),
             "candidate_unique_carrefour_url_ids": len(by_sku),
             "candidate_rows_missing_product_id": missing_sku,
             "verified_first_party_unique_skus": len(verified_skus),
             "candidate_ids_already_verified": already_verified,
+            "candidate_ids_terminal_route_excluded": terminal_excluded,
             "candidate_ids_not_yet_verified": len(unverified),
             "queue_rows_emitted": len(selected_rows),
             "queue_limit": args.limit,
@@ -167,10 +199,12 @@ def main() -> None:
             "unverified_with_external_name_hint": sum(1 for row in unverified if row.get("name_hint_external")),
         },
         "candidate_id_source_counts": id_source_counts,
+        "terminal_outcome_counts": terminal_outcome_counts,
         "queue_order": "external GTIN hint first, then name hint, then casefolded name and Carrefour URL product ID",
         "notes": [
             "This queue is only a prioritization aid for direct official Carrefour verification.",
             "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
+            "Persisted terminal outcomes are official-route observations only; they exclude stale candidate IDs but do not create product evidence.",
             "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL.",
             "Pending direct first-party batch fixtures may be included as verified inputs so the queue remains current before the cumulative merge commit lands.",
         ],
