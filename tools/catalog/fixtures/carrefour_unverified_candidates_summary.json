@@ -216,8 +216,8 @@
     "candidate_rows_missing_product_id": 0,
     "verified_first_party_unique_skus": 963,
     "candidate_ids_already_verified": 854,
-    "candidate_ids_terminal_route_excluded": 3,
-    "candidate_ids_not_yet_verified": 7594,
+    "candidate_ids_terminal_route_excluded": 4,
+    "candidate_ids_not_yet_verified": 7593,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -227,7 +227,7 @@
     "CARREFOUR_URL_CANDIDATE": 8451
   },
   "terminal_outcome_counts": {
-    "REDIRECTED_AWAY_FROM_PRODUCT": 2,
+    "REDIRECTED_AWAY_FROM_PRODUCT": 3,
     "NOT_FOUND_404": 1
   },
   "queue_order": "external GTIN hint first, then name hint, then casefolded name and Carrefour URL product ID",
