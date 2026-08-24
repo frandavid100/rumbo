@@ -41,6 +41,17 @@ NUTRITION_FIELDS = [
     "energy_kj", "calories_kcal", "fat_g", "saturates_g", "carbohydrate_g",
     "sugars_g", "fiber_g", "protein_g", "salt_g",
 ]
+# The SQLite products table is intentionally compact and stores rich values as TEXT.
+# Some first-party surfaces represent a declared field (notably allergens) as a
+# structured object/list rather than a scalar string. Keep the JSONL/evidence value
+# structured, but serialize it losslessly when writing that compact SQLite projection.
+SQLITE_PRODUCT_TEXT_FIELDS = {
+    "retailer_sku", "gtin", "name", "brand", "canonical_url", "image_url",
+    "price_currency", "unit_price_text", "availability", "legal_name", "ingredients",
+    "allergens", "net_content", "storage_conditions", "preparation_instructions",
+    "operator_address", "manufacturer_packer_importer", "observed_at", "page_sha256",
+    "fetch_error",
+}
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -253,6 +264,24 @@ def read_candidate_count(path: Path | None) -> int:
     return 0
 
 
+def sqlite_safe_products(rows: list[dict]) -> list[dict]:
+    """Return a SQLite-only projection with structured TEXT values serialized.
+
+    JSONL remains the canonical lossless staging representation. This helper only makes
+    the compact SQLite export tolerant of retailer fields that Carrefour sometimes
+    exposes as objects/lists instead of a display string.
+    """
+    out: list[dict] = []
+    for row in rows:
+        safe = dict(row)
+        for field in SQLITE_PRODUCT_TEXT_FIELDS:
+            value = safe.get(field)
+            if isinstance(value, (dict, list, tuple)):
+                safe[field] = json.dumps(value, ensure_ascii=False, sort_keys=True)
+        out.append(safe)
+    return out
+
+
 def build_summary(rows: list[dict], evidence: list[dict], candidate_count: int) -> dict:
     methods: dict[str, int] = {}
     for row in rows:
@@ -309,7 +338,7 @@ def main() -> int:
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     sqlite_path = Path(args.sqlite)
     sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-    browser.write_sqlite(sqlite_path, rows, evidence)
+    browser.write_sqlite(sqlite_path, sqlite_safe_products(rows), evidence)
     print(json.dumps(summary["counts"], ensure_ascii=False, sort_keys=True))
     return 0
 
