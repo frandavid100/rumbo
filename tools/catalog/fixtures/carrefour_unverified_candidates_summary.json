@@ -224,6 +224,7 @@
     "fixtures/carrefour_first_party_agent_web_products_batch99_carrefour_oils.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch_2026-08-23T0400Z.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch_20260824_1410_cereals.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_batch_20260824_1424_bars.jsonl",
     "fixtures/carrefour_first_party_agent_web_productsz_timestamp_corrections.jsonl",
     "../../catalog/fixtures/carrefour_first_party_agent_web_products_batch45_soups_broths.jsonl"
   ],
@@ -232,10 +233,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1029,
-    "candidate_ids_already_verified": 920,
+    "verified_first_party_unique_skus": 1038,
+    "candidate_ids_already_verified": 929,
     "candidate_ids_terminal_route_excluded": 6,
-    "candidate_ids_not_yet_verified": 7525,
+    "candidate_ids_not_yet_verified": 7516,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -249,7 +250,7 @@
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2937,
+    "food_like": 2928,
     "uncertain": 4481,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
