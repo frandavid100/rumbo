@@ -241,10 +241,21 @@
     "REDIRECTED_AWAY_FROM_PRODUCT": 3,
     "NOT_FOUND_404": 1
   },
-  "queue_order": "external GTIN hint first, then name hint, then casefolded name and Carrefour URL product ID",
+  "food_priority_counts": {
+    "food_like": 2964,
+    "uncertain": 4483,
+    "deprioritized_obvious_alcohol_or_nonfood": 107
+  },
+  "emitted_food_priority_counts": {
+    "food_like": 250,
+    "uncertain": 0,
+    "deprioritized_obvious_alcohol_or_nonfood": 0
+  },
+  "queue_order": "Rumbo food-like URL slugs first; uncertain/general candidates second; obvious alcohol/non-food last. Within each tier: external GTIN hint, name hint, casefolded name, Carrefour URL product ID.",
   "notes": [
     "This queue is only a prioritization aid for direct official Carrefour verification.",
     "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
+    "URL-slug food priority is scheduling metadata only. Candidates are retained regardless of tier and require direct Carrefour observation before any field becomes evidence.",
     "Persisted terminal outcomes are official-route observations only; they exclude stale candidate IDs but do not create product evidence.",
     "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL.",
     "Pending direct first-party batch fixtures may be included as verified inputs so the queue remains current before the cumulative merge commit lands."
