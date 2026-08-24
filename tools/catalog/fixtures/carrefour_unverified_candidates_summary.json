@@ -226,6 +226,7 @@
     "fixtures/carrefour_first_party_agent_web_products_batch_20260824_1410_cereals.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch_20260824_1424_bars.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch_20260824_1442_jams.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_batch_20260824_1450_jams_snacks.jsonl",
     "fixtures/carrefour_first_party_agent_web_productsz_timestamp_corrections.jsonl",
     "../../catalog/fixtures/carrefour_first_party_agent_web_products_batch45_soups_broths.jsonl"
   ],
@@ -234,10 +235,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1043,
-    "candidate_ids_already_verified": 934,
+    "verified_first_party_unique_skus": 1048,
+    "candidate_ids_already_verified": 939,
     "candidate_ids_terminal_route_excluded": 6,
-    "candidate_ids_not_yet_verified": 7511,
+    "candidate_ids_not_yet_verified": 7506,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -251,7 +252,7 @@
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2923,
+    "food_like": 2918,
     "uncertain": 4481,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
