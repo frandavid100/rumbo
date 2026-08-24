@@ -1,0 +1,66 @@
+name: Catalog Carrefour unverified first-party queue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-unverified-queue.yml'
+      - 'tools/catalog/select_carrefour_unverified_candidates.py'
+      - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_candidate_route_outcomes.jsonl'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carrefour-unverified-first-party-queue
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Rebuild discovery-only direct-verification queue
+        working-directory: tools/catalog
+        run: |
+          python select_carrefour_unverified_candidates.py \
+            --candidates fixtures/carrefour_candidate_urls_radarsuper.jsonl \
+            --verified fixtures/carrefour_first_party_products_cumulative.jsonl \
+            --terminal-outcomes fixtures/carrefour_first_party_candidate_route_outcomes.jsonl \
+            --output fixtures/carrefour_unverified_candidates_head.jsonl \
+            --summary fixtures/carrefour_unverified_candidates_summary.json \
+            --limit 250
+      - name: Persist refreshed queue
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add \
+            tools/catalog/fixtures/carrefour_unverified_candidates_head.jsonl \
+            tools/catalog/fixtures/carrefour_unverified_candidates_summary.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: refresh Carrefour verification queue"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - name: Upload queue audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-unverified-first-party-queue
+          path: |
+            tools/catalog/fixtures/carrefour_unverified_candidates_head.jsonl
+            tools/catalog/fixtures/carrefour_unverified_candidates_summary.json
+          retention-days: 7
+          if-no-files-found: error
+
+# The candidate input is external discovery metadata only. This workflow merely removes
+# product IDs already verified from official Carrefour surfaces (or known terminal routes)
+# and never promotes candidate values to CARREFOUR_FIRST_PARTY evidence.
