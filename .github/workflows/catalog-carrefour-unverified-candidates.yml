@@ -10,6 +10,7 @@ on:
       - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl'
       - 'catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_candidate_route_outcomes.jsonl'
   workflow_dispatch:
 
 permissions:
