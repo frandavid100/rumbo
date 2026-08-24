@@ -229,8 +229,8 @@
     "candidate_rows_missing_product_id": 0,
     "verified_first_party_unique_skus": 1012,
     "candidate_ids_already_verified": 903,
-    "candidate_ids_terminal_route_excluded": 4,
-    "candidate_ids_not_yet_verified": 7544,
+    "candidate_ids_terminal_route_excluded": 6,
+    "candidate_ids_not_yet_verified": 7542,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -240,11 +240,11 @@
     "CARREFOUR_URL_CANDIDATE": 8451
   },
   "terminal_outcome_counts": {
-    "REDIRECTED_AWAY_FROM_PRODUCT": 3,
+    "REDIRECTED_AWAY_FROM_PRODUCT": 5,
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2954,
+    "food_like": 2952,
     "uncertain": 4483,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
