@@ -19,6 +19,31 @@ from typing import Any, Iterable
 
 SKU_IN_URL_RE = re.compile(r"/R-([^/]+)/p(?:$|[?#])", re.IGNORECASE)
 
+# This queue exists to drive Rumbo's food-catalog verification. Keep every external
+# candidate in the audit counts, but put obvious food candidates ahead of alcohol and
+# non-food supermarket items. This is only scheduling metadata: it does not create or
+# suppress Carrefour evidence, and uncertain URLs remain in the queue after food-like
+# candidates rather than being discarded.
+FOOD_URL_SIGNAL_RE = re.compile(
+    r"/(?:"
+    r"aceite|aceituna|agua-mineral|arroz|avena|azucar|barrita|bebida-vegetal|"
+    r"bizcocho|bolleria|caldo|cafe|cacao|cereales?|chocolate|conserva|crema-de-|"
+    r"embutido|fiambre|galleta|garbanzo|harina|helado|huevo|infusion|judia|"
+    r"leche|lenteja|mantequilla|mermelada|pan-|pasta-|patata|pescado|pizza|"
+    r"postre|queso|salsa|sopa|te-|tofu|tortilla|yogur|zumo"
+    r")",
+    re.IGNORECASE,
+)
+DEPRIORITIZED_URL_SIGNAL_RE = re.compile(
+    r"/(?:"
+    r"whisky|ron-|vodka|ginebra|licor|vermut|cerveza|vino-|cava-|champagne|"
+    r"agua-de-colonia|perfume|desodorante|crema-hidratante|champu|gel-de-ducha|"
+    r"ambientador|lavavajillas|detergente|limpiador|lejia|plumero|atrapapolvo|"
+    r"papel-higienico|panal|compresa|tampon|dentifrico|cepillo-de-dientes"
+    r")",
+    re.IGNORECASE,
+)
+
 
 def read_jsonl(path: Path) -> Iterable[dict[str, Any]]:
     if not path.exists():
@@ -59,12 +84,28 @@ def candidate_sku(row: dict[str, Any]) -> tuple[str | None, str]:
     return None, "MISSING"
 
 
-def candidate_key(row: dict[str, Any]) -> tuple[int, int, str, str]:
+def candidate_food_priority(row: dict[str, Any]) -> int:
+    """Return queue priority without treating an external URL slug as product evidence.
+
+    0 = URL looks food-like and is useful for Rumbo first.
+    1 = uncertain/general supermarket candidate; keep it in the queue.
+    2 = obvious alcohol or non-food candidate; retain but verify after food candidates.
+    """
+    url = str(row.get("canonical_url_candidate") or row.get("canonical_url") or row.get("url") or "")
+    if DEPRIORITIZED_URL_SIGNAL_RE.search(url):
+        return 2
+    if FOOD_URL_SIGNAL_RE.search(url):
+        return 0
+    return 1
+
+
+def candidate_key(row: dict[str, Any]) -> tuple[int, int, int, str, str]:
+    food_priority = candidate_food_priority(row)
     has_gtin_hint = 0 if norm_sku(row.get("gtin_hint_external")) else 1
     has_name_hint = 0 if str(row.get("name_hint_external") or "").strip() else 1
     name = str(row.get("name_hint_external") or "").casefold()
     sku = norm_sku(row.get("retailer_sku")) or ""
-    return (has_gtin_hint, has_name_hint, name, sku)
+    return (food_priority, has_gtin_hint, has_name_hint, name, sku)
 
 
 def main() -> None:
@@ -159,6 +200,9 @@ def main() -> None:
             "canonical_url_verified": False,
             "selection_reason": "NOT_YET_DIRECTLY_VERIFIED",
             "evidence_status": "DISCOVERY_ONLY_NOT_CARREFOUR_EVIDENCE",
+            "queue_food_priority": candidate_food_priority(
+                {"canonical_url_candidate": row.get("canonical_url") or row.get("url")}
+            ),
             "provenance_note": (
                 "External discovery hint only. The Carrefour R- identifier parsed from the URL is "
                 "used solely to prioritize verification. Do not attribute any field in this row to "
@@ -175,6 +219,21 @@ def main() -> None:
         "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in selected_rows),
         encoding="utf-8",
     )
+
+    priority_counts = {
+        "food_like": sum(1 for row in unverified if candidate_food_priority(row) == 0),
+        "uncertain": sum(1 for row in unverified if candidate_food_priority(row) == 1),
+        "deprioritized_obvious_alcohol_or_nonfood": sum(
+            1 for row in unverified if candidate_food_priority(row) == 2
+        ),
+    }
+    selected_priority_counts = {
+        "food_like": sum(1 for row in selected_rows if candidate_food_priority(row) == 0),
+        "uncertain": sum(1 for row in selected_rows if candidate_food_priority(row) == 1),
+        "deprioritized_obvious_alcohol_or_nonfood": sum(
+            1 for row in selected_rows if candidate_food_priority(row) == 2
+        ),
+    }
 
     summary = {
         "source_boundary": {
@@ -200,10 +259,16 @@ def main() -> None:
         },
         "candidate_id_source_counts": id_source_counts,
         "terminal_outcome_counts": terminal_outcome_counts,
-        "queue_order": "external GTIN hint first, then name hint, then casefolded name and Carrefour URL product ID",
+        "food_priority_counts": priority_counts,
+        "emitted_food_priority_counts": selected_priority_counts,
+        "queue_order": (
+            "Rumbo food-like URL slugs first; uncertain/general candidates second; obvious alcohol/non-food "
+            "last. Within each tier: external GTIN hint, name hint, casefolded name, Carrefour URL product ID."
+        ),
         "notes": [
             "This queue is only a prioritization aid for direct official Carrefour verification.",
             "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
+            "URL-slug food priority is scheduling metadata only. Candidates are retained regardless of tier and require direct Carrefour observation before any field becomes evidence.",
             "Persisted terminal outcomes are official-route observations only; they exclude stale candidate IDs but do not create product evidence.",
             "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL.",
             "Pending direct first-party batch fixtures may be included as verified inputs so the queue remains current before the cumulative merge commit lands.",
