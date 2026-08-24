@@ -1,3 +1,4 @@
 Refresh cumulative Carrefour first-party staging from all currently persisted verified observation batches.
 Include every verified batch currently present on agent/catalog-phase1, including the latest 2026-08-24 observations.
 Rerun after adding batch111 (Recondo/Carrefour/Gullón direct product-page evidence).
+Rerun after normalizing batch111 allergen evidence to the existing scalar staging schema.
