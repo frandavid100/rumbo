@@ -90,6 +90,7 @@
     "fixtures/carrefour_first_party_agent_web_products_batch142_unverified_coffee_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch143_unverified_coffee_tea_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch143_unverified_sauces_20260824.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_batch144_unverified_sauces_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch144_unverified_tea_dairy_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch145_official_infusions_category_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch146_official_galletas_category_20260824.jsonl",
@@ -241,10 +242,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1088,
-    "candidate_ids_already_verified": 979,
+    "verified_first_party_unique_skus": 1091,
+    "candidate_ids_already_verified": 982,
     "candidate_ids_terminal_route_excluded": 9,
-    "candidate_ids_not_yet_verified": 7463,
+    "candidate_ids_not_yet_verified": 7460,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -258,7 +259,7 @@
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2875,
+    "food_like": 2872,
     "uncertain": 4481,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
