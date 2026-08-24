@@ -2,6 +2,7 @@
   "source_boundary": {
     "candidate_input": "EXTERNAL_DISCOVERY_ONLY",
     "verified_input": "CARREFOUR_FIRST_PARTY",
+    "terminal_outcome_input": "CARREFOUR_FIRST_PARTY_ROUTE_OUTCOME_NOT_PRODUCT_EVIDENCE",
     "output_is_first_party_evidence": false
   },
   "verified_inputs_used": [
@@ -203,13 +204,15 @@
     "fixtures/carrefour_first_party_agent_web_productsz_timestamp_corrections.jsonl",
     "../../catalog/fixtures/carrefour_first_party_agent_web_products_batch45_soups_broths.jsonl"
   ],
+  "terminal_outcomes_input": "fixtures/carrefour_first_party_candidate_route_outcomes.jsonl",
   "counts": {
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
     "verified_first_party_unique_skus": 949,
     "candidate_ids_already_verified": 840,
-    "candidate_ids_not_yet_verified": 7611,
+    "candidate_ids_terminal_route_excluded": 3,
+    "candidate_ids_not_yet_verified": 7608,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -218,10 +221,15 @@
   "candidate_id_source_counts": {
     "CARREFOUR_URL_CANDIDATE": 8451
   },
+  "terminal_outcome_counts": {
+    "REDIRECTED_AWAY_FROM_PRODUCT": 2,
+    "NOT_FOUND_404": 1
+  },
   "queue_order": "external GTIN hint first, then name hint, then casefolded name and Carrefour URL product ID",
   "notes": [
     "This queue is only a prioritization aid for direct official Carrefour verification.",
     "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
+    "Persisted terminal outcomes are official-route observations only; they exclude stale candidate IDs but do not create product evidence.",
     "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL.",
     "Pending direct first-party batch fixtures may be included as verified inputs so the queue remains current before the cumulative merge commit lands."
   ]
