@@ -124,6 +124,7 @@
     "fixtures/carrefour_first_party_agent_web_products_batch166_queue_cacao_broths_mexican_20260824.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch167_queue_yogurts_20260825.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch168_queue_actimel_20260825.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_batch169_queue_danacol_kaikucol_20260825.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch16_pasta_rice_frozen_fish.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch17_yogurt.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch18_eggs_milk.jsonl",
@@ -264,10 +265,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1238,
-    "candidate_ids_already_verified": 1129,
+    "verified_first_party_unique_skus": 1242,
+    "candidate_ids_already_verified": 1133,
     "candidate_ids_terminal_route_excluded": 14,
-    "candidate_ids_not_yet_verified": 7308,
+    "candidate_ids_not_yet_verified": 7304,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -281,7 +282,7 @@
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2720,
+    "food_like": 2716,
     "uncertain": 4481,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
