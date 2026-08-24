@@ -223,6 +223,7 @@
     "fixtures/carrefour_first_party_agent_web_products_batch98_chickpea_pasta_category.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch99_carrefour_oils.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch_2026-08-23T0400Z.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_batch_20260824_1410_cereals.jsonl",
     "fixtures/carrefour_first_party_agent_web_productsz_timestamp_corrections.jsonl",
     "../../catalog/fixtures/carrefour_first_party_agent_web_products_batch45_soups_broths.jsonl"
   ],
@@ -231,10 +232,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1023,
-    "candidate_ids_already_verified": 914,
+    "verified_first_party_unique_skus": 1029,
+    "candidate_ids_already_verified": 920,
     "candidate_ids_terminal_route_excluded": 6,
-    "candidate_ids_not_yet_verified": 7531,
+    "candidate_ids_not_yet_verified": 7525,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -248,7 +249,7 @@
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2943,
+    "food_like": 2937,
     "uncertain": 4481,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
