@@ -10,6 +10,7 @@ on:
       - 'tools/catalog/carrefour_first_party_category_frontier.py'
       - 'tools/catalog/merge_carrefour_first_party_cumulative.py'
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
+      - 'tools/catalog/extract_carrefour_public_gtin.py'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
   workflow_dispatch:
 
@@ -77,6 +78,7 @@ jobs:
             --max-products 60 \
             --rotate \
             "${EXTRA[@]}"
+          python extract_carrefour_public_gtin.py carrefour-first-party-fresh-inventory
           python sanitize_carrefour_first_party_output.py carrefour-first-party-fresh-inventory
       - name: Validate and persist successful first-party observations
         if: always()
