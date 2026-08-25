@@ -1,0 +1,89 @@
+name: Carrefour first-party product analytics inventory
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-carrefour-first-party-analytics.yml'
+      - 'tools/catalog/carrefour_first_party_analytics_inventory.py'
+      - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carrefour-first-party-analytics
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Query Carrefour public product analytics endpoint conservatively
+        working-directory: tools/catalog
+        run: |
+          SEEDS=(--seed-jsonl fixtures/carrefour_candidate_urls_radarsuper.jsonl)
+          if test -s fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl; then
+            SEEDS+=(--seed-jsonl fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl)
+          fi
+          python carrefour_first_party_analytics_inventory.py \
+            "${SEEDS[@]}" \
+            --out carrefour-first-party-analytics \
+            --max-products 80 \
+            --delay 1.5 \
+            --timeout 20 \
+            --stop-after-blocks 3 \
+            --rotate
+      - name: Validate provenance and persist observations
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          src=pathlib.Path('tools/catalog/carrefour-first-party-analytics')
+          summary=src/'summary.json'
+          if not summary.exists():
+              raise SystemExit('analytics inventory produced no summary')
+          d=json.loads(summary.read_text(encoding='utf-8'))
+          if d.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
+              raise SystemExit('bad source policy')
+          if d.get('classification_performed') is not False:
+              raise SystemExit('analytics inventory performed classification')
+          fixtures=pathlib.Path('tools/catalog/fixtures')
+          fixtures.mkdir(parents=True,exist_ok=True)
+          for source_name,target_name in (
+              ('summary.json','carrefour_first_party_analytics_latest_summary.json'),
+              ('products.jsonl','carrefour_first_party_analytics_latest_products.jsonl'),
+              ('field_evidence.jsonl','carrefour_first_party_analytics_latest_field_evidence.jsonl'),
+              ('audit.jsonl','carrefour_first_party_analytics_latest_audit.jsonl'),
+          ):
+              p=src/source_name
+              if p.exists():
+                  (fixtures/target_name).write_text(p.read_text(encoding='utf-8'),encoding='utf-8')
+          if int(d.get('counts',{}).get('matched',0) or 0) < 1:
+              raise SystemExit('Carrefour product analytics endpoint yielded no matching product observation')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/carrefour_first_party_analytics_latest_*.json tools/catalog/fixtures/carrefour_first_party_analytics_latest_*.jsonl 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Carrefour first-party analytics observations"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - name: Upload auditable analytics inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrefour-first-party-analytics
+          path: tools/catalog/carrefour-first-party-analytics/
+          retention-days: 7
+          if-no-files-found: warn
