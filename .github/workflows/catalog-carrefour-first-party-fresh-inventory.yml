@@ -7,6 +7,7 @@ on:
       - '.github/workflows/catalog-carrefour-first-party-fresh-inventory.yml'
       - 'tools/catalog/carrefour_first_party_inventory.py'
       - 'tools/catalog/carrefour_first_party_browser_inventory.py'
+      - 'tools/catalog/carrefour_first_party_category_frontier.py'
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
   workflow_dispatch:
@@ -50,10 +51,20 @@ jobs:
               raise SystemExit('expected browser context line not found')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
+      - name: Discover first-party category frontier
+        working-directory: tools/catalog
+        run: |
+          python carrefour_first_party_category_frontier.py \
+            --out carrefour-first-party-category-frontier \
+            --max-depth 3 \
+            --max-categories 220 \
+            --timeout 12 \
+            --attempts 2 \
+            --delay 0.15
       - name: Inventory before any other Carrefour request
         working-directory: tools/catalog
         run: |
-          EXTRA=()
+          EXTRA=(--seed-jsonl carrefour-first-party-category-frontier/product_candidates.jsonl)
           if [ -s fixtures/carrefour_candidate_urls_radarsuper.jsonl ]; then
             EXTRA+=(--seed-jsonl fixtures/carrefour_candidate_urls_radarsuper.jsonl)
           fi
@@ -83,6 +94,25 @@ jobs:
           fixtures.mkdir(parents=True, exist_ok=True)
           (fixtures/'carrefour_first_party_fresh_inventory_latest.json').write_text(
               json.dumps(d, ensure_ascii=False, indent=2), encoding='utf-8')
+
+          frontier=pathlib.Path('tools/catalog/carrefour-first-party-category-frontier')
+          frontier_summary=frontier/'summary.json'
+          if frontier_summary.exists():
+              fd=json.loads(frontier_summary.read_text(encoding='utf-8'))
+              if fd.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY':
+                  raise SystemExit('bad category frontier source policy')
+              if str(fd.get('classification_performed')).lower() != 'false':
+                  raise SystemExit('unexpected category frontier classification')
+              (fixtures/'carrefour_first_party_category_frontier_latest_summary.json').write_text(
+                  json.dumps(fd, ensure_ascii=False, indent=2), encoding='utf-8')
+              for src_name, dst_name in (
+                  ('category_audit.jsonl','carrefour_first_party_category_frontier_latest_audit.jsonl'),
+                  ('product_candidates.jsonl','carrefour_first_party_category_frontier_latest_candidates.jsonl'),
+              ):
+                  src=frontier/src_name
+                  if src.exists():
+                      (fixtures/dst_name).write_text(src.read_text(encoding='utf-8'),encoding='utf-8')
+
           def read_jsonl(path):
               rows=[]
               if path.exists():
@@ -109,6 +139,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             tools/catalog/fixtures/carrefour_first_party_fresh_inventory_latest.json \
+            tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_summary.json \
+            tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_audit.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl \
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
             tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl
           if ! git diff --cached --quiet; then
@@ -121,8 +154,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: carrefour-first-party-fresh-inventory
-          path: tools/catalog/carrefour-first-party-fresh-inventory/
+          path: |
+            tools/catalog/carrefour-first-party-fresh-inventory/
+            tools/catalog/carrefour-first-party-category-frontier/
           retention-days: 7
           if-no-files-found: warn
 
-# Safe manual refresh marker: 2026-08-23T06:57Z.
+# Safe category-frontier refresh marker: 2026-08-25T03:15Z.
