@@ -12,11 +12,12 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 SOURCE = "CARREFOUR_FIRST_PARTY"
-VERSION = "carrefour-first-party-analytics-inventory-1.0"
+VERSION = "carrefour-first-party-analytics-inventory-1.1"
 BASE = "https://www.carrefour.es"
 ENDPOINT = BASE + "/cloud-api/pdp-food-analytics/v1/impressions"
 SKU_RE = re.compile(r"/R-([^/]+)/p/?(?:\?.*)?$", re.I)
 GTIN_RE = re.compile(r"\d{8}|\d{12,14}")
+SKU_VALID_RE = re.compile(r"[A-Za-z0-9._-]{3,80}")
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36",
     "Accept": "application/json,text/plain,*/*",
@@ -58,7 +59,18 @@ def read_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def candidate_skus(paths: list[str]) -> list[str]:
+def candidate_skus(paths: list[str], explicit: list[str] | None = None) -> list[str]:
+    # Explicit smoke/probe SKUs are kept first. Discovered candidates follow, with numeric
+    # retailer IDs ahead of marketplace-style IDs because the food PDP endpoint is keyed by
+    # Carrefour's own R-<numeric> food identifiers.
+    priority = []
+    seen_priority = set()
+    for value in explicit or []:
+        sku = str(value or "").strip()
+        if sku and SKU_VALID_RE.fullmatch(sku) and sku not in seen_priority:
+            priority.append(sku)
+            seen_priority.add(sku)
+
     skus = set()
     for raw_path in paths:
         for row in read_jsonl(Path(raw_path)):
@@ -67,9 +79,10 @@ def candidate_skus(paths: list[str]) -> list[str]:
                 url = str(row.get("url") or row.get("canonical_url") or "")
                 match = SKU_RE.search(url)
                 sku = match.group(1) if match else ""
-            if sku and re.fullmatch(r"[A-Za-z0-9._-]{3,80}", sku):
+            if sku and SKU_VALID_RE.fullmatch(sku) and sku not in seen_priority:
                 skus.add(sku)
-    return sorted(skus)
+    discovered = sorted(skus, key=lambda s: (not s.isdigit(), int(s) if s.isdigit() else s))
+    return priority + discovered
 
 
 def fetch_one(sku: str, timeout: int) -> tuple[int | None, dict | None, str | None, str]:
@@ -171,6 +184,7 @@ def parse_impression(sku: str, payload: dict, source_url: str, observed_at: str)
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed-jsonl", action="append", default=[])
+    ap.add_argument("--sku", action="append", default=[], help="Explicit Carrefour retailer SKU(s), tested before discovered candidates.")
     ap.add_argument("--out", default="carrefour-first-party-analytics")
     ap.add_argument("--max-products", type=int, default=60)
     ap.add_argument("--delay", type=float, default=1.0)
@@ -181,10 +195,14 @@ def main() -> int:
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    all_skus = candidate_skus(args.seed_jsonl)
-    if args.rotate and all_skus:
-        offset = int(datetime.now(timezone.utc).timestamp() // 3600) % len(all_skus)
-        all_skus = all_skus[offset:] + all_skus[:offset]
+    all_skus = candidate_skus(args.seed_jsonl, args.sku)
+    explicit_count = len(candidate_skus([], args.sku))
+    # Rotation is only applied to discovered candidates; explicit validation SKUs must remain first.
+    if args.rotate and len(all_skus) > explicit_count:
+        prefix = all_skus[:explicit_count]
+        tail = all_skus[explicit_count:]
+        offset = int(datetime.now(timezone.utc).timestamp() // 3600) % len(tail)
+        all_skus = prefix + tail[offset:] + tail[:offset]
     selected = all_skus[: args.max_products] if args.max_products > 0 else all_skus
 
     products = []
@@ -238,6 +256,7 @@ def main() -> int:
         "endpoint": ENDPOINT,
         "counts": {
             "candidate_skus": len(all_skus),
+            "explicit_skus": explicit_count,
             "attempted": attempted,
             "matched": matched,
             "http_403": sum(r.get("http_status") == 403 for r in audit),
