@@ -57,10 +57,11 @@ jobs:
           python carrefour_first_party_category_frontier.py \
             --out carrefour-first-party-category-frontier \
             --max-depth 3 \
-            --max-categories 220 \
-            --timeout 12 \
-            --attempts 2 \
-            --delay 0.15
+            --max-categories 160 \
+            --timeout 18 \
+            --attempts 1 \
+            --delay 0.2 \
+            --browser
       - name: Inventory before any other Carrefour request
         working-directory: tools/catalog
         run: |
@@ -135,6 +136,9 @@ jobs:
           print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
           print('cumulative products',len(products),'evidence',len(evidence))
           PY
+          # The validated-probe step intentionally patches this tracked script only for this run.
+          # Restore it before rebasing so the persistence commit contains data only.
+          git restore tools/catalog/carrefour_first_party_browser_inventory.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
@@ -160,4 +164,4 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-# Safe category-frontier refresh marker: 2026-08-25T03:15Z.
+# Safe browser category-frontier refresh marker: 2026-08-25T03:25Z.
