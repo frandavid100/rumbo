@@ -94,6 +94,32 @@ def coverage(rows: list[dict], field: str) -> dict:
     return {"count": count, "pct": round(100.0 * count / total, 2) if total else 0.0}
 
 
+def sqlite_text(value):
+    """Preserve structured first-party declarations in TEXT columns without losing information."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return str(value)
+
+
+def sqlite_number(value):
+    """Store only actual numeric values in numeric SQLite columns; JSONL/evidence remains lossless."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    if isinstance(value, str):
+        raw = value.strip().replace(",", ".")
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+    return None
+
+
 def build_sqlite(path: Path, rows: list[dict], evidence: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -124,20 +150,27 @@ def build_sqlite(path: Path, rows: list[dict], evidence: list[dict]) -> None:
         db.execute(
             "INSERT OR REPLACE INTO products VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
-                r.get("retailer_sku"), r.get("gtin"), r.get("name"), r.get("brand"), r.get("canonical_url"),
-                r.get("image_url"), json.dumps(r.get("category_path") or [], ensure_ascii=False), r.get("price_eur"),
-                r.get("price_currency"), r.get("unit_price_text"), r.get("availability"), r.get("legal_name"),
-                r.get("ingredients"), r.get("allergens"), r.get("net_content"), r.get("storage_conditions"),
-                r.get("preparation_instructions"), r.get("operator_address"), r.get("manufacturer_packer_importer"),
-                r.get("observed_at"), r.get("nutrition_status"), SOURCE,
+                sqlite_text(r.get("retailer_sku")), sqlite_text(r.get("gtin")), sqlite_text(r.get("name")),
+                sqlite_text(r.get("brand")), sqlite_text(r.get("canonical_url")), sqlite_text(r.get("image_url")),
+                json.dumps(r.get("category_path") or [], ensure_ascii=False, sort_keys=True),
+                sqlite_number(r.get("price_eur")), sqlite_text(r.get("price_currency")),
+                sqlite_text(r.get("unit_price_text")), sqlite_text(r.get("availability")),
+                sqlite_text(r.get("legal_name")), sqlite_text(r.get("ingredients")), sqlite_text(r.get("allergens")),
+                sqlite_text(r.get("net_content")), sqlite_text(r.get("storage_conditions")),
+                sqlite_text(r.get("preparation_instructions")), sqlite_text(r.get("operator_address")),
+                sqlite_text(r.get("manufacturer_packer_importer")), sqlite_text(r.get("observed_at")),
+                sqlite_text(r.get("nutrition_status")), SOURCE,
             ),
         )
         db.execute(
             "INSERT OR REPLACE INTO nutrition VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
-                r.get("retailer_sku"), r.get("nutrition_basis"), r.get("energy_kj"), r.get("calories_kcal"),
-                r.get("fat_g"), r.get("saturates_g"), r.get("carbohydrate_g"), r.get("sugars_g"), r.get("fiber_g"),
-                r.get("protein_g"), r.get("salt_g"), r.get("nutrition_status"), SOURCE, "DECLARED",
+                sqlite_text(r.get("retailer_sku")), sqlite_text(r.get("nutrition_basis")),
+                sqlite_number(r.get("energy_kj")), sqlite_number(r.get("calories_kcal")),
+                sqlite_number(r.get("fat_g")), sqlite_number(r.get("saturates_g")),
+                sqlite_number(r.get("carbohydrate_g")), sqlite_number(r.get("sugars_g")),
+                sqlite_number(r.get("fiber_g")), sqlite_number(r.get("protein_g")), sqlite_number(r.get("salt_g")),
+                sqlite_text(r.get("nutrition_status")), SOURCE, "DECLARED",
             ),
         )
     for e in evidence:
