@@ -1,22 +1,22 @@
 {
   "retailer": "CARREFOUR",
   "policy": "PER_FIELD_PROVENANCE_REQUIRED",
-  "updated_at": "2026-08-24",
+  "updated_at": "2026-08-25",
   "source_inventory_reconciled_at": "2026-08-23",
   "current_first_party_status": {
     "inventory_complete": false,
     "candidate_identity_urls_external_only": 8451,
     "candidate_identity_source": "RADARSUPER_CANDIDATE_IDENTITY_ONLY",
-    "successful_first_party_product_pages_cumulative": 1227,
+    "successful_first_party_product_pages_cumulative": 1232,
     "successful_first_party_products_fixture": "tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl",
     "field_evidence_fixture": "tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl",
     "direct_http_status": "BLOCKED_403_FROM_GITHUB_RUNNERS",
     "browser_status": "PARTIAL_SUCCESS_THEN_WAF",
     "classification_performed_in_first_party_staging": false,
-    "notes": "Current cumulative staging contains 1242 products verified from official Carrefour surfaces: 1227 product-page observations and 15 listing-only observations. External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.",
-    "first_party_field_evidence_rows_cumulative": 29996,
+    "notes": "Current cumulative staging contains 1247 products verified from official Carrefour surfaces: 1232 product-page observations and 15 listing-only observations. External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.",
+    "first_party_field_evidence_rows_cumulative": 30127,
     "cumulative_summary_fixture": "tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json",
-    "verified_first_party_products_cumulative": 1242,
+    "verified_first_party_products_cumulative": 1247,
     "first_party_listing_only_products_cumulative": 15
   },
   "sources": {
