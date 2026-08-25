@@ -163,8 +163,20 @@ jobs:
             tools/catalog/fixtures/carrefour_source_inventory.json
           if ! git diff --cached --quiet; then
             git commit -m "catalog: merge Carrefour first-party observations"
-            git pull --rebase origin agent/catalog-phase1
-            git push origin HEAD:agent/catalog-phase1
+            pushed=false
+            for attempt in 1 2 3 4 5; do
+              git pull --rebase origin agent/catalog-phase1
+              if git push origin HEAD:agent/catalog-phase1; then
+                pushed=true
+                break
+              fi
+              echo "Concurrent branch update detected; retrying cumulative push (${attempt}/5)"
+              sleep $((attempt * 2))
+            done
+            if [ "$pushed" != true ]; then
+              echo "Could not persist cumulative staging after 5 race-safe retries" >&2
+              exit 1
+            fi
           fi
       - name: Upload auditable cumulative outputs
         uses: actions/upload-artifact@v4
