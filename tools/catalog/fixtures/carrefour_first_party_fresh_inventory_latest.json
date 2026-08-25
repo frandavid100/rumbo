@@ -3,7 +3,7 @@
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "source": "https://www.carrefour.es",
   "extractor_version": "carrefour-first-party-browser-inventory-1.0",
-  "built_at": "2026-08-25T03:32:12.054356+00:00",
+  "built_at": "2026-08-25T03:37:27.738647+00:00",
   "classification_performed": "false",
   "counts": {
     "candidate_urls": 16,
@@ -15,8 +15,10 @@
     "nutrition_partial": 0,
     "nutrition_not_found": 0,
     "evidence_rows": 29,
-    "network_responses": 69,
+    "network_responses": 71,
     "json_xhr_fetch_responses": 8,
+    "gtin_from_official_page_client_data": 0,
+    "gtin_client_data_conflicts": 0,
     "nutrition_extra_products": 0
   },
   "coverage": {
@@ -168,11 +170,11 @@
         "startHour",
         "timeSlotDescription"
       ],
-      "body_sample": "{\"timeSlotDescription\":\"Mañana, 26 AGO, 12-13h\",\"postalCode\":\"28232\",\"startHour\":\"12:00\",\"endHour\":\"13:00\",\"date\":\"2026-08-26\"}\n"
+      "body_sample": "{\"timeSlotDescription\":\"Mañana, 26 AGO, 10-11h\",\"postalCode\":\"28232\",\"startHour\":\"10:00\",\"endHour\":\"11:00\",\"date\":\"2026-08-26\"}\n"
     },
     {
       "retailer_sku": "VC4AECOMM-517695",
-      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IOHSXq8Ndky5KkKKtoVKKyPsRm",
+      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IOI689D3LKCg0Tk9IgbkixjEml",
       "status": 403,
       "resource_type": "xhr",
       "content_type": "application/json",
@@ -220,22 +222,22 @@
     },
     {
       "retailer_sku": "VC4AECOMM-517695",
-      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/5176950000.json?u=B6FF1B87-3444-422C-82F7-11553EBF476A&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=5176950000&s=1787628695723&v=v1.0.564&visitid=54FF44E1-8A14-48CD-B3E7-E952DC9E9FE8&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fbiscottes-classic-carrefour-540-g%2FR-VC4AECOMM-517695%2Fp",
-      "status": 200,
-      "resource_type": "fetch",
-      "content_type": "application/json",
-      "body_bytes": 2,
-      "json_keys": [],
-      "body_sample": "{}"
-    },
-    {
-      "retailer_sku": "VC4AECOMM-517695",
       "url": "https://clientes-carrefour.my.salesforce-scrt.com/embeddedservice/v1/businesshours?orgId=00D20000000pFOG&esConfigName=MessagingForWeb_ATC_Carrefour",
       "status": 204,
       "resource_type": "xhr",
       "content_type": "application/json;charset=utf-8",
       "body_bytes": 0,
       "body_sample": ""
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/5176950000.json?u=46B5C8FB-65EA-470D-829E-D10CA2DBC8C5&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=5176950000&s=1787629011329&v=v1.0.564&visitid=72160BAA-2247-44FE-8C0F-5646350BCA60&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fbiscottes-classic-carrefour-540-g%2FR-VC4AECOMM-517695%2Fp",
+      "status": 200,
+      "resource_type": "fetch",
+      "content_type": "application/json",
+      "body_bytes": 2,
+      "json_keys": [],
+      "body_sample": "{}"
     },
     {
       "retailer_sku": "VC4AECOMM-517695",
@@ -254,18 +256,17 @@
   ],
   "sample": [
     {
-      "retailer": "CARREFOUR",
-      "retailer_sku": "VC4AECOMM-517695",
-      "canonical_url": "https://www.carrefour.es/supermercado/biscottes-classic-carrefour-540-g/R-VC4AECOMM-517695/p",
-      "observed_at": "2026-08-25T03:31:37.348344+00:00",
-      "source": "CARREFOUR_FIRST_PARTY",
-      "http_status": 200,
-      "page_sha256": "bed67737a3e13c0d9f82248cd5b8457dd276e3943690b7c9c564604cdf9328cf",
-      "fetch_error": null,
-      "name": "Biscottes Classic Carrefour 540 g.",
+      "allergens": "Contiene: Cereales que contienen gluten",
+      "attributes": {
+        "product_type": "Biscottes"
+      },
+      "availability": "InStock",
+      "blocked": false,
       "brand": "CARREFOUR",
-      "gtin": "8431876353976",
-      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/517695_00_1.jpg",
+      "browser_title": "Biscottes Classic Carrefour 540 g. | Supermercado Online Carrefour",
+      "calories_kcal": 389.0,
+      "canonical_url": "https://www.carrefour.es/supermercado/biscottes-classic-carrefour-540-g/R-VC4AECOMM-517695/p",
+      "carbohydrate_g": 73.0,
       "category_path": [
         "Inicio",
         "Supermercado",
@@ -273,40 +274,42 @@
         "Panaderia, Bollería y Pastelería",
         "Pan tostado, Biscottes y Barritas"
       ],
-      "price_eur": 1.67,
-      "price_currency": "EUR",
-      "unit_price_text": "3,09 €/kg",
-      "availability": "InStock",
-      "legal_name": "Biscote",
+      "energy_kj": 1644.0,
+      "fat_g": 4.8,
+      "fetch_error": null,
+      "fiber_g": 4.8,
+      "gtin": "8431876353976",
+      "html_bytes": 305942,
+      "http_status": 200,
+      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/517695_00_1.jpg",
       "ingredients": "Harina de trigo (85%), azúcar, aceite de girasol, gluten de trigo, levadura, sal, harina de cebada malteada y agente de tratamiento de la harina (acido ascórbico). Puede contener trazas de soja, leche, granos de sesamo, huevos y frutos de cascara.",
-      "allergens": "Contiene: Cereales que contienen gluten",
-      "net_content": "540 g",
-      "storage_conditions": "Conservar en lugar fresco y seco.",
-      "preparation_instructions": "Lugar fresco y seco",
-      "operator_address": "Avda. de la Transición Española, 36 28108 Alcobendas - Madrid. Espana Tel.: 914 908 900",
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour, S.A.",
+      "legal_name": "Biscote",
       "mandatory_mentions": null,
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour, S.A.",
+      "name": "Biscottes Classic Carrefour 540 g.",
+      "net_content": "540 g",
       "nutriscore": null,
-      "attributes": {
-        "product_type": "Biscottes"
-      },
       "nutrition_basis": "100 g",
       "nutrition_status": "DECLARED_COMPLETE",
-      "energy_kj": 1644.0,
-      "calories_kcal": 389.0,
-      "fat_g": 4.8,
-      "saturates_g": 0.6,
-      "carbohydrate_g": 73.0,
-      "sugars_g": 8.0,
-      "fiber_g": 4.8,
+      "observed_at": "2026-08-25T03:36:53.034175+00:00",
+      "operator_address": "Avda. de la Transición Española, 36 28108 Alcobendas - Madrid. Espana Tel.: 914 908 900",
+      "page_sha256": "9fb0b969cc6d98de9642a7f611bec2e368b43bf0f20c2b9d01a9793e99e244c7",
+      "preparation_instructions": "Lugar fresco y seco",
+      "price_currency": "EUR",
+      "price_eur": 1.67,
       "protein_g": 11.0,
+      "retailer": "CARREFOUR",
+      "retailer_sku": "VC4AECOMM-517695",
       "salt_g": 1.2,
-      "browser_title": "Biscottes Classic Carrefour 540 g. | Supermercado Online Carrefour",
-      "html_bytes": 305791,
+      "saturates_g": 0.6,
+      "source": "CARREFOUR_FIRST_PARTY",
+      "storage_conditions": "Conservar en lugar fresco y seco.",
+      "sugars_g": 8.0,
       "text_chars": 4613,
-      "blocked": false
+      "unit_price_text": "3,09 €/kg"
     }
   ],
   "provenance_note": "Every populated product field in this dataset was observed directly on carrefour.es in a real browser session. Third-party data may seed candidate URLs only and is never copied as Carrefour evidence.",
+  "gtin_provenance_note": "GTIN values obtained from official page client data are labelled OBSERVED_PRODUCT_PAGE_CLIENT_DATA, not DECLARED.",
   "quality_note": "Nutri-Score is retained only when the extracted product value is a single grade A-E. Generic marketplace/page-chrome text, malformed schema keys and the known legacy milk-label prefix artifact are removed from product attributes. Raw captured HTML remains the audit source."
 }
