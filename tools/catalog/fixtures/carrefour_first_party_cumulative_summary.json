@@ -3,12 +3,12 @@
   "source": "CARREFOUR_FIRST_PARTY",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "classification_performed": false,
-  "built_at": "2026-08-25T06:07:33.507819+00:00",
+  "built_at": "2026-08-25T06:18:35.873790+00:00",
   "counts": {
     "products_total": 1312,
     "products_detail_observed": 1299,
     "products_listing_only": 13,
-    "evidence_rows": 31438,
+    "evidence_rows": 31479,
     "nutrition_status": {
       "DECLARED_COMPLETE": 1025,
       "DECLARED_PARTIAL": 87,
@@ -23,8 +23,9 @@
       "UNKNOWN": 21
     },
     "evidence_types": {
-      "DECLARED": 22467,
-      "OBSERVED_LISTING": 5047,
+      "DECLARED": 22489,
+      "OBSERVED_LISTING": 5060,
+      "OBSERVED_PRODUCT_ANALYTICS": 6,
       "OBSERVED_PRODUCT_PAGE": 3924
     }
   },
@@ -194,39 +195,39 @@
   },
   "evidence_field_counts": {
     "allergens": 515,
-    "attributes": 1287,
-    "availability": 434,
-    "brand": 1260,
-    "calories_kcal": 1114,
-    "canonical_url": 1333,
-    "carbohydrate_g": 1107,
-    "category_path": 639,
-    "energy_kj": 1113,
-    "fat_g": 1081,
-    "fiber_g": 544,
-    "gtin": 8,
-    "image_url": 39,
-    "ingredients": 1215,
-    "legal_name": 1243,
+    "attributes": 1289,
+    "availability": 435,
+    "brand": 1262,
+    "calories_kcal": 1115,
+    "canonical_url": 1342,
+    "carbohydrate_g": 1108,
+    "category_path": 640,
+    "energy_kj": 1114,
+    "fat_g": 1082,
+    "fiber_g": 545,
+    "gtin": 10,
+    "image_url": 40,
+    "ingredients": 1216,
+    "legal_name": 1244,
     "mandatory_mentions": 390,
-    "manufacturer_packer_importer": 1230,
-    "name": 1309,
-    "net_content": 1233,
+    "manufacturer_packer_importer": 1231,
+    "name": 1310,
+    "net_content": 1234,
     "nutriscore": 285,
-    "nutrition_basis": 1107,
+    "nutrition_basis": 1108,
     "nutrition_extra": 226,
     "nutrition_status": 5,
-    "operator_address": 1237,
-    "preparation_instructions": 715,
-    "price_currency": 1309,
-    "price_eur": 1309,
-    "protein_g": 1090,
-    "retailer_sku": 1312,
+    "operator_address": 1238,
+    "preparation_instructions": 716,
+    "price_currency": 1311,
+    "price_eur": 1311,
+    "protein_g": 1091,
+    "retailer_sku": 1313,
     "salt_g": 1062,
-    "saturates_g": 1073,
-    "storage_conditions": 1212,
-    "sugars_g": 1093,
-    "unit_price_text": 1309
+    "saturates_g": 1074,
+    "storage_conditions": 1213,
+    "sugars_g": 1094,
+    "unit_price_text": 1310
   },
   "sample": [
     {
@@ -257,6 +258,7 @@
       "image_url": null,
       "ingredients": "Aceite de Oliva Refinado y Aceite de Oliva Virgen. Aceite que contiene exclusivamente aceites de oliva que se hayan sometido a un tratamiento de refinado y de aceites obtenidos directamente de aceitunas.",
       "legal_name": "Aceite de oliva que contiene exclusivamente aceites de oliva refinados y aceites de oliva vírgenes",
+      "listing_only_observed": false,
       "mandatory_mentions": null,
       "manufacturer_packer_importer": "Acesur",
       "name": "Aceite de oliva suave 0,4º La Española 1 l.",
@@ -287,8 +289,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Mantener alejado de la luz y del calor.",
       "sugars_g": 0.0,
-      "unit_price_text": "6,69 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "6,69 €/l"
     },
     {
       "allergens": null,
@@ -320,6 +321,7 @@
       "image_url": null,
       "ingredients": "Aceite de oliva refinado y aceite de oliva virgen extra.",
       "legal_name": "Aceite de oliva — contiene exclusivamente aceites de oliva refinados y aceites de oliva vírgenes",
+      "listing_only_observed": false,
       "mandatory_mentions": null,
       "manufacturer_packer_importer": "Oleo Masía, S.A.",
       "name": "Aceite de oliva 0,4º La Masía 1 l.",
@@ -345,8 +347,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Preservar del calor y del exceso de luz",
       "sugars_g": 0.0,
-      "unit_price_text": "5,19 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "5,19 €/l"
     },
     {
       "attributes": {
@@ -370,6 +371,7 @@
       "image_url": null,
       "ingredients": "Aceite de oliva virgen extra y aceite de oliva refinado.",
       "legal_name": "Aceite de oliva — contiene exclusivamente aceites de oliva refinados y aceites de oliva vírgenes",
+      "listing_only_observed": false,
       "manufacturer_packer_importer": "Empresa Alimentación YBARRA",
       "name": "Aceite de oliva intenso 1º La Masía 1 l.",
       "net_content": "1000 ml",
@@ -392,8 +394,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Preservar del calor y del exceso de luz",
       "sugars_g": 0.0,
-      "unit_price_text": "5,19 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "5,19 €/l"
     },
     {
       "allergens": null,
@@ -429,6 +430,7 @@
       "image_url": null,
       "ingredients": "Aceite de Oliva Virgen Extra",
       "legal_name": "Aceite de Oliva Virgen Extra Ecológico",
+      "listing_only_observed": false,
       "mandatory_mentions": "Aceite de Oliva Virgen Extra: Aceite de oliva de categoria superior obtenido directamente de aceitunas y sólo mediante procedimientos mecánicos.",
       "manufacturer_packer_importer": "Jaencoop SCA",
       "name": "Aceite de oliva virgen extra ecológico Oro de Génave 75 cl.",
@@ -454,8 +456,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y oscuro",
       "sugars_g": 0.0,
-      "unit_price_text": "16,87 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "16,87 €/l"
     },
     {
       "allergens": null,
@@ -485,6 +486,7 @@
       "image_url": null,
       "ingredients": "Aceite de Oliva Virgen Extra Ecológico",
       "legal_name": "Aceite de Oliva Virgen Extra Ecológico",
+      "listing_only_observed": false,
       "mandatory_mentions": "Aceite de Oliva Virgen Extra: Aceite de oliva de categoria superior obtenido directamente de aceitunas y sólo mediante procedimientos mecánicos.",
       "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
       "name": "Aceite de oliva virgen extra ecológico Carrefour Bio 500 ml.",
@@ -510,8 +512,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y oscuro.",
       "sugars_g": 0.0,
-      "unit_price_text": "9,98 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "9,98 €/l"
     },
     {
       "allergens": null,
@@ -538,6 +539,7 @@
       "image_url": null,
       "ingredients": "Aceite de Oliva Virgen Extra",
       "legal_name": "Aceite De Oliva",
+      "listing_only_observed": false,
       "mandatory_mentions": null,
       "manufacturer_packer_importer": "DEOLEO GLOBAL, S.A.U.",
       "name": "Aceite de oliva virgen extra gran selección Carbonell 750 ml.",
@@ -563,8 +565,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco y protegido de la luz",
       "sugars_g": 0.0,
-      "unit_price_text": "9,59 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "9,59 €/l"
     },
     {
       "allergens": null,
@@ -594,6 +595,7 @@
       "image_url": null,
       "ingredients": "100% Aceite de oliva virgen extra variedad arbequina",
       "legal_name": "Aceite de oliva virgen extra variedad arbequina",
+      "listing_only_observed": false,
       "mandatory_mentions": "Aceite de oliva de categoría superior obtenido directamente de aceituna y solo mediante procedimientos mecánicos",
       "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
       "name": "Aceite de oliva virgen extra arbequina Carrefour Extra 1 l.",
@@ -618,8 +620,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
-      "unit_price_text": "6,95 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "6,95 €/l"
     },
     {
       "allergens": null,
@@ -649,6 +650,7 @@
       "image_url": null,
       "ingredients": "100% Aceite de oliva virgen extra variedad hojiblanca",
       "legal_name": "Aceite de oliva virgen extra variedad hojiblanca",
+      "listing_only_observed": false,
       "mandatory_mentions": "Aceite de oliva de categoría superior obtenido directamente de aceituna y solo mediante procedimientos mecánicos",
       "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
       "name": "Aceite de oliva virgen extra hojiblanca Carrefour Extra 1 l.",
@@ -673,8 +675,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
-      "unit_price_text": "6,95 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "6,95 €/l"
     },
     {
       "allergens": null,
@@ -704,6 +705,7 @@
       "image_url": null,
       "ingredients": "100% Aceite de oliva virgen extra variedad picual",
       "legal_name": "Aceite de oliva virgen extra variedad picual",
+      "listing_only_observed": false,
       "mandatory_mentions": "Aceite de oliva de categoría superior obtenido directamente de aceituna y solo mediante procedimientos mecánicos",
       "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
       "name": "Aceite de oliva virgen extra picual Carrefour Extra 1 l.",
@@ -728,8 +730,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
-      "unit_price_text": "6,95 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "6,95 €/l"
     },
     {
       "allergens": null,
@@ -759,6 +760,7 @@
       "image_url": null,
       "ingredients": "Aceite de oliva virgen extra",
       "legal_name": "Aceite de Oliva Virgen Extra",
+      "listing_only_observed": false,
       "mandatory_mentions": "Aceite de oliva de categoría superior obtenido directamente de aceitunas y sólo mediante procedimientos mecánicos.",
       "manufacturer_packer_importer": "Aceites del Sur- Coosur S.A.",
       "name": "Aceite de oliva virgen extra intenso Coosur 1 l.",
@@ -788,8 +790,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Preservar del calor y del exceso de luz",
       "sugars_g": 0.0,
-      "unit_price_text": "7,99 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "7,99 €/l"
     },
     {
       "allergens": null,
@@ -825,6 +826,7 @@
       "image_url": null,
       "ingredients": "Ingredientes: Té 100%",
       "legal_name": "Té",
+      "listing_only_observed": false,
       "mandatory_mentions": null,
       "manufacturer_packer_importer": "JACOBS DOUWE EGBERTS B.V.",
       "name": "Té Classic en bolsitas Hornimans 25 ud.",
@@ -850,8 +852,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco y seco.",
       "sugars_g": null,
-      "unit_price_text": "49,77 €/kg",
-      "listing_only_observed": false
+      "unit_price_text": "49,77 €/kg"
     },
     {
       "allergens": null,
@@ -882,6 +883,7 @@
       "image_url": null,
       "ingredients": "Aceite de oliva virgen extra. Aceite de oliva de categoría superior obtenido directamente de aceitunas y sólo mediante procedimientos mecánicos.",
       "legal_name": "Aceite de oliva virgen extra",
+      "listing_only_observed": false,
       "mandatory_mentions": "100% natural. Al ser un producto 100% natural, y para garantizar el pleno sabor, le recomendamos consumir preferentemente antes de los 9 meses desde su fecha de envasado.",
       "manufacturer_packer_importer": "ACEITES DEL SUR-COOSUR, S.A.",
       "name": "Aceite de oliva virgen extra hojiblanca Coosur 1 l.",
@@ -912,8 +914,7 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Mantener alejado de la luz y del calor.",
       "sugars_g": 0.0,
-      "unit_price_text": "7,99 €/l",
-      "listing_only_observed": false
+      "unit_price_text": "7,99 €/l"
     }
   ],
   "notes": [
