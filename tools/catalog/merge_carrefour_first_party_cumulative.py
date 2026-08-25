@@ -22,6 +22,14 @@ NUTRITION_FIELDS = [
     "energy_kj", "calories_kcal", "fat_g", "saturates_g", "carbohydrate_g", "sugars_g",
     "fiber_g", "protein_g", "salt_g",
 ]
+# These fields are only available from a product/detail surface, not from a category identity listing.
+# If any survives in a cumulative row, a later category observation must never downgrade that product
+# to listing-only.
+DETAIL_FIELDS = [
+    "legal_name", "ingredients", "allergens", "net_content", "storage_conditions",
+    "preparation_instructions", "operator_address", "manufacturer_packer_importer",
+    "mandatory_mentions", "nutriscore", "nutrition_basis", *NUTRITION_FIELDS,
+]
 
 
 def now_iso() -> str:
@@ -70,9 +78,21 @@ def merge_value(old, new):
 
 def merge_product(old: dict | None, new: dict) -> dict:
     if old is None:
-        return dict(new)
+        merged = dict(new)
+        merged["retailer"] = "CARREFOUR"
+        merged["source"] = SOURCE
+        return merged
     merged = dict(old)
     for key, value in new.items():
+        # listing_only_observed describes the strongest observation ever obtained, not merely
+        # the latest surface visited. Once a product detail has been observed (False), a later
+        # category listing (True) must not erase that fact.
+        if key == "listing_only_observed":
+            if value is False or merged.get(key) is False:
+                merged[key] = False
+            elif key not in merged and value is True:
+                merged[key] = True
+            continue
         merged[key] = merge_value(merged.get(key), value)
     merged["retailer"] = "CARREFOUR"
     merged["source"] = SOURCE
@@ -118,6 +138,26 @@ def sqlite_number(value):
         except ValueError:
             return None
     return None
+
+
+def repair_observation_strength(row: dict) -> None:
+    """Repair old cumulative rows that a sparse listing may have accidentally downgraded.
+
+    This is deliberately evidence-conservative: it only upgrades listing-only to detail when the
+    cumulative row itself still contains a field that can only come from a Carrefour product/detail
+    surface. It never invents a field.
+    """
+    if any(nonempty(row.get(field)) for field in DETAIL_FIELDS):
+        row["listing_only_observed"] = False
+
+    # A category-only merge in older versions could also replace a real nutrition status with
+    # NOT_FETCHED. Recover the status only when the retained direct values prove it.
+    if row.get("nutrition_status") == "NOT_FETCHED":
+        core = [row.get("calories_kcal"), row.get("fat_g"), row.get("carbohydrate_g"), row.get("protein_g")]
+        if all(nonempty(value) for value in core):
+            row["nutrition_status"] = "DECLARED_COMPLETE"
+        elif any(nonempty(row.get(field)) for field in NUTRITION_FIELDS):
+            row["nutrition_status"] = "DECLARED_PARTIAL"
 
 
 def build_sqlite(path: Path, rows: list[dict], evidence: list[dict]) -> None:
@@ -221,6 +261,7 @@ def main() -> int:
         sku = row.get("retailer_sku")
         if not sku or row.get("source") != SOURCE:
             continue
+        old = products.get(sku)
         minimal = {
             "retailer": "CARREFOUR",
             "retailer_sku": sku,
@@ -228,9 +269,12 @@ def main() -> int:
             "source": SOURCE,
             "observed_at": row.get("observed_at"),
             "listing_only_observed": True,
-            "nutrition_status": "NOT_FETCHED",
         }
-        products[sku] = merge_product(products.get(sku), minimal)
+        # NOT_FETCHED is meaningful only for a genuinely new listing-only identity. Never let a
+        # later category crawl overwrite a previously observed product-page nutrition status.
+        if old is None:
+            minimal["nutrition_status"] = "NOT_FETCHED"
+        products[sku] = merge_product(old, minimal)
 
     fresh_rows = read_jsonl(fresh / "products.jsonl")
     for row in fresh_rows:
@@ -278,6 +322,7 @@ def main() -> int:
             item = latest_by_field.get((sku, field))
             if item:
                 row[field] = item.get("value")
+        repair_observation_strength(row)
 
     rows = [products[k] for k in sorted(products)]
     write_jsonl(products_path, rows)
@@ -286,7 +331,7 @@ def main() -> int:
     status_counts = Counter(str(r.get("nutrition_status") or "UNKNOWN") for r in rows)
     evidence_type_counts = Counter(str(e.get("evidence_type") or "UNKNOWN") for e in evidence)
     field_counts = Counter(str(e.get("field") or "UNKNOWN") for e in evidence)
-    first_party_detail = [r for r in rows if not r.get("listing_only_observed")]
+    first_party_detail = [r for r in rows if r.get("listing_only_observed") is not True]
     summary = {
         "retailer": "CARREFOUR",
         "source": SOURCE,
@@ -296,7 +341,7 @@ def main() -> int:
         "counts": {
             "products_total": len(rows),
             "products_detail_observed": len(first_party_detail),
-            "products_listing_only": sum(bool(r.get("listing_only_observed")) for r in rows),
+            "products_listing_only": sum(r.get("listing_only_observed") is True for r in rows),
             "evidence_rows": len(evidence),
             "nutrition_status": dict(sorted(status_counts.items())),
             "evidence_types": dict(sorted(evidence_type_counts.items())),
@@ -310,6 +355,7 @@ def main() -> int:
             "Third-party datasets may seed product URLs but are never copied into this cumulative first-party dataset.",
             "Category-listing identities are retained even when product detail retrieval is blocked.",
             "Field evidence is append-only by observation timestamp; newer sparse pages do not erase older direct observations.",
+            "A later category listing cannot downgrade a previously observed product detail or its proved nutrition status.",
             "No Rumbo nutritional or culinary classification is performed here.",
         ],
     }
