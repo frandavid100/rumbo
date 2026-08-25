@@ -143,6 +143,7 @@
     "fixtures/carrefour_first_party_agent_web_products_batch183_current_frontier_20260825.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch184_current_frontier_20260825.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch185_current_frontier_20260825.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_batch186_current_frontier_20260825.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch18_eggs_milk.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch19_milk.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch2.jsonl",
@@ -281,10 +282,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1369,
-    "candidate_ids_already_verified": 1260,
+    "verified_first_party_unique_skus": 1371,
+    "candidate_ids_already_verified": 1262,
     "candidate_ids_terminal_route_excluded": 17,
-    "candidate_ids_not_yet_verified": 7174,
+    "candidate_ids_not_yet_verified": 7172,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -299,7 +300,7 @@
   },
   "food_priority_counts": {
     "food_like": 2595,
-    "uncertain": 4472,
+    "uncertain": 4470,
     "deprioritized_obvious_alcohol_or_nonfood": 107
   },
   "emitted_food_priority_counts": {
