@@ -44,6 +44,7 @@ jobs:
           python select_carrefour_unverified_candidates.py \
             --candidates fixtures/carrefour_candidate_urls_radarsuper.jsonl \
             --verified "${VERIFIED[@]}" \
+            --terminal-outcomes fixtures/carrefour_first_party_candidate_route_outcomes.jsonl \
             --output fixtures/carrefour_unverified_candidates_head.jsonl \
             --summary fixtures/carrefour_unverified_candidates_summary.json \
             --limit 250
