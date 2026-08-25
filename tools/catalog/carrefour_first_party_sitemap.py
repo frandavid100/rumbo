@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 SOURCE = "CARREFOUR_FIRST_PARTY"
 INDEX_URL = "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml"
-VERSION = "carrefour-first-party-sitemap-1.0"
+VERSION = "carrefour-first-party-sitemap-1.1"
 PRODUCT_RE = re.compile(r"^https://www\.carrefour\.es/supermercado/.+/R-([^/]+)/p/?(?:\?.*)?$", re.I)
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; RumboCatalog/1.0; +https://github.com/frandavid100/rumbo)",
@@ -49,8 +49,18 @@ def child_text(node, name: str):
 
 
 def allowed_sitemap(url: str) -> bool:
+    """Follow only official same-host Carrefour sitemap children.
+
+    Product extraction remains much stricter (`/supermercado/.../R-.../p`), so allowing
+    Carrefour's other robots-declared sitemap indexes cannot turn corporate/tech URLs into
+    supermarket evidence. This lets us test alternate official sitemap roots when the dedicated
+    food CDN index is WAF-blocked.
+    """
     p = urlparse(url)
-    return p.scheme == "https" and p.netloc in {"www.carrefour.es", "carrefour.es"} and "/sitemap-food/" in p.path
+    if p.scheme != "https" or p.netloc not in {"www.carrefour.es", "carrefour.es"}:
+        return False
+    path = p.path.lower()
+    return path.endswith((".xml", ".xml.gz", ".gz")) or "sitemap" in path or "siteindex" in path
 
 
 def crawl(index_url: str, max_sitemaps: int, delay: float):
@@ -204,7 +214,11 @@ def main():
         },
         "errors": errors[:30],
         "sample": rows[:20],
-        "provenance_note": "Product identities and URLs come only from Carrefour's official sitemap-food index declared in carrefour.es/robots.txt. No third-party product fields are copied.",
+        "provenance_note": (
+            "Product identities and URLs come only from the selected official carrefour.es sitemap root "
+            "and same-host sitemap children. Only canonical /supermercado/.../R-.../p product URLs are retained; "
+            "no third-party product fields are copied."
+        ),
     }
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary["counts"], ensure_ascii=False, indent=2))
