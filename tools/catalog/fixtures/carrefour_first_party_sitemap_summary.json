@@ -2,8 +2,8 @@
   "retailer": "CARREFOUR",
   "source": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
-  "extractor_version": "carrefour-first-party-sitemap-1.0",
-  "built_at": "2026-08-25T06:01:15.881646+00:00",
+  "extractor_version": "carrefour-first-party-sitemap-1.1",
+  "built_at": "2026-08-25T06:06:55.602391+00:00",
   "classification_performed": "false",
   "counts": {
     "sitemaps_visited": 1,
@@ -19,5 +19,5 @@
     }
   ],
   "sample": [],
-  "provenance_note": "Product identities and URLs come only from Carrefour's official sitemap-food index declared in carrefour.es/robots.txt. No third-party product fields are copied."
+  "provenance_note": "Product identities and URLs come only from the selected official carrefour.es sitemap root and same-host sitemap children. Only canonical /supermercado/.../R-.../p product URLs are retained; no third-party product fields are copied."
 }
