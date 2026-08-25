@@ -154,4 +154,4 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-# Lossless cumulative Carrefour first-party refresh marker: 2026-08-25T05:25Z.
+# Lossless cumulative Carrefour first-party refresh marker: 2026-08-25T06:06Z.
