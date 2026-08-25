@@ -1,9 +1,9 @@
 {
   "retailer": "CARREFOUR",
-  "source": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
+  "source": "https://www.carrefour.es/tecno/dyn/MEDIA/siteindex.xml",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "extractor_version": "carrefour-first-party-sitemap-1.1",
-  "built_at": "2026-08-25T06:06:55.602391+00:00",
+  "built_at": "2026-08-25T06:07:37.967437+00:00",
   "classification_performed": "false",
   "counts": {
     "sitemaps_visited": 1,
@@ -14,7 +14,7 @@
   },
   "errors": [
     {
-      "url": "https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml",
+      "url": "https://www.carrefour.es/tecno/dyn/MEDIA/siteindex.xml",
       "error": "HTTPError:HTTP Error 403: Forbidden"
     }
   ],
