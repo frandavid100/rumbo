@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/catalog-carrefour-first-party-sitemap.yml'
       - 'tools/catalog/carrefour_first_party_sitemap.py'
+      - 'tools/catalog/carrefour_first_party_sitemap_browser.py'
   workflow_dispatch:
 
 permissions:
@@ -18,7 +19,7 @@ concurrency:
 jobs:
   inventory:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,14 +27,75 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Enumerate official Carrefour food sitemap
+      - name: Try official Carrefour food sitemap over direct HTTP
         continue-on-error: true
         working-directory: tools/catalog
         run: |
           python carrefour_first_party_sitemap.py \
-            --out carrefour-first-party-sitemap \
+            --out carrefour-first-party-sitemap-http \
             --max-sitemaps 5000 \
             --delay 0.15
+      - name: Decide whether browser fallback is needed
+        id: sitemap_http
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib
+          p=pathlib.Path('tools/catalog/carrefour-first-party-sitemap-http/summary.json')
+          products=0
+          if p.exists():
+              try:
+                  products=int(json.load(open(p,encoding='utf-8')).get('counts',{}).get('product_urls',0) or 0)
+              except Exception:
+                  pass
+          print(f'product_urls={products}')
+          print('browser_needed=' + ('true' if products < 1 else 'false'))
+          PY
+      - name: Install Playwright browser for same-origin official sitemap fallback
+        if: always() && steps.sitemap_http.outputs.browser_needed == 'true'
+        run: |
+          python -m pip install --disable-pip-version-check playwright
+          python -m playwright install --with-deps chromium
+      - name: Try official Carrefour food sitemap in a normal same-origin browser session
+        if: always() && steps.sitemap_http.outputs.browser_needed == 'true'
+        continue-on-error: true
+        working-directory: tools/catalog
+        run: |
+          python carrefour_first_party_sitemap_browser.py \
+            --out carrefour-first-party-sitemap-browser \
+            --max-sitemaps 5000 \
+            --delay 0.15 \
+            --timeout 45
+      - name: Select strongest official sitemap observation
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, pathlib, shutil
+          root=pathlib.Path('tools/catalog')
+          candidates=[]
+          for name in ('carrefour-first-party-sitemap-http','carrefour-first-party-sitemap-browser'):
+              d=root/name
+              p=d/'summary.json'
+              if not p.exists():
+                  continue
+              try:
+                  summary=json.load(open(p,encoding='utf-8'))
+              except Exception:
+                  continue
+              count=int(summary.get('counts',{}).get('product_urls',0) or 0)
+              errors=int(summary.get('counts',{}).get('sitemap_fetch_errors',0) or 0)
+              remaining=int(summary.get('counts',{}).get('remaining_sitemaps',0) or 0)
+              candidates.append((count, -remaining, -errors, d))
+          if not candidates:
+              raise SystemExit('No sitemap attempt produced a summary')
+          _,_,_,src=max(candidates, key=lambda x:(x[0],x[1],x[2]))
+          dst=root/'carrefour-first-party-sitemap'
+          if dst.exists():
+              shutil.rmtree(dst)
+          shutil.copytree(src,dst)
+          print(f'Selected {src.name}')
+          print((dst/'summary.json').read_text(encoding='utf-8'))
+          PY
       - name: Persist official first-party candidate inventory and diagnostics
         if: always()
         run: |
@@ -73,7 +135,7 @@ jobs:
           if str(d.get('classification_performed')).lower() != 'false':
               raise SystemExit('Sitemap inventory performed classification')
           if d['counts']['product_urls'] < 1:
-              raise SystemExit('Official sitemap yielded no Carrefour product URLs')
+              raise SystemExit('Official sitemap yielded no Carrefour product URLs through either direct HTTP or a normal same-origin browser session')
           if d['counts']['remaining_sitemaps']:
               raise SystemExit('Sitemap traversal was incomplete')
           PY
@@ -82,6 +144,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: carrefour-first-party-official-sitemap
-          path: tools/catalog/carrefour-first-party-sitemap/
+          path: |
+            tools/catalog/carrefour-first-party-sitemap/
+            tools/catalog/carrefour-first-party-sitemap-http/
+            tools/catalog/carrefour-first-party-sitemap-browser/
           retention-days: 7
           if-no-files-found: warn
