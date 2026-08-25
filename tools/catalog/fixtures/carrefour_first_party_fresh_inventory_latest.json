@@ -3,7 +3,7 @@
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "source": "https://www.carrefour.es",
   "extractor_version": "carrefour-first-party-browser-inventory-1.0",
-  "built_at": "2026-08-25T03:17:29.915061+00:00",
+  "built_at": "2026-08-25T03:32:12.054356+00:00",
   "classification_performed": "false",
   "counts": {
     "candidate_urls": 16,
@@ -15,7 +15,7 @@
     "nutrition_partial": 0,
     "nutrition_not_found": 0,
     "evidence_rows": 29,
-    "network_responses": 71,
+    "network_responses": 69,
     "json_xhr_fetch_responses": 8,
     "nutrition_extra_products": 0
   },
@@ -160,7 +160,7 @@
       "status": 200,
       "resource_type": "xhr",
       "content_type": "application/json; charset=UTF-8",
-      "body_bytes": 125,
+      "body_bytes": 129,
       "json_keys": [
         "date",
         "endHour",
@@ -168,7 +168,20 @@
         "startHour",
         "timeSlotDescription"
       ],
-      "body_sample": "{\"timeSlotDescription\":\"Hoy, 25 AGO, 18-19h\",\"postalCode\":\"28232\",\"startHour\":\"18:00\",\"endHour\":\"19:00\",\"date\":\"2026-08-25\"}\n"
+      "body_sample": "{\"timeSlotDescription\":\"Mañana, 26 AGO, 12-13h\",\"postalCode\":\"28232\",\"startHour\":\"12:00\",\"endHour\":\"13:00\",\"date\":\"2026-08-26\"}\n"
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IOHSXq8Ndky5KkKKtoVKKyPsRm",
+      "status": 403,
+      "resource_type": "xhr",
+      "content_type": "application/json",
+      "body_bytes": 68,
+      "json_keys": [
+        "code",
+        "message"
+      ],
+      "body_sample": "{\"code\":403,\"message\":\"forbidden customer login status: anonymous\"}\n"
     },
     {
       "retailer_sku": "VC4AECOMM-517695",
@@ -207,20 +220,7 @@
     },
     {
       "retailer_sku": "VC4AECOMM-517695",
-      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IOFfdjCFpeCZBLftba0TgChLQf",
-      "status": 403,
-      "resource_type": "xhr",
-      "content_type": "application/json",
-      "body_bytes": 68,
-      "json_keys": [
-        "code",
-        "message"
-      ],
-      "body_sample": "{\"code\":403,\"message\":\"forbidden customer login status: anonymous\"}\n"
-    },
-    {
-      "retailer_sku": "VC4AECOMM-517695",
-      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/5176950000.json?u=6BCD57A2-DA6A-474E-8E1B-FBA4C81EB203&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=5176950000&s=1787627813517&v=v1.0.564&visitid=DD3BCF8C-491D-41D1-8192-EE02A5AC6FC3&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fbiscottes-classic-carrefour-540-g%2FR-VC4AECOMM-517695%2Fp",
+      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/5176950000.json?u=B6FF1B87-3444-422C-82F7-11553EBF476A&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=5176950000&s=1787628695723&v=v1.0.564&visitid=54FF44E1-8A14-48CD-B3E7-E952DC9E9FE8&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fbiscottes-classic-carrefour-540-g%2FR-VC4AECOMM-517695%2Fp",
       "status": 200,
       "resource_type": "fetch",
       "content_type": "application/json",
@@ -257,10 +257,10 @@
       "retailer": "CARREFOUR",
       "retailer_sku": "VC4AECOMM-517695",
       "canonical_url": "https://www.carrefour.es/supermercado/biscottes-classic-carrefour-540-g/R-VC4AECOMM-517695/p",
-      "observed_at": "2026-08-25T03:16:55.231453+00:00",
+      "observed_at": "2026-08-25T03:31:37.348344+00:00",
       "source": "CARREFOUR_FIRST_PARTY",
       "http_status": 200,
-      "page_sha256": "a5b7de01c355f63518bfe3d7895299c210856014fa37e0ad7915d401e7dc222c",
+      "page_sha256": "bed67737a3e13c0d9f82248cd5b8457dd276e3943690b7c9c564604cdf9328cf",
       "fetch_error": null,
       "name": "Biscottes Classic Carrefour 540 g.",
       "brand": "CARREFOUR",
@@ -302,7 +302,7 @@
       "protein_g": 11.0,
       "salt_g": 1.2,
       "browser_title": "Biscottes Classic Carrefour 540 g. | Supermercado Online Carrefour",
-      "html_bytes": 305952,
+      "html_bytes": 305791,
       "text_chars": 4613,
       "blocked": false
     }

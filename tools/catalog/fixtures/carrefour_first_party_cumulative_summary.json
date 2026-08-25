@@ -1,161 +1,232 @@
 {
-  "built_at": "2026-08-25T03:13:37.562504+00:00",
-  "capture_methods": {
-    "OPENAI_WEB_DIRECT_OFFICIAL_ACTFORFOOD_PAGE": 8,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PAGE": 1074,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 8,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_INDEXED": 1,
-    "OPENAI_WEB_DIRECT_OFFICIAL_PRODUCT_PAGE": 2,
-    "OPENAI_WEB_OFFICIAL_CATEGORY_INDEXED": 17,
-    "OPENAI_WEB_OFFICIAL_CATEGORY_LISTING": 8,
-    "OPENAI_WEB_OFFICIAL_PRODUCT_AND_CATEGORY_INDEXED": 146,
-    "OPENAI_WEB_OFFICIAL_PRODUCT_INDEXED": 6,
-    "PLAYWRIGHT_SAVED_HTML": 3
-  },
+  "retailer": "CARREFOUR",
+  "source": "CARREFOUR_FIRST_PARTY",
+  "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "classification_performed": false,
+  "built_at": "2026-08-25T03:32:13.051218+00:00",
   "counts": {
-    "evidence_rows": 30720,
-    "external_candidate_identity_urls_not_counted_as_first_party": 8451,
-    "nutrition_complete": 994,
-    "nutrition_not_found": 194,
-    "nutrition_partial": 85,
-    "verified_direct_products": 1273,
-    "verified_first_party_products": 1273,
-    "verified_listing_only_observations": 15,
-    "verified_product_page_observations": 1258
+    "products_total": 1278,
+    "products_detail_observed": 1262,
+    "products_listing_only": 16,
+    "evidence_rows": 30548,
+    "nutrition_status": {
+      "DECLARED_COMPLETE": 994,
+      "DECLARED_PARTIAL": 85,
+      "DECLARED_VALUES_BASIS_UNSPECIFIED": 1,
+      "NOT_DECLARED": 41,
+      "NOT_DECLARED_ON_PAGE": 19,
+      "NOT_FETCHED": 8,
+      "NOT_FOUND": 101,
+      "NOT_OBSERVED_IN_CAPTURE": 1,
+      "NOT_OBSERVED_ON_LISTING": 7,
+      "UNKNOWN": 21
+    },
+    "evidence_types": {
+      "DECLARED": 21829,
+      "OBSERVED_LISTING": 5023,
+      "OBSERVED_PRODUCT_PAGE": 3696
+    }
   },
   "coverage": {
-    "allergens": {
-      "count": 501,
-      "pct": 39.36
-    },
-    "attributes": {
-      "count": 1260,
-      "pct": 98.98
-    },
-    "availability": {
-      "count": 432,
-      "pct": 33.94
-    },
-    "brand": {
-      "count": 1224,
-      "pct": 96.15
-    },
-    "canonical_url": {
-      "count": 1273,
-      "pct": 100.0
-    },
-    "category_path": {
-      "count": 612,
-      "pct": 48.08
-    },
     "gtin": {
-      "count": 5,
-      "pct": 0.39
-    },
-    "image_url": {
-      "count": 36,
-      "pct": 2.83
-    },
-    "ingredients": {
-      "count": 1178,
-      "pct": 92.54
-    },
-    "legal_name": {
-      "count": 1207,
-      "pct": 94.82
-    },
-    "mandatory_mentions": {
-      "count": 379,
-      "pct": 29.77
-    },
-    "manufacturer_packer_importer": {
-      "count": 1194,
-      "pct": 93.79
+      "count": 6,
+      "pct": 0.47
     },
     "name": {
       "count": 1273,
-      "pct": 100.0
+      "pct": 99.61
     },
-    "net_content": {
-      "count": 1197,
-      "pct": 94.03
+    "brand": {
+      "count": 1224,
+      "pct": 95.77
     },
-    "nutriscore": {
-      "count": 284,
-      "pct": 22.31
+    "image_url": {
+      "count": 37,
+      "pct": 2.9
     },
-    "nutrition_extra": {
-      "count": 801,
-      "pct": 62.92
-    },
-    "operator_address": {
-      "count": 1201,
-      "pct": 94.34
-    },
-    "preparation_instructions": {
-      "count": 708,
-      "pct": 55.62
+    "category_path": {
+      "count": 612,
+      "pct": 47.89
     },
     "price_eur": {
       "count": 1273,
-      "pct": 100.0
+      "pct": 99.61
     },
-    "retailer_sku": {
+    "price_currency": {
       "count": 1273,
-      "pct": 100.0
-    },
-    "storage_conditions": {
-      "count": 1177,
-      "pct": 92.46
+      "pct": 99.61
     },
     "unit_price_text": {
       "count": 1273,
-      "pct": 100.0
-    }
-  },
-  "inventory_complete": false,
-  "nutrition_field_coverage": {
-    "calories_kcal": {
-      "count": 1079,
-      "pct": 84.76
+      "pct": 99.61
     },
-    "carbohydrate_g": {
+    "availability": {
+      "count": 432,
+      "pct": 33.8
+    },
+    "legal_name": {
+      "count": 1207,
+      "pct": 94.44
+    },
+    "ingredients": {
+      "count": 1178,
+      "pct": 92.18
+    },
+    "allergens": {
+      "count": 501,
+      "pct": 39.2
+    },
+    "net_content": {
+      "count": 1197,
+      "pct": 93.66
+    },
+    "storage_conditions": {
+      "count": 1177,
+      "pct": 92.1
+    },
+    "preparation_instructions": {
+      "count": 708,
+      "pct": 55.4
+    },
+    "operator_address": {
+      "count": 1201,
+      "pct": 93.97
+    },
+    "manufacturer_packer_importer": {
+      "count": 1194,
+      "pct": 93.43
+    },
+    "mandatory_mentions": {
+      "count": 379,
+      "pct": 29.66
+    },
+    "nutriscore": {
+      "count": 284,
+      "pct": 22.22
+    },
+    "attributes": {
+      "count": 1250,
+      "pct": 97.81
+    },
+    "nutrition_basis": {
       "count": 1073,
-      "pct": 84.29
+      "pct": 83.96
+    },
+    "nutrition_status": {
+      "count": 1257,
+      "pct": 98.36
     },
     "energy_kj": {
       "count": 1078,
-      "pct": 84.68
+      "pct": 84.35
+    },
+    "calories_kcal": {
+      "count": 1079,
+      "pct": 84.43
     },
     "fat_g": {
       "count": 1046,
-      "pct": 82.17
-    },
-    "fiber_g": {
-      "count": 535,
-      "pct": 42.03
-    },
-    "protein_g": {
-      "count": 1055,
-      "pct": 82.88
-    },
-    "salt_g": {
-      "count": 1030,
-      "pct": 80.91
+      "pct": 81.85
     },
     "saturates_g": {
       "count": 1038,
-      "pct": 81.54
+      "pct": 81.22
+    },
+    "carbohydrate_g": {
+      "count": 1073,
+      "pct": 83.96
     },
     "sugars_g": {
       "count": 1059,
-      "pct": 83.19
+      "pct": 82.86
+    },
+    "fiber_g": {
+      "count": 535,
+      "pct": 41.86
+    },
+    "protein_g": {
+      "count": 1055,
+      "pct": 82.55
+    },
+    "salt_g": {
+      "count": 1030,
+      "pct": 80.59
     }
   },
-  "observation_scope_note": "verified_first_party_products includes both official Carrefour product-page observations and official Carrefour category-listing-only observations. Listing-only records never imply that ingredients, nutrition or other product-detail fields were observed.",
-  "provenance_note": "Only fields observed directly on official Carrefour-controlled pages are merged. Third-party catalogs may seed candidate URLs, but their product facts are never promoted to CARREFOUR_FIRST_PARTY. Indexed official-page retrieval is explicitly marked because crawl lag is possible.",
-  "retailer": "CARREFOUR",
+  "nutrition_field_coverage": {
+    "energy_kj": {
+      "count": 1078,
+      "pct": 84.35
+    },
+    "calories_kcal": {
+      "count": 1079,
+      "pct": 84.43
+    },
+    "fat_g": {
+      "count": 1046,
+      "pct": 81.85
+    },
+    "saturates_g": {
+      "count": 1038,
+      "pct": 81.22
+    },
+    "carbohydrate_g": {
+      "count": 1073,
+      "pct": 83.96
+    },
+    "sugars_g": {
+      "count": 1059,
+      "pct": 82.86
+    },
+    "fiber_g": {
+      "count": 535,
+      "pct": 41.86
+    },
+    "protein_g": {
+      "count": 1055,
+      "pct": 82.55
+    },
+    "salt_g": {
+      "count": 1030,
+      "pct": 80.59
+    }
+  },
+  "evidence_field_counts": {
+    "allergens": 502,
+    "attributes": 1251,
+    "availability": 433,
+    "brand": 1225,
+    "calories_kcal": 1080,
+    "canonical_url": 1285,
+    "carbohydrate_g": 1074,
+    "category_path": 613,
+    "energy_kj": 1079,
+    "fat_g": 1047,
+    "fiber_g": 536,
+    "gtin": 7,
+    "image_url": 38,
+    "ingredients": 1179,
+    "legal_name": 1208,
+    "mandatory_mentions": 379,
+    "manufacturer_packer_importer": 1195,
+    "name": 1274,
+    "net_content": 1198,
+    "nutriscore": 284,
+    "nutrition_basis": 1074,
+    "nutrition_extra": 212,
+    "nutrition_status": 5,
+    "operator_address": 1202,
+    "preparation_instructions": 709,
+    "price_currency": 1274,
+    "price_eur": 1274,
+    "protein_g": 1056,
+    "retailer_sku": 1273,
+    "salt_g": 1031,
+    "saturates_g": 1039,
+    "storage_conditions": 1178,
+    "sugars_g": 1060,
+    "unit_price_text": 1274
+  },
   "sample": [
     {
       "allergens": null,
@@ -830,461 +901,13 @@
       "storage_conditions": "Mantener alejado de la luz y del calor.",
       "sugars_g": 0.0,
       "unit_price_text": "7,99 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "food_origin": "España",
-        "halal": true,
-        "oil_type": "Aceite de oliva virgen extra",
-        "package_presentation": "1l",
-        "packaging": "Botella PET",
-        "vegan": true,
-        "vegetarian": true
-      },
-      "availability": null,
-      "brand": "COOSUR",
-      "calories_kcal": 822,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-virgen-extra-arbequina-coosur-1-l/R-520660331/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-10.2-unverified-queue-oils-tea",
-      "carbohydrate_g": 0.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 3381,
-      "fat_g": 91.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Aceite de oliva virgen extra. Aceite de oliva de categoría superior obtenido directamente de aceitunas y sólo mediante procedimientos mecánicos.",
-      "legal_name": "Aceite de oliva virgen extra arbequina",
-      "mandatory_mentions": "100% natural. Al ser un producto 100% natural, y para garantizar el pleno sabor, le recomendamos consumir preferentemente antes de los 9 meses desde su fecha de envasado.",
-      "manufacturer_packer_importer": "Aceites del Sur-Coosur, S.A.",
-      "name": "Aceite de oliva virgen extra arbequina Coosur 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {
-        "monounsaturated_fat_g": 71.0,
-        "polyunsaturated_fat_g": 8.0,
-        "vitamin_e_mg": 18.0,
-        "vitamin_e_reference_intake_percent": 150.0
-      },
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-23T20:32:00+00:00",
-      "operator_address": "Parque Industrial PISA 41927 Mairena del Aljarafe-Sevilla-España",
-      "page_sha256": null,
-      "preparation_instructions": "Conservar en un lugar fresco, seco y aislado del suelo",
-      "price_currency": "EUR",
-      "price_eur": 7.99,
-      "protein_g": 0.0,
-      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price is an observed Carrefour value but is not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660331",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 12.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Mantener alejado de la luz y del calor.",
-      "sugars_g": 0.0,
-      "unit_price_text": "7,99 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "food_origin": "Madrid",
-        "halal": true,
-        "oil_type": "Aceite de oliva virgen extra",
-        "package_presentation": "1l",
-        "packaging": "Botella PET",
-        "product_origin": "Madrid",
-        "vegan": true,
-        "vegetarian": true
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 900.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-virgen-extra-carrefour-extra-1-l/R-520660335/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-9.9-indexed-oils",
-      "carbohydrate_g": 0.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Aceites y vinagres"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 3700.0,
-      "fat_g": 100.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "100% Aceite de oliva virgen extra",
-      "legal_name": "Aceite de oliva virgen extra",
-      "mandatory_mentions": "Aceite de oliva de categoría superior obtenido directamente de aceituna y solo mediante procedimientos mecánicos",
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A.",
-      "name": "Aceite de oliva virgen extra Carrefour Extra 1 l.",
-      "net_content": "1000 ml, 916 g",
-      "nutriscore": "B",
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-23T18:58:00+00:00",
-      "operator_address": "Avda. de la Transición Española, 36 28108 Alcobendas (Madrid)",
-      "page_sha256": null,
-      "preparation_instructions": "Lugar fresco y seco",
-      "price_currency": "EUR",
-      "price_eur": 4.7,
-      "protein_g": 0.0,
-      "provenance_note": "All populated fields were observed on an official Carrefour-controlled product page via indexed retrieval. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660335",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 16.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
-      "sugars_g": 0.0,
-      "unit_price_text": "4,70 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "oil_type": "Aceite de oliva virgen extra",
-        "package_presentation": "1l",
-        "packaging": "Botella PET"
-      },
-      "availability": null,
-      "brand": "MAESTROS DE HOJIBLANCA",
-      "calories_kcal": 821,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-virgen-extra-maestros-de-hojiblanca-1-l/R-520660337/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-10.2-unverified-queue-oils-tea",
-      "carbohydrate_g": 0.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 3374,
-      "fat_g": 91.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Aceite de Oliva Virgen Extra",
-      "legal_name": "Aceite de Oliva Virgen Extra",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "DEOLEO GLOBAL, S.A.U.",
-      "name": "Aceite de oliva virgen extra Maestros de Hojiblanca 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-23T20:32:00+00:00",
-      "operator_address": "Ctra. N.IV. Km.388-14610 Alcolea (Córdoba)",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 8.25,
-      "protein_g": 0.0,
-      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price is an observed Carrefour value but is not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660337",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 13.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Conservar en un lugar fresco y protegido de la luz",
-      "sugars_g": 0.0,
-      "unit_price_text": "8,25 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "oil_type": "Aceite de oliva virgen extra",
-        "packaging": "Botella",
-        "product": "Aceite de oliva virgen extra"
-      },
-      "availability": null,
-      "brand": "YBARRA",
-      "calories_kcal": 824,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-de-oliva-virgen-extra-ybarra-1-l/R-520660339/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-10.2-unverified-queue-oils-tea",
-      "carbohydrate_g": 0.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Aceites y vinagres"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 3389,
-      "fat_g": 92.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Aceite de oliva virgen extra.",
-      "legal_name": "Aceite de Oliva Virgen Extra",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Empresa Alimentación YBARRA",
-      "name": "Aceite de oliva virgen extra Ybarra 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-23T20:32:00+00:00",
-      "operator_address": "Carretera Isla Menor, km. 1,8. 41703 Dos Hermanas (Sevilla)",
-      "page_sha256": null,
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 6.69,
-      "protein_g": 0.0,
-      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price is an observed Carrefour value but is not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660339",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 14.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Preservar del calor y del exceso de luz",
-      "sugars_g": 0.0,
-      "unit_price_text": "6,69 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "food_origin": "España",
-        "oil_type": "Aceite de girasol",
-        "package_presentation": "1l",
-        "packaging": "Botella PET"
-      },
-      "availability": null,
-      "brand": "COOSUR",
-      "calories_kcal": 900,
-      "canonical_url": "https://www.carrefour.es/supermercado/aceite-refinado-de-girasol-coosol-1-l/R-520660349/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-10.2-unverified-queue-oils-tea",
-      "carbohydrate_g": 0.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Aceites y vinagres"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 3700,
-      "fat_g": 100.0,
-      "fetch_error": null,
-      "fiber_g": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Aceite refinado de girasol, antioxidante: extracto natural rico en tocoferoles (E-306), y antiespumante E-900.",
-      "legal_name": "Aceite refinado de girasol",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "ACEITES DEL SUR-COOSUR, S.A.",
-      "name": "Aceite refinado de girasol Coosol 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_extra": {
-        "monounsaturated_fat_g": 24.0,
-        "polyunsaturated_fat_g": 63.0,
-        "vitamin_e_mg": 60.0,
-        "vitamin_e_reference_intake_percent": 500.0
-      },
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-23T20:32:00+00:00",
-      "operator_address": "Ctra. de La Carolina, 29 - 23220 Vilches (Jaén) - ESPAÑA",
-      "page_sha256": null,
-      "preparation_instructions": "Lugar fresco y seco",
-      "price_currency": "EUR",
-      "price_eur": 2.35,
-      "protein_g": 0.0,
-      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible, so price is an observed Carrefour value but is not asserted as live/current. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660349",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 13.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Preservar del calor y del exceso de luz.",
-      "sugars_g": 0.0,
-      "unit_price_text": "2,35 €/l"
-    },
-    {
-      "allergens": null,
-      "attributes": {
-        "packaging": "Botella cristal",
-        "product": "Vinagre balsámico",
-        "product_origin": "Italia",
-        "storage_mode": "Lugar fresco y seco",
-        "vinegar_characteristic": "Módena",
-        "vinegar_type": "Otros tipos de vinagre"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 82.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/vinagre-balsamico-de-modena-igp-carrefour-sensation-500-ml/R-520660378/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-10.0-indexed-vinegars",
-      "carbohydrate_g": 15.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 352.0,
-      "fat_g": 0.0,
-      "fiber_g": null,
-      "gtin": null,
-      "image_url": null,
-      "ingredients": "Vinagre de vino (contiene sulfitos), mosto de uva concentrado, acidez 6%",
-      "legal_name": "Vinagre balsámico de Módena",
-      "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros comerciales Carrefour España S.A.",
-      "name": "Vinagre balsámico de módena IGP Carrefour Sensation 500 ml.",
-      "net_content": "500 ml",
-      "nutriscore": "C",
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-23T19:18:00+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid Tfno.: 914 908 900",
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 2.54,
-      "protein_g": 0.7,
-      "provenance_note": "All populated fields were observed on an official Carrefour-controlled product page via indexed retrieval. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660378",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.07,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Conservar en lugar fresco y seco y protegido de la luz solar directa.",
-      "sugars_g": 15.0,
-      "unit_price_text": "5,08 €/l"
-    },
-    {
-      "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
-      "attributes": {
-        "packaging": "Botella PET",
-        "vinegar_type": "Vinagre de manzana"
-      },
-      "availability": null,
-      "brand": "CARREFOUR",
-      "calories_kcal": 20.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/vinagre-de-manzana-carrefour-classic-1-l/R-520660380/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-7.6-indexed",
-      "carbohydrate_g": 1.0,
-      "category_path": [
-        "Carrefour.es",
-        "Supermercado",
-        "La Despensa",
-        "Alimentación",
-        "Aceites y vinagres"
-      ],
-      "direct_page_observed": true,
-      "energy_kj": 87.0,
-      "fat_g": 0.0,
-      "fiber_g": null,
-      "gtin": null,
-      "image_url": null,
-      "ingredients": "Vinagre de manzana y antioxidante: Dióxido de azufre.",
-      "legal_name": "Vinagre de Manzana",
-      "mandatory_mentions": "Acidez 5º Logo punto verde",
-      "manufacturer_packer_importer": "Vinagrerias Riojanas S.A. para Centros comerciales Carrefour",
-      "name": "Vinagre de manzana Carrefour Classic 1 l.",
-      "net_content": "1000 ml",
-      "nutriscore": "A",
-      "nutrition_basis": "100 ml",
-      "nutrition_extra": {},
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-22T20:28:00+00:00",
-      "operator_address": "Avda. de la Transición Española, 36. 28018 Alcobendas - Madrid",
-      "preparation_instructions": null,
-      "price_currency": "EUR",
-      "price_eur": 0.9,
-      "protein_g": 0.0,
-      "provenance_note": "All populated fields were observed on official Carrefour-controlled product/category pages via indexed retrieval. Missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660380",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.0,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Conservar en un lugar fresco y seco, protegido de la luz solar directa.",
-      "sugars_g": 1.0,
-      "unit_price_text": "0,90 €/l"
-    },
-    {
-      "allergens": "Contiene: Dióxido de Azufre y Sulfitos",
-      "attributes": {
-        "food_origin": "Denominación de origen protegida Italia.",
-        "packaging": "Botella cristal",
-        "vinegar_type": "Balsámico"
-      },
-      "availability": "InStock",
-      "brand": "BORGES",
-      "calories_kcal": 111.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/vinagre-balsamico-de-modena-borges-250-ml/R-520660396/p",
-      "capture_method": "OPENAI_WEB_DIRECT_OFFICIAL_PAGE",
-      "capture_probe_version": "agent-web-direct-11.0-unverified-queue-beverages-vinegars",
-      "carbohydrate_g": 22.0,
-      "category_path": null,
-      "direct_page_observed": true,
-      "energy_kj": 471.0,
-      "fat_g": 0.0,
-      "fetch_error": null,
-      "gtin": null,
-      "http_status": null,
-      "image_url": null,
-      "ingredients": "Vinagre de vino, mosto de uva cocido, colorante E-150d. Contiene sulfitos.",
-      "legal_name": "Vinagre Balsámico de Módena.",
-      "manufacturer_packer_importer": "Borges Branded Foods S.L.U.",
-      "name": "Vinagre balsámico de módena Borges 250 ml.",
-      "net_content": "250 ml",
-      "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-23T21:10:00+00:00",
-      "operator_address": "Avda. Josep Trepat, 38 25300 Tàrrega (Lleida)",
-      "page_sha256": null,
-      "price_currency": "EUR",
-      "price_eur": 2.45,
-      "protein_g": 0.7,
-      "provenance_note": "All populated fields were observed directly on the official Carrefour product page via indexed retrieval. Indexed crawl lag is possible; missing fields are not inferred or filled from external sources.",
-      "retailer": "CARREFOUR",
-      "retailer_sku": "520660396",
-      "retrieval_freshness": "INDEXED_OFFICIAL_PAGE_CRAWL_LAG_POSSIBLE",
-      "salt_g": 0.05,
-      "saturates_g": 0.0,
-      "source": "CARREFOUR_FIRST_PARTY",
-      "source_host": "www.carrefour.es",
-      "storage_conditions": "Conservar a temperatura ambiente. Almacenar en un lugar fresco y seco, lejos de la luz solar.",
-      "sugars_g": 22.0,
-      "unit_price_text": "9,80 €/l"
     }
   ],
-  "source": "CARREFOUR_OFFICIAL_HOSTS",
-  "source_hosts": [
-    "https://www.carrefour.es",
-    "https://actforfood.carrefour.es"
-  ],
-  "source_policy": "FIRST_PARTY_CARREFOUR_ONLY"
+  "notes": [
+    "Only direct carrefour.es observations are counted as Carrefour evidence.",
+    "Third-party datasets may seed product URLs but are never copied into this cumulative first-party dataset.",
+    "Category-listing identities are retained even when product detail retrieval is blocked.",
+    "Field evidence is append-only by observation timestamp; newer sparse pages do not erase older direct observations.",
+    "No Rumbo nutritional or culinary classification is performed here."
+  ]
 }
