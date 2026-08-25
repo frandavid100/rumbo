@@ -8,6 +8,8 @@ on:
       - 'tools/catalog/carrefour_first_party_inventory.py'
       - 'tools/catalog/carrefour_first_party_browser_inventory.py'
       - 'tools/catalog/carrefour_first_party_category_frontier.py'
+      - 'tools/catalog/augment_carrefour_first_party_from_network.py'
+      - 'tools/catalog/carrefour_first_party_analytics_inventory.py'
       - 'tools/catalog/merge_carrefour_first_party_cumulative.py'
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
       - 'tools/catalog/extract_carrefour_public_gtin.py'
@@ -78,6 +80,10 @@ jobs:
             --max-products 60 \
             --rotate \
             "${EXTRA[@]}"
+          # Successful PDP loads expose additional first-party IDs (including EAN) through the
+          # page's own analytics response. Merge only complete HTTP-200 JSON captured in that same
+          # browser session; keep it OBSERVED_PRODUCT_ANALYTICS rather than manufacturer DECLARED.
+          python augment_carrefour_first_party_from_network.py carrefour-first-party-fresh-inventory
           python extract_carrefour_public_gtin.py carrefour-first-party-fresh-inventory
           python sanitize_carrefour_first_party_output.py carrefour-first-party-fresh-inventory
       - name: Validate and persist successful first-party observations
@@ -98,6 +104,14 @@ jobs:
           fixtures.mkdir(parents=True, exist_ok=True)
           (fixtures/'carrefour_first_party_fresh_inventory_latest.json').write_text(
               json.dumps(d, ensure_ascii=False, indent=2), encoding='utf-8')
+
+          augmentation=out/'analytics_network_augmentation_summary.json'
+          if augmentation.exists():
+              ad=json.loads(augmentation.read_text(encoding='utf-8'))
+              if ad.get('source_policy') != 'FIRST_PARTY_CARREFOUR_ONLY' or ad.get('classification_performed') is not False:
+                  raise SystemExit('bad analytics network augmentation provenance')
+              (fixtures/'carrefour_first_party_analytics_network_latest_summary.json').write_text(
+                  json.dumps(ad, ensure_ascii=False, indent=2), encoding='utf-8')
 
           frontier=pathlib.Path('tools/catalog/carrefour-first-party-category-frontier')
           frontier_summary=frontier/'summary.json'
@@ -131,6 +145,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             tools/catalog/fixtures/carrefour_first_party_fresh_inventory_latest.json \
+            tools/catalog/fixtures/carrefour_first_party_analytics_network_latest_summary.json \
             tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_summary.json \
             tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_audit.jsonl \
             tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl \
@@ -154,4 +169,4 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-# Lossless cumulative Carrefour first-party refresh marker: 2026-08-25T06:06Z.
+# Lossless cumulative Carrefour first-party refresh marker: 2026-08-25T06:15Z.
