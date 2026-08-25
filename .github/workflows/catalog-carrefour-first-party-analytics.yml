@@ -7,6 +7,7 @@ on:
       - '.github/workflows/catalog-carrefour-first-party-analytics.yml'
       - 'tools/catalog/carrefour_first_party_analytics_inventory.py'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl'
   workflow_dispatch:
 
@@ -31,18 +32,21 @@ jobs:
       - name: Query Carrefour public product analytics endpoint conservatively
         working-directory: tools/catalog
         run: |
-          SEEDS=(--seed-jsonl fixtures/carrefour_candidate_urls_radarsuper.jsonl)
+          SEEDS=(--seed-jsonl fixtures/carrefour_first_party_products_cumulative.jsonl)
           if test -s fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl; then
             SEEDS+=(--seed-jsonl fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl)
           fi
+          if test -s fixtures/carrefour_candidate_urls_radarsuper.jsonl; then
+            SEEDS+=(--seed-jsonl fixtures/carrefour_candidate_urls_radarsuper.jsonl)
+          fi
           python carrefour_first_party_analytics_inventory.py \
+            --sku 641402048 \
             "${SEEDS[@]}" \
             --out carrefour-first-party-analytics \
-            --max-products 80 \
+            --max-products 20 \
             --delay 1.5 \
             --timeout 20 \
-            --stop-after-blocks 3 \
-            --rotate
+            --stop-after-blocks 3
       - name: Validate provenance and persist observations
         if: always()
         run: |
@@ -69,7 +73,7 @@ jobs:
               if p.exists():
                   (fixtures/target_name).write_text(p.read_text(encoding='utf-8'),encoding='utf-8')
           if int(d.get('counts',{}).get('matched',0) or 0) < 1:
-              raise SystemExit('Carrefour product analytics endpoint yielded no matching product observation')
+              raise SystemExit('Carrefour product analytics endpoint yielded no matching product observation, including known-valid SKU 641402048')
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
