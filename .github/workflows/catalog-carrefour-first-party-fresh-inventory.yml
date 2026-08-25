@@ -8,6 +8,7 @@ on:
       - 'tools/catalog/carrefour_first_party_inventory.py'
       - 'tools/catalog/carrefour_first_party_browser_inventory.py'
       - 'tools/catalog/carrefour_first_party_category_frontier.py'
+      - 'tools/catalog/merge_carrefour_first_party_cumulative.py'
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
   workflow_dispatch:
@@ -113,32 +114,17 @@ jobs:
                   src=frontier/src_name
                   if src.exists():
                       (fixtures/dst_name).write_text(src.read_text(encoding='utf-8'),encoding='utf-8')
-
-          def read_jsonl(path):
-              rows=[]
-              if path.exists():
-                  for line in path.read_text(encoding='utf-8').splitlines():
-                      try: rows.append(json.loads(line))
-                      except Exception: pass
-              return rows
-          products_path=fixtures/'carrefour_first_party_products_cumulative.jsonl'
-          products={r.get('retailer_sku'):r for r in read_jsonl(products_path) if r.get('retailer_sku')}
-          for r in read_jsonl(out/'products.jsonl'):
-              if r.get('retailer_sku') and not r.get('fetch_error'):
-                  products[r['retailer_sku']]=r
-          products_path.write_text(''.join(json.dumps(products[k],ensure_ascii=False)+'\n' for k in sorted(products)),encoding='utf-8')
-          evidence_path=fixtures/'carrefour_first_party_field_evidence_cumulative.jsonl'
-          evidence={}
-          for e in read_jsonl(evidence_path)+read_jsonl(out/'field_evidence.jsonl'):
-              key=(e.get('retailer_sku'),e.get('field'),e.get('source'),e.get('source_url'))
-              if all(key): evidence[key]=e
-          evidence_path.write_text(''.join(json.dumps(evidence[k],ensure_ascii=False)+'\n' for k in sorted(evidence)),encoding='utf-8')
-          print(json.dumps(d.get('counts',{}),ensure_ascii=False,indent=2))
-          print('cumulative products',len(products),'evidence',len(evidence))
           PY
           # The validated-probe step intentionally patches this tracked script only for this run.
-          # Restore it before rebasing so the persistence commit contains data only.
+          # Restore it before persisting so the data commit contains observations only.
           git restore tools/catalog/carrefour_first_party_browser_inventory.py
+          cd tools/catalog
+          python merge_carrefour_first_party_cumulative.py \
+            --fixtures fixtures \
+            --fresh carrefour-first-party-fresh-inventory \
+            --frontier carrefour-first-party-category-frontier \
+            --sqlite carrefour-first-party-cumulative/carrefour_first_party.sqlite
+          cd ../..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
@@ -147,7 +133,8 @@ jobs:
             tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_audit.jsonl \
             tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl \
             tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl \
-            tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl
+            tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl \
+            tools/catalog/fixtures/carrefour_first_party_cumulative_summary.json
           if ! git diff --cached --quiet; then
             git commit -m "catalog: persist fresh Carrefour first-party inventory"
             git pull --rebase origin agent/catalog-phase1
@@ -161,7 +148,8 @@ jobs:
           path: |
             tools/catalog/carrefour-first-party-fresh-inventory/
             tools/catalog/carrefour-first-party-category-frontier/
+            tools/catalog/carrefour-first-party-cumulative/
           retention-days: 7
           if-no-files-found: warn
 
-# Safe browser category-frontier refresh marker: 2026-08-25T03:25Z.
+# Lossless cumulative Carrefour first-party refresh marker: 2026-08-25T05:25Z.
