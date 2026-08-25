@@ -3,85 +3,86 @@
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "source": "https://www.carrefour.es",
   "extractor_version": "carrefour-first-party-browser-inventory-1.0",
-  "built_at": "2026-08-20T08:59:47.672794+00:00",
+  "built_at": "2026-08-25T03:17:29.915061+00:00",
   "classification_performed": "false",
   "counts": {
-    "candidate_urls": 8,
-    "attempted": 2,
-    "fetched": 0,
+    "candidate_urls": 16,
+    "attempted": 3,
+    "fetched": 1,
     "blocked": 2,
     "fetch_errors": 2,
-    "nutrition_complete": 0,
+    "nutrition_complete": 1,
     "nutrition_partial": 0,
     "nutrition_not_found": 0,
-    "evidence_rows": 0,
-    "network_responses": 13,
-    "json_xhr_fetch_responses": 0
+    "evidence_rows": 29,
+    "network_responses": 71,
+    "json_xhr_fetch_responses": 8,
+    "nutrition_extra_products": 0
   },
   "coverage": {
     "gtin": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "name": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "brand": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "image_url": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "category_path": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "price_eur": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "unit_price_text": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "availability": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "legal_name": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "ingredients": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "allergens": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "net_content": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "storage_conditions": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "preparation_instructions": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "operator_address": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "manufacturer_packer_importer": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "mandatory_mentions": {
       "count": 0,
@@ -92,50 +93,220 @@
       "pct": 0.0
     },
     "attributes": {
+      "count": 1,
+      "pct": 33.33
+    },
+    "nutrition_extra": {
       "count": 0,
       "pct": 0.0
     }
   },
   "nutrition_field_coverage": {
     "energy_kj": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "calories_kcal": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "fat_g": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "saturates_g": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "carbohydrate_g": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "sugars_g": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "fiber_g": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "protein_g": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     },
     "salt_g": {
-      "count": 0,
-      "pct": 0.0
+      "count": 1,
+      "pct": 33.33
     }
   },
-  "network_json_candidates": [],
-  "sample": [],
+  "network_json_candidates": [
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://www.carrefour.es/cloud-api/footer-papi/footer",
+      "status": 200,
+      "resource_type": "xhr",
+      "content_type": "application/json",
+      "body_bytes": 13021,
+      "json_keys": [
+        "arrayColumns",
+        "footerLeft",
+        "footerRight"
+      ],
+      "body_sample": "{\"arrayColumns\":[[{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Carrefour en España\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/trabaja-en-carrefour/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Trabaja con nosotros\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.pass.carrefour.es/solicitar-tarjeta\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Tarjeta ClubPASS\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour/franquicias\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Abre tu franquicia\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/clubcarrefour\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Club Carrefour\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour/compromisos-de-carrefour/compromisos-economicos\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Nuestros compromisos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour/las-marcas-carrefour\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Nuestras marcas\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/tenemos-para-ti/act-for-food.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Act for Food\"},{\"bu\":\"corp-empresa\",\"href\":\"https://seguros.carrefour.es/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Seguros Carrefour\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.viajes.carrefour.es/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Viajes Carrefour\"},{\"bu\":\"corp-empresa\",\"href\":\"https://links.carrefour.com\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Carrefour Links\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/sostenibilidad/mas-info/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Sostenibilidad\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour/nuestros-premios\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Premios y reconocimientos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones/formulario-derechos-privacidad.e\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Derechos de protección de datos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/sistema-interno-de-informacion/mas-info\",\"rel\":\"nofollow\",\"style\":\"color:blue\",\"title\":\"Línea de Ética y Cumplimiento Normativo\"}],\"title\":\"Grupo Carrefour\"}],[{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/contacta-con-nosotros.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Contacto\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/preguntas-frecuentes/mas-info/\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Preguntas frecuentes\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/solicitud-facturas-cliente/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Facturas\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/mapa-web/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Mapa Web\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones/suscripcion-newletters-comunicaciones.e\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Suscríbete a nuestras newsletters\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/seguridad.e\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Alerta de seguridad\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/aviso-legal/mas-info/#seccion7\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Quejas, Reclamaciones y Denuncia de Contenidos Ilícitos de Terceros\"}],\"title\":\"Atención al cliente\"},{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/tiendas-carrefour/buscador-de-tiendas/\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Localiza tu tienda\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/supermercado-cerca-de-mi.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Supermercados cerca de ti\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/tiendas-carrefour/buscador-de-tiendas/?category=cb1\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Hipermercados\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/tiendas-carrefour/buscador-de-tiendas/?category=cb2\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Carrefour Market\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/tiendas-carrefour/buscador-de-tiendas/?category=cb3\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Carrefour Express\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/folletos.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Folletos\"}],\"title\":\"Tiendas\"},{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/empresas/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Contacta con nosotros\"}],\"title\":\"Carrefour Empresas\"}],[{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/quienes-somos/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Quiénes somos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/entrega-recogida-pedidos.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Entrega y recogida de pedidos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/servicios/drive.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Carrefour Drive\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/click-and-collect.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Click\\u0026Collect\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/contact?type=orders\\u0026ic_source=portal-y-corporativo\\u0026ic_medium=footer-links\\u0026ic_campaign=%28not+set%29\\u0026ic_content=ns\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Estado del pedido\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/devoluciones.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Devoluciones\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/servicios/garantia-de-frescura.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Garantía de frescura\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/marketplace-carrefour.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Vender en Marketplace\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones/marketplace.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Productos vendidos por terceros\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones/outlet-info.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Outlet\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/campanas/calendario-promocional.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Calendario promocional\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/blog.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Consejos, ideas y trucos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/recetas.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Nuestras recetas\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones-generales-de-compra/mas-info/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Condiciones de compra\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/instalacion-y-puesta-en-marcha.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Instalación electrodomésticos\"},{\"bu\":\"language\",\"href\":\"\",\"rel\":\"\",\"style\":\"\",\"title\":\"Idioma\"}],\"title\":\"Carrefour.es\"}],[{\"arrayLinks\":[{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/supermercado/ofertas/cat20968591/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Ofertas supermercado online\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/supermercado/condiciones/cupon-bienvenida.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Cupón descuento súper online\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/supermercado/ofertas/precios-imbatibles.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Precios Imbatibles\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/campanas/vive-el-mundial-2026-con-las-mejores-ofertas.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Vive el Mundial 2026\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/electrodomesticos/climatizacion/aire-acondicionado/aire-acondicionado-split/cat22713285/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Aire acondicionado split \"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/electrodomesticos/climatizacion/aire-acondicionado/aire-acondicionado-portatil/cat22713299/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Aire acondicionado portátil\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/electrodomesticos/climatizacion/aire-acondicionado/con-instalacion-basica-incluida/cat19965434/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Aire acondicionado con instalación básica incluida\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/electrodomesticos/climatizacion/ventiladores/cat1973116/c\",\"rel\":\"\",\"style\":\"\",\"title\":\"Ventiladores\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/jardin-y-terraza/muebles-de-jardin/conjuntos-de-jardin/cat10280003/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Conjuntos de jardín\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/jardin-y-terraza/muebles-de-jardin/cat2440002/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Muebles de jardín \"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/jardin-y-terraza/piscinas/cat2450018/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Piscinas\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/bebe\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Envío gratis bebé desde 29€\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/bebe-y-mama/sillas-de-coche/sillas-de-coche-para-bebe/cat1861416/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Sillas de coche bebé\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/bebe-y-mama/paseo-del-bebe/carritos-de-bebe-2-y-3-piezas/cat8520030/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Carritos bebé\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/stock-fuera\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Stock fuera -40% descuento\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/exclusivos-online/cat28650681/c\",\"rel\":\"\",\"style\":\"\",\"title\":\"Ofertas Exclusivas Online\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/moviles-foto/smartphones/cat32745043/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Móviles y smartphones\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/gaming/consolas-ps5/F-13riiZ1pt4/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"PlayStation 5\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/moviles-foto/espacio-apple/iphone-17/cat32793297/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"iPhone 17\"}],\"title\":\"Ofertas y campañas\"}],[{\"arrayLinks\":[{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/maxima-seguridad-en-tus-compras.e\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Máxima seguridad en tus compras\"},{\"bu\":\"others\",\"href\":\"https://www.confianzaonline.es/empresas/carrefour.htm\",\"images\":[{\"bu\":\"others\",\"href\":\"https://www.confianzaonline.es/empresas/carrefour.htm\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/confianza-online.png\",\"title\":\"Confianza online\",\"type\":\"(not set)\"}],\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Confianza online\"},{\"bu\":\"others\",\"href\":\"https://www.adigital.org/asociados/carrefour-online\",\"images\":[{\"bu\":\"others\",\"href\":\"https://www.adigital.org/asociados/carrefour-online\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/adigital_logo.png\",\"title\":\"ADigital\",\"type\":\"(not set)\"}],\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"ADigital\"},{\"bu\":\"others\",\"href\":\"https://www.carrefour.es/litigios-union-europea.e\",\"images\":[{\"bu\":\"others\",\"href\":\"https://www.carrefour.es/litigios-union-europea.e\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/com_eur.png\",\"title\":\"Litigios de la Unión Europea\",\"type\":\"(not set)\"}],\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Litigios de la Unión Europea\"}],\"title\":\"Garantía de Carrefour\"},{\"arrayLinks\":[{\"bu\":\"others\",\"href\":\"\",\"images\":[{\"bu\":\"others\",\"href\":\"\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/metodos-pago.png\",\"title\":\"Métodos de pago\",\"type\":\"(not set)\"}],\"rel\":\"\",\"style\":\"\",\"title\":\"Métodos de pago\"}],\"title\":\"Métodos de pago\"},{\"arrayLinks\":[{\"bu\":\"others\",\"href\":\"\",\"images\":[{\"bu\":\"others\",\"href\":\"\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/premios-menciones.png\",\"title\":\"Premios y reconocimientos\",\"type\":\"(not set)\"}],\"rel\":\"\",\"style\":\"\",\"title\":\"Premios y reconocimientos\"}],\"title\":\"Premios y reconocimientos\"},{\"arrayLinks\":[{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/investigacion-desarrollo-innovacion/mas-info/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Investigación, desarrollo e innovación\"}],\"title\":\"I+D+i\"}]],\"footerLeft\":[{\"bu\":\"corp-empresa\",\"href\":\"https"
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://www.carrefour.es/cloud-api/delivery-manager/v1/home-first-delivery-day?postalCode=28232&sortBy=distance",
+      "status": 200,
+      "resource_type": "xhr",
+      "content_type": "application/json; charset=UTF-8",
+      "body_bytes": 125,
+      "json_keys": [
+        "date",
+        "endHour",
+        "postalCode",
+        "startHour",
+        "timeSlotDescription"
+      ],
+      "body_sample": "{\"timeSlotDescription\":\"Hoy, 25 AGO, 18-19h\",\"postalCode\":\"28232\",\"startHour\":\"18:00\",\"endHour\":\"19:00\",\"date\":\"2026-08-25\"}\n"
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://www.carrefour.es/cloud-api/salepoints/v1/",
+      "status": 200,
+      "resource_type": "xhr",
+      "content_type": "application/json",
+      "body_bytes": 301,
+      "json_keys": [
+        "allow_substitutions",
+        "chronos",
+        "delivery_type",
+        "is_sell_pack_enabled",
+        "marketpay",
+        "name",
+        "nektriaWarehouseId",
+        "postal_code",
+        "projection_days",
+        "region_id",
+        "sale_point",
+        "werks_id"
+      ],
+      "body_sample": "{\"allow_substitutions\":true,\"chronos\":true,\"delivery_type\":\"A_DOMICILIO\",\"is_sell_pack_enabled\":true,\"marketpay\":true,\"name\":\"COL PINAR\",\"nektriaWarehouseId\":\"e5069f93-bded-4904-b554-453e37c8075a\",\"postal_code\":\"28232\",\"projection_days\":\"0\",\"region_id\":\"5289\",\"sale_point\":\"005290\",\"werks_id\":\"0731\"}\n"
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://www.carrefour.es/cloud-api/pdp-food-analytics/v1/impressions?product_id=R-VC4AECOMM-517695&referer=",
+      "status": 200,
+      "resource_type": "xhr",
+      "content_type": "application/json",
+      "body_bytes": 409,
+      "json_keys": [
+        "impressions"
+      ],
+      "body_sample": "{\"impressions\":[{\"currency\":\"EUR\",\"index\":1,\"item_brand\":\"carrefour\",\"item_category\":\"14000\",\"item_ean\":[\"8431876353976\"],\"item_id\":\"517695\",\"item_internal_id\":\"VC4AECOMM-517695\",\"item_list_name\":\"product-direct\",\"item_name\":\"biscottes-classic-carrefour-540-g\",\"item_provider\":\"carrefour\",\"item_provider_type\":\"carrefour\",\"item_shipping\":\"home_delivery|drive\",\"item_sms\":\"517695\",\"price\":1.67,\"quantity\":1}]}\n"
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IOFfdjCFpeCZBLftba0TgChLQf",
+      "status": 403,
+      "resource_type": "xhr",
+      "content_type": "application/json",
+      "body_bytes": 68,
+      "json_keys": [
+        "code",
+        "message"
+      ],
+      "body_sample": "{\"code\":403,\"message\":\"forbidden customer login status: anonymous\"}\n"
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/5176950000.json?u=6BCD57A2-DA6A-474E-8E1B-FBA4C81EB203&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=5176950000&s=1787627813517&v=v1.0.564&visitid=DD3BCF8C-491D-41D1-8192-EE02A5AC6FC3&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fbiscottes-classic-carrefour-540-g%2FR-VC4AECOMM-517695%2Fp",
+      "status": 200,
+      "resource_type": "fetch",
+      "content_type": "application/json",
+      "body_bytes": 2,
+      "json_keys": [],
+      "body_sample": "{}"
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://clientes-carrefour.my.salesforce-scrt.com/embeddedservice/v1/businesshours?orgId=00D20000000pFOG&esConfigName=MessagingForWeb_ATC_Carrefour",
+      "status": 204,
+      "resource_type": "xhr",
+      "content_type": "application/json;charset=utf-8",
+      "body_bytes": 0,
+      "body_sample": ""
+    },
+    {
+      "retailer_sku": "VC4AECOMM-517695",
+      "url": "https://clientes-carrefour.my.salesforce-scrt.com/embeddedservice/v1/embedded-service-config?orgId=00D20000000pFOG&esConfigName=MessagingForWeb_ATC_Carrefour&language=es",
+      "status": 200,
+      "resource_type": "xhr",
+      "content_type": "application/json;charset=utf-8",
+      "body_bytes": 29665,
+      "json_keys": [
+        "embeddedServiceConfig",
+        "standardLabels",
+        "timestamp"
+      ],
+      "body_sample": "{\"embeddedServiceConfig\":{\"siteUrl\":\"https://clientes-carrefour.my.site.com/ESWMessagingForWebATCCa1712658191918\",\"attachments\":{\"isFileTransferRepInitiated\":false,\"endUserToAgent\":true,\"maxFileSize\":5242880,\"allowedFileTypes\":{\"image\":[\"jpg\",\"tiff\",\"bmp\",\"gif\",\"png\"],\"other\":[\"xlsx\",\"pdf\",\"xml\",\"doc\",\"xls\",\"docx\"],\"audio\":[],\"video\":[],\"text\":[\"txt\",\"csv\"]}},\"fallbackMessage\":{\"isFallbackMessageEnabled\":false},\"branding\":[{\"n\":\"baseFontSize\",\"v\":\"Medium\"},{\"n\":\"chatButton\",\"v\":\"#0970E6\"},{\"n\":\"headerAlternateColor\",\"v\":\"#C23934\"},{\"n\":\"avatarImage\",\"v\":\"https://assets.app.smart-tribune.com/carrefour/images/search-group-icon.png\"},{\"n\":\"agentMessageLink\",\"v\":\"#0B5CAB\"},{\"n\":\"headerColor\",\"v\":\"#1A1B1E\"},{\"n\":\"headerForeground\",\"v\":\"#FFFFFF\"},{\"n\":\"height\",\"v\":\"561\"},{\"n\":\"userMessageBackground\",\"v\":\"#0970E6\"},{\"n\":\"width\",\"v\":\"374\"},{\"n\":\"primaryButtonText\",\"v\":\"#FFFFFF\"},{\"n\":\"primaryText\",\"v\":\"#333333\"},{\"n\":\"alert\",\"v\":\"#D72E2D\"},{\"n\":\"userMessageText\",\"v\":\"#FFFFFF\"},{\"n\":\"secondaryColor\",\"v\":\"#005290\"},{\"n\":\"citationsBackground\",\"v\":\"#FFFFFF\"},{\"n\":\"headerBackground\",\"v\":\"#0970E6\"},{\"n\":\"userMessageLink\",\"v\":\"#FFFFFF\"},{\"n\":\"inputOutline\",\"v\":\"#C9C9C9\"},{\"n\":\"secondaryText\",\"v\":\"#5C5C5C\"},{\"n\":\"logoImage\",\"v\":\"https://assets.app.smart-tribune.com/carrefour/images/push_open-picto.png\"},{\"n\":\"contrastPrimaryColor\",\"v\":\"#333333\"},{\"n\":\"invitationText\",\"v\":\"#FFFFFF\"},{\"n\":\"agentMessageText\",\"v\":\"#2E2E2E\"},{\"n\":\"inputFooterButton\",\"v\":\"#005290\"},{\"n\":\"invitationDismissalButton\",\"v\":\"#AEAEAE\"},{\"n\":\"citationsText\",\"v\":\"#181818\"},{\"n\":\"botImage\",\"v\":\"https://assets.app.smart-tribune.com/carrefour/images/push_open-picto.png\"},{\"n\":\"primaryColor\",\"v\":\"#1A1B1E\"},{\"n\":\"primaryButtonBackground\",\"v\":\"#0970E6\"},{\"n\":\"font\",\"v\":\"Arial\"},{\"n\":\"headerTextColor\",\"v\":\"#FFFFFF\"},{\"n\":\"agentMessageBackground\",\"v\":\"#F3F3F3\"},{\"n\":\"fabImage\",\"v\":\"https://assets.app.smart-tribune.com/carrefour/images/push_open-picto.png\"},{\"n\":\"conversationBodyBackground\",\"v\":\"#FFFFFF\"}],\"customLabels\":[{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"DefaultHeaderText\",\"labelValue\":\"¿Podemos ayudarte?\"}],\"embeddedServiceMessagingChannel\":{\"authMode\":\"UnAuth\",\"channelAddressIdentifier\":\"3e707698-3669-4fe3-aaa4-10228d9dc2ce\",\"showTypingIndicators\":false,\"startNewLineOnEnter\":false,\"showDeliveryReceipts\":false,\"esClientVersion\":\"WebV1\",\"showAgentforceTagline\":false,\"showReadReceipts\":false,\"showEmojiSelection\":false},\"termsAndConditions\":{\"isTermsAndConditionsEnabled\":false},\"deploymentType\":\"Web\",\"site\":\"ESW_MessagingForWeb_ATC_Ca_17126581919181\",\"htmlDirection\":\"LTR\",\"transcript\":{\"allowTranscriptDownload\":false},\"name\":\"MessagingForWeb_ATC_Carrefour\",\"forms\":[],\"choiceListConfig\":{\"choiceList\":[],\"choiceListValueDependencies\":[]},\"messagingChannel\":{\"isAgentAvailabilityCheckEnabled\":false,\"isVoiceRecordingEnabled\":false,\"isVoiceModeEnabled\":false,\"supportedModes\":[\"Messaging\"],\"isFeedbackEnabled\":false}},\"standardLabels\":[{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"DefaultHeaderText\",\"labelValue\":\"Chat\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"Minimize\",\"labelValue\":\"Minimizar ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"Close\",\"labelValue\":\"Cerrar ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"DefaultMinimizedText\",\"labelValue\":\"Hola, ¿tiene alguna pregunta? Chateemos.\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MinimizedButtonAssistiveText\",\"labelValue\":\"Ampliar la ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MinimizedNotificationDismissButtonAssistiveText\",\"labelValue\":\"Cerrar la notificación de chat\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"HeaderGreetingAnnouncement\",\"labelValue\":\"Hola, pregúnteme cualquier cosa.\"},{\"sectionName\":\"EmbeddedMessagingUnseenMessageNotification\",\"labelName\":\"NinePlusUnseenMessageCount\",\"labelValue\":\"9+\"},{\"sectionName\":\"EmbeddedMessagingUnseenMessageNotification\",\"labelName\":\"ZeroUnseenMessagesAssistiveText\",\"labelValue\":\"Desplace los mensajes más recientes en vista\"},{\"sectionName\":\"EmbeddedMessagingUnseenMessageNotification\",\"labelName\":\"UnseenMessagesAssistiveText\",\"labelValue\":\"Desplace los mensajes más recientes en vista ({0} no leído).\"},{\"sectionName\":\"EmbeddedMessagingUnseenMessageNotification\",\"labelName\":\"NinePlusUnseenMessagesAssistiveText\",\"labelValue\":\"Desplace los mensajes más recientes en vista (9+ no leído).\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterTextAreaPlaceHolder\",\"labelValue\":\"Escriba su mensaje...\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"StartBookendText\",\"labelValue\":\"Hoy\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ParticipantJoinText\",\"labelValue\":\"{0} se unió\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ParticipantLeaveText\",\"labelValue\":\"{0} salió\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterSendButtonAssistiveText\",\"labelValue\":\"Enviar mensaje\"},{\"sectionName\":\"EmbeddedMessagingPrechat\",\"labelName\":\"PrechatStateSubmitButton\",\"labelValue\":\"Iniciar conversación\"},{\"sectionName\":\"EmbeddedMessagingPrechat\",\"labelName\":\"InvalidEmailFormFieldError\",\"labelValue\":\"Utilice un formato de correo electrónico válido.\"},{\"sectionName\":\"EmbeddedMessagingPrechat\",\"labelName\":\"RequiredFormFieldError\",\"labelValue\":\"Este campo es obligatorio.\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"NotificationDismissButtonText\",\"labelValue\":\"Lo entiendo\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"ConversationEndedMinimizedText\",\"labelValue\":\"Sesión de chat finalizada\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ExpiredJWT\",\"labelValue\":\"Esta conversación finalizó. Cierre la ventana de chat e inicie una nueva.\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"FileSendingText\",\"labelValue\":\"Enviando archivo...\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"DownloadFileButtonTitle\",\"labelValue\":\"Descargar archivo\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"SelectFileAttachmentButtonTitle\",\"labelValue\":\"Adjuntar archivo\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"DownloadFileButtonAssistiveText\",\"labelValue\":\"Icono de flecha de descarga\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"SelectFileAttachmentButtonAssistiveText\",\"labelValue\":\"Icono para adjuntar\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"Sent\",\"labelValue\":\"Enviado\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"Delivered\",\"labelValue\":\"Entregado\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"Read\",\"labelValue\":\"Leído\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ChoicesMenuMessageAssistiveText\",\"labelValue\":\"Seleccionar un elemento de menú\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ChoicesSelectionResponsePlaceholderText\",\"labelValue\":\"Marcador de posición\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ChoicesButtonsMessageAssistiveText\",\"labelValue\":\"Seleccionar una respuesta rápida\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"TransferRequestSuccessHeaderAnnouncement\",\"labelValue\":\"Transfiriendo...\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"TransferRequestFailureHeaderAnnouncement\",\"labelValue\":\"Transferencia cancelada\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"TransferRequestSuccessSystemMessage\",\"labelValue\":\"Transferencia solicitada a las\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"TransferRequestFailureSystemMessage\",\"labelValue\":\"Solicitud de transferencia fallida a las\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"TransferRequestTryAgainSystemMessage\",\"labelValue\":\"Espere e inténtelo más tarde.\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"AgentTypingIndicator\",\"labelValue\":\"{0} está escribiendo...\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ChatbotTypingIndicator\",\"labelValue\":\"Pensando\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterTextAreaPlaceholderEndUserOnlyParticipant\",\"labelValue\":\"Iniciar a nueva sesión de chat...\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"AgentJoinAnnouncement\",\"labelValue\":\"Nuevo participante\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"AgentLeaveAnnouncement\",\"labelValue\":\"El participante se fue\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"JWTExpiredAnnouncement\",\"labelValue\":\"Conversación finalizada\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"ParticipantJoinedText\",\"labelValue\":\"El participante se unió\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"ParticipantLeftText\",\"labelValue\":\"El participante se fue\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"NewMessageText\",\"labelValue\":\"Nuevo mensaje\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MultipleNewMessagesText\",\"labelValue\":\"Nuevos mensajes\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"JwtExpiredText\",\"labelValue\":\"La sesión finalizó. Inicie una nueva sesión de chat...\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"TransferInitiatedText\",\"labelValue\":\"Transferencia solicitada\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"TransferFailedText\",\"labelValue\":\"Transferencia cancelada\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"NotSent\",\"labelValue\":\"No enviado\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"SpinnerDefaultAssistiveText\",\"labelValue\":\"Cargando...\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"FetchMoreEntriesSpinnerAssistiveText\",\"labelValue\":\"Cargando nuevos mensajes...\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"MinimizeButtonAssistiveText\",\"labelValue\":\"Minimizar ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"CloseButtonAssistiveText\",\"labelValue\":\"Cerrar la ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MinimizedNotificationAssistiveText\",\"labelValue\":\"Ampliar el texto\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MinimizedStateAssistiveText\",\"labelValue\":\"Ampliar la ventana de mensaje\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"NotRoutedToAgentRoutingResult\",\"labelValue\":\"Los agentes no están disponibles. Inténtelo de nuevo más tarde.\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"TitleNotificationSenderDisplayName\",\"labelValue\":\"{0} dice…\"},{\"sectionName\":\"EmbeddedMessagingIframesAndContents\",\"labelName\":\"MessagingIframeTitle\",\"labelValue\":\"Sesión de chat con un agente\"},{\"sectionName\":\"EmbeddedMessagingIframesAndContents\",\"labelName\":\"FilePreviewIframeTitle\",\"labelValue\":\"Vista previa de imagen ampliada\"},{\"sectionName\":\"EmbeddedMessagingIframesAndContents\",\"labelName\":\"FilePreviewIframeCloseButtonTitle\",\"labelValue\":\"Cerrar ventana\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"MessageResendButtonText\",\"labelValue\":\"Volver a enviar\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"EstimatedWaitTimeInMinute\",\"labelValue\":\"Estamos conectándole con un agente. Su tiempo de espera estimado es de {0} minuto.\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"EstimatedWaitTimeInMinutes\",\"labelValue\":\"Estamos conectándole con un agente. Su tiempo de espera estimado es de {0} minutos.\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterEmojiButtonAssistiveText\",\"labelValue\":\"Insertar emoji\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterEmojiKeyboardAssistiveText\",\"labelValue\":\"Teclado de emojis\"},{\"sectionName\":\"Em"
+    }
+  ],
+  "sample": [
+    {
+      "retailer": "CARREFOUR",
+      "retailer_sku": "VC4AECOMM-517695",
+      "canonical_url": "https://www.carrefour.es/supermercado/biscottes-classic-carrefour-540-g/R-VC4AECOMM-517695/p",
+      "observed_at": "2026-08-25T03:16:55.231453+00:00",
+      "source": "CARREFOUR_FIRST_PARTY",
+      "http_status": 200,
+      "page_sha256": "a5b7de01c355f63518bfe3d7895299c210856014fa37e0ad7915d401e7dc222c",
+      "fetch_error": null,
+      "name": "Biscottes Classic Carrefour 540 g.",
+      "brand": "CARREFOUR",
+      "gtin": "8431876353976",
+      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/517695_00_1.jpg",
+      "category_path": [
+        "Inicio",
+        "Supermercado",
+        "La Despensa",
+        "Panaderia, Bollería y Pastelería",
+        "Pan tostado, Biscottes y Barritas"
+      ],
+      "price_eur": 1.67,
+      "price_currency": "EUR",
+      "unit_price_text": "3,09 €/kg",
+      "availability": "InStock",
+      "legal_name": "Biscote",
+      "ingredients": "Harina de trigo (85%), azúcar, aceite de girasol, gluten de trigo, levadura, sal, harina de cebada malteada y agente de tratamiento de la harina (acido ascórbico). Puede contener trazas de soja, leche, granos de sesamo, huevos y frutos de cascara.",
+      "allergens": "Contiene: Cereales que contienen gluten",
+      "net_content": "540 g",
+      "storage_conditions": "Conservar en lugar fresco y seco.",
+      "preparation_instructions": "Lugar fresco y seco",
+      "operator_address": "Avda. de la Transición Española, 36 28108 Alcobendas - Madrid. Espana Tel.: 914 908 900",
+      "manufacturer_packer_importer": "Centros Comerciales Carrefour, S.A.",
+      "mandatory_mentions": null,
+      "nutriscore": null,
+      "attributes": {
+        "product_type": "Biscottes"
+      },
+      "nutrition_basis": "100 g",
+      "nutrition_status": "DECLARED_COMPLETE",
+      "energy_kj": 1644.0,
+      "calories_kcal": 389.0,
+      "fat_g": 4.8,
+      "saturates_g": 0.6,
+      "carbohydrate_g": 73.0,
+      "sugars_g": 8.0,
+      "fiber_g": 4.8,
+      "protein_g": 11.0,
+      "salt_g": 1.2,
+      "browser_title": "Biscottes Classic Carrefour 540 g. | Supermercado Online Carrefour",
+      "html_bytes": 305952,
+      "text_chars": 4613,
+      "blocked": false
+    }
+  ],
   "provenance_note": "Every populated product field in this dataset was observed directly on carrefour.es in a real browser session. Third-party data may seed candidate URLs only and is never copied as Carrefour evidence.",
-  "quality_note": "Nutri-Score is retained only when the extracted product value is a single grade A-E. Generic marketplace/page-chrome text is removed from product attributes. Raw captured HTML remains the audit source."
+  "quality_note": "Nutri-Score is retained only when the extracted product value is a single grade A-E. Generic marketplace/page-chrome text, malformed schema keys and the known legacy milk-label prefix artifact are removed from product attributes. Raw captured HTML remains the audit source."
 }
