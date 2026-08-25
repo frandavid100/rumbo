@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/catalog-carrefour-first-party-analytics.yml'
       - 'tools/catalog/carrefour_first_party_analytics_inventory.py'
+      - 'tools/catalog/carrefour_first_party_analytics_browser.py'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl'
@@ -29,7 +30,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Query Carrefour public product analytics endpoint conservatively
+      - name: Build candidate arguments
+        id: candidates
+        working-directory: tools/catalog
+        run: |
+          # The scripts re-read these files themselves. This step only verifies that the primary
+          # cumulative first-party identity set exists before probing the public analytics surface.
+          test -s fixtures/carrefour_first_party_products_cumulative.jsonl
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+      - name: Try Carrefour public product analytics endpoint over direct HTTP
+        continue-on-error: true
         working-directory: tools/catalog
         run: |
           SEEDS=(--seed-jsonl fixtures/carrefour_first_party_products_cumulative.jsonl)
@@ -42,11 +52,80 @@ jobs:
           python carrefour_first_party_analytics_inventory.py \
             --sku 641402048 \
             "${SEEDS[@]}" \
-            --out carrefour-first-party-analytics \
+            --out carrefour-first-party-analytics-direct \
             --max-products 20 \
             --delay 1.5 \
             --timeout 20 \
             --stop-after-blocks 3
+      - name: Decide whether same-origin browser fallback is needed
+        id: direct
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib
+          p=pathlib.Path('tools/catalog/carrefour-first-party-analytics-direct/summary.json')
+          matched=0
+          if p.exists():
+              try:
+                  matched=int(json.load(open(p,encoding='utf-8')).get('counts',{}).get('matched',0) or 0)
+              except Exception:
+                  pass
+          print(f'matched={matched}')
+          print('browser_needed=' + ('true' if matched < 1 else 'false'))
+          PY
+      - name: Install Playwright browser for same-origin fallback
+        if: always() && steps.direct.outputs.browser_needed == 'true'
+        run: |
+          python -m pip install --disable-pip-version-check playwright
+          python -m playwright install --with-deps chromium
+      - name: Try analytics endpoint in a normal same-origin Carrefour browser session
+        if: always() && steps.direct.outputs.browser_needed == 'true'
+        continue-on-error: true
+        working-directory: tools/catalog
+        run: |
+          SEEDS=(--seed-jsonl fixtures/carrefour_first_party_products_cumulative.jsonl)
+          if test -s fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl; then
+            SEEDS+=(--seed-jsonl fixtures/carrefour_first_party_category_frontier_latest_candidates.jsonl)
+          fi
+          if test -s fixtures/carrefour_candidate_urls_radarsuper.jsonl; then
+            SEEDS+=(--seed-jsonl fixtures/carrefour_candidate_urls_radarsuper.jsonl)
+          fi
+          python carrefour_first_party_analytics_browser.py \
+            --sku 641402048 \
+            "${SEEDS[@]}" \
+            --out carrefour-first-party-analytics-browser \
+            --max-products 20 \
+            --delay 1.5 \
+            --timeout 30 \
+            --stop-after-blocks 3
+      - name: Select strongest first-party analytics observation
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, pathlib, shutil
+          root=pathlib.Path('tools/catalog')
+          candidates=[]
+          for name in ('carrefour-first-party-analytics-direct','carrefour-first-party-analytics-browser'):
+              directory=root/name
+              p=directory/'summary.json'
+              if not p.exists():
+                  continue
+              try:
+                  d=json.loads(p.read_text(encoding='utf-8'))
+              except Exception:
+                  continue
+              counts=d.get('counts',{})
+              candidates.append((int(counts.get('matched',0) or 0), int(counts.get('evidence_rows',0) or 0), directory))
+          if not candidates:
+              raise SystemExit('No analytics attempt produced a summary')
+          _,_,src=max(candidates,key=lambda x:(x[0],x[1],x[2].name))
+          dst=root/'carrefour-first-party-analytics'
+          if dst.exists():
+              shutil.rmtree(dst)
+          shutil.copytree(src,dst)
+          print('Selected',src.name)
+          print((dst/'summary.json').read_text(encoding='utf-8'))
+          PY
       - name: Validate provenance and persist observations
         if: always()
         run: |
@@ -73,7 +152,7 @@ jobs:
               if p.exists():
                   (fixtures/target_name).write_text(p.read_text(encoding='utf-8'),encoding='utf-8')
           if int(d.get('counts',{}).get('matched',0) or 0) < 1:
-              raise SystemExit('Carrefour product analytics endpoint yielded no matching product observation, including known-valid SKU 641402048')
+              raise SystemExit('Carrefour analytics yielded no matching product observation for known-valid SKU 641402048 by direct HTTP or a normal same-origin browser session')
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -88,6 +167,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: carrefour-first-party-analytics
-          path: tools/catalog/carrefour-first-party-analytics/
+          path: |
+            tools/catalog/carrefour-first-party-analytics/
+            tools/catalog/carrefour-first-party-analytics-direct/
+            tools/catalog/carrefour-first-party-analytics-browser/
           retention-days: 7
           if-no-files-found: warn
