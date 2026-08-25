@@ -3,12 +3,12 @@
   "source": "CARREFOUR_FIRST_PARTY",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "classification_performed": false,
-  "built_at": "2026-08-25T06:03:50.584962+00:00",
+  "built_at": "2026-08-25T06:07:33.507819+00:00",
   "counts": {
     "products_total": 1312,
-    "products_detail_observed": 1296,
-    "products_listing_only": 16,
-    "evidence_rows": 31403,
+    "products_detail_observed": 1299,
+    "products_listing_only": 13,
+    "evidence_rows": 31438,
     "nutrition_status": {
       "DECLARED_COMPLETE": 1025,
       "DECLARED_PARTIAL": 87,
@@ -23,8 +23,8 @@
       "UNKNOWN": 21
     },
     "evidence_types": {
-      "DECLARED": 22445,
-      "OBSERVED_LISTING": 5034,
+      "DECLARED": 22467,
+      "OBSERVED_LISTING": 5047,
       "OBSERVED_PRODUCT_PAGE": 3924
     }
   },
@@ -194,39 +194,39 @@
   },
   "evidence_field_counts": {
     "allergens": 515,
-    "attributes": 1286,
-    "availability": 433,
-    "brand": 1259,
-    "calories_kcal": 1113,
-    "canonical_url": 1324,
-    "carbohydrate_g": 1106,
-    "category_path": 638,
-    "energy_kj": 1112,
-    "fat_g": 1080,
-    "fiber_g": 543,
-    "gtin": 7,
-    "image_url": 38,
-    "ingredients": 1214,
-    "legal_name": 1242,
+    "attributes": 1287,
+    "availability": 434,
+    "brand": 1260,
+    "calories_kcal": 1114,
+    "canonical_url": 1333,
+    "carbohydrate_g": 1107,
+    "category_path": 639,
+    "energy_kj": 1113,
+    "fat_g": 1081,
+    "fiber_g": 544,
+    "gtin": 8,
+    "image_url": 39,
+    "ingredients": 1215,
+    "legal_name": 1243,
     "mandatory_mentions": 390,
-    "manufacturer_packer_importer": 1229,
-    "name": 1308,
-    "net_content": 1232,
+    "manufacturer_packer_importer": 1230,
+    "name": 1309,
+    "net_content": 1233,
     "nutriscore": 285,
-    "nutrition_basis": 1106,
+    "nutrition_basis": 1107,
     "nutrition_extra": 226,
     "nutrition_status": 5,
-    "operator_address": 1236,
-    "preparation_instructions": 714,
-    "price_currency": 1308,
-    "price_eur": 1308,
-    "protein_g": 1089,
+    "operator_address": 1237,
+    "preparation_instructions": 715,
+    "price_currency": 1309,
+    "price_eur": 1309,
+    "protein_g": 1090,
     "retailer_sku": 1312,
     "salt_g": 1062,
-    "saturates_g": 1072,
-    "storage_conditions": 1211,
-    "sugars_g": 1092,
-    "unit_price_text": 1308
+    "saturates_g": 1073,
+    "storage_conditions": 1212,
+    "sugars_g": 1093,
+    "unit_price_text": 1309
   },
   "sample": [
     {
@@ -287,7 +287,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Mantener alejado de la luz y del calor.",
       "sugars_g": 0.0,
-      "unit_price_text": "6,69 €/l"
+      "unit_price_text": "6,69 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -344,7 +345,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Preservar del calor y del exceso de luz",
       "sugars_g": 0.0,
-      "unit_price_text": "5,19 €/l"
+      "unit_price_text": "5,19 €/l",
+      "listing_only_observed": false
     },
     {
       "attributes": {
@@ -390,7 +392,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Preservar del calor y del exceso de luz",
       "sugars_g": 0.0,
-      "unit_price_text": "5,19 €/l"
+      "unit_price_text": "5,19 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -451,7 +454,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y oscuro",
       "sugars_g": 0.0,
-      "unit_price_text": "16,87 €/l"
+      "unit_price_text": "16,87 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -506,7 +510,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en lugar fresco y oscuro.",
       "sugars_g": 0.0,
-      "unit_price_text": "9,98 €/l"
+      "unit_price_text": "9,98 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -558,7 +563,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco y protegido de la luz",
       "sugars_g": 0.0,
-      "unit_price_text": "9,59 €/l"
+      "unit_price_text": "9,59 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -612,7 +618,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
-      "unit_price_text": "6,95 €/l"
+      "unit_price_text": "6,95 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -666,7 +673,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
-      "unit_price_text": "6,95 €/l"
+      "unit_price_text": "6,95 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -720,7 +728,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco, seco y protegido de la luz.",
       "sugars_g": 0.0,
-      "unit_price_text": "6,95 €/l"
+      "unit_price_text": "6,95 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -779,7 +788,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Preservar del calor y del exceso de luz",
       "sugars_g": 0.0,
-      "unit_price_text": "7,99 €/l"
+      "unit_price_text": "7,99 €/l",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -840,7 +850,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Conservar en un lugar fresco y seco.",
       "sugars_g": null,
-      "unit_price_text": "49,77 €/kg"
+      "unit_price_text": "49,77 €/kg",
+      "listing_only_observed": false
     },
     {
       "allergens": null,
@@ -901,7 +912,8 @@
       "source_host": "www.carrefour.es",
       "storage_conditions": "Mantener alejado de la luz y del calor.",
       "sugars_g": 0.0,
-      "unit_price_text": "7,99 €/l"
+      "unit_price_text": "7,99 €/l",
+      "listing_only_observed": false
     }
   ],
   "notes": [
@@ -909,6 +921,7 @@
     "Third-party datasets may seed product URLs but are never copied into this cumulative first-party dataset.",
     "Category-listing identities are retained even when product detail retrieval is blocked.",
     "Field evidence is append-only by observation timestamp; newer sparse pages do not erase older direct observations.",
+    "A later category listing cannot downgrade a previously observed product detail or its proved nutrition status.",
     "No Rumbo nutritional or culinary classification is performed here."
   ]
 }
