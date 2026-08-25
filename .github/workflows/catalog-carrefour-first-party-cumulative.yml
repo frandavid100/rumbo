@@ -9,6 +9,7 @@ on:
       - 'tools/catalog/annotate_carrefour_first_party_summary.py'
       - 'tools/catalog/summarize_carrefour_first_party.py'
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
+      - 'tools/catalog/extract_carrefour_public_gtin.py'
       - 'tools/catalog/fixtures/carrefour_first_party_products_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_field_evidence_cumulative.jsonl'
       - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products*.jsonl'
@@ -139,7 +140,12 @@ jobs:
               'External candidate catalogs remain discovery-only and are never promoted to Carrefour evidence without direct observation.'
           )
           first_party = inventory.setdefault('sources', {}).setdefault('first_party_carrefour', {})
-          first_party['allowed_evidence_types'] = ['DECLARED', 'OBSERVED_PRODUCT_PAGE', 'OBSERVED_LISTING']
+          first_party['allowed_evidence_types'] = [
+              'DECLARED',
+              'OBSERVED_PRODUCT_PAGE',
+              'OBSERVED_PRODUCT_PAGE_CLIENT_DATA',
+              'OBSERVED_LISTING',
+          ]
           built_at = str(summary.get('built_at') or '')
           if built_at:
               inventory['updated_at'] = built_at[:10]
