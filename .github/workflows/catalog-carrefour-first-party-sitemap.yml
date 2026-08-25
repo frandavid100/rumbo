@@ -27,25 +27,31 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Try official Carrefour food sitemap over direct HTTP
-        continue-on-error: true
+      - name: Try all robots-declared non-bodega Carrefour sitemap roots over direct HTTP
         working-directory: tools/catalog
         run: |
-          python carrefour_first_party_sitemap.py \
-            --out carrefour-first-party-sitemap-http \
-            --max-sitemaps 5000 \
-            --delay 0.15
+          declare -A ROOTS=(
+            [food]='https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml'
+            [includes]='https://www.carrefour.es/_includes/sitemap.xml'
+            [media]='https://www.carrefour.es/tecno/dyn/MEDIA/siteindex.xml'
+          )
+          for key in food includes media; do
+            python carrefour_first_party_sitemap.py \
+              --index-url "${ROOTS[$key]}" \
+              --out "carrefour-first-party-sitemap-http-$key" \
+              --max-sitemaps 1200 \
+              --delay 0.05 || true
+          done
       - name: Decide whether browser fallback is needed
         id: sitemap_http
         if: always()
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json, pathlib
-          p=pathlib.Path('tools/catalog/carrefour-first-party-sitemap-http/summary.json')
           products=0
-          if p.exists():
+          for p in pathlib.Path('tools/catalog').glob('carrefour-first-party-sitemap-http-*/summary.json'):
               try:
-                  products=int(json.load(open(p,encoding='utf-8')).get('counts',{}).get('product_urls',0) or 0)
+                  products += int(json.load(open(p,encoding='utf-8')).get('counts',{}).get('product_urls',0) or 0)
               except Exception:
                   pass
           print(f'product_urls={products}')
@@ -56,16 +62,23 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check playwright
           python -m playwright install --with-deps chromium
-      - name: Try official Carrefour food sitemap in a normal same-origin browser session
+      - name: Try all official sitemap roots in a normal same-origin browser session
         if: always() && steps.sitemap_http.outputs.browser_needed == 'true'
-        continue-on-error: true
         working-directory: tools/catalog
         run: |
-          python carrefour_first_party_sitemap_browser.py \
-            --out carrefour-first-party-sitemap-browser \
-            --max-sitemaps 5000 \
-            --delay 0.15 \
-            --timeout 45
+          declare -A ROOTS=(
+            [food]='https://www.carrefour.es/crs/cdn-static/sitemap-food/index.xml'
+            [includes]='https://www.carrefour.es/_includes/sitemap.xml'
+            [media]='https://www.carrefour.es/tecno/dyn/MEDIA/siteindex.xml'
+          )
+          for key in food includes media; do
+            python carrefour_first_party_sitemap_browser.py \
+              --index-url "${ROOTS[$key]}" \
+              --out "carrefour-first-party-sitemap-browser-$key" \
+              --max-sitemaps 1200 \
+              --delay 0.05 \
+              --timeout 45 || true
+          done
       - name: Select strongest official sitemap observation
         if: always()
         run: |
@@ -73,8 +86,9 @@ jobs:
           import json, pathlib, shutil
           root=pathlib.Path('tools/catalog')
           candidates=[]
-          for name in ('carrefour-first-party-sitemap-http','carrefour-first-party-sitemap-browser'):
-              d=root/name
+          for d in sorted(root.glob('carrefour-first-party-sitemap-*-*')):
+              if d.name == 'carrefour-first-party-sitemap':
+                  continue
               p=d/'summary.json'
               if not p.exists():
                   continue
@@ -88,7 +102,7 @@ jobs:
               candidates.append((count, -remaining, -errors, d))
           if not candidates:
               raise SystemExit('No sitemap attempt produced a summary')
-          _,_,_,src=max(candidates, key=lambda x:(x[0],x[1],x[2]))
+          _,_,_,src=max(candidates, key=lambda x:(x[0],x[1],x[2],x[3].name))
           dst=root/'carrefour-first-party-sitemap'
           if dst.exists():
               shutil.rmtree(dst)
@@ -135,9 +149,9 @@ jobs:
           if str(d.get('classification_performed')).lower() != 'false':
               raise SystemExit('Sitemap inventory performed classification')
           if d['counts']['product_urls'] < 1:
-              raise SystemExit('Official sitemap yielded no Carrefour product URLs through either direct HTTP or a normal same-origin browser session')
+              raise SystemExit('All three official non-bodega sitemap roots yielded no Carrefour supermarket product URLs through direct HTTP or a normal same-origin browser session')
           if d['counts']['remaining_sitemaps']:
-              raise SystemExit('Sitemap traversal was incomplete')
+              raise SystemExit('Selected sitemap traversal was incomplete')
           PY
       - name: Upload auditable sitemap inventory
         if: always()
@@ -146,7 +160,7 @@ jobs:
           name: carrefour-first-party-official-sitemap
           path: |
             tools/catalog/carrefour-first-party-sitemap/
-            tools/catalog/carrefour-first-party-sitemap-http/
-            tools/catalog/carrefour-first-party-sitemap-browser/
+            tools/catalog/carrefour-first-party-sitemap-http-*/
+            tools/catalog/carrefour-first-party-sitemap-browser-*/
           retention-days: 7
           if-no-files-found: warn
