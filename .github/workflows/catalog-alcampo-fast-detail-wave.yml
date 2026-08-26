@@ -4,6 +4,7 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-alcampo-fast-detail-wave.yml'
+      - 'tools/catalog/alcampo_detail_fast_wave.py'
   workflow_dispatch:
 permissions:
   contents: write
@@ -71,7 +72,7 @@ jobs:
         with:
           name: alcampo-fast-wave-inputs
           path: inputs
-      - name: Fetch each product once per canonical route and checkpoint immediately
+      - name: Fetch each product once per observed canonical route and checkpoint immediately
         working-directory: tools/catalog
         run: |
           python alcampo_detail_fast_wave.py \
