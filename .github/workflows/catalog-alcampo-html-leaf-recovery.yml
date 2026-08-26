@@ -144,6 +144,7 @@ jobs:
           cp alcampo-html-recovery-union/recovery_report.json tools/catalog/fixtures/alcampo_html_recovery_enumeration_latest.json
           cp alcampo-html-recovery-union/summary.json tools/catalog/fixtures/alcampo_html_recovery_catalog_summary_latest.json
           cp alcampo-html-recovery-union/new_products_summary.json tools/catalog/fixtures/alcampo_html_recovery_new_products_latest.json
+          cp alcampo-html-recovery-union/new_products.jsonl tools/catalog/fixtures/alcampo_html_recovery_new_products_latest.jsonl
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tools/catalog/fixtures/alcampo_html_recovery_*
