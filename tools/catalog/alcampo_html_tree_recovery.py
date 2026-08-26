@@ -18,7 +18,7 @@ from alcampo_html_leaf_recovery import (
     request_html,
 )
 
-VERSION = "alcampo-html-tree-recovery-v1"
+VERSION = "alcampo-html-tree-recovery-v2"
 CATEGORY_LINK_RE = re.compile(
     r'href=["\']([^"\']*/categories/[^"\']+/(OC[0-9A-Za-z]+)(?:\?[^"\']*)?)["\']',
     re.I,
@@ -160,7 +160,7 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
     meta = [{
         "label": label,
         "retailer_category_id": rid,
-        "method": "FIRST_PARTY_CATEGORY_HTML_RECURSIVE_DIRECT_DESCENDANTS",
+        "method": "FIRST_PARTY_CATEGORY_HTML_RECURSIVE_DIRECT_DESCENDANTS_PAIRED_IDENTITY_VECTORS",
         "version": VERSION,
         "source_reported_product_count": source_target or None,
         "categories_visited": len(nodes),
@@ -184,7 +184,7 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
         "deduplication_identity": "retailer_sku_else_product_id",
         "max_depth": max_depth,
         "aggregate_root_with_children": len(nodes) > 1,
-        "completeness_basis": "first_party_category_html_recursive_direct_descendants",
+        "completeness_basis": "first_party_category_html_recursive_direct_descendants_paired_identity_vectors",
         "source_product_count_is_diagnostic_only": False if source_target else True,
         "html_product_links": len(skus),
         "html_link_skus": skus,
