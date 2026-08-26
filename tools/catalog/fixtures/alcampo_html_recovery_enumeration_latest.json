@@ -249,6 +249,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -465,6 +466,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -681,6 +683,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -897,6 +900,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -1113,6 +1117,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -1329,6 +1334,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -1348,7 +1354,7 @@
           "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC170128122022",
           "final_url": "https://www.compraonline.alcampo.es/categories/frescos/frutas/mis-frutas-y-verduras/OC170128122022",
           "html_status": 200,
-          "html_bytes": 1399025,
+          "html_bytes": 1398928,
           "source_reported_product_count": 60,
           "html_product_ids": 50,
           "html_retailer_product_ids": 50,
@@ -1396,14 +1402,14 @@
             "55186",
             "74316",
             "52086",
+            "57861",
             "58727",
             "76125",
             "55727",
             "57142",
             "53001",
             "55989",
-            "55522",
-            "55272"
+            "55522"
           ],
           "html_retailer_ids": [
             "75876",
@@ -1448,14 +1454,14 @@
             "55186",
             "74316",
             "52086",
+            "57861",
             "58727",
             "76125",
             "55727",
             "57142",
             "53001",
             "55989",
-            "55522",
-            "55272"
+            "55522"
           ],
           "visible_id_overlap": 50,
           "identity_materialized_products": 50,
@@ -1520,14 +1526,14 @@
         "55186",
         "74316",
         "52086",
+        "57861",
         "58727",
         "76125",
         "55727",
         "57142",
         "53001",
         "55989",
-        "55522",
-        "55272"
+        "55522"
       ],
       "identity_materialized_products": 50,
       "identity_mapping_error": null,
@@ -1545,6 +1551,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -1761,6 +1768,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -1818,6 +1826,7 @@
       "html_visible_skus_present_in_union": 0,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     }
   ]

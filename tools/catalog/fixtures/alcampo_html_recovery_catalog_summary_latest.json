@@ -3,7 +3,7 @@
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
   "importer_version": "alcampo-direct-v6.0",
-  "built_at": "2026-08-26T11:37:28.452697+00:00",
+  "built_at": "2026-08-26T14:44:01.060006+00:00",
   "roots": [
     {
       "label": "Mostaza y Miel",
@@ -46,6 +46,7 @@
       "html_visible_skus_present_in_union": 6,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -90,6 +91,7 @@
       "html_visible_skus_present_in_union": 7,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -178,6 +180,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -241,6 +244,7 @@
       "html_visible_skus_present_in_union": 26,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -309,6 +313,7 @@
       "html_visible_skus_present_in_union": 31,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -360,6 +365,7 @@
       "html_visible_skus_present_in_union": 14,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -421,6 +427,7 @@
       "html_visible_skus_present_in_union": 24,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -468,6 +475,7 @@
       "html_visible_skus_present_in_union": 10,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -508,6 +516,7 @@
       "html_visible_skus_present_in_union": 3,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -554,6 +563,7 @@
       "html_visible_skus_present_in_union": 9,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -614,6 +624,7 @@
       "html_visible_skus_present_in_union": 23,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -658,6 +669,7 @@
       "html_visible_skus_present_in_union": 7,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -697,6 +709,7 @@
       "html_visible_skus_present_in_union": 2,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -746,6 +759,7 @@
       "html_visible_skus_present_in_union": 12,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -811,6 +825,7 @@
       "html_visible_skus_present_in_union": 28,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1027,6 +1042,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -1115,6 +1131,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1331,6 +1348,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -1388,6 +1406,7 @@
       "html_visible_skus_present_in_union": 20,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1452,6 +1471,7 @@
       "html_visible_skus_present_in_union": 27,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1506,6 +1526,7 @@
       "html_visible_skus_present_in_union": 17,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1567,6 +1588,7 @@
       "html_visible_skus_present_in_union": 24,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1601,6 +1623,7 @@
         "15859",
         "497361",
         "795730",
+        "10350",
         "866545",
         "23951",
         "677191",
@@ -1616,7 +1639,6 @@
         "244869",
         "789493",
         "745933",
-        "10350",
         "185496"
       ],
       "identity_materialized_products": 30,
@@ -1634,6 +1656,7 @@
       "html_visible_skus_present_in_union": 30,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1684,6 +1707,7 @@
       "html_visible_skus_present_in_union": 13,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1737,6 +1761,7 @@
       "html_visible_skus_present_in_union": 16,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1781,6 +1806,7 @@
       "html_visible_skus_present_in_union": 7,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1828,6 +1854,7 @@
       "html_visible_skus_present_in_union": 10,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1871,6 +1898,7 @@
       "html_visible_skus_present_in_union": 6,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1915,6 +1943,7 @@
       "html_visible_skus_present_in_union": 7,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1971,6 +2000,7 @@
       "html_visible_skus_present_in_union": 19,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2016,6 +2046,7 @@
       "html_visible_skus_present_in_union": 8,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2066,6 +2097,7 @@
       "html_visible_skus_present_in_union": 13,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2114,6 +2146,7 @@
       "html_visible_skus_present_in_union": 11,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2162,6 +2195,7 @@
       "html_visible_skus_present_in_union": 11,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2378,6 +2412,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -2432,6 +2467,7 @@
       "html_visible_skus_present_in_union": 17,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2496,12 +2532,12 @@
         "19549",
         "475658",
         "181526",
+        "38126",
         "985993",
         "884707",
         "848520",
         "716300",
-        "38178",
-        "38126"
+        "38178"
       ],
       "identity_materialized_products": 49,
       "identity_mapping_error": null,
@@ -2519,6 +2555,7 @@
       "html_visible_skus_present_in_union": 49,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2565,6 +2602,7 @@
       "html_visible_skus_present_in_union": 9,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2633,6 +2671,7 @@
       "html_visible_skus_present_in_union": 31,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2849,6 +2888,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -2916,6 +2956,7 @@
       "html_visible_skus_present_in_union": 30,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -2974,6 +3015,7 @@
       "html_visible_skus_present_in_union": 21,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3024,6 +3066,7 @@
       "html_visible_skus_present_in_union": 13,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3068,6 +3111,7 @@
       "html_visible_skus_present_in_union": 7,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3107,6 +3151,7 @@
       "html_visible_skus_present_in_union": 2,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3168,6 +3213,7 @@
       "html_visible_skus_present_in_union": 24,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3384,6 +3430,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -3427,6 +3474,7 @@
       "html_visible_skus_present_in_union": 6,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3476,6 +3524,7 @@
       "html_visible_skus_present_in_union": 12,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3524,6 +3573,7 @@
       "html_visible_skus_present_in_union": 11,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3567,6 +3617,7 @@
       "html_visible_skus_present_in_union": 6,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3626,6 +3677,7 @@
       "html_visible_skus_present_in_union": 22,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3649,7 +3701,6 @@
       "html_link_skus": [
         "631123",
         "565092",
-        "497716",
         "519705",
         "227946",
         "207947",
@@ -3658,6 +3709,7 @@
         "678955",
         "635358",
         "635362",
+        "497716",
         "313792",
         "32859",
         "497701"
@@ -3677,6 +3729,7 @@
       "html_visible_skus_present_in_union": 14,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3724,6 +3777,7 @@
       "html_visible_skus_present_in_union": 10,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3760,6 +3814,7 @@
       "html_visible_skus_present_in_union": 0,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3798,6 +3853,7 @@
       "html_visible_skus_present_in_union": 1,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3836,6 +3892,7 @@
       "html_visible_skus_present_in_union": 1,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3876,6 +3933,7 @@
       "html_visible_skus_present_in_union": 3,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3926,6 +3984,7 @@
       "html_visible_skus_present_in_union": 13,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -3972,6 +4031,7 @@
       "html_visible_skus_present_in_union": 9,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4016,6 +4076,7 @@
       "html_visible_skus_present_in_union": 7,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4050,7 +4111,7 @@
       "enumeration_ok": true,
       "decoration_ok": false,
       "decoration_errors": [
-        "PUT[0:7]:RuntimeError:pending:202"
+        "PUT[0:7]:RuntimeError:HTTP_403:"
       ],
       "ok": true,
       "artifact_path": "../../recovered/alcampo-html-recovery-OC1409/child_check.json",
@@ -4060,6 +4121,7 @@
       "html_visible_skus_present_in_union": 7,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4117,6 +4179,7 @@
       "html_visible_skus_present_in_union": 20,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4185,6 +4248,7 @@
       "html_visible_skus_present_in_union": 31,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4250,6 +4314,7 @@
       "html_visible_skus_present_in_union": 28,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4466,6 +4531,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -4543,6 +4609,7 @@
       "html_visible_skus_present_in_union": 40,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4582,6 +4649,7 @@
       "html_visible_skus_present_in_union": 2,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4645,6 +4713,7 @@
       "html_visible_skus_present_in_union": 26,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4691,6 +4760,7 @@
       "html_visible_skus_present_in_union": 9,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4742,6 +4812,7 @@
       "html_visible_skus_present_in_union": 14,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4781,6 +4852,7 @@
       "html_visible_skus_present_in_union": 2,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4825,6 +4897,7 @@
       "html_visible_skus_present_in_union": 7,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -4844,7 +4917,7 @@
           "requested_url": "https://www.compraonline.alcampo.es/categories/~/OC170128122022",
           "final_url": "https://www.compraonline.alcampo.es/categories/frescos/frutas/mis-frutas-y-verduras/OC170128122022",
           "html_status": 200,
-          "html_bytes": 1399025,
+          "html_bytes": 1398928,
           "source_reported_product_count": 60,
           "html_product_ids": 50,
           "html_retailer_product_ids": 50,
@@ -4892,14 +4965,14 @@
             "55186",
             "74316",
             "52086",
+            "57861",
             "58727",
             "76125",
             "55727",
             "57142",
             "53001",
             "55989",
-            "55522",
-            "55272"
+            "55522"
           ],
           "html_retailer_ids": [
             "75876",
@@ -4944,14 +5017,14 @@
             "55186",
             "74316",
             "52086",
+            "57861",
             "58727",
             "76125",
             "55727",
             "57142",
             "53001",
             "55989",
-            "55522",
-            "55272"
+            "55522"
           ],
           "visible_id_overlap": 50,
           "identity_materialized_products": 50,
@@ -5016,14 +5089,14 @@
         "55186",
         "74316",
         "52086",
+        "57861",
         "58727",
         "76125",
         "55727",
         "57142",
         "53001",
         "55989",
-        "55522",
-        "55272"
+        "55522"
       ],
       "identity_materialized_products": 50,
       "identity_mapping_error": null,
@@ -5041,6 +5114,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -5099,6 +5173,7 @@
         "55186",
         "74316",
         "52086",
+        "57861",
         "58727",
         "76125",
         "55727",
@@ -5110,7 +5185,6 @@
         "57057",
         "55271",
         "23783",
-        "57861",
         "76074"
       ],
       "identity_materialized_products": 50,
@@ -5129,6 +5203,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5170,6 +5245,7 @@
       "html_visible_skus_present_in_union": 4,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5210,6 +5286,7 @@
       "html_visible_skus_present_in_union": 3,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5247,6 +5324,7 @@
       "html_visible_skus_present_in_union": 0,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5297,6 +5375,7 @@
       "html_visible_skus_present_in_union": 13,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5354,6 +5433,7 @@
       "html_visible_skus_present_in_union": 20,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5431,6 +5511,7 @@
       "html_visible_skus_present_in_union": 40,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5490,6 +5571,7 @@
       "html_visible_skus_present_in_union": 22,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5542,6 +5624,7 @@
       "html_visible_skus_present_in_union": 15,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5606,6 +5689,7 @@
       "html_visible_skus_present_in_union": 27,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5646,6 +5730,7 @@
       "html_visible_skus_present_in_union": 3,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5676,8 +5761,8 @@
         "23010",
         "23019",
         "233634",
-        "19815",
-        "96951"
+        "96951",
+        "19815"
       ],
       "identity_materialized_products": 11,
       "identity_mapping_error": null,
@@ -5694,6 +5779,7 @@
       "html_visible_skus_present_in_union": 11,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5910,6 +5996,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -5953,6 +6040,7 @@
       "html_visible_skus_present_in_union": 6,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -5996,6 +6084,7 @@
       "html_visible_skus_present_in_union": 6,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6084,6 +6173,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6183,6 +6273,7 @@
       "html_visible_skus_present_in_union": 40,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6222,6 +6313,7 @@
       "html_visible_skus_present_in_union": 2,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6264,6 +6356,7 @@
       "html_visible_skus_present_in_union": 5,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6321,6 +6414,7 @@
       "html_visible_skus_present_in_union": 20,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6360,6 +6454,7 @@
       "html_visible_skus_present_in_union": 2,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6434,6 +6529,7 @@
       "html_visible_skus_present_in_union": 37,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6480,6 +6576,7 @@
       "html_visible_skus_present_in_union": 9,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6522,6 +6619,7 @@
       "html_visible_skus_present_in_union": 5,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6567,6 +6665,7 @@
       "html_visible_skus_present_in_union": 8,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6618,6 +6717,7 @@
       "html_visible_skus_present_in_union": 14,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6661,6 +6761,7 @@
       "html_visible_skus_present_in_union": 6,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6706,6 +6807,7 @@
       "html_visible_skus_present_in_union": 8,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6747,6 +6849,7 @@
       "html_visible_skus_present_in_union": 4,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6805,6 +6908,7 @@
       "html_visible_skus_present_in_union": 21,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6886,6 +6990,7 @@
       "html_visible_skus_present_in_union": 43,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6934,6 +7039,7 @@
       "html_visible_skus_present_in_union": 11,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -6990,6 +7096,7 @@
       "html_visible_skus_present_in_union": 19,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7035,6 +7142,7 @@
       "html_visible_skus_present_in_union": 8,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7075,6 +7183,7 @@
       "html_visible_skus_present_in_union": 3,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7158,6 +7267,7 @@
       "html_visible_skus_present_in_union": 45,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7213,6 +7323,7 @@
       "html_visible_skus_present_in_union": 18,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7263,6 +7374,7 @@
       "html_visible_skus_present_in_union": 13,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7325,6 +7437,7 @@
       "html_visible_skus_present_in_union": 25,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7397,6 +7510,7 @@
       "html_visible_skus_present_in_union": 35,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7442,6 +7556,7 @@
       "html_visible_skus_present_in_union": 8,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7494,6 +7609,7 @@
       "html_visible_skus_present_in_union": 15,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7533,6 +7649,7 @@
       "html_visible_skus_present_in_union": 2,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7578,6 +7695,7 @@
       "html_visible_skus_present_in_union": 8,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7635,6 +7753,7 @@
       "html_visible_skus_present_in_union": 0,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": false
     },
     {
@@ -7677,6 +7796,7 @@
       "html_visible_skus_present_in_union": 5,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7727,6 +7847,7 @@
       "html_visible_skus_present_in_union": 13,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7774,6 +7895,7 @@
       "html_visible_skus_present_in_union": 10,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7825,6 +7947,7 @@
       "html_visible_skus_present_in_union": 14,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -7883,6 +8006,7 @@
       "html_visible_skus_present_in_union": 21,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     }
   ],
