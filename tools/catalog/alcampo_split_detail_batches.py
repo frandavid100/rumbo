@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 
@@ -48,14 +49,32 @@ def main() -> int:
     rows.sort(key=lambda r: str(r.get("sku") or ""))
 
     count = max(1, min(int(a.batches), len(rows) or 1))
+    buckets: list[list[dict]] = [[] for _ in range(count)]
+    for i, row in enumerate(rows):
+        buckets[i % count].append(row)
+
+    # A fresh GitHub runner tends to get only a small SSR window before Alcampo
+    # starts returning transient 202 responses. Rotate each microbatch on later
+    # workflow runs so repeated first-party waves do not keep spending that window
+    # on exactly the same leading SKUs. This is deterministic and does not change
+    # product identity or provenance.
+    run_number = int(os.environ.get("GITHUB_RUN_NUMBER") or 0)
+    stride = 7
+    offsets = []
+    for i, bucket in enumerate(buckets):
+        if not bucket:
+            offsets.append(0)
+            continue
+        offset = (run_number * stride) % len(bucket)
+        offsets.append(offset)
+        if offset:
+            buckets[i] = bucket[offset:] + bucket[:offset]
+
     a.out.mkdir(parents=True, exist_ok=True)
-    handles = [(a.out / f"batch-{i:03d}.jsonl").open("w", encoding="utf-8") for i in range(count)]
-    try:
-        for i, row in enumerate(rows):
-            handles[i % count].write(json.dumps(row, ensure_ascii=False) + "\n")
-    finally:
-        for h in handles:
-            h.close()
+    for i, bucket in enumerate(buckets):
+        with (a.out / f"batch-{i:03d}.jsonl").open("w", encoding="utf-8") as h:
+            for row in bucket:
+                h.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     matrix = {"include": [{"batch": f"{i:03d}"} for i in range(count)]}
     summary = {
@@ -63,6 +82,10 @@ def main() -> int:
         "batches": count,
         "previous_successes": len(done & seen),
         "baseline_products": total,
+        "run_number": run_number,
+        "rotation_stride": stride,
+        "rotation_offsets_min": min(offsets) if offsets else 0,
+        "rotation_offsets_max": max(offsets) if offsets else 0,
         "matrix": matrix,
     }
     (a.out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
