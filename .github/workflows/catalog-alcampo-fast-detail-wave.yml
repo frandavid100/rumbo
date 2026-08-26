@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/catalog-alcampo-fast-detail-wave.yml'
       - 'tools/catalog/alcampo_detail_fast_wave.py'
+      - 'tools/catalog/alcampo_split_detail_batches.py'
+      - 'tools/catalog/alcampo_merge_detail_batches.py'
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,7 +18,10 @@ jobs:
   prepare:
     runs-on: ubuntu-24.04
     outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
+      matrix: ${{ steps.split.outputs.matrix }}
+      retry_products: ${{ steps.split.outputs.retry_products }}
+      previous_successes: ${{ steps.split.outputs.previous_successes }}
+      baseline_run: ${{ steps.baseline.outputs.run_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,22 +29,98 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Download stable 13,877-SKU first-party Alcampo listing baseline
+      - id: baseline
+        name: Download newest available first-party Alcampo enumeration baseline
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p baseline
-          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D baseline
-          test -s baseline/products.jsonl
-      - name: Split into fresh-runner microbatches
-        working-directory: tools/catalog
-        run: python alcampo_split_detail_batches.py --input ../../baseline/products.jsonl --out ../../inputs --batches 256
-      - id: matrix
+          # Artifacts expire. Never pin a long-running recovery workflow to one run ID.
+          # Walk recent enumeration runs newest-first and accept the first still-downloadable
+          # official artifact with a non-empty products.jsonl. This also lets newer audited
+          # enumeration cuts extend the original stable 13,877-SKU baseline monotonically.
+          mapfile -t run_ids < <(
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow catalog-alcampo-sharded-enumeration.yml \
+              --branch agent/catalog-phase1 \
+              --limit 50 \
+              --json databaseId,createdAt \
+              --jq 'sort_by(.createdAt) | reverse | .[].databaseId'
+          )
+          selected=''
+          for run_id in "${run_ids[@]}"; do
+            rm -rf baseline/*
+            if gh run download "$run_id" \
+                --repo "$GITHUB_REPOSITORY" \
+                -n alcampo-food-catalog-sharded-enumeration \
+                -D baseline >/tmp/alcampo-baseline-download.log 2>&1; then
+              if test -s baseline/products.jsonl && test -s baseline/enumeration_report.json; then
+                selected="$run_id"
+                break
+              fi
+            fi
+          done
+          if [[ -z "$selected" ]]; then
+            echo '::error::No recent non-expired Alcampo enumeration artifact with products.jsonl is available.'
+            exit 1
+          fi
+          echo "run_id=$selected" >> "$GITHUB_OUTPUT"
+          echo "Using Alcampo enumeration artifact from run $selected"
+          wc -l baseline/products.jsonl
+      - id: previous
+        name: Download newest available successful detail snapshot for monotonic recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          print('matrix='+json.dumps({'include':[{'batch':f'{i:03d}'} for i in range(256)]},separators=(',',':')))
-          PY
+          set -euo pipefail
+          mkdir -p previous
+          selected=''
+          mapfile -t run_ids < <(
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow catalog-alcampo-fast-detail-wave.yml \
+              --branch agent/catalog-phase1 \
+              --status success \
+              --limit 30 \
+              --json databaseId,createdAt \
+              --jq 'sort_by(.createdAt) | reverse | .[].databaseId'
+          )
+          for run_id in "${run_ids[@]}"; do
+            rm -rf previous/*
+            if gh run download "$run_id" \
+                --repo "$GITHUB_REPOSITORY" \
+                -n alcampo-fast-detail-classified-snapshot \
+                -D previous >/tmp/alcampo-previous-download.log 2>&1; then
+              if test -s previous/details.jsonl; then
+                selected="$run_id"
+                break
+              fi
+            fi
+          done
+          if [[ -n "$selected" ]]; then
+            echo "run_id=$selected" >> "$GITHUB_OUTPUT"
+            echo "Using previous detail snapshot from run $selected"
+            wc -l previous/details.jsonl
+          else
+            rm -rf previous/*
+            echo 'No previous non-expired successful detail snapshot is available; this wave will start from first-party baseline only.'
+          fi
+      - id: split
+        name: Split only unresolved products into fresh-runner microbatches
+        working-directory: tools/catalog
+        run: |
+          args=(
+            --input ../../baseline/products.jsonl
+            --out ../../inputs
+            --batches 256
+            --github-output "$GITHUB_OUTPUT"
+          )
+          if test -s ../../previous/details.jsonl; then
+            args+=(--previous-details ../../previous/details.jsonl)
+          fi
+          python alcampo_split_detail_batches.py "${args[@]}"
       - uses: actions/upload-artifact@v4
         with:
           name: alcampo-fast-wave-baseline
@@ -55,8 +136,8 @@ jobs:
     needs: prepare
     strategy:
       fail-fast: false
-      # The canonical SSR route succeeded with complete declared nutrition in smoke.
-      # Keep global pressure moderate so WAF 202 responses do not dominate the wave.
+      # A fresh runner gets a short canonical SSR window before transient 202s dominate.
+      # Keep global pressure moderate and spend that window only on unresolved SKUs.
       max-parallel: 12
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
