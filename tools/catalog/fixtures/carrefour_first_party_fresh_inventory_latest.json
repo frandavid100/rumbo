@@ -3,7 +3,7 @@
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "source": "https://www.carrefour.es",
   "extractor_version": "carrefour-first-party-browser-inventory-1.0",
-  "built_at": "2026-08-25T06:18:34.974879+00:00",
+  "built_at": "2026-08-26T10:11:50.964717+00:00",
   "classification_performed": "false",
   "counts": {
     "candidate_urls": 16,
@@ -11,12 +11,12 @@
     "fetched": 1,
     "blocked": 2,
     "fetch_errors": 2,
-    "nutrition_complete": 1,
+    "nutrition_complete": 0,
     "nutrition_partial": 0,
-    "nutrition_not_found": 0,
-    "evidence_rows": 33,
-    "network_responses": 73,
-    "json_xhr_fetch_responses": 8,
+    "nutrition_not_found": 1,
+    "evidence_rows": 17,
+    "network_responses": 71,
+    "json_xhr_fetch_responses": 9,
     "gtin_from_official_page_client_data": 0,
     "gtin_client_data_conflicts": 0,
     "nutrition_extra_products": 0
@@ -55,36 +55,36 @@
       "pct": 33.33
     },
     "legal_name": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "ingredients": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "allergens": {
       "count": 0,
       "pct": 0.0
     },
     "net_content": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "storage_conditions": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "preparation_instructions": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "operator_address": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "manufacturer_packer_importer": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "mandatory_mentions": {
       "count": 0,
@@ -105,36 +105,36 @@
   },
   "nutrition_field_coverage": {
     "energy_kj": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "calories_kcal": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "fat_g": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "saturates_g": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "carbohydrate_g": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "sugars_g": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "fiber_g": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "protein_g": {
-      "count": 1,
-      "pct": 33.33
+      "count": 0,
+      "pct": 0.0
     },
     "salt_g": {
       "count": 0,
@@ -143,7 +143,7 @@
   },
   "network_json_candidates": [
     {
-      "retailer_sku": "641402048",
+      "retailer_sku": "529921745",
       "url": "https://www.carrefour.es/cloud-api/footer-papi/footer",
       "status": 200,
       "resource_type": "xhr",
@@ -157,7 +157,7 @@
       "body_sample": "{\"arrayColumns\":[[{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Carrefour en España\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/trabaja-en-carrefour/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Trabaja con nosotros\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.pass.carrefour.es/solicitar-tarjeta\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Tarjeta ClubPASS\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour/franquicias\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Abre tu franquicia\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/clubcarrefour\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Club Carrefour\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour/compromisos-de-carrefour/compromisos-economicos\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Nuestros compromisos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour/las-marcas-carrefour\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Nuestras marcas\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/tenemos-para-ti/act-for-food.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Act for Food\"},{\"bu\":\"corp-empresa\",\"href\":\"https://seguros.carrefour.es/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Seguros Carrefour\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.viajes.carrefour.es/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Viajes Carrefour\"},{\"bu\":\"corp-empresa\",\"href\":\"https://links.carrefour.com\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Carrefour Links\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/sostenibilidad/mas-info/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Sostenibilidad\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/grupo-carrefour/nuestros-premios\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Premios y reconocimientos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones/formulario-derechos-privacidad.e\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Derechos de protección de datos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/sistema-interno-de-informacion/mas-info\",\"rel\":\"nofollow\",\"style\":\"color:blue\",\"title\":\"Línea de Ética y Cumplimiento Normativo\"}],\"title\":\"Grupo Carrefour\"}],[{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/contacta-con-nosotros.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Contacto\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/preguntas-frecuentes/mas-info/\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Preguntas frecuentes\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/solicitud-facturas-cliente/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Facturas\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/mapa-web/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Mapa Web\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones/suscripcion-newletters-comunicaciones.e\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Suscríbete a nuestras newsletters\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/seguridad.e\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Alerta de seguridad\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/aviso-legal/mas-info/#seccion7\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Quejas, Reclamaciones y Denuncia de Contenidos Ilícitos de Terceros\"}],\"title\":\"Atención al cliente\"},{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/tiendas-carrefour/buscador-de-tiendas/\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Localiza tu tienda\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/supermercado-cerca-de-mi.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Supermercados cerca de ti\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/tiendas-carrefour/buscador-de-tiendas/?category=cb1\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Hipermercados\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/tiendas-carrefour/buscador-de-tiendas/?category=cb2\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Carrefour Market\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/tiendas-carrefour/buscador-de-tiendas/?category=cb3\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Carrefour Express\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/folletos.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Folletos\"}],\"title\":\"Tiendas\"},{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/empresas/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Contacta con nosotros\"}],\"title\":\"Carrefour Empresas\"}],[{\"arrayLinks\":[{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/quienes-somos/mas-info\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Quiénes somos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/entrega-recogida-pedidos.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Entrega y recogida de pedidos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/servicios/drive.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Carrefour Drive\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/click-and-collect.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Click\\u0026Collect\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/contact?type=orders\\u0026ic_source=portal-y-corporativo\\u0026ic_medium=footer-links\\u0026ic_campaign=%28not+set%29\\u0026ic_content=ns\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Estado del pedido\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/devoluciones.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Devoluciones\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/servicios/garantia-de-frescura.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Garantía de frescura\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/marketplace-carrefour.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Vender en Marketplace\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones/marketplace.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Productos vendidos por terceros\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones/outlet-info.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Outlet\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/campanas/calendario-promocional.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Calendario promocional\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/blog.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Consejos, ideas y trucos\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/supermercado/recetas.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Nuestras recetas\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/condiciones-generales-de-compra/mas-info/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Condiciones de compra\"},{\"bu\":\"corp-empresa\",\"href\":\"https://www.carrefour.es/servicios/instalacion-y-puesta-en-marcha.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Instalación electrodomésticos\"},{\"bu\":\"language\",\"href\":\"\",\"rel\":\"\",\"style\":\"\",\"title\":\"Idioma\"}],\"title\":\"Carrefour.es\"}],[{\"arrayLinks\":[{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/supermercado/ofertas/cat20968591/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Ofertas supermercado online\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/supermercado/condiciones/cupon-bienvenida.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Cupón descuento súper online\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/supermercado/ofertas/precios-imbatibles.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Precios Imbatibles\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/campanas/vive-el-mundial-2026-con-las-mejores-ofertas.e\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Vive el Mundial 2026\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/electrodomesticos/climatizacion/aire-acondicionado/aire-acondicionado-split/cat22713285/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Aire acondicionado split \"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/electrodomesticos/climatizacion/aire-acondicionado/aire-acondicionado-portatil/cat22713299/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Aire acondicionado portátil\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/electrodomesticos/climatizacion/aire-acondicionado/con-instalacion-basica-incluida/cat19965434/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Aire acondicionado con instalación básica incluida\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/electrodomesticos/climatizacion/ventiladores/cat1973116/c\",\"rel\":\"\",\"style\":\"\",\"title\":\"Ventiladores\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/jardin-y-terraza/muebles-de-jardin/conjuntos-de-jardin/cat10280003/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Conjuntos de jardín\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/jardin-y-terraza/muebles-de-jardin/cat2440002/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Muebles de jardín \"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/jardin-y-terraza/piscinas/cat2450018/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Piscinas\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/bebe\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Envío gratis bebé desde 29€\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/bebe-y-mama/sillas-de-coche/sillas-de-coche-para-bebe/cat1861416/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Sillas de coche bebé\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/bebe-y-mama/paseo-del-bebe/carritos-de-bebe-2-y-3-piezas/cat8520030/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Carritos bebé\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/stock-fuera\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Stock fuera -40% descuento\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/exclusivos-online/cat28650681/c\",\"rel\":\"\",\"style\":\"\",\"title\":\"Ofertas Exclusivas Online\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/moviles-foto/smartphones/cat32745043/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"Móviles y smartphones\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/gaming/consolas-ps5/F-13riiZ1pt4/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"PlayStation 5\"},{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/moviles-foto/espacio-apple/iphone-17/cat32793297/c\",\"rel\":\"follow\",\"style\":\"\",\"title\":\"iPhone 17\"}],\"title\":\"Ofertas y campañas\"}],[{\"arrayLinks\":[{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/maxima-seguridad-en-tus-compras.e\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Máxima seguridad en tus compras\"},{\"bu\":\"others\",\"href\":\"https://www.confianzaonline.es/empresas/carrefour.htm\",\"images\":[{\"bu\":\"others\",\"href\":\"https://www.confianzaonline.es/empresas/carrefour.htm\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/confianza-online.png\",\"title\":\"Confianza online\",\"type\":\"(not set)\"}],\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Confianza online\"},{\"bu\":\"others\",\"href\":\"https://www.adigital.org/asociados/carrefour-online\",\"images\":[{\"bu\":\"others\",\"href\":\"https://www.adigital.org/asociados/carrefour-online\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/adigital_logo.png\",\"title\":\"ADigital\",\"type\":\"(not set)\"}],\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"ADigital\"},{\"bu\":\"others\",\"href\":\"https://www.carrefour.es/litigios-union-europea.e\",\"images\":[{\"bu\":\"others\",\"href\":\"https://www.carrefour.es/litigios-union-europea.e\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/com_eur.png\",\"title\":\"Litigios de la Unión Europea\",\"type\":\"(not set)\"}],\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Litigios de la Unión Europea\"}],\"title\":\"Garantía de Carrefour\"},{\"arrayLinks\":[{\"bu\":\"others\",\"href\":\"\",\"images\":[{\"bu\":\"others\",\"href\":\"\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/metodos-pago.png\",\"title\":\"Métodos de pago\",\"type\":\"(not set)\"}],\"rel\":\"\",\"style\":\"\",\"title\":\"Métodos de pago\"}],\"title\":\"Métodos de pago\"},{\"arrayLinks\":[{\"bu\":\"others\",\"href\":\"\",\"images\":[{\"bu\":\"others\",\"href\":\"\",\"src\":\"https://www.carrefour.es/crs/cdn_static/c4nonfood-front/images/premios-menciones.png\",\"title\":\"Premios y reconocimientos\",\"type\":\"(not set)\"}],\"rel\":\"\",\"style\":\"\",\"title\":\"Premios y reconocimientos\"}],\"title\":\"Premios y reconocimientos\"},{\"arrayLinks\":[{\"bu\":\"NonFood\",\"href\":\"https://www.carrefour.es/investigacion-desarrollo-innovacion/mas-info/\",\"rel\":\"nofollow\",\"style\":\"\",\"title\":\"Investigación, desarrollo e innovación\"}],\"title\":\"I+D+i\"}]],\"footerLeft\":[{\"bu\":\"corp-empresa\",\"href\":\"https"
     },
     {
-      "retailer_sku": "641402048",
+      "retailer_sku": "529921745",
       "url": "https://www.carrefour.es/cloud-api/delivery-manager/v1/home-first-delivery-day?postalCode=28232&sortBy=distance",
       "status": 200,
       "resource_type": "xhr",
@@ -170,11 +170,11 @@
         "startHour",
         "timeSlotDescription"
       ],
-      "body_sample": "{\"timeSlotDescription\":\"Mañana, 26 AGO, 12-13h\",\"postalCode\":\"28232\",\"startHour\":\"12:00\",\"endHour\":\"13:00\",\"date\":\"2026-08-26\"}\n"
+      "body_sample": "{\"timeSlotDescription\":\"Mañana, 27 AGO, 17-18h\",\"postalCode\":\"28232\",\"startHour\":\"17:00\",\"endHour\":\"18:00\",\"date\":\"2026-08-27\"}\n"
     },
     {
-      "retailer_sku": "641402048",
-      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IObh1hdzlsuYjjtQrsQZ9eE44v",
+      "retailer_sku": "529921745",
+      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IRtBPJRZytqRE5pr7pRqg8gnzP",
       "status": 403,
       "resource_type": "xhr",
       "content_type": "application/json",
@@ -186,7 +186,19 @@
       "body_sample": "{\"code\":403,\"message\":\"forbidden customer login status: anonymous\"}\n"
     },
     {
-      "retailer_sku": "641402048",
+      "retailer_sku": "529921745",
+      "url": "https://www.carrefour.es/cloud-api/pdp-food-analytics/v1/impressions?product_id=R-529921745&referer=",
+      "status": 200,
+      "resource_type": "xhr",
+      "content_type": "application/json",
+      "body_bytes": 410,
+      "json_keys": [
+        "impressions"
+      ],
+      "body_sample": "{\"impressions\":[{\"currency\":\"EUR\",\"index\":1,\"item_brand\":\"marca-nacional-sin-marca\",\"item_category\":\"22012\",\"item_ean\":[\"2902266000009\"],\"item_id\":\"035834\",\"item_internal_id\":\"529921745\",\"item_list_name\":\"product-direct\",\"item_name\":\"banana-a-granel-1-kg-aprox\",\"item_provider\":\"carrefour\",\"item_provider_type\":\"carrefour\",\"item_shipping\":\"home_delivery|drive\",\"item_sms\":\"035834\",\"price\":1.49,\"quantity\":1}]}\n"
+    },
+    {
+      "retailer_sku": "529921745",
       "url": "https://www.carrefour.es/cloud-api/salepoints/v1/",
       "status": 200,
       "resource_type": "xhr",
@@ -209,19 +221,19 @@
       "body_sample": "{\"allow_substitutions\":true,\"chronos\":true,\"delivery_type\":\"A_DOMICILIO\",\"is_sell_pack_enabled\":true,\"marketpay\":true,\"name\":\"COL PINAR\",\"nektriaWarehouseId\":\"e5069f93-bded-4904-b554-453e37c8075a\",\"postal_code\":\"28232\",\"projection_days\":\"0\",\"region_id\":\"5289\",\"sale_point\":\"005290\",\"werks_id\":\"0731\"}\n"
     },
     {
-      "retailer_sku": "641402048",
-      "url": "https://www.carrefour.es/cloud-api/pdp-food-analytics/v1/impressions?product_id=R-641402048&referer=",
+      "retailer_sku": "529921745",
+      "url": "https://www.carrefour.es/cloud-api/pdp-food/v1/reviews?product_id=529921745&offset=0&limit=3&rating=false",
       "status": 200,
       "resource_type": "xhr",
       "content_type": "application/json",
-      "body_bytes": 476,
+      "body_bytes": 735,
       "json_keys": [
-        "impressions"
+        "reviews"
       ],
-      "body_sample": "{\"impressions\":[{\"coupon\":\"directo/sobre-producto/8004359196_30-dias-locos\",\"currency\":\"EUR\",\"index\":1,\"item_brand\":\"carrefour\",\"item_category\":\"14064\",\"item_ean\":[\"3560070614202\"],\"item_id\":\"813631\",\"item_internal_id\":\"641402048\",\"item_list_name\":\"product-direct\",\"item_name\":\"copos-de-avena-integral-original-carrefour-500-g\",\"item_provider\":\"carrefour\",\"item_provider_type\":\"carrefour\",\"item_shipping\":\"home_delivery|drive\",\"item_sms\":\"813631\",\"price\":0.84,\"quantity\":1}]}\n"
+      "body_sample": "{\"reviews\":[{\"assessment\":5,\"creation_date\":\"2026-04-23T15:44:12.543+02:00\",\"id\":\"3ClEedM75Ii5GgpzGZ6SqtfwzSL\",\"name\":\"Stella maris\",\"review_text\":\"me ha gustado mucho \",\"title\":\"ricas ricas bien precio acomodado sigan asi\"},{\"assessment\":4,\"creation_date\":\"2026-01-20T11:50:29.358+01:00\",\"id\":\"38WD2wCQxlsjU76oLJZAjrPLzTf\",\"name\":\"antonio\",\"review_text\":\"Salud a precio asequible \",\"title\":\"Cuesta de Enero, Febrero, Marzo, ....\"},{\"assessment\":5,\"creation_date\":\"2025-10-26T01:36:03.179+02:00\",\"id\":\"34ZyPPq377FNmtp6TnObrncePKv\",\"name\":\"Pedro emeterio\",\"review_text\":\"siempre he usado plátano de Canarias pero el sabor de la banana tampoco desmejora está muy rico y muy aprovechado. y el precio excepcional\",\"title\":\"un cambio\"}]}\n"
     },
     {
-      "retailer_sku": "641402048",
+      "retailer_sku": "529921745",
       "url": "https://clientes-carrefour.my.salesforce-scrt.com/embeddedservice/v1/businesshours?orgId=00D20000000pFOG&esConfigName=MessagingForWeb_ATC_Carrefour",
       "status": 204,
       "resource_type": "xhr",
@@ -230,8 +242,8 @@
       "body_sample": ""
     },
     {
-      "retailer_sku": "641402048",
-      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/8136310000.json?u=2FAFB5EA-79A3-487A-A960-D6BB468768CD&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=8136310000&s=1787638678559&v=v1.0.564&visitid=FDFE0A1D-2D2D-48A2-9922-CEE5C6CAD9E1&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fcopos-de-avena-integral-original-carrefour-500-g%2FR-641402048%2Fp",
+      "retailer_sku": "529921745",
+      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/0358340000.json?u=BE7816E5-98AD-42A1-B63C-EE44F1B32F53&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=0358340000&s=1787739074658&v=v1.0.564&visitid=FFF767D5-C38D-4700-A108-17A74CFB554D&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fbanana-a-granel-1-kg-aprox%2FR-529921745%2Fp",
       "status": 200,
       "resource_type": "fetch",
       "content_type": "application/json",
@@ -240,7 +252,7 @@
       "body_sample": "{}"
     },
     {
-      "retailer_sku": "641402048",
+      "retailer_sku": "529921745",
       "url": "https://clientes-carrefour.my.salesforce-scrt.com/embeddedservice/v1/embedded-service-config?orgId=00D20000000pFOG&esConfigName=MessagingForWeb_ATC_Carrefour&language=es",
       "status": 200,
       "resource_type": "xhr",
@@ -257,66 +269,65 @@
   "sample": [
     {
       "allergens": null,
-      "analytics_payload_sha256": "3ace22d1982daaf41b3200c0a68948169c841fb1c86a8e362a5f4ced3a88657d",
-      "analytics_source_url": "https://www.carrefour.es/cloud-api/pdp-food-analytics/v1/impressions?product_id=R-641402048&referer=",
+      "analytics_payload_sha256": "01201ac0c56729c139f6de46c8fa2ac2d6c95b0e8b5b5900389afb8e9e070494",
+      "analytics_source_url": "https://www.carrefour.es/cloud-api/pdp-food-analytics/v1/impressions?product_id=R-529921745&referer=",
       "attributes": {
-        "carrefour_analytics_category_id": "14064",
-        "carrefour_analytics_name": "copos-de-avena-integral-original-carrefour-500-g",
-        "carrefour_coupon": "directo/sobre-producto/8004359196_30-dias-locos",
-        "carrefour_item_id": "813631",
+        "carrefour_analytics_category_id": "22012",
+        "carrefour_analytics_name": "banana-a-granel-1-kg-aprox",
+        "carrefour_item_id": "035834",
         "carrefour_provider": "carrefour",
         "carrefour_provider_type": "carrefour",
         "carrefour_shipping": "home_delivery|drive",
-        "carrefour_sms_id": "813631",
-        "product_type": "Cereales, Fibra"
+        "carrefour_sms_id": "035834",
+        "product_type": "de peso variable, la cantidad y precio puede variar ligeramente en la preparación."
       },
       "availability": "InStock",
       "blocked": false,
-      "brand": "CARREFOUR",
-      "browser_title": "Copos de avena integral Original Carrefour 500 g. | Supermercado Online Carrefour",
-      "calories_kcal": 372.0,
-      "canonical_url": "https://www.carrefour.es/supermercado/copos-de-avena-integral-original-carrefour-500-g/R-641402048/p",
-      "carbohydrate_g": 59.0,
+      "brand": "MARCA NACIONAL SIN MARCA",
+      "browser_title": "Banana a granel 1 Kg aprox | Supermercado Online Carrefour",
+      "calories_kcal": null,
+      "canonical_url": "https://www.carrefour.es/supermercado/banana-a-granel-1-kg-aprox/R-529921745/p",
+      "carbohydrate_g": null,
       "category_path": [
         "Inicio",
         "Supermercado",
-        "La Despensa",
-        "Desayuno",
-        "Cereales"
+        "Frescos",
+        "Frutas",
+        "Plátanos y Bananas"
       ],
-      "energy_kj": 1566.0,
-      "fat_g": 7.0,
+      "energy_kj": null,
+      "fat_g": null,
       "fetch_error": null,
-      "fiber_g": 10.0,
-      "gtin": "3560070614202",
-      "html_bytes": 326458,
+      "fiber_g": null,
+      "gtin": "2902266000009",
+      "html_bytes": 335201,
       "http_status": 200,
-      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/813631_00_1.jpg",
-      "ingredients": "100% copos de avena integral. Puede contener trazas de altramuces y mostaza.",
-      "legal_name": "Copos laminados de avena integral, alto contenido de fibra.",
+      "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/035834_00_1.jpg",
+      "ingredients": null,
+      "legal_name": null,
       "mandatory_mentions": null,
-      "manufacturer_packer_importer": "Centros Comerciales Carrefour S.A",
-      "name": "Copos de avena integral Original Carrefour 500 g.",
-      "net_content": "500 g",
+      "manufacturer_packer_importer": null,
+      "name": "Banana a granel 1 Kg aprox",
+      "net_content": null,
       "nutriscore": null,
-      "nutrition_basis": "100 g",
-      "nutrition_status": "DECLARED_COMPLETE",
-      "observed_at": "2026-08-25T06:18:00.325316+00:00",
-      "operator_address": "Avenida de la Transición Española 36, 28108, Alcobendas, Madrid",
-      "page_sha256": "c787fc8bd76a9049db6ab8e27e8f566ed62548691863c5475d1d87ff29c79130",
-      "preparation_instructions": "Lugar fresco y seco",
+      "nutrition_basis": null,
+      "nutrition_status": "NOT_FOUND",
+      "observed_at": "2026-08-26T10:11:16.255683+00:00",
+      "operator_address": null,
+      "page_sha256": "23d4e93b9d696e745b8b55c065b3b22c77912116328014d7a297689bd7565ef0",
+      "preparation_instructions": null,
       "price_currency": "EUR",
-      "price_eur": 0.84,
-      "protein_g": 14.0,
+      "price_eur": 1.49,
+      "protein_g": null,
       "retailer": "CARREFOUR",
-      "retailer_sku": "641402048",
+      "retailer_sku": "529921745",
       "salt_g": null,
-      "saturates_g": 1.3,
+      "saturates_g": null,
       "source": "CARREFOUR_FIRST_PARTY",
-      "storage_conditions": "Conservar en lugar fresco y seco.",
-      "sugars_g": 0.7,
-      "text_chars": 4749,
-      "unit_price_text": "1,68 €/kg"
+      "storage_conditions": null,
+      "sugars_g": null,
+      "text_chars": 3900,
+      "unit_price_text": "1,49 €/kg"
     }
   ],
   "provenance_note": "Every populated product field in this dataset was observed directly on carrefour.es in a real browser session. Third-party data may seed candidate URLs only and is never copied as Carrefour evidence.",

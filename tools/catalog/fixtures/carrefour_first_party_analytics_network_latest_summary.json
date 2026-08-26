@@ -2,14 +2,14 @@
   "source": "CARREFOUR_FIRST_PARTY",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "classification_performed": false,
-  "network_responses_seen": 73,
+  "network_responses_seen": 71,
   "analytics_responses_complete_json": 1,
   "analytics_responses_matched": 1,
-  "product_fields_or_attributes_added": 8,
+  "product_fields_or_attributes_added": 7,
   "evidence_rows_added": 6,
   "products_touched": 1,
   "touched_skus": [
-    "641402048"
+    "529921745"
   ],
   "provenance_note": "Only complete HTTP-200 JSON responses observed directly while loading the matching Carrefour product page are used. Analytics values are marked OBSERVED_PRODUCT_ANALYTICS, not manufacturer DECLARED data."
 }
