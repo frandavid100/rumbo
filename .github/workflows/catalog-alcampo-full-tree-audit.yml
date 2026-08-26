@@ -1,3 +1,4 @@
+# Retrigger the full audit after the repaired ten-root first-party snapshot.
 name: Catalog Alcampo full first-party tree audit
 on:
   push:
