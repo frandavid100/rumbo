@@ -1,0 +1,214 @@
+name: Catalog Alcampo full first-party tree audit
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-alcampo-full-tree-audit.yml'
+      - 'tools/catalog/alcampo_html_tree_recovery.py'
+      - 'tools/catalog/alcampo_recovery_union.py'
+      - 'tools/catalog/fixtures/alcampo_root_children_latest.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-full-tree-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - id: matrix
+        name: Build complete direct-child frontier from official root snapshot
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          p=Path('tools/catalog/fixtures/alcampo_root_children_latest.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          expected_roots={
+              'OC2112','OC16','OCC10','OC10','OC200220183','OC20022018',
+              'OC26112021','OCC11','OCSINGSINL','OC09112021',
+          }
+          roots=data.get('roots') or []
+          observed_roots={str(r.get('root_retailer_category_id') or '').strip() for r in roots}
+          missing_roots=sorted(expected_roots-observed_roots)
+          if missing_roots:
+              raise SystemExit(f'root snapshot incomplete; missing={missing_roots}')
+
+          found={}
+          for root in roots:
+              root_label=str(root.get('root_label') or root.get('root_retailer_category_id') or '')
+              for child in root.get('children') or []:
+                  rid=str(child.get('retailerCategoryId') or '').strip()
+                  if not rid:
+                      continue
+                  candidate={
+                      'rid':rid,
+                      'label':str(child.get('name') or rid),
+                      'expected':int(child.get('productCount') or 0),
+                      'root':root_label,
+                  }
+                  prev=found.get(rid)
+                  if prev is None or candidate['expected'] > prev['expected']:
+                      found[rid]=candidate
+
+          include=sorted(found.values(), key=lambda x:x['rid'])
+          if not include:
+              raise SystemExit('empty direct-child frontier')
+          if len(include) > 240:
+              raise SystemExit(f'unexpected frontier size {len(include)} > 240')
+          print('matrix='+json.dumps({'include':include},ensure_ascii=False,separators=(',',':')))
+          print('count='+str(len(include)))
+          PY
+
+  audit:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Audit one canonical first-party subtree
+        working-directory: tools/catalog
+        continue-on-error: true
+        run: |
+          python alcampo_html_tree_recovery.py \
+            --label "${{ matrix.label }}" \
+            --rid "${{ matrix.rid }}" \
+            --expected "${{ matrix.expected }}" \
+            --max-depth 6 \
+            --max-nodes 120 \
+            --out "alcampo-full-audit-${{ matrix.rid }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-full-audit-${{ matrix.rid }}
+          path: tools/catalog/alcampo-full-audit-${{ matrix.rid }}/
+          retention-days: 14
+          if-no-files-found: warn
+
+  merge:
+    needs: [prepare, audit]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      EXPECTED_CHECKS: ${{ needs.prepare.outputs.count }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download stable 13,877 baseline
+        run: |
+          mkdir -p baseline
+          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D baseline
+          test -s baseline/products.jsonl
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: alcampo-full-audit-*
+          path: full-audit
+      - name: Merge baseline, prior SSR additions, and complete frontier audit
+        working-directory: tools/catalog
+        run: |
+          mkdir -p ../../alcampo-full-tree-union
+          set +e
+          python alcampo_recovery_union.py \
+            --baseline-products ../../baseline/products.jsonl \
+            --recursive-products fixtures/alcampo_html_recovery_new_products_latest.jsonl \
+            --recovery-root ../../full-audit \
+            --out ../../alcampo-full-tree-union
+          echo "$?" > ../../alcampo-full-tree-union/recovery_exit_code.txt
+          set -e
+      - name: Certify whether the whole current root frontier was audited
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          expected=int(os.environ['EXPECTED_CHECKS'])
+          root_snapshot=json.loads(Path('tools/catalog/fixtures/alcampo_root_children_latest.json').read_text(encoding='utf-8'))
+          report=json.loads(Path('alcampo-full-tree-union/recovery_report.json').read_text(encoding='utf-8'))
+          checks=[]
+          for p in Path('full-audit').rglob('child_check.json'):
+              try: checks.append(json.loads(p.read_text(encoding='utf-8')))
+              except Exception: pass
+          observed={str(c.get('rid') or c.get('retailer_category_id') or '').strip() for c in checks}
+          expected_rids={
+              str(c.get('retailerCategoryId') or '').strip()
+              for r in (root_snapshot.get('roots') or [])
+              for c in (r.get('children') or [])
+              if str(c.get('retailerCategoryId') or '').strip()
+          }
+          missing=sorted(expected_rids-observed)
+          extra=sorted(observed-expected_rids)
+          truncated=sorted(str(c.get('rid') or '') for c in checks if c.get('traversal_truncated'))
+          failed=int(report.get('recovery_checks_failed') or 0)
+          visible_missing=int(report.get('html_visible_unique_skus_missing_from_union') or 0)
+          complete=(
+              expected == len(expected_rids) == len(checks)
+              and not missing and not extra and not truncated
+              and failed == 0 and visible_missing == 0
+          )
+          audit={
+              'baseline_unique':report.get('baseline_unique'),
+              'prior_recovery_unique':report.get('recursive_new_unique_vs_baseline'),
+              'frontier_subtrees_expected':len(expected_rids),
+              'frontier_subtrees_audited':len(checks),
+              'frontier_subtrees_failed':failed,
+              'frontier_subtrees_truncated':truncated,
+              'missing_frontier_rids':missing,
+              'unexpected_frontier_rids':extra,
+              'html_visible_unique_food_skus_audited':report.get('html_visible_unique_food_skus_audited'),
+              'html_visible_unique_skus_missing_from_union':visible_missing,
+              'audit_recovery_rows':report.get('recovery_rows'),
+              'audit_recovery_new_unique':report.get('recovery_new_unique'),
+              'unique_food_products_union':report.get('unique_food_products_union'),
+              'net_new_unique_vs_13877_baseline':report.get('net_new_unique_vs_13877_baseline'),
+              'current_root_frontier_complete':complete,
+              'completeness_claim':(
+                  'CURRENT_FIRST_PARTY_ROOT_FRONTIER_FULLY_AUDITED_AND_VISIBLE_SKUS_COVERED'
+                  if complete else 'FULL_TREE_AUDIT_INCOMPLETE'
+              ),
+          }
+          Path('tools/catalog/fixtures/alcampo_full_tree_audit_latest.json').write_text(
+              json.dumps(audit,ensure_ascii=False,indent=2),encoding='utf-8')
+          summary=json.loads(Path('alcampo-full-tree-union/summary.json').read_text(encoding='utf-8'))
+          Path('tools/catalog/fixtures/alcampo_full_tree_catalog_summary_latest.json').write_text(
+              json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(audit,ensure_ascii=False,indent=2))
+          PY
+      - name: Persist full-tree audit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_full_tree_audit_latest.json tools/catalog/fixtures/alcampo_full_tree_catalog_summary_latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Alcampo full-tree audit"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-full-tree-audit-union
+          path: alcampo-full-tree-union/
+          retention-days: 14
