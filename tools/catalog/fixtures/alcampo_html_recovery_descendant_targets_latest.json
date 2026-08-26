@@ -1,0 +1,20 @@
+{
+  "source": "FIRST_PARTY_ALCAMPO",
+  "provenance": "Discovered as canonical direct descendants in prior audited SSR recovery of OC100805007 (Galletas rellenas); persisted so workflow cancellation cannot erase unresolved descendant knowledge.",
+  "targets": [
+    {
+      "label": "fruta",
+      "rid": "OC100805027",
+      "expected": 0,
+      "last_observed_html_status": 202,
+      "active": true
+    },
+    {
+      "label": "barquillo relleno",
+      "rid": "OC100805024",
+      "expected": 0,
+      "last_observed_html_status": 202,
+      "active": true
+    }
+  ]
+}
