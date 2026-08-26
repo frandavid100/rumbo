@@ -2,7 +2,7 @@
   "source": "CARREFOUR_FIRST_PARTY",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "classification_performed": false,
-  "network_responses_seen": 71,
+  "network_responses_seen": 73,
   "analytics_responses_complete_json": 1,
   "analytics_responses_matched": 1,
   "product_fields_or_attributes_added": 7,

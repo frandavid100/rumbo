@@ -3,13 +3,13 @@
   "source": "CARREFOUR_FIRST_PARTY",
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "classification_performed": false,
-  "built_at": "2026-08-26T10:34:33.313672+00:00",
+  "built_at": "2026-08-26T10:37:41.271150+00:00",
   "counts": {
     "products_total": 1681,
     "products_detail_observed": 1652,
     "products_listing_only": 29,
     "manual_first_party_fixture_rows": 1952,
-    "evidence_rows": 47071,
+    "evidence_rows": 47096,
     "nutrition_status": {
       "DECLARED_COMPLETE": 1320,
       "DECLARED_PARTIAL": 106,
@@ -27,9 +27,9 @@
       "UNKNOWN": 21
     },
     "evidence_types": {
-      "DECLARED": 31931,
-      "OBSERVED_LISTING": 660,
-      "OBSERVED_PRODUCT_ANALYTICS": 18,
+      "DECLARED": 31937,
+      "OBSERVED_LISTING": 673,
+      "OBSERVED_PRODUCT_ANALYTICS": 24,
       "OBSERVED_PRODUCT_PAGE": 14462
     }
   },
@@ -199,23 +199,23 @@
   },
   "evidence_field_counts": {
     "allergens": 793,
-    "attributes": 2067,
-    "availability": 504,
-    "brand": 1890,
+    "attributes": 2069,
+    "availability": 505,
+    "brand": 1892,
     "calories_kcal": 1680,
-    "canonical_url": 2043,
+    "canonical_url": 2052,
     "carbohydrate_g": 1669,
-    "category_path": 854,
+    "category_path": 855,
     "energy_kj": 1672,
     "fat_g": 1636,
     "fiber_g": 825,
-    "gtin": 10,
-    "image_url": 50,
+    "gtin": 12,
+    "image_url": 51,
     "ingredients": 1828,
     "legal_name": 1854,
     "mandatory_mentions": 558,
     "manufacturer_packer_importer": 1836,
-    "name": 1968,
+    "name": 1969,
     "net_content": 1851,
     "nutriscore": 393,
     "nutrition_basis": 1665,
@@ -223,15 +223,15 @@
     "nutrition_status": 5,
     "operator_address": 1847,
     "preparation_instructions": 1066,
-    "price_currency": 1964,
-    "price_eur": 1964,
+    "price_currency": 1966,
+    "price_eur": 1966,
     "protein_g": 1647,
-    "retailer_sku": 2023,
+    "retailer_sku": 2024,
     "salt_g": 1586,
     "saturates_g": 1624,
     "storage_conditions": 1821,
     "sugars_g": 1638,
-    "unit_price_text": 1962
+    "unit_price_text": 1963
   },
   "sample": [
     {
@@ -1248,7 +1248,7 @@
       "carrefour_first_party_agent_web_products_batch_20260824_1510_olives.jsonl"
     ],
     "accepted_rows": 1952,
-    "direct_rows": 1932,
+    "direct_rows": 1919,
     "listing_rows": 33,
     "sanitized_listing_rows": 12,
     "removed_listing_fields": {
@@ -1256,7 +1256,7 @@
       "mandatory_mentions": 1,
       "source_host": 3
     },
-    "skipped_unverified_legacy_files": [
+    "skipped_nonadmissible_legacy_files": [
       "carrefour_first_party_agent_web_products_batch12_images.jsonl",
       "carrefour_first_party_agent_web_products_batch27_actforfood_fish.jsonl",
       "carrefour_first_party_agent_web_products_batch28_actforfood_seafood.jsonl",

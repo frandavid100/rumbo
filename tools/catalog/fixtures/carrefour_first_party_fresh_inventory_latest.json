@@ -3,7 +3,7 @@
   "source_policy": "FIRST_PARTY_CARREFOUR_ONLY",
   "source": "https://www.carrefour.es",
   "extractor_version": "carrefour-first-party-browser-inventory-1.0",
-  "built_at": "2026-08-26T10:34:31.438711+00:00",
+  "built_at": "2026-08-26T10:37:39.499736+00:00",
   "classification_performed": "false",
   "counts": {
     "candidate_urls": 16,
@@ -15,7 +15,7 @@
     "nutrition_partial": 0,
     "nutrition_not_found": 1,
     "evidence_rows": 17,
-    "network_responses": 71,
+    "network_responses": 73,
     "json_xhr_fetch_responses": 9,
     "gtin_from_official_page_client_data": 0,
     "gtin_client_data_conflicts": 0,
@@ -174,7 +174,7 @@
     },
     {
       "retailer_sku": "529921745",
-      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IRvwS5Ef3DaST98cIiEUxHpK7w",
+      "url": "https://www.carrefour.es/cloud-api/shopping-lists-papi/v1/aggr-list/3IRwK953dmmQ5ixYeE01DzBJdSA",
       "status": 403,
       "resource_type": "xhr",
       "content_type": "application/json",
@@ -184,6 +184,29 @@
         "message"
       ],
       "body_sample": "{\"code\":403,\"message\":\"forbidden customer login status: anonymous\"}\n"
+    },
+    {
+      "retailer_sku": "529921745",
+      "url": "https://www.carrefour.es/cloud-api/salepoints/v1/",
+      "status": 200,
+      "resource_type": "xhr",
+      "content_type": "application/json",
+      "body_bytes": 301,
+      "json_keys": [
+        "allow_substitutions",
+        "chronos",
+        "delivery_type",
+        "is_sell_pack_enabled",
+        "marketpay",
+        "name",
+        "nektriaWarehouseId",
+        "postal_code",
+        "projection_days",
+        "region_id",
+        "sale_point",
+        "werks_id"
+      ],
+      "body_sample": "{\"allow_substitutions\":true,\"chronos\":true,\"delivery_type\":\"A_DOMICILIO\",\"is_sell_pack_enabled\":true,\"marketpay\":true,\"name\":\"COL PINAR\",\"nektriaWarehouseId\":\"e5069f93-bded-4904-b554-453e37c8075a\",\"postal_code\":\"28232\",\"projection_days\":\"0\",\"region_id\":\"5289\",\"sale_point\":\"005290\",\"werks_id\":\"0731\"}\n"
     },
     {
       "retailer_sku": "529921745",
@@ -211,26 +234,13 @@
     },
     {
       "retailer_sku": "529921745",
-      "url": "https://www.carrefour.es/cloud-api/salepoints/v1/",
+      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/0358340000.json?u=39590255-A6CA-4286-917C-9FD6D1507657&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=0358340000&s=1787740623302&v=v1.0.564&visitid=F65F562E-8965-4B52-A084-88FC1453B759&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fbanana-a-granel-1-kg-aprox%2FR-529921745%2Fp",
       "status": 200,
-      "resource_type": "xhr",
+      "resource_type": "fetch",
       "content_type": "application/json",
-      "body_bytes": 301,
-      "json_keys": [
-        "allow_substitutions",
-        "chronos",
-        "delivery_type",
-        "is_sell_pack_enabled",
-        "marketpay",
-        "name",
-        "nektriaWarehouseId",
-        "postal_code",
-        "projection_days",
-        "region_id",
-        "sale_point",
-        "werks_id"
-      ],
-      "body_sample": "{\"allow_substitutions\":true,\"chronos\":true,\"delivery_type\":\"A_DOMICILIO\",\"is_sell_pack_enabled\":true,\"marketpay\":true,\"name\":\"COL PINAR\",\"nektriaWarehouseId\":\"e5069f93-bded-4904-b554-453e37c8075a\",\"postal_code\":\"28232\",\"projection_days\":\"0\",\"region_id\":\"5289\",\"sale_point\":\"005290\",\"werks_id\":\"0731\"}\n"
+      "body_bytes": 2,
+      "json_keys": [],
+      "body_sample": "{}"
     },
     {
       "retailer_sku": "529921745",
@@ -254,16 +264,6 @@
         "timestamp"
       ],
       "body_sample": "{\"embeddedServiceConfig\":{\"siteUrl\":\"https://clientes-carrefour.my.site.com/ESWMessagingForWebATCCa1712658191918\",\"attachments\":{\"isFileTransferRepInitiated\":false,\"endUserToAgent\":true,\"maxFileSize\":5242880,\"allowedFileTypes\":{\"image\":[\"jpg\",\"tiff\",\"bmp\",\"gif\",\"png\"],\"other\":[\"xlsx\",\"pdf\",\"xml\",\"doc\",\"xls\",\"docx\"],\"audio\":[],\"video\":[],\"text\":[\"txt\",\"csv\"]}},\"fallbackMessage\":{\"isFallbackMessageEnabled\":false},\"branding\":[{\"n\":\"baseFontSize\",\"v\":\"Medium\"},{\"n\":\"chatButton\",\"v\":\"#0970E6\"},{\"n\":\"headerAlternateColor\",\"v\":\"#C23934\"},{\"n\":\"avatarImage\",\"v\":\"https://assets.app.smart-tribune.com/carrefour/images/search-group-icon.png\"},{\"n\":\"agentMessageLink\",\"v\":\"#0B5CAB\"},{\"n\":\"headerColor\",\"v\":\"#1A1B1E\"},{\"n\":\"headerForeground\",\"v\":\"#FFFFFF\"},{\"n\":\"height\",\"v\":\"561\"},{\"n\":\"userMessageBackground\",\"v\":\"#0970E6\"},{\"n\":\"width\",\"v\":\"374\"},{\"n\":\"primaryButtonText\",\"v\":\"#FFFFFF\"},{\"n\":\"primaryText\",\"v\":\"#333333\"},{\"n\":\"alert\",\"v\":\"#D72E2D\"},{\"n\":\"userMessageText\",\"v\":\"#FFFFFF\"},{\"n\":\"secondaryColor\",\"v\":\"#005290\"},{\"n\":\"citationsBackground\",\"v\":\"#FFFFFF\"},{\"n\":\"headerBackground\",\"v\":\"#0970E6\"},{\"n\":\"userMessageLink\",\"v\":\"#FFFFFF\"},{\"n\":\"inputOutline\",\"v\":\"#C9C9C9\"},{\"n\":\"secondaryText\",\"v\":\"#5C5C5C\"},{\"n\":\"logoImage\",\"v\":\"https://assets.app.smart-tribune.com/carrefour/images/push_open-picto.png\"},{\"n\":\"contrastPrimaryColor\",\"v\":\"#333333\"},{\"n\":\"invitationText\",\"v\":\"#FFFFFF\"},{\"n\":\"agentMessageText\",\"v\":\"#2E2E2E\"},{\"n\":\"inputFooterButton\",\"v\":\"#005290\"},{\"n\":\"invitationDismissalButton\",\"v\":\"#AEAEAE\"},{\"n\":\"citationsText\",\"v\":\"#181818\"},{\"n\":\"botImage\",\"v\":\"https://assets.app.smart-tribune.com/carrefour/images/push_open-picto.png\"},{\"n\":\"primaryColor\",\"v\":\"#1A1B1E\"},{\"n\":\"primaryButtonBackground\",\"v\":\"#0970E6\"},{\"n\":\"font\",\"v\":\"Arial\"},{\"n\":\"headerTextColor\",\"v\":\"#FFFFFF\"},{\"n\":\"agentMessageBackground\",\"v\":\"#F3F3F3\"},{\"n\":\"fabImage\",\"v\":\"https://assets.app.smart-tribune.com/carrefour/images/push_open-picto.png\"},{\"n\":\"conversationBodyBackground\",\"v\":\"#FFFFFF\"}],\"customLabels\":[{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"DefaultHeaderText\",\"labelValue\":\"¿Podemos ayudarte?\"}],\"embeddedServiceMessagingChannel\":{\"authMode\":\"UnAuth\",\"channelAddressIdentifier\":\"3e707698-3669-4fe3-aaa4-10228d9dc2ce\",\"showTypingIndicators\":false,\"startNewLineOnEnter\":false,\"showDeliveryReceipts\":false,\"esClientVersion\":\"WebV1\",\"showAgentforceTagline\":false,\"showReadReceipts\":false,\"showEmojiSelection\":false},\"termsAndConditions\":{\"isTermsAndConditionsEnabled\":false},\"deploymentType\":\"Web\",\"site\":\"ESW_MessagingForWeb_ATC_Ca_17126581919181\",\"htmlDirection\":\"LTR\",\"transcript\":{\"allowTranscriptDownload\":false},\"name\":\"MessagingForWeb_ATC_Carrefour\",\"forms\":[],\"choiceListConfig\":{\"choiceList\":[],\"choiceListValueDependencies\":[]},\"messagingChannel\":{\"isAgentAvailabilityCheckEnabled\":false,\"isVoiceRecordingEnabled\":false,\"isVoiceModeEnabled\":false,\"supportedModes\":[\"Messaging\"],\"isFeedbackEnabled\":false}},\"standardLabels\":[{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"DefaultHeaderText\",\"labelValue\":\"Chat\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"Minimize\",\"labelValue\":\"Minimizar ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"Close\",\"labelValue\":\"Cerrar ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"DefaultMinimizedText\",\"labelValue\":\"Hola, ¿tiene alguna pregunta? Chateemos.\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MinimizedButtonAssistiveText\",\"labelValue\":\"Ampliar la ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MinimizedNotificationDismissButtonAssistiveText\",\"labelValue\":\"Cerrar la notificación de chat\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"HeaderGreetingAnnouncement\",\"labelValue\":\"Hola, pregúnteme cualquier cosa.\"},{\"sectionName\":\"EmbeddedMessagingUnseenMessageNotification\",\"labelName\":\"NinePlusUnseenMessageCount\",\"labelValue\":\"9+\"},{\"sectionName\":\"EmbeddedMessagingUnseenMessageNotification\",\"labelName\":\"ZeroUnseenMessagesAssistiveText\",\"labelValue\":\"Desplace los mensajes más recientes en vista\"},{\"sectionName\":\"EmbeddedMessagingUnseenMessageNotification\",\"labelName\":\"UnseenMessagesAssistiveText\",\"labelValue\":\"Desplace los mensajes más recientes en vista ({0} no leído).\"},{\"sectionName\":\"EmbeddedMessagingUnseenMessageNotification\",\"labelName\":\"NinePlusUnseenMessagesAssistiveText\",\"labelValue\":\"Desplace los mensajes más recientes en vista (9+ no leído).\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterTextAreaPlaceHolder\",\"labelValue\":\"Escriba su mensaje...\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"StartBookendText\",\"labelValue\":\"Hoy\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ParticipantJoinText\",\"labelValue\":\"{0} se unió\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ParticipantLeaveText\",\"labelValue\":\"{0} salió\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterSendButtonAssistiveText\",\"labelValue\":\"Enviar mensaje\"},{\"sectionName\":\"EmbeddedMessagingPrechat\",\"labelName\":\"PrechatStateSubmitButton\",\"labelValue\":\"Iniciar conversación\"},{\"sectionName\":\"EmbeddedMessagingPrechat\",\"labelName\":\"InvalidEmailFormFieldError\",\"labelValue\":\"Utilice un formato de correo electrónico válido.\"},{\"sectionName\":\"EmbeddedMessagingPrechat\",\"labelName\":\"RequiredFormFieldError\",\"labelValue\":\"Este campo es obligatorio.\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"NotificationDismissButtonText\",\"labelValue\":\"Lo entiendo\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"ConversationEndedMinimizedText\",\"labelValue\":\"Sesión de chat finalizada\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ExpiredJWT\",\"labelValue\":\"Esta conversación finalizó. Cierre la ventana de chat e inicie una nueva.\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"FileSendingText\",\"labelValue\":\"Enviando archivo...\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"DownloadFileButtonTitle\",\"labelValue\":\"Descargar archivo\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"SelectFileAttachmentButtonTitle\",\"labelValue\":\"Adjuntar archivo\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"DownloadFileButtonAssistiveText\",\"labelValue\":\"Icono de flecha de descarga\"},{\"sectionName\":\"EmbeddedMessagingFileAttachments\",\"labelName\":\"SelectFileAttachmentButtonAssistiveText\",\"labelValue\":\"Icono para adjuntar\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"Sent\",\"labelValue\":\"Enviado\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"Delivered\",\"labelValue\":\"Entregado\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"Read\",\"labelValue\":\"Leído\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ChoicesMenuMessageAssistiveText\",\"labelValue\":\"Seleccionar un elemento de menú\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ChoicesSelectionResponsePlaceholderText\",\"labelValue\":\"Marcador de posición\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ChoicesButtonsMessageAssistiveText\",\"labelValue\":\"Seleccionar una respuesta rápida\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"TransferRequestSuccessHeaderAnnouncement\",\"labelValue\":\"Transfiriendo...\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"TransferRequestFailureHeaderAnnouncement\",\"labelValue\":\"Transferencia cancelada\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"TransferRequestSuccessSystemMessage\",\"labelValue\":\"Transferencia solicitada a las\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"TransferRequestFailureSystemMessage\",\"labelValue\":\"Solicitud de transferencia fallida a las\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"TransferRequestTryAgainSystemMessage\",\"labelValue\":\"Espere e inténtelo más tarde.\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"AgentTypingIndicator\",\"labelValue\":\"{0} está escribiendo...\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"ChatbotTypingIndicator\",\"labelValue\":\"Pensando\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterTextAreaPlaceholderEndUserOnlyParticipant\",\"labelValue\":\"Iniciar a nueva sesión de chat...\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"AgentJoinAnnouncement\",\"labelValue\":\"Nuevo participante\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"AgentLeaveAnnouncement\",\"labelValue\":\"El participante se fue\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"JWTExpiredAnnouncement\",\"labelValue\":\"Conversación finalizada\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"ParticipantJoinedText\",\"labelValue\":\"El participante se unió\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"ParticipantLeftText\",\"labelValue\":\"El participante se fue\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"NewMessageText\",\"labelValue\":\"Nuevo mensaje\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MultipleNewMessagesText\",\"labelValue\":\"Nuevos mensajes\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"JwtExpiredText\",\"labelValue\":\"La sesión finalizó. Inicie una nueva sesión de chat...\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"TransferInitiatedText\",\"labelValue\":\"Transferencia solicitada\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"TransferFailedText\",\"labelValue\":\"Transferencia cancelada\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"NotSent\",\"labelValue\":\"No enviado\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"SpinnerDefaultAssistiveText\",\"labelValue\":\"Cargando...\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"FetchMoreEntriesSpinnerAssistiveText\",\"labelValue\":\"Cargando nuevos mensajes...\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"MinimizeButtonAssistiveText\",\"labelValue\":\"Minimizar ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingChatHeader\",\"labelName\":\"CloseButtonAssistiveText\",\"labelValue\":\"Cerrar la ventana de chat\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MinimizedNotificationAssistiveText\",\"labelValue\":\"Ampliar el texto\"},{\"sectionName\":\"EmbeddedMessagingMinimizedState\",\"labelName\":\"MinimizedStateAssistiveText\",\"labelValue\":\"Ampliar la ventana de mensaje\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"NotRoutedToAgentRoutingResult\",\"labelValue\":\"Los agentes no están disponibles. Inténtelo de nuevo más tarde.\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"TitleNotificationSenderDisplayName\",\"labelValue\":\"{0} dice…\"},{\"sectionName\":\"EmbeddedMessagingIframesAndContents\",\"labelName\":\"MessagingIframeTitle\",\"labelValue\":\"Sesión de chat con un agente\"},{\"sectionName\":\"EmbeddedMessagingIframesAndContents\",\"labelName\":\"FilePreviewIframeTitle\",\"labelValue\":\"Vista previa de imagen ampliada\"},{\"sectionName\":\"EmbeddedMessagingIframesAndContents\",\"labelName\":\"FilePreviewIframeCloseButtonTitle\",\"labelValue\":\"Cerrar ventana\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"MessageResendButtonText\",\"labelValue\":\"Volver a enviar\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"EstimatedWaitTimeInMinute\",\"labelValue\":\"Estamos conectándole con un agente. Su tiempo de espera estimado es de {0} minuto.\"},{\"sectionName\":\"EmbeddedMessagingConversationState\",\"labelName\":\"EstimatedWaitTimeInMinutes\",\"labelValue\":\"Estamos conectándole con un agente. Su tiempo de espera estimado es de {0} minutos.\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterEmojiButtonAssistiveText\",\"labelValue\":\"Insertar emoji\"},{\"sectionName\":\"EmbeddedMessagingInputFooter\",\"labelName\":\"InputFooterEmojiKeyboardAssistiveText\",\"labelValue\":\"Teclado de emojis\"},{\"sectionName\":\"Em"
-    },
-    {
-      "retailer_sku": "529921745",
-      "url": "https://content.syndigo.com/page/af10d664-7044-4553-bea7-7dc659fbae09/0358340000.json?u=31BC314D-E897-44C2-AB73-EEFAB5CC76D6&siteid=af10d664-7044-4553-bea7-7dc659fbae09&pageid=0358340000&s=1787740435102&v=v1.0.564&visitid=F8089391-92F4-422A-96EE-99159627FE98&ref=&pageurl=https%3A%2F%2Fwww.carrefour.es%2Fsupermercado%2Fbanana-a-granel-1-kg-aprox%2FR-529921745%2Fp",
-      "status": 200,
-      "resource_type": "fetch",
-      "content_type": "application/json",
-      "body_bytes": 2,
-      "json_keys": [],
-      "body_sample": "{}"
     }
   ],
   "sample": [
@@ -300,7 +300,7 @@
       "fetch_error": null,
       "fiber_g": null,
       "gtin": "2902266000009",
-      "html_bytes": 335187,
+      "html_bytes": 335185,
       "http_status": 200,
       "image_url": "https://static.carrefour.es/hd_510x_/img_pim_food/035834_00_1.jpg",
       "ingredients": null,
@@ -312,9 +312,9 @@
       "nutriscore": null,
       "nutrition_basis": null,
       "nutrition_status": "NOT_FOUND",
-      "observed_at": "2026-08-26T10:33:56.728008+00:00",
+      "observed_at": "2026-08-26T10:37:04.743808+00:00",
       "operator_address": null,
-      "page_sha256": "e76f72b4091f73340000a624fa90df58c815f77349e2d31141141c7dedf5c830",
+      "page_sha256": "28ce80844277a6e02121af9778cff25c3c2e9dcb52f8804c973e13cee45ca931",
       "preparation_instructions": null,
       "price_currency": "EUR",
       "price_eur": 1.49,
