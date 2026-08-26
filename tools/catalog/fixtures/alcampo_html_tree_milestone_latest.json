@@ -3,6 +3,6 @@
   "prior_recovery_unique": 38,
   "tree_recovery_new_unique": 1,
   "unique_food_products_union": 13916,
-  "failed_tree_targets": 10,
+  "failed_tree_targets": 9,
   "completeness_claim": "RECOVERY_UNION_NOT_PROVEN_COMPLETE"
 }

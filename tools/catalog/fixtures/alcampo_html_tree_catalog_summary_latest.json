@@ -3,7 +3,7 @@
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
   "importer_version": "alcampo-direct-v6.0",
-  "built_at": "2026-08-26T11:37:47.500769+00:00",
+  "built_at": "2026-08-26T12:37:00.515787+00:00",
   "roots": [
     {
       "label": "Barritas de chocolate",
@@ -105,6 +105,9 @@
           "retailer_category_id": "OC100805027",
           "html_status": 202,
           "identity_mapping_error": "missing_identity_vector",
+          "html_product_id_values": [],
+          "html_retailer_id_values": [],
+          "html_link_skus": [],
           "request_error": null
         },
         {
@@ -112,6 +115,9 @@
           "retailer_category_id": "OC100805024",
           "html_status": 202,
           "identity_mapping_error": "missing_identity_vector",
+          "html_product_id_values": [],
+          "html_retailer_id_values": [],
+          "html_link_skus": [],
           "request_error": null
         }
       ],
@@ -488,137 +494,6 @@
       "recovery_enumeration_ok": false
     },
     {
-      "label": "Corvina",
-      "rid": "OC140111",
-      "source_reported_product_count": 5,
-      "food_products_recursive_union": 5,
-      "recursive_categories_visited": 1,
-      "api_error_categories": 0,
-      "children_without_retailer_category_id": 0,
-      "unresolved": [],
-      "missing_retailer_ids": [],
-      "deduplication_identity": "retailer_sku_else_product_id",
-      "max_depth": 5,
-      "aggregate_root_with_children": false,
-      "completeness_basis": "first_party_category_html_recursive_direct_descendants_paired_identity_vectors",
-      "source_product_count_is_diagnostic_only": false,
-      "html_product_links": 5,
-      "html_link_skus": [
-        "71707-ENTERA",
-        "71707-ENTERA-LIMPIA",
-        "71707-ESPALDA-CON-ESPINAS",
-        "71707-FILETES",
-        "71707-RODAJAS"
-      ],
-      "identity_materialized_products": 5,
-      "identity_mapping_error": null,
-      "traversal_truncated": false,
-      "enumeration_ok": true,
-      "decoration_ok": false,
-      "decoration_errors": [
-        "not_attempted_known_v6_products_waf_403"
-      ],
-      "ok": true,
-      "artifact_path": "../../recovered-tree/alcampo-html-tree-OC140111/child_check.json",
-      "html_visible_skus": 5,
-      "html_visible_food_skus": 5,
-      "html_visible_skus_excluded_nonfood": [],
-      "html_visible_skus_present_in_union": 5,
-      "html_visible_skus_missing_from_union": [],
-      "union_coverage_ok": true,
-      "recovery_enumeration_ok": true
-    },
-    {
-      "label": "Dorada",
-      "rid": "OC14012",
-      "source_reported_product_count": 10,
-      "food_products_recursive_union": 15,
-      "recursive_categories_visited": 1,
-      "api_error_categories": 0,
-      "children_without_retailer_category_id": 0,
-      "unresolved": [],
-      "missing_retailer_ids": [],
-      "deduplication_identity": "retailer_sku_else_product_id",
-      "max_depth": 5,
-      "aggregate_root_with_children": false,
-      "completeness_basis": "first_party_category_html_recursive_direct_descendants_paired_identity_vectors",
-      "source_product_count_is_diagnostic_only": false,
-      "html_product_links": 15,
-      "html_link_skus": [
-        "51518-ENTERA-LIMPIA",
-        "51518-ESPALDA-CON-ESPINAS",
-        "51518-FILETES",
-        "70574-ENTERA-LIMPIA",
-        "70574-ESPALDA-CON-ESPINAS",
-        "70574-FILETES",
-        "72370",
-        "73514-ENTERA",
-        "73514-ENTERA-LIMPIA",
-        "73514-ESPALDA-CON-ESPINAS",
-        "73514-FILETES",
-        "94360-ENTERA",
-        "94360-ENTERA-LIMPIA",
-        "94360-ESPALDA-CON-ESPINAS",
-        "94360-FILETES"
-      ],
-      "identity_materialized_products": 15,
-      "identity_mapping_error": null,
-      "traversal_truncated": false,
-      "enumeration_ok": true,
-      "decoration_ok": false,
-      "decoration_errors": [
-        "not_attempted_known_v6_products_waf_403"
-      ],
-      "ok": true,
-      "artifact_path": "../../recovered-tree/alcampo-html-tree-OC14012/child_check.json",
-      "html_visible_skus": 15,
-      "html_visible_food_skus": 15,
-      "html_visible_skus_excluded_nonfood": [],
-      "html_visible_skus_present_in_union": 15,
-      "html_visible_skus_missing_from_union": [],
-      "union_coverage_ok": true,
-      "recovery_enumeration_ok": true
-    },
-    {
-      "label": "Trucha",
-      "rid": "OC14019",
-      "source_reported_product_count": 3,
-      "food_products_recursive_union": 3,
-      "recursive_categories_visited": 1,
-      "api_error_categories": 0,
-      "children_without_retailer_category_id": 0,
-      "unresolved": [],
-      "missing_retailer_ids": [],
-      "deduplication_identity": "retailer_sku_else_product_id",
-      "max_depth": 5,
-      "aggregate_root_with_children": false,
-      "completeness_basis": "first_party_category_html_recursive_direct_descendants_paired_identity_vectors",
-      "source_product_count_is_diagnostic_only": false,
-      "html_product_links": 3,
-      "html_link_skus": [
-        "70559",
-        "71903-ENTERA",
-        "71903-ENTERA-LIMPIA"
-      ],
-      "identity_materialized_products": 3,
-      "identity_mapping_error": null,
-      "traversal_truncated": false,
-      "enumeration_ok": true,
-      "decoration_ok": false,
-      "decoration_errors": [
-        "not_attempted_known_v6_products_waf_403"
-      ],
-      "ok": true,
-      "artifact_path": "../../recovered-tree/alcampo-html-tree-OC14019/child_check.json",
-      "html_visible_skus": 3,
-      "html_visible_food_skus": 3,
-      "html_visible_skus_excluded_nonfood": [],
-      "html_visible_skus_present_in_union": 3,
-      "html_visible_skus_missing_from_union": [],
-      "union_coverage_ok": true,
-      "recovery_enumeration_ok": true
-    },
-    {
       "label": "Yogures Griegos y cremosos",
       "rid": "OC160108",
       "source_reported_product_count": 102,
@@ -732,7 +607,6 @@
         "55042",
         "55160",
         "55186",
-        "55272",
         "55275",
         "55352",
         "55522",
@@ -751,6 +625,7 @@
         "57414",
         "57511",
         "57557",
+        "57861",
         "58727",
         "59024",
         "59386",
@@ -782,352 +657,6 @@
       ],
       "ok": false,
       "artifact_path": "../../recovered-tree/alcampo-html-tree-OC170128122022/child_check.json",
-      "html_visible_skus": 50,
-      "html_visible_food_skus": 50,
-      "html_visible_skus_excluded_nonfood": [],
-      "html_visible_skus_present_in_union": 50,
-      "html_visible_skus_missing_from_union": [],
-      "union_coverage_ok": true,
-      "recovery_enumeration_ok": false
-    },
-    {
-      "label": "Frescos",
-      "rid": "OC2112",
-      "source_reported_product_count": null,
-      "food_products_recursive_union": 50,
-      "recursive_categories_visited": 38,
-      "api_error_categories": 37,
-      "children_without_retailer_category_id": 0,
-      "unresolved": [
-        {
-          "label": "frutas",
-          "retailer_category_id": "OC1701",
-          "html_status": 200,
-          "identity_mapping_error": "retailer_id_link_sku_relative_order_mismatch",
-          "request_error": null
-        },
-        {
-          "label": "verduras y hortalizas",
-          "retailer_category_id": "OC1702",
-          "html_status": 200,
-          "identity_mapping_error": "retailer_id_link_sku_relative_order_mismatch",
-          "request_error": null
-        },
-        {
-          "label": "carne",
-          "retailer_category_id": "OC13",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "pescados mariscos y moluscos",
-          "retailer_category_id": "OC14",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "charcuter%C3%ADa",
-          "retailer_category_id": "OC15",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "quesos",
-          "retailer_category_id": "OCQuesos",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "ahumados surimis anchoas pulpos y otros",
-          "retailer_category_id": "OC184",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "panader%C3%ADa",
-          "retailer_category_id": "OC1281",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "pasteler%C3%ADa",
-          "retailer_category_id": "OC1282",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "jamones y paletas",
-          "retailer_category_id": "OC151001",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "sand%C3%ADas y melones",
-          "retailer_category_id": "OC170110",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "frutas de hueso",
-          "retailer_category_id": "OC170105",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "naranjas mandarinas y limones",
-          "retailer_category_id": "OC170101",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "pl%C3%A1tanos y bananas",
-          "retailer_category_id": "OC170104",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "tropicales y ex%C3%B3ticas",
-          "retailer_category_id": "OC170106",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "peras y manzanas",
-          "retailer_category_id": "OC170102001",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "uvas",
-          "retailer_category_id": "OC170105001",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "frutas del bosque",
-          "retailer_category_id": "OC170109",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "frutas ecol%C3%B3gicas",
-          "retailer_category_id": "OC170107",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "frutas y verduras calidad extra",
-          "retailer_category_id": "OCFyVpremium",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "fresas",
-          "retailer_category_id": "OC170109001",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "zumos",
-          "retailer_category_id": "OC12082022",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "fruta cortada",
-          "retailer_category_id": "OC170105003",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "compotas smoothies y purés y snacks de frutas",
-          "retailer_category_id": "OCPureSnacksFrutas",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "mis frutas y verduras",
-          "retailer_category_id": "OC170128122022",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "ensaladas y verduras preparadas",
-          "retailer_category_id": "OC170209",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "verduras y frutas calidad extra",
-          "retailer_category_id": "OCVyFpremium",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "patatas boniatos ajos y cebollas",
-          "retailer_category_id": "OCPatataAjoCebolla",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "tomates pepinos y pimientos",
-          "retailer_category_id": "OC170207",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "zanahorias y puerros",
-          "retailer_category_id": "OC170208009",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "calabaza calabacín y berenjenas",
-          "retailer_category_id": "OCCalabazasBerenjenas",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "lechugas coliflor y repollos",
-          "retailer_category_id": "OCLechugasColRepollo",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "aromáticas manojos y otras",
-          "retailer_category_id": "OC170208",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "judía alcachofa y espárragos",
-          "retailer_category_id": "OCJudiasEsparragos",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "champiñones y setas",
-          "retailer_category_id": "OC170204",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "verduras ecológicas",
-          "retailer_category_id": "OC170210",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        },
-        {
-          "label": "mis verduras y frutas",
-          "retailer_category_id": "OC1701281220222",
-          "html_status": 202,
-          "identity_mapping_error": "missing_identity_vector",
-          "request_error": null
-        }
-      ],
-      "missing_retailer_ids": [],
-      "deduplication_identity": "retailer_sku_else_product_id",
-      "max_depth": 5,
-      "aggregate_root_with_children": true,
-      "completeness_basis": "first_party_category_html_recursive_direct_descendants_paired_identity_vectors",
-      "source_product_count_is_diagnostic_only": true,
-      "html_product_links": 50,
-      "html_link_skus": [
-        "23712",
-        "245807",
-        "24827",
-        "24845",
-        "25070",
-        "25140",
-        "40575",
-        "429318",
-        "495236",
-        "496854",
-        "496855",
-        "499073",
-        "533858",
-        "534041",
-        "53472",
-        "53704",
-        "54960",
-        "55654",
-        "56761",
-        "58775",
-        "58796",
-        "58916",
-        "626478",
-        "629386",
-        "638214",
-        "66498",
-        "681260",
-        "683683",
-        "71903-ENTERA-LIMPIA",
-        "723782",
-        "73636",
-        "73702",
-        "73734",
-        "74331",
-        "749799",
-        "75662",
-        "75876",
-        "76023",
-        "76512",
-        "766535",
-        "76753",
-        "793118",
-        "795897",
-        "80077",
-        "81208",
-        "81299-LONCHA-NORMAL-2-A-3-MM",
-        "87802",
-        "90155",
-        "944025",
-        "99135"
-      ],
-      "identity_materialized_products": 50,
-      "identity_mapping_error": null,
-      "traversal_truncated": false,
-      "enumeration_ok": false,
-      "decoration_ok": false,
-      "decoration_errors": [
-        "not_attempted_known_v6_products_waf_403"
-      ],
-      "ok": false,
-      "artifact_path": "../../recovered-tree/alcampo-html-tree-OC2112/child_check.json",
       "html_visible_skus": 50,
       "html_visible_food_skus": 50,
       "html_visible_skus_excluded_nonfood": [],
@@ -1236,6 +765,9 @@
           "retailer_category_id": "OCconfreiaire19",
           "html_status": 200,
           "identity_mapping_error": "missing_identity_vector",
+          "html_product_id_values": [],
+          "html_retailer_id_values": [],
+          "html_link_skus": [],
           "request_error": null
         }
       ],
@@ -1275,7 +807,7 @@
     "with_brand": 13876,
     "with_pack_size": 13396,
     "with_image": 13877,
-    "with_product_url": 469,
+    "with_product_url": 468,
     "available": 13570
   },
   "third_party_product_data": false
