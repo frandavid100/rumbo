@@ -7,6 +7,40 @@ from collections import Counter
 from pathlib import Path
 
 
+EXPORT_QUERY = """
+  SELECT p.id,p.gtin,p.canonical_name,p.brand,p.legal_name,p.ingredients,
+         rl.retailer_sku,rl.url,rl.availability,
+         rf.retailer_product_id,rf.pack_size,rf.price_eur,rf.unit_price_eur,rf.unit_price_unit,
+         rf.category_path_json,rf.source_roots_json,rf.alcohol,rf.available AS available_observed,
+         rf.image_url,rf.evidence_endpoint,
+         n.basis,n.calories,n.protein_g,n.carbohydrate_g,n.fat_g,n.fiber_g,n.salt_g,n.evidence_level,
+         e.discoverable,e.identified,e.nutritionally_usable,e.classified,e.menu_eligible,e.reason,
+         ct.culinary_type,ct.confidence,
+         ff.food_family,pb.portion_basis_grams,pb.material_state
+  FROM products p
+  JOIN retailer_listings rl ON rl.product_id=p.id AND rl.retailer='Alcampo'
+  LEFT JOIN retailer_listing_facts rf ON rf.product_id=p.id
+  LEFT JOIN nutrition n ON n.product_id=p.id
+  JOIN eligibility e ON e.product_id=p.id
+  LEFT JOIN culinary_types ct ON ct.product_id=p.id
+  LEFT JOIN food_family_assignments ff ON ff.product_id=p.id
+  LEFT JOIN portion_basis pb ON pb.product_id=p.id
+  ORDER BY rl.retailer_sku
+"""
+
+
+def count_present(con: sqlite3.Connection, column: str) -> int:
+    allowed = {
+        "retailer_product_id", "pack_size", "price_eur", "unit_price_eur", "unit_price_unit",
+        "category_path_json", "source_roots_json", "image_url", "evidence_endpoint",
+    }
+    if column not in allowed:
+        raise ValueError(column)
+    return int(con.execute(
+        f"SELECT count(*) FROM retailer_listing_facts WHERE {column} IS NOT NULL AND {column} != ''"
+    ).fetchone()[0])
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("database", type=Path)
@@ -17,23 +51,9 @@ def main() -> int:
     a = p.parse_args()
 
     con = sqlite3.connect(a.database)
-    rows = con.execute("""
-      SELECT p.id,p.gtin,p.canonical_name,p.brand,p.legal_name,p.ingredients,
-             rl.retailer_sku,rl.url,rl.availability,
-             n.basis,n.calories,n.protein_g,n.carbohydrate_g,n.fat_g,n.fiber_g,n.salt_g,n.evidence_level,
-             e.discoverable,e.identified,e.nutritionally_usable,e.classified,e.menu_eligible,e.reason,
-             ct.culinary_type,ct.confidence,
-             ff.food_family,pb.portion_basis_grams,pb.material_state
-      FROM products p
-      JOIN retailer_listings rl ON rl.product_id=p.id AND rl.retailer='Alcampo'
-      LEFT JOIN nutrition n ON n.product_id=p.id
-      JOIN eligibility e ON e.product_id=p.id
-      LEFT JOIN culinary_types ct ON ct.product_id=p.id
-      LEFT JOIN food_family_assignments ff ON ff.product_id=p.id
-      LEFT JOIN portion_basis pb ON pb.product_id=p.id
-      ORDER BY rl.retailer_sku
-    """).fetchall()
-    columns = [d[0] for d in con.execute("SELECT p.id,p.gtin,p.canonical_name,p.brand,p.legal_name,p.ingredients,rl.retailer_sku,rl.url,rl.availability,n.basis,n.calories,n.protein_g,n.carbohydrate_g,n.fat_g,n.fiber_g,n.salt_g,n.evidence_level,e.discoverable,e.identified,e.nutritionally_usable,e.classified,e.menu_eligible,e.reason,ct.culinary_type,ct.confidence,ff.food_family,pb.portion_basis_grams,pb.material_state FROM products p JOIN retailer_listings rl ON rl.product_id=p.id LEFT JOIN nutrition n ON n.product_id=p.id JOIN eligibility e ON e.product_id=p.id LEFT JOIN culinary_types ct ON ct.product_id=p.id LEFT JOIN food_family_assignments ff ON ff.product_id=p.id LEFT JOIN portion_basis pb ON pb.product_id=p.id LIMIT 0").description]
+    cursor = con.execute(EXPORT_QUERY)
+    rows = cursor.fetchall()
+    columns = [d[0] for d in cursor.description]
 
     role_rows = con.execute("SELECT product_id,role FROM nutritional_role_assignments ORDER BY product_id,role").fetchall()
     crole_rows = con.execute("SELECT product_id,role FROM culinary_role_assignments ORDER BY product_id,role").fetchall()
@@ -47,6 +67,13 @@ def main() -> int:
         for vals in rows:
             row = dict(zip(columns, vals))
             pid = row.pop("id")
+            for field in ("category_path_json", "source_roots_json"):
+                raw = row.pop(field, None)
+                row[field.removesuffix("_json")] = json.loads(raw) if raw else []
+            if row.get("alcohol") is not None:
+                row["alcohol"] = bool(row["alcohol"])
+            if row.get("available_observed") is not None:
+                row["available_observed"] = bool(row["available_observed"])
             row["nutritional_roles"] = nroles.get(pid, [])
             row["culinary_roles"] = croles.get(pid, [])
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -64,7 +91,24 @@ def main() -> int:
         "portion_basis_assigned": con.execute("SELECT count(*) FROM portion_basis").fetchone()[0],
         "nutritional_role_assignments": con.execute("SELECT count(*) FROM nutritional_role_assignments").fetchone()[0],
         "culinary_role_assignments": con.execute("SELECT count(*) FROM culinary_role_assignments").fetchone()[0],
+        "field_evidence_rows": con.execute("SELECT count(*) FROM field_evidence").fetchone()[0],
     }
+    listing_coverage = {
+        "retailer_product_id": count_present(con, "retailer_product_id"),
+        "pack_size": count_present(con, "pack_size"),
+        "price_eur": count_present(con, "price_eur"),
+        "unit_price_eur": count_present(con, "unit_price_eur"),
+        "unit_price_unit": count_present(con, "unit_price_unit"),
+        "category_path": con.execute("SELECT count(*) FROM retailer_listing_facts WHERE category_path_json NOT IN ('', '[]')").fetchone()[0],
+        "source_roots": con.execute("SELECT count(*) FROM retailer_listing_facts WHERE source_roots_json NOT IN ('', '[]')").fetchone()[0],
+        "availability_observed": con.execute("SELECT count(*) FROM retailer_listing_facts WHERE available IS NOT NULL").fetchone()[0],
+        "alcohol_observed": con.execute("SELECT count(*) FROM retailer_listing_facts WHERE alcohol IS NOT NULL").fetchone()[0],
+        "image_url": count_present(con, "image_url"),
+        "evidence_endpoint": count_present(con, "evidence_endpoint"),
+    }
+    field_evidence_by_kind = dict(con.execute(
+        "SELECT evidence_kind,count(*) FROM field_evidence GROUP BY evidence_kind ORDER BY evidence_kind"
+    ).fetchall())
     reason_counts = Counter(r[0] or "OK" for r in con.execute("SELECT reason FROM eligibility"))
     review_counts = Counter(r[0] for r in con.execute("SELECT reason FROM review_queue WHERE status='OPEN'"))
     metadata = dict(con.execute("SELECT key,value FROM catalog_metadata"))
@@ -72,6 +116,8 @@ def main() -> int:
         "retailer": "ALCAMPO",
         "source_policy": "FIRST_PARTY_ALCAMPO_ONLY",
         "counts": counts,
+        "listing_field_coverage": listing_coverage,
+        "field_evidence_by_kind": field_evidence_by_kind,
         "eligibility_reasons": dict(reason_counts.most_common()),
         "review_queue_reasons": dict(review_counts.most_common()),
         "metadata": metadata,
