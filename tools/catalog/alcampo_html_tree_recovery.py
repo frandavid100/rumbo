@@ -18,7 +18,7 @@ from alcampo_html_leaf_recovery import (
     request_html,
 )
 
-VERSION = "alcampo-html-tree-recovery-v2"
+VERSION = "alcampo-html-tree-recovery-v3"
 CATEGORY_LINK_RE = re.compile(
     r'href=["\']([^"\']*/categories/[^"\']+/(OC[0-9A-Za-z]+)(?:\?[^"\']*)?)["\']',
     re.I,
@@ -100,6 +100,8 @@ def parse_node(label: str, rid: str, depth: int) -> tuple[dict, dict[str, Produc
         "html_product_ids": len(product_ids),
         "html_retailer_product_ids": len(retailer_ids),
         "html_product_links": len(link_skus),
+        "html_product_id_values": product_ids,
+        "html_retailer_id_values": retailer_ids,
         "html_link_skus": link_skus,
         "identity_materialized_products": len(products),
         "identity_mapping_error": mapping_error,
@@ -134,6 +136,9 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
                 "retailer_category_id": node_rid,
                 "html_status": node.get("html_status"),
                 "identity_mapping_error": node.get("identity_mapping_error"),
+                "html_product_id_values": node.get("html_product_id_values"),
+                "html_retailer_id_values": node.get("html_retailer_id_values"),
+                "html_link_skus": node.get("html_link_skus"),
                 "request_error": node.get("request_error"),
             })
 
