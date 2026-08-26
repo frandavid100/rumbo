@@ -1,8 +1,8 @@
 {
   "baseline_unique": 13877,
   "prior_recovery_unique": 38,
-  "tree_recovery_new_unique": 9,
-  "unique_food_products_union": 13924,
-  "failed_tree_targets": 1,
-  "completeness_claim": "RECOVERY_UNION_NOT_PROVEN_COMPLETE"
+  "tree_recovery_new_unique": 8,
+  "unique_food_products_union": 13923,
+  "failed_tree_targets": 0,
+  "completeness_claim": "RECOVERY_TARGETS_ENUMERATED_AND_VISIBLE_SKUS_COVERED; GLOBAL_COMPLETENESS_STILL_REQUIRES_FULL_TREE_AUDIT"
 }
