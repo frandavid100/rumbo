@@ -85,6 +85,43 @@ def read_checks(root: Path) -> list[dict]:
     return out
 
 
+def raw_check_ok(c: dict) -> bool:
+    return bool(c.get("enumeration_ok", c.get("ok")))
+
+
+def independent_descendant_resolution(c: dict, successful_rids: set[str]) -> list[str]:
+    """Return child RIDs that independently resolve every unresolved parent child.
+
+    A parent traversal can observe a child as HTTP 202 while a separate narrow job
+    for that exact official category succeeds. Treating the stale parent attempt as
+    a permanent failure would ignore stronger evidence from the same run. This only
+    reconciles descendant failures: a failure referring to the parent itself cannot
+    be overridden here.
+    """
+    failures = [x for x in (c.get("unresolved") or []) if isinstance(x, dict)]
+    if not failures:
+        return []
+    parent_rid = str(c.get("rid") or c.get("retailer_category_id") or "").strip()
+    child_rids: list[str] = []
+    for failure in failures:
+        rid = str(failure.get("rid") or failure.get("retailer_category_id") or "").strip()
+        if not rid or rid == parent_rid or rid not in successful_rids:
+            return []
+        child_rids.append(rid)
+    return sorted(set(child_rids))
+
+
+def parent_target_satisfied(c: dict) -> bool:
+    if c.get("source_product_count_stale"):
+        return True
+    source_target = int(c.get("source_reported_product_count") or 0)
+    observed = int(c.get("food_products_recursive_union") or 0)
+    if source_target:
+        required = max(1, int(source_target * 0.95))
+        return observed >= required
+    return bool(c.get("enumerated_skus") or observed)
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--baseline-products", type=Path, required=True)
@@ -112,6 +149,11 @@ def main() -> int:
         recovery_excluded_nonfood.update(excluded)
 
     checks = read_checks(a.recovery_root)
+    successful_rids = {
+        str(c.get("rid") or c.get("retailer_category_id") or "").strip()
+        for c in checks
+        if raw_check_ok(c) and str(c.get("rid") or c.get("retailer_category_id") or "").strip()
+    }
     union_skus = {str(p.sku) for p in products.values() if p.sku}
     audited_checks = []
     unresolved = []
@@ -128,7 +170,12 @@ def main() -> int:
         visible_skus_total.update(visible_food)
         missing = sorted(visible_food - union_skus)
         visible_skus_missing.update(missing)
-        enum_ok = bool(c.get("enumeration_ok", c.get("ok")))
+        enum_ok = raw_check_ok(c)
+        independently_recovered: list[str] = []
+        if not enum_ok and not c.get("traversal_truncated") and parent_target_satisfied(c):
+            independently_recovered = independent_descendant_resolution(c, successful_rids)
+            if independently_recovered:
+                enum_ok = True
         coverage_ok = not missing
         c["html_visible_skus"] = len(visible)
         c["html_visible_food_skus"] = len(visible_food)
@@ -136,6 +183,7 @@ def main() -> int:
         c["html_visible_skus_present_in_union"] = len(visible_food) - len(missing)
         c["html_visible_skus_missing_from_union"] = missing
         c["union_coverage_ok"] = coverage_ok
+        c["independently_recovered_descendant_rids"] = independently_recovered
         c["recovery_enumeration_ok"] = enum_ok and coverage_ok
         if not c.get("decoration_ok", False):
             decoration_failed += 1
