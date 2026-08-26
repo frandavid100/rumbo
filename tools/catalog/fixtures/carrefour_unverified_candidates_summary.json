@@ -303,7 +303,7 @@
     "fixtures/carrefour_first_party_agent_web_productsz_timestamp_corrections.jsonl",
     "../../catalog/fixtures/carrefour_first_party_agent_web_products_batch45_soups_broths.jsonl"
   ],
-  "terminal_outcomes_input": "fixtures/carrefour_first_party_candidate_route_outcomes.jsonl",
+  "terminal_outcomes_input": "/tmp/carrefour_first_party_candidate_route_outcomes_all.jsonl",
   "counts": {
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
