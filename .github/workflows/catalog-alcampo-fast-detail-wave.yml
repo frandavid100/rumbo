@@ -22,6 +22,9 @@ jobs:
       retry_products: ${{ steps.split.outputs.retry_products }}
       previous_successes: ${{ steps.split.outputs.previous_successes }}
       baseline_run: ${{ steps.baseline.outputs.run_id }}
+      baseline_products: ${{ steps.baseline.outputs.product_count }}
+      previous_run: ${{ steps.previous.outputs.run_id }}
+      previous_rows: ${{ steps.previous.outputs.row_count }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,16 +33,16 @@ jobs:
         with:
           python-version: '3.12'
       - id: baseline
-        name: Download newest available first-party Alcampo enumeration baseline
+        name: Select largest available first-party Alcampo enumeration baseline
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          mkdir -p baseline
-          # Artifacts expire. Never pin a long-running recovery workflow to one run ID.
-          # Walk recent enumeration runs newest-first and accept the first still-downloadable
-          # official artifact with a non-empty products.jsonl. This also lets newer audited
-          # enumeration cuts extend the original stable 13,877-SKU baseline monotonically.
+          mkdir -p baseline candidate-baseline
+          # Recent successful enumeration jobs can contain partial recovery artifacts.
+          # Never let a newer partial artifact silently replace the stable 13,877-SKU
+          # inventory. Inspect every downloadable candidate and retain the largest
+          # unique first-party SKU set; fail closed if the stable floor is unavailable.
           mapfile -t run_ids < <(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
@@ -49,62 +52,109 @@ jobs:
               --json databaseId,createdAt \
               --jq 'sort_by(.createdAt) | reverse | .[].databaseId'
           )
-          selected=''
+          best_run=''
+          best_count=0
           for run_id in "${run_ids[@]}"; do
-            rm -rf baseline/*
+            rm -rf candidate-baseline/*
             if gh run download "$run_id" \
                 --repo "$GITHUB_REPOSITORY" \
                 -n alcampo-food-catalog-sharded-enumeration \
-                -D baseline >/tmp/alcampo-baseline-download.log 2>&1; then
-              if test -s baseline/products.jsonl && test -s baseline/enumeration_report.json; then
-                selected="$run_id"
-                break
+                -D candidate-baseline >/tmp/alcampo-baseline-download.log 2>&1; then
+              if test -s candidate-baseline/products.jsonl && test -s candidate-baseline/enumeration_report.json; then
+                count=$(python - candidate-baseline/products.jsonl <<'PY'
+import json, sys
+seen = set()
+with open(sys.argv[1], encoding='utf-8') as fh:
+    for line in fh:
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        sku = str(row.get('sku') or row.get('retailer_sku') or '').strip()
+        if sku:
+            seen.add(sku)
+print(len(seen))
+PY
+                )
+                echo "candidate enumeration run=$run_id unique_skus=$count"
+                if (( count > best_count )); then
+                  rm -rf baseline/*
+                  cp -a candidate-baseline/. baseline/
+                  best_count="$count"
+                  best_run="$run_id"
+                fi
               fi
             fi
           done
-          if [[ -z "$selected" ]]; then
-            echo '::error::No recent non-expired Alcampo enumeration artifact with products.jsonl is available.'
+          if (( best_count < 13877 )); then
+            echo "::error::Largest downloadable Alcampo enumeration has only $best_count unique SKUs; refusing to regress below stable 13,877-SKU inventory."
             exit 1
           fi
-          echo "run_id=$selected" >> "$GITHUB_OUTPUT"
-          echo "Using Alcampo enumeration artifact from run $selected"
+          echo "run_id=$best_run" >> "$GITHUB_OUTPUT"
+          echo "product_count=$best_count" >> "$GITHUB_OUTPUT"
+          echo "Using largest Alcampo enumeration artifact from run $best_run with $best_count unique SKUs"
           wc -l baseline/products.jsonl
       - id: previous
-        name: Download newest available successful detail snapshot for monotonic recovery
+        name: Select largest successful detail snapshot for monotonic recovery
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          mkdir -p previous
-          selected=''
+          mkdir -p previous candidate-previous
+          best_run=''
+          best_count=0
+          # A recent successful wave may itself have been built from a partial
+          # enumeration. Search backwards and keep the widest snapshot rather than
+          # trusting recency, so an accidental narrow cut cannot erase old evidence.
           mapfile -t run_ids < <(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
               --workflow catalog-alcampo-fast-detail-wave.yml \
               --branch agent/catalog-phase1 \
               --status success \
-              --limit 30 \
+              --limit 40 \
               --json databaseId,createdAt \
               --jq 'sort_by(.createdAt) | reverse | .[].databaseId'
           )
           for run_id in "${run_ids[@]}"; do
-            rm -rf previous/*
+            rm -rf candidate-previous/*
             if gh run download "$run_id" \
                 --repo "$GITHUB_REPOSITORY" \
                 -n alcampo-fast-detail-classified-snapshot \
-                -D previous >/tmp/alcampo-previous-download.log 2>&1; then
-              if test -s previous/details.jsonl; then
-                selected="$run_id"
-                break
+                -D candidate-previous >/tmp/alcampo-previous-download.log 2>&1; then
+              if test -s candidate-previous/details.jsonl; then
+                count=$(python - candidate-previous/details.jsonl <<'PY'
+import json, sys
+seen = set()
+with open(sys.argv[1], encoding='utf-8') as fh:
+    for line in fh:
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        sku = str(row.get('sku') or row.get('retailer_sku') or '').strip()
+        if sku:
+            seen.add(sku)
+print(len(seen))
+PY
+                )
+                echo "candidate detail run=$run_id unique_skus=$count"
+                if (( count > best_count )); then
+                  rm -rf previous/*
+                  cp -a candidate-previous/. previous/
+                  best_count="$count"
+                  best_run="$run_id"
+                fi
               fi
             fi
           done
-          if [[ -n "$selected" ]]; then
-            echo "run_id=$selected" >> "$GITHUB_OUTPUT"
-            echo "Using previous detail snapshot from run $selected"
+          if [[ -n "$best_run" ]]; then
+            echo "run_id=$best_run" >> "$GITHUB_OUTPUT"
+            echo "row_count=$best_count" >> "$GITHUB_OUTPUT"
+            echo "Using widest previous detail snapshot from run $best_run with $best_count unique SKUs"
             wc -l previous/details.jsonl
           else
-            rm -rf previous/*
+            echo 'run_id=' >> "$GITHUB_OUTPUT"
+            echo 'row_count=0' >> "$GITHUB_OUTPUT"
+            touch previous/.none
             echo 'No previous non-expired successful detail snapshot is available; this wave will start from first-party baseline only.'
           fi
       - id: split
@@ -126,6 +176,12 @@ jobs:
           name: alcampo-fast-wave-baseline
           path: baseline/
           retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-fast-wave-previous
+          path: previous/
+          retention-days: 7
+          include-hidden-files: true
       - uses: actions/upload-artifact@v4
         with:
           name: alcampo-fast-wave-inputs
@@ -188,21 +244,50 @@ jobs:
           path: baseline
       - uses: actions/download-artifact@v4
         with:
+          name: alcampo-fast-wave-previous
+          path: previous
+      - uses: actions/download-artifact@v4
+        with:
           pattern: alcampo-fast-detail-result-*
           path: downloaded-details
       - name: Merge all completed rows without pretending failures are evidence
         working-directory: tools/catalog
         run: |
           mkdir -p ../../alcampo-fast-final
-          set +e
-          python alcampo_merge_detail_batches.py \
-            --downloaded ../../downloaded-details \
-            --out ../../alcampo-fast-final/details.jsonl \
+          args=(
+            --downloaded ../../downloaded-details
+            --out ../../alcampo-fast-final/details.jsonl
             --expected-products ../../baseline/products.jsonl
+          )
+          if test -s ../../previous/details.jsonl; then
+            args+=(--previous-details ../../previous/details.jsonl)
+          fi
+          set +e
+          python alcampo_merge_detail_batches.py "${args[@]}"
           code=$?
           set -e
           echo "$code" > ../../alcampo-fast-final/detail_merge_exit_code.txt
           touch ../../alcampo-fast-final/details.jsonl
+      - name: Guard stable inventory before canonical build
+        run: |
+          count=$(python - baseline/products.jsonl <<'PY'
+import json, sys
+seen = set()
+with open(sys.argv[1], encoding='utf-8') as fh:
+    for line in fh:
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        sku = str(row.get('sku') or row.get('retailer_sku') or '').strip()
+        if sku:
+            seen.add(sku)
+print(len(seen))
+PY
+          )
+          if (( count < 13877 )); then
+            echo "::error::Refusing canonical build from partial Alcampo inventory ($count < 13877)."
+            exit 1
+          fi
       - name: Build canonical SQLite and proposal-only classification
         working-directory: tools/catalog
         run: |
