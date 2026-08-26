@@ -1,0 +1,152 @@
+name: Catalog Alcampo recover failed HTML category subtrees
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-alcampo-html-tree-recovery.yml'
+      - 'tools/catalog/alcampo_html_tree_recovery.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: catalog-alcampo-html-tree-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - id: matrix
+        name: Select only targets still incomplete after direct SSR recovery
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          p=Path('tools/catalog/fixtures/alcampo_html_recovery_enumeration_latest.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          found={}
+          for row in data.get('failed_recovery_targets') or []:
+              if not isinstance(row,dict): continue
+              rid=str(row.get('rid') or row.get('retailer_category_id') or '').strip()
+              if not rid: continue
+              candidate={
+                  'rid':rid,
+                  'label':str(row.get('label') or rid),
+                  'expected':int(row.get('source_reported_product_count') or 0),
+              }
+              prev=found.get(rid)
+              if prev is None or candidate['expected'] > prev['expected']:
+                  found[rid]=candidate
+          include=[found[x] for x in sorted(found)]
+          print('matrix='+json.dumps({'include':include},ensure_ascii=False,separators=(',',':')))
+          print('count='+str(len(include)))
+          PY
+
+  recover:
+    needs: prepare
+    if: needs.prepare.outputs.count != '0'
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Traverse only canonical direct descendants in official SSR HTML
+        working-directory: tools/catalog
+        continue-on-error: true
+        run: |
+          python alcampo_html_tree_recovery.py \
+            --label "${{ matrix.label }}" \
+            --rid "${{ matrix.rid }}" \
+            --expected "${{ matrix.expected }}" \
+            --max-depth 5 \
+            --max-nodes 80 \
+            --out "alcampo-html-tree-${{ matrix.rid }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alcampo-html-tree-${{ matrix.rid }}
+          path: tools/catalog/alcampo-html-tree-${{ matrix.rid }}/
+          retention-days: 7
+          if-no-files-found: warn
+
+  merge:
+    needs: [prepare, recover]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download stable 13,877 baseline
+        run: |
+          mkdir -p baseline
+          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D baseline
+          test -s baseline/products.jsonl
+      - uses: actions/download-artifact@v4
+        if: needs.prepare.outputs.count != '0'
+        with:
+          pattern: alcampo-html-tree-*
+          path: recovered-tree
+      - name: Merge stable baseline, prior SSR additions, and subtree recovery
+        working-directory: tools/catalog
+        run: |
+          mkdir -p ../../alcampo-html-tree-union
+          set +e
+          python alcampo_recovery_union.py \
+            --baseline-products ../../baseline/products.jsonl \
+            --recursive-products fixtures/alcampo_html_recovery_new_products_latest.jsonl \
+            --recovery-root ../../recovered-tree \
+            --out ../../alcampo-html-tree-union
+          code=$?
+          echo "$code" > ../../alcampo-html-tree-union/recovery_exit_code.txt
+          set -e
+      - name: Persist auditable subtree recovery state
+        run: |
+          cp alcampo-html-tree-union/recovery_report.json tools/catalog/fixtures/alcampo_html_tree_recovery_latest.json
+          cp alcampo-html-tree-union/summary.json tools/catalog/fixtures/alcampo_html_tree_catalog_summary_latest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('alcampo-html-tree-union/recovery_report.json').read_text(encoding='utf-8'))
+          Path('tools/catalog/fixtures/alcampo_html_tree_milestone_latest.json').write_text(json.dumps({
+              'baseline_unique':r.get('baseline_unique'),
+              'prior_recovery_unique':r.get('recursive_new_unique_vs_baseline'),
+              'tree_recovery_new_unique':r.get('recovery_new_unique'),
+              'unique_food_products_union':r.get('unique_food_products_union'),
+              'failed_tree_targets':r.get('recovery_checks_failed'),
+              'completeness_claim':r.get('completeness_claim'),
+          },ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/catalog/fixtures/alcampo_html_tree_*
+          if ! git diff --cached --quiet; then
+            git commit -m "catalog: persist Alcampo HTML subtree recovery"
+            git pull --rebase origin agent/catalog-phase1
+            git push origin HEAD:agent/catalog-phase1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-html-tree-recovery-union
+          path: alcampo-html-tree-union/
+          retention-days: 14
