@@ -30,6 +30,10 @@ DETAIL_FIELDS = [
     "preparation_instructions", "operator_address", "manufacturer_packer_importer",
     "mandatory_mentions", "nutriscore", "nutrition_basis", *NUTRITION_FIELDS,
 ]
+MANUAL_WEB_OBSERVED_FIELDS = {
+    "retailer_sku", "canonical_url", "name", "brand", "image_url", "category_path",
+    "price_eur", "price_currency", "unit_price_text", "availability",
+}
 
 
 def now_iso() -> str:
@@ -97,6 +101,79 @@ def merge_product(old: dict | None, new: dict) -> dict:
     merged["retailer"] = "CARREFOUR"
     merged["source"] = SOURCE
     return merged
+
+
+def merge_product_fill_missing(old: dict | None, new: dict) -> dict:
+    """Merge an archived direct observation without letting it overwrite newer cumulative values."""
+    if old is None:
+        return merge_product(None, new)
+    merged = dict(old)
+    was_listing_only = merged.get("listing_only_observed") is True
+    for key, value in new.items():
+        if key == "listing_only_observed":
+            continue
+        old_value = merged.get(key)
+        if isinstance(old_value, dict) and isinstance(value, dict):
+            combined = dict(old_value)
+            for subkey, subvalue in value.items():
+                if subkey not in combined and nonempty(subvalue):
+                    combined[subkey] = subvalue
+            merged[key] = combined
+        elif not nonempty(old_value) and nonempty(value):
+            merged[key] = value
+    if new.get("listing_only_observed") is False:
+        merged["listing_only_observed"] = False
+        if was_listing_only and nonempty(new.get("observed_at")):
+            merged["observed_at"] = new.get("observed_at")
+    merged["retailer"] = "CARREFOUR"
+    merged["source"] = SOURCE
+    return merged
+
+
+def read_manual_first_party_rows(fixtures: Path) -> list[dict]:
+    """Load only agent observations that were explicitly verified on an official Carrefour PDP."""
+    rows: list[dict] = []
+    for path in sorted(fixtures.glob("carrefour_first_party_agent_web_products_*.jsonl")):
+        for row in read_jsonl(path):
+            url = str(row.get("canonical_url") or "")
+            valid = (
+                row.get("retailer") == "CARREFOUR"
+                and row.get("source") == SOURCE
+                and row.get("direct_page_observed") is True
+                and row.get("listing_only_observed") is False
+                and bool(row.get("retailer_sku"))
+                and (url.startswith("https://www.carrefour.es/") or url.startswith("https://carrefour.es/"))
+            )
+            if not valid:
+                raise SystemExit(f"unsafe Carrefour manual first-party row in {path.name}: {row.get('retailer_sku')!r}")
+            rows.append(row)
+    return rows
+
+
+def manual_first_party_evidence(rows: list[dict]) -> list[dict]:
+    evidence: list[dict] = []
+    fields = ["retailer_sku", "canonical_url", *PRODUCT_FIELDS]
+    for row in rows:
+        sku = row.get("retailer_sku")
+        source_url = row.get("canonical_url")
+        for field in fields:
+            if field == "nutrition_status":
+                continue
+            value = row.get(field)
+            if not nonempty(value):
+                continue
+            evidence.append({
+                "retailer_sku": sku,
+                "field": field,
+                "value": value,
+                "source": SOURCE,
+                "evidence_type": "OBSERVED_PRODUCT_PAGE" if field in MANUAL_WEB_OBSERVED_FIELDS else "DECLARED",
+                "source_url": source_url,
+                "observed_at": row.get("observed_at"),
+                "capture_method": row.get("capture_method"),
+                "discovery_source": row.get("discovery_source"),
+            })
+    return evidence
 
 
 def evidence_key(row: dict) -> tuple:
@@ -276,6 +353,15 @@ def main() -> int:
             minimal["nutrition_status"] = "NOT_FETCHED"
         products[sku] = merge_product(old, minimal)
 
+    # Agent/web fixture rows are retained as direct Carrefour evidence only after strict first-party validation.
+    # They are merged conservatively so a later cumulative value is never overwritten by an archived observation.
+    manual_rows = read_manual_first_party_rows(fixtures)
+    for row in manual_rows:
+        sku = row.get("retailer_sku")
+        row = dict(row)
+        row["listing_only_observed"] = False
+        products[sku] = merge_product_fill_missing(products.get(sku), row)
+
     fresh_rows = read_jsonl(fresh / "products.jsonl")
     for row in fresh_rows:
         sku = row.get("retailer_sku")
@@ -285,8 +371,9 @@ def main() -> int:
         row["listing_only_observed"] = False
         products[sku] = merge_product(products.get(sku), row)
 
+    manual_evidence = manual_first_party_evidence(manual_rows)
     evidence_map: dict[tuple, dict] = {}
-    for row in read_jsonl(evidence_path) + read_jsonl(fresh / "field_evidence.jsonl") + frontier_rows:
+    for row in read_jsonl(evidence_path) + read_jsonl(fresh / "field_evidence.jsonl") + frontier_rows + manual_evidence:
         if row.get("source") != SOURCE:
             continue
         # Frontier candidate rows are identity observations, not product field declarations.
@@ -342,6 +429,7 @@ def main() -> int:
             "products_total": len(rows),
             "products_detail_observed": len(first_party_detail),
             "products_listing_only": sum(r.get("listing_only_observed") is True for r in rows),
+            "manual_first_party_fixture_rows": len(manual_rows),
             "evidence_rows": len(evidence),
             "nutrition_status": dict(sorted(status_counts.items())),
             "evidence_types": dict(sorted(evidence_type_counts.items())),
@@ -353,6 +441,7 @@ def main() -> int:
         "notes": [
             "Only direct carrefour.es observations are counted as Carrefour evidence.",
             "Third-party datasets may seed product URLs but are never copied into this cumulative first-party dataset.",
+            "Agent/web fixture rows are accepted only when they assert a directly observed official Carrefour product page.",
             "Category-listing identities are retained even when product detail retrieval is blocked.",
             "Field evidence is append-only by observation timestamp; newer sparse pages do not erase older direct observations.",
             "A later category listing cannot downgrade a previously observed product detail or its proved nutrition status.",
