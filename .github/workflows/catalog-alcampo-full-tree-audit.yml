@@ -1,10 +1,13 @@
-# Retry the full audit conservatively: low parallelism avoids transient 202s from Alcampo.
+# Audit the complete current first-party root frontier. Prefer the retailer's
+# paginated catalogue API when it exhausts the source-reported target; recurse SSR
+# only for categories that the API cannot certify.
 name: Catalog Alcampo full first-party tree audit
 on:
   push:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-alcampo-full-tree-audit.yml'
+      - 'tools/catalog/alcampo_api_first_tree_recovery.py'
       - 'tools/catalog/alcampo_html_tree_recovery.py'
       - 'tools/catalog/alcampo_recovery_union.py'
       - 'tools/catalog/fixtures/alcampo_root_children_latest.json'
@@ -69,14 +72,23 @@ jobs:
           print('matrix='+json.dumps({'include':include},ensure_ascii=False,separators=(',',':')))
           print('count='+str(len(include)))
           PY
+      - name: Preserve the stable 13,877-SKU first-party baseline before source artifact expiry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p baseline
+          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D baseline
+          test -s baseline/products.jsonl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alcampo-full-tree-baseline
+          path: baseline/
+          retention-days: 14
 
   audit:
     needs: prepare
     strategy:
       fail-fast: false
-      # Twelve concurrent category crawls produced many transient HTTP 202s.
-      # Four keeps the audit bounded while being substantially gentler with the
-      # retailer's own first-party surfaces.
       max-parallel: 4
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
@@ -103,7 +115,7 @@ jobs:
         working-directory: tools/catalog
         continue-on-error: true
         run: |
-          python alcampo_html_tree_recovery.py \
+          python alcampo_api_first_tree_recovery.py \
             --label "${{ matrix.label }}" \
             --rid "${{ matrix.rid }}" \
             --expected "${{ matrix.expected }}" \
@@ -125,7 +137,6 @@ jobs:
     timeout-minutes: 35
     env:
       EXPECTED_CHECKS: ${{ needs.prepare.outputs.count }}
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -133,11 +144,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Download stable 13,877 baseline
-        run: |
-          mkdir -p baseline
-          gh run download 32296518958 -n alcampo-food-catalog-sharded-enumeration -D baseline
-          test -s baseline/products.jsonl
+      - uses: actions/download-artifact@v4
+        with:
+          name: alcampo-full-tree-baseline
+          path: baseline
       - uses: actions/download-artifact@v4
         with:
           pattern: alcampo-full-audit-*
