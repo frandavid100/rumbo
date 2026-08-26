@@ -98,7 +98,7 @@ def merge_product(old: dict | None, new: dict) -> dict:
 
 
 def merge_product_fill_missing(old: dict | None, new: dict) -> dict:
-    """Merge an archived direct observation without letting it overwrite newer cumulative values."""
+    """Merge an archived official observation without letting it overwrite newer cumulative values."""
     if old is None:
         return merge_product(None, new)
     merged = dict(old)
@@ -119,32 +119,46 @@ def merge_product_fill_missing(old: dict | None, new: dict) -> dict:
         merged["listing_only_observed"] = False
         if was_listing_only and nonempty(new.get("observed_at")):
             merged["observed_at"] = new.get("observed_at")
+    elif "listing_only_observed" not in merged and new.get("listing_only_observed") is True:
+        merged["listing_only_observed"] = True
     merged["retailer"] = "CARREFOUR"
     merged["source"] = SOURCE
     return merged
 
 
 def read_manual_first_party_rows(fixtures: Path) -> list[dict]:
-    """Load only agent observations explicitly verified on an official Carrefour PDP.
+    """Load archived agent observations verified on official Carrefour PDPs or category listings.
 
-    Early direct-web fixtures predate listing_only_observed. They remain admissible only when
-    direct_page_observed is explicitly true and the canonical URL is first-party; an explicit
-    listing_only_observed=true is always rejected.
+    Direct PDP observations may predate listing_only_observed. Official category-listing observations
+    are retained as listing-only and may never supply detail-only declarations.
     """
     rows: list[dict] = []
     for path in sorted(fixtures.glob("carrefour_first_party_agent_web_products_*.jsonl")):
-        for row in read_jsonl(path):
+        for original in read_jsonl(path):
+            row = dict(original)
             url = str(row.get("canonical_url") or "")
+            official_url = url.startswith("https://www.carrefour.es/") or url.startswith("https://carrefour.es/")
+            direct = row.get("direct_page_observed") is True
+            listing = (
+                row.get("direct_page_observed") is False
+                and str(row.get("capture_method") or "").startswith("OPENAI_WEB_OFFICIAL_CATEGORY")
+            )
             valid = (
                 row.get("retailer") == "CARREFOUR"
                 and row.get("source") == SOURCE
-                and row.get("direct_page_observed") is True
-                and row.get("listing_only_observed") is not True
                 and bool(row.get("retailer_sku"))
-                and (url.startswith("https://www.carrefour.es/") or url.startswith("https://carrefour.es/"))
+                and official_url
+                and (direct or listing)
             )
+            if direct and row.get("listing_only_observed") is True:
+                valid = False
             if not valid:
                 raise SystemExit(f"unsafe Carrefour manual first-party row in {path.name}: {row.get('retailer_sku')!r}")
+            row["listing_only_observed"] = not direct
+            if listing and any(nonempty(row.get(field)) for field in DETAIL_FIELDS):
+                raise SystemExit(
+                    f"listing-only Carrefour row contains detail fields in {path.name}: {row.get('retailer_sku')!r}"
+                )
             rows.append(row)
     return rows
 
@@ -155,18 +169,23 @@ def manual_first_party_evidence(rows: list[dict]) -> list[dict]:
     for row in rows:
         sku = row.get("retailer_sku")
         source_url = row.get("canonical_url")
+        is_listing = row.get("listing_only_observed") is True
         for field in fields:
             if field == "nutrition_status":
                 continue
             value = row.get(field)
             if not nonempty(value):
                 continue
+            if is_listing:
+                evidence_type = "OBSERVED_LISTING"
+            else:
+                evidence_type = "OBSERVED_PRODUCT_PAGE" if field in MANUAL_WEB_OBSERVED_FIELDS else "DECLARED"
             evidence.append({
                 "retailer_sku": sku,
                 "field": field,
                 "value": value,
                 "source": SOURCE,
-                "evidence_type": "OBSERVED_PRODUCT_PAGE" if field in MANUAL_WEB_OBSERVED_FIELDS else "DECLARED",
+                "evidence_type": evidence_type,
                 "source_url": source_url,
                 "observed_at": row.get("observed_at"),
                 "capture_method": row.get("capture_method"),
@@ -338,8 +357,6 @@ def main() -> int:
     manual_rows = read_manual_first_party_rows(fixtures)
     for row in manual_rows:
         sku = row.get("retailer_sku")
-        row = dict(row)
-        row["listing_only_observed"] = False
         products[sku] = merge_product_fill_missing(products.get(sku), row)
 
     fresh_rows = read_jsonl(fresh / "products.jsonl")
@@ -418,8 +435,8 @@ def main() -> int:
         "notes": [
             "Only direct carrefour.es observations are counted as Carrefour evidence.",
             "Third-party datasets may seed product URLs but are never copied into this cumulative first-party dataset.",
-            "Agent/web fixture rows are accepted only when they assert a directly observed official Carrefour product page.",
-            "Legacy direct-web fixtures may omit listing_only_observed; explicit direct_page_observed=true plus an official Carrefour canonical URL is required and listing_only_observed=true is rejected.",
+            "Agent/web fixtures may contain official Carrefour PDP or category-listing observations; listing rows are explicitly retained as OBSERVED_LISTING and cannot contribute detail-only declarations.",
+            "Legacy direct-web fixtures may omit listing_only_observed; direct_page_observed plus an official Carrefour canonical URL controls normalization.",
             "Category-listing identities are retained even when product detail retrieval is blocked.",
             "Field evidence is append-only by observation timestamp; newer sparse pages do not erase older direct observations.",
             "A later category listing cannot downgrade a previously observed product detail or its proved nutrition status.",
