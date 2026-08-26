@@ -136,6 +136,10 @@ def main() -> int:
             continue
 
         normalized: list[dict] = []
+        file_direct_rows = 0
+        file_listing_rows = 0
+        file_sanitized_listing_rows = 0
+        file_removed_listing_fields: dict[str, int] = {}
         valid = True
         for row in rows:
             kind = row_kind(row)
@@ -144,16 +148,16 @@ def main() -> int:
                 break
             if kind == "direct":
                 normalized.append(dict(row))
-                direct_rows += 1
+                file_direct_rows += 1
                 continue
 
             clean, removed = sanitize_listing_row(row)
             normalized.append(clean)
-            listing_rows += 1
+            file_listing_rows += 1
             if removed:
-                sanitized_listing_rows += 1
+                file_sanitized_listing_rows += 1
                 for field in removed:
-                    removed_listing_fields[field] = removed_listing_fields.get(field, 0) + 1
+                    file_removed_listing_fields[field] = file_removed_listing_fields.get(field, 0) + 1
 
         if not valid:
             skipped.append(src.name)
@@ -164,6 +168,11 @@ def main() -> int:
         write_jsonl(work / src.name, normalized)
         accepted.append(src.name)
         accepted_rows += len(normalized)
+        direct_rows += file_direct_rows
+        listing_rows += file_listing_rows
+        sanitized_listing_rows += file_sanitized_listing_rows
+        for field, count in file_removed_listing_fields.items():
+            removed_listing_fields[field] = removed_listing_fields.get(field, 0) + count
 
     cmd = [
         sys.executable,
@@ -185,7 +194,7 @@ def main() -> int:
         "listing_rows": listing_rows,
         "sanitized_listing_rows": sanitized_listing_rows,
         "removed_listing_fields": dict(sorted(removed_listing_fields.items())),
-        "skipped_unverified_legacy_files": skipped,
+        "skipped_nonadmissible_legacy_files": skipped,
         "skipped_count": len(skipped),
         "note": (
             "Archived fixtures remain unchanged. Direct PDP observations retain their observed fields; "
