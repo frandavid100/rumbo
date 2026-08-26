@@ -39,7 +39,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          mkdir -p baseline enumeration-artifacts
+          mkdir -p baseline enumeration-artifacts snapshot-candidate
           # Enumeration jobs are intentionally partial/recovery-oriented and older
           # complete artifacts can expire. Rebuild the widest safe inventory as the
           # union of every still-downloadable official Alcampo enumeration artifact.
@@ -54,7 +54,7 @@ jobs:
           )
           downloaded=0
           for run_id in "${run_ids[@]}"; do
-            target="enumeration-artifacts/$run_id"
+            target="enumeration-artifacts/enumeration-$run_id"
             mkdir -p "$target"
             if gh run download "$run_id" \
                 --repo "$GITHUB_REPOSITORY" \
@@ -69,8 +69,43 @@ jobs:
               rm -rf "$target"
             fi
           done
+
+          # Every successful fast-detail snapshot also preserves the exact
+          # first-party enumeration used to build it as source_products.jsonl.
+          # These snapshots outlive some original enumeration artifacts, so use
+          # their preserved source inventory as another first-party baseline input.
+          mapfile -t detail_run_ids < <(
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow catalog-alcampo-fast-detail-wave.yml \
+              --branch agent/catalog-phase1 \
+              --status success \
+              --limit 40 \
+              --json databaseId,createdAt \
+              --jq 'sort_by(.createdAt) | reverse | .[].databaseId'
+          )
+          for run_id in "${detail_run_ids[@]}"; do
+            rm -rf snapshot-candidate/*
+            if gh run download "$run_id" \
+                --repo "$GITHUB_REPOSITORY" \
+                -n alcampo-fast-detail-classified-snapshot \
+                -D snapshot-candidate >/tmp/alcampo-snapshot-download.log 2>&1; then
+              if test -s snapshot-candidate/source_products.jsonl; then
+                target="enumeration-artifacts/detail-snapshot-$run_id"
+                mkdir -p "$target"
+                cp snapshot-candidate/source_products.jsonl "$target/products.jsonl"
+                if test -s snapshot-candidate/enumeration_report.json; then
+                  cp snapshot-candidate/enumeration_report.json "$target/enumeration_report.json"
+                fi
+                downloaded=$((downloaded + 1))
+                count=$(jq -r '.sku // .retailer_sku // empty' "$target/products.jsonl" | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
+                echo "preserved detail snapshot run=$run_id source_products=$count"
+              fi
+            fi
+          done
+
           if (( downloaded == 0 )); then
-            echo "::error::No downloadable first-party Alcampo enumeration artifacts remain."
+            echo "::error::No downloadable first-party Alcampo enumeration evidence remains."
             exit 1
           fi
           python tools/catalog/alcampo_union_enumeration_artifacts.py \
@@ -81,7 +116,7 @@ jobs:
           count=$(jq -r '.sku // .retailer_sku // empty' baseline/products.jsonl | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
           echo 'run_id=cumulative-union' >> "$GITHUB_OUTPUT"
           echo "product_count=$count" >> "$GITHUB_OUTPUT"
-          echo "Using cumulative Alcampo enumeration union with $count unique SKUs from $downloaded downloadable artifacts"
+          echo "Using cumulative Alcampo enumeration union with $count unique SKUs from $downloaded downloadable first-party artifacts"
       - id: previous
         name: Select largest successful detail snapshot for monotonic recovery
         env:
