@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 
@@ -19,6 +20,16 @@ def successful_skus(path: Path | None) -> set[str]:
         if sku and row.get("error") is None:
             out.add(sku)
     return out
+
+
+def coprime_rotation_stride(size: int) -> int:
+    """Choose a small odd stride that eventually visits every position in a bucket."""
+    if size <= 1:
+        return 0
+    stride = 7
+    while math.gcd(stride, size) != 1:
+        stride += 2
+    return stride
 
 
 def main() -> int:
@@ -56,16 +67,20 @@ def main() -> int:
     # A fresh GitHub runner tends to get only a small SSR window before Alcampo
     # starts returning transient 202 responses. Rotate each microbatch on later
     # workflow runs so repeated first-party waves do not keep spending that window
-    # on exactly the same leading SKUs. This is deterministic and does not change
-    # product identity or provenance.
+    # on exactly the same leading SKUs. Pick a stride coprime with each current
+    # bucket length so every position is eventually front-loaded even when a bucket
+    # length happens to share a factor with the historical stride of seven.
     run_number = int(os.environ.get("GITHUB_RUN_NUMBER") or 0)
-    stride = 7
     offsets = []
+    strides = []
     for i, bucket in enumerate(buckets):
         if not bucket:
             offsets.append(0)
+            strides.append(0)
             continue
+        stride = coprime_rotation_stride(len(bucket))
         offset = (run_number * stride) % len(bucket)
+        strides.append(stride)
         offsets.append(offset)
         if offset:
             buckets[i] = bucket[offset:] + bucket[:offset]
@@ -77,13 +92,16 @@ def main() -> int:
                 h.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     matrix = {"include": [{"batch": f"{i:03d}"} for i in range(count)]}
+    nonzero_strides = [s for s in strides if s]
     summary = {
         "products": len(rows),
         "batches": count,
         "previous_successes": len(done & seen),
         "baseline_products": total,
         "run_number": run_number,
-        "rotation_stride": stride,
+        "rotation_policy": "PER_BUCKET_COPRIME_STRIDE",
+        "rotation_stride_min": min(nonzero_strides) if nonzero_strides else 0,
+        "rotation_stride_max": max(nonzero_strides) if nonzero_strides else 0,
         "rotation_offsets_min": min(offsets) if offsets else 0,
         "rotation_offsets_max": max(offsets) if offsets else 0,
         "matrix": matrix,
