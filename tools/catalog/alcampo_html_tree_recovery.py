@@ -4,6 +4,7 @@ import argparse
 import html as htmlmod
 import json
 import re
+import time
 from collections import deque
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
@@ -19,7 +20,7 @@ from alcampo_html_leaf_recovery import (
     request_html,
 )
 
-VERSION = "alcampo-html-tree-recovery-v5"
+VERSION = "alcampo-html-tree-recovery-v6"
 CATEGORY_LINK_RE = re.compile(
     r'href=["\']([^"\']*/categories/[^"\']+/(OC[0-9A-Za-z]+)(?:\?[^"\']*)?)["\']',
     re.I,
@@ -106,13 +107,13 @@ def parse_node(label: str, rid: str, depth: int) -> tuple[dict, dict[str, Produc
     return node, products, children
 
 
-def collect_api_fresh(label: str, rid: str, attempts: int = 3) -> tuple[list[Product], dict, list[str], int]:
-    """Retry a narrow official API category with a fresh anonymous session.
+def collect_api_fresh(label: str, rid: str, attempts: int = 5) -> tuple[list[Product], dict, list[str], int]:
+    """Retry a narrow official API category with fresh anonymous sessions.
 
-    A category can remain pending (202) for one cookie-bound session while the same
-    category is immediately available to a fresh session. Keep the richest clean
-    first-party response and never combine an errored partial response with a clean
-    one.
+    Alcampo sometimes returns HTTP 202 while a category is being prepared. A fresh
+    anonymous session plus a short bounded backoff is enough for transient cases and
+    remains a conservative first-party retry, not a WAF bypass. Keep only the richest
+    clean response; never merge an errored partial response into a clean one.
     """
     best_products: list[Product] = []
     best_meta: dict = {}
@@ -122,6 +123,8 @@ def collect_api_fresh(label: str, rid: str, attempts: int = 3) -> tuple[list[Pro
             plist, meta = collect_api_root(label, rid, 0)
         except Exception as exc:
             errors.append(f"attempt_{attempt}:{type(exc).__name__}:{exc}")
+            if attempt < attempts:
+                time.sleep(min(8, 2 * attempt))
             continue
         current_errors = [str(x) for x in (meta.get("errors") or [])]
         if not current_errors:
@@ -129,6 +132,8 @@ def collect_api_fresh(label: str, rid: str, attempts: int = 3) -> tuple[list[Pro
         errors.extend(f"attempt_{attempt}:{x}" for x in current_errors)
         if len(plist) > len(best_products):
             best_products, best_meta = plist, meta
+        if attempt < attempts:
+            time.sleep(min(8, 2 * attempt))
     return best_products, best_meta, errors, max(1, attempts)
 
 
@@ -188,7 +193,7 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
         if not child_rid or child_rid == rid:
             continue
         child_label = str(failure.get("label") or child_rid)
-        plist, meta, errors, attempts_used = collect_api_fresh(child_label, child_rid, attempts=3)
+        plist, meta, errors, attempts_used = collect_api_fresh(child_label, child_rid, attempts=5)
         for p in plist:
             key = stable_key(p)
             products[key] = merge(products[key], p) if key in products else p
@@ -203,15 +208,25 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
         })
 
     interim_skus = sorted({str(p.sku) for p in products.values() if p.sku})
+    root_node = nodes[0] if nodes else {}
+    root_ssr_unusable = bool(
+        not nodes
+        or root_node.get("html_status") != 200
+        or root_node.get("identity_mapping_error")
+    )
+    # Direct unresolved children often have no independent productCount, so an
+    # expected=0 recovery job must still be allowed to ask the official API when
+    # its own SSR page is 202/unusable. Previously those jobs could never recover.
     root_api_attempted = bool(
-        source_target and (len(interim_skus) < required or traversal_truncated)
+        root_ssr_unusable
+        or (source_target and (len(interim_skus) < required or traversal_truncated))
     )
     root_api_meta: dict = {}
     root_api_errors: list[str] = []
     root_api_products = 0
     root_api_attempts = 0
     if root_api_attempted:
-        api_products, root_api_meta, root_api_errors, root_api_attempts = collect_api_fresh(label, rid, attempts=3)
+        api_products, root_api_meta, root_api_errors, root_api_attempts = collect_api_fresh(label, rid, attempts=5)
         root_api_products = len(api_products)
         for p in api_products:
             key = stable_key(p)
@@ -225,7 +240,6 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
     # emptiness: SSR is HTTP 200 with no identities/children and the official API
     # returns a clean exhausted page with zero products. This does not add a product;
     # it records that the historical source count is no longer current.
-    root_node = nodes[0] if nodes else {}
     source_product_count_stale = bool(
         source_target > 0
         and not ssr_skus
