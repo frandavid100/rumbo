@@ -14,6 +14,7 @@ on:
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
       - 'tools/catalog/extract_carrefour_public_gtin.py'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
+      - 'tools/catalog/fixtures/carrefour_first_party_agent_web_products_*.jsonl'
   workflow_dispatch:
 
 permissions:
@@ -142,7 +143,7 @@ jobs:
             --sqlite carrefour-first-party-cumulative/carrefour_first_party.sqlite
           cd ../..
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "4189822+github-actions[bot]@users.noreply.github.com"
           git add \
             tools/catalog/fixtures/carrefour_first_party_fresh_inventory_latest.json \
             tools/catalog/fixtures/carrefour_first_party_analytics_network_latest_summary.json \
