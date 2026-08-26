@@ -85,6 +85,7 @@
     "fixtures/carrefour_first_party_agent_web_products_20260826_batch51.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_20260826_batch52.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_20260826_batch53.jsonl",
+    "fixtures/carrefour_first_party_agent_web_products_20260826_batch54.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch10.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch100_carrefour_vinegars.jsonl",
     "fixtures/carrefour_first_party_agent_web_products_batch101_queue_oils_tea.jsonl",
@@ -329,10 +330,10 @@
     "candidate_rows": 8451,
     "candidate_unique_carrefour_url_ids": 8451,
     "candidate_rows_missing_product_id": 0,
-    "verified_first_party_unique_skus": 1644,
-    "candidate_ids_already_verified": 1525,
+    "verified_first_party_unique_skus": 1651,
+    "candidate_ids_already_verified": 1532,
     "candidate_ids_terminal_route_excluded": 22,
-    "candidate_ids_not_yet_verified": 6904,
+    "candidate_ids_not_yet_verified": 6897,
     "queue_rows_emitted": 250,
     "queue_limit": 250,
     "unverified_with_external_gtin_hint": 0,
@@ -346,7 +347,7 @@
     "NOT_FOUND_404": 1
   },
   "food_priority_counts": {
-    "food_like": 2326,
+    "food_like": 2319,
     "uncertain": 4446,
     "deprioritized_obvious_alcohol_pet_or_nonfood": 132
   },
