@@ -1,4 +1,4 @@
-# Retrigger the full audit after the repaired ten-root first-party snapshot.
+# Retry the full audit conservatively: low parallelism avoids transient 202s from Alcampo.
 name: Catalog Alcampo full first-party tree audit
 on:
   push:
@@ -74,10 +74,13 @@ jobs:
     needs: prepare
     strategy:
       fail-fast: false
-      max-parallel: 12
+      # Twelve concurrent category crawls produced many transient HTTP 202s.
+      # Four keeps the audit bounded while being substantially gentler with the
+      # retailer's own first-party surfaces.
+      max-parallel: 4
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,6 +88,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Stagger first-party requests
+        env:
+          RID: ${{ matrix.rid }}
+        run: |
+          python - <<'PY'
+          import hashlib, os, time
+          rid=os.environ['RID']
+          delay=int(hashlib.sha256(rid.encode()).hexdigest()[:4],16) % 13
+          print(f'stagger_seconds={delay}')
+          time.sleep(delay)
+          PY
       - name: Audit one canonical first-party subtree
         working-directory: tools/catalog
         continue-on-error: true
