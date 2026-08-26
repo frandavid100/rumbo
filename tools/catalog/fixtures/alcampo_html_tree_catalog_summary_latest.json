@@ -3,7 +3,7 @@
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
   "importer_version": "alcampo-direct-v6.0",
-  "built_at": "2026-08-26T14:40:35.986007+00:00",
+  "built_at": "2026-08-26T14:48:04.135840+00:00",
   "roots": [
     {
       "label": "Barritas de chocolate",
@@ -163,6 +163,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -340,6 +341,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -541,6 +543,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -697,6 +700,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -896,6 +900,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1048,6 +1053,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1224,6 +1230,7 @@
       "html_visible_skus_present_in_union": 50,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     },
     {
@@ -1278,6 +1285,7 @@
       "html_visible_skus_present_in_union": 0,
       "html_visible_skus_missing_from_union": [],
       "union_coverage_ok": true,
+      "independently_recovered_descendant_rids": [],
       "recovery_enumeration_ok": true
     }
   ],
