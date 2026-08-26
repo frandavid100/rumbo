@@ -1,15 +1,938 @@
 {
   "root_shards_expected": 108,
-  "root_shards_seen": 1,
-  "root_shards_missing": 107,
-  "root_shards_failed": 0,
-  "failed": [],
-  "recursive_category_nodes_visited": 1,
-  "api_error_categories": 0,
+  "root_shards_seen": 55,
+  "root_shards_missing": 53,
+  "root_shards_failed": 17,
+  "failed": [
+    {
+      "label": "Helados",
+      "rid": "OC200220184",
+      "source_reported_product_count": 448,
+      "food_products_recursive_union": 349,
+      "recursive_categories_visited": 13,
+      "api_error_categories": 4,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Helados específicos",
+          "retailer_category_id": "OCHELESP",
+          "depth": 1,
+          "source_reported_product_count": 12,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Dietéticos y ecológicos",
+          "retailer_category_id": "OC120809",
+          "depth": 1,
+          "source_reported_product_count": 14,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Galletas y barquillos",
+          "retailer_category_id": "OCBarquillos",
+          "depth": 1,
+          "source_reported_product_count": 2,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Polo Flash",
+          "retailer_category_id": "OC1208041",
+          "depth": 2,
+          "source_reported_product_count": 6,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Frutas",
+      "rid": "OC1701",
+      "source_reported_product_count": 281,
+      "food_products_recursive_union": 174,
+      "recursive_categories_visited": 29,
+      "api_error_categories": 3,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Peras y Manzanas",
+          "retailer_category_id": "OC170102001",
+          "depth": 1,
+          "source_reported_product_count": 28,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Tropicales y Exóticas",
+          "retailer_category_id": "OC170106",
+          "depth": 1,
+          "source_reported_product_count": 26,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Cerezas",
+          "retailer_category_id": "OC170105002",
+          "depth": 2,
+          "source_reported_product_count": 3,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Refrescos",
+      "rid": "OC1103",
+      "source_reported_product_count": 544,
+      "food_products_recursive_union": 464,
+      "recursive_categories_visited": 26,
+      "api_error_categories": 4,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Bitter y Anisados",
+          "retailer_category_id": "OC110504",
+          "depth": 1,
+          "source_reported_product_count": 1,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Refresco de cola normal",
+          "retailer_category_id": "OCRefrescoColaNormal",
+          "depth": 2,
+          "source_reported_product_count": 31,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Refresco de naranja sin gas",
+          "retailer_category_id": "OCrefresconaranjasingas",
+          "depth": 2,
+          "source_reported_product_count": 6,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Té normal",
+          "retailer_category_id": "OC1103081",
+          "depth": 2,
+          "source_reported_product_count": 45,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Huevos",
+      "rid": "OC1608",
+      "source_reported_product_count": 50,
+      "food_products_recursive_union": 36,
+      "recursive_categories_visited": 12,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Clase S y M",
+          "retailer_category_id": "OC160801",
+          "depth": 2,
+          "source_reported_product_count": 9,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Conservas vegetales",
+      "rid": "OC100401",
+      "source_reported_product_count": 393,
+      "food_products_recursive_union": 284,
+      "recursive_categories_visited": 21,
+      "api_error_categories": 3,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Otras conservas vegetales",
+          "retailer_category_id": "OCOtrasConservasVegetales",
+          "depth": 1,
+          "source_reported_product_count": 43,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Conservas Vegetales Ecológicas",
+          "retailer_category_id": "OC1163072207",
+          "depth": 1,
+          "source_reported_product_count": 22,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Maíz",
+          "retailer_category_id": "OC100401009",
+          "depth": 2,
+          "source_reported_product_count": 14,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Pescados, mariscos y surimis",
+      "rid": "OC1201",
+      "source_reported_product_count": 274,
+      "food_products_recursive_union": 194,
+      "recursive_categories_visited": 16,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Calamar y otros cefalópodos Congelados",
+          "retailer_category_id": "OC12010504",
+          "depth": 2,
+          "source_reported_product_count": 11,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Conservas de pescado",
+      "rid": "OC100402",
+      "source_reported_product_count": 501,
+      "food_products_recursive_union": 385,
+      "recursive_categories_visited": 22,
+      "api_error_categories": 2,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Caballa y melva",
+          "retailer_category_id": "OC100402006",
+          "depth": 1,
+          "source_reported_product_count": 24,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Calamares Pulpo Chipirones Sepia",
+          "retailer_category_id": "OCConservasCalamares",
+          "depth": 1,
+          "source_reported_product_count": 37,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Verduras y hortalizas",
+      "rid": "OC1702",
+      "source_reported_product_count": 464,
+      "food_products_recursive_union": 270,
+      "recursive_categories_visited": 38,
+      "api_error_categories": 5,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Judía, alcachofa y espárragos",
+          "retailer_category_id": "OCJudiasEsparragos",
+          "depth": 1,
+          "source_reported_product_count": 6,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Mis verduras y frutas",
+          "retailer_category_id": "OC1701281220222",
+          "depth": 1,
+          "source_reported_product_count": 50,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Puerros",
+          "retailer_category_id": "OCPuerros",
+          "depth": 2,
+          "source_reported_product_count": 3,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Lechugas y Endibias",
+          "retailer_category_id": "OC170206",
+          "depth": 2,
+          "source_reported_product_count": 9,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Coliflor y brócoli",
+          "retailer_category_id": "OC170208004",
+          "depth": 2,
+          "source_reported_product_count": 3,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Bebidas",
+      "rid": "OCC11",
+      "source_reported_product_count": 0,
+      "food_products_recursive_union": 915,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Bebidas",
+          "retailer_category_id": "OCC11",
+          "depth": 0,
+          "source_reported_product_count": null,
+          "direct_unique_products": 1800,
+          "pages": 6,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 14,
+          "children_traversed": false
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": true,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Sin Gluten apto Celíacos",
+      "rid": "OC101204",
+      "source_reported_product_count": 256,
+      "food_products_recursive_union": 240,
+      "recursive_categories_visited": 17,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Snacks y Tortitas sin gluten",
+          "retailer_category_id": "OC10120408",
+          "depth": 1,
+          "source_reported_product_count": 14,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Platos preparados congelados",
+      "rid": "OC1205",
+      "source_reported_product_count": 303,
+      "food_products_recursive_union": 248,
+      "recursive_categories_visited": 25,
+      "api_error_categories": 5,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Platos de carne",
+          "retailer_category_id": "OCPlatosCarneCongelados",
+          "depth": 1,
+          "source_reported_product_count": 5,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Pizza Pepperoni",
+          "retailer_category_id": "OC1204018",
+          "depth": 2,
+          "source_reported_product_count": 13,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Otras pizzas",
+          "retailer_category_id": "OC1204019",
+          "depth": 2,
+          "source_reported_product_count": 57,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Arroces",
+          "retailer_category_id": "OC120602",
+          "depth": 2,
+          "source_reported_product_count": 11,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Salteados",
+          "retailer_category_id": "OC12060112",
+          "depth": 2,
+          "source_reported_product_count": 20,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Verduras Congeladas",
+      "rid": "OC1203",
+      "source_reported_product_count": 111,
+      "food_products_recursive_union": 105,
+      "recursive_categories_visited": 11,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Otras Verduras",
+          "retailer_category_id": "OC120310",
+          "depth": 1,
+          "source_reported_product_count": 13,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Leche",
+      "rid": "OC1603",
+      "source_reported_product_count": 332,
+      "food_products_recursive_union": 241,
+      "recursive_categories_visited": 12,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Infantil, Energía y Crecimiento",
+          "retailer_category_id": "OCPreparadoinfantilleche",
+          "depth": 1,
+          "source_reported_product_count": 11,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Alimentación",
+      "rid": "OCC10",
+      "source_reported_product_count": 0,
+      "food_products_recursive_union": 1791,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Alimentación",
+          "retailer_category_id": "OCC10",
+          "depth": 0,
+          "source_reported_product_count": null,
+          "direct_unique_products": 1800,
+          "pages": 6,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 12,
+          "children_traversed": false
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": true,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Ahumados, surimis, anchoas, pulpos y otros",
+      "rid": "OC184",
+      "source_reported_product_count": 387,
+      "food_products_recursive_union": 234,
+      "recursive_categories_visited": 25,
+      "api_error_categories": 6,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Huevas y sucedáneos",
+          "retailer_category_id": "OC14050303",
+          "depth": 1,
+          "source_reported_product_count": 20,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Patés y cremas de Marisco",
+          "retailer_category_id": "OC14050304",
+          "depth": 1,
+          "source_reported_product_count": 3,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Salmón Ahumado",
+          "retailer_category_id": "OC140301",
+          "depth": 2,
+          "source_reported_product_count": 41,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Salsas y condimentos para Ahumados y Pescados",
+          "retailer_category_id": "OC140302",
+          "depth": 2,
+          "source_reported_product_count": 2,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Barritas",
+          "retailer_category_id": "OCsuriyotros1",
+          "depth": 2,
+          "source_reported_product_count": 14,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "En conserva",
+          "retailer_category_id": "OCsuriyotros23",
+          "depth": 3,
+          "source_reported_product_count": 3,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Frescos",
+      "rid": "OC2112",
+      "source_reported_product_count": 0,
+      "food_products_recursive_union": 1798,
+      "recursive_categories_visited": 1,
+      "api_error_categories": 1,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Frescos",
+          "retailer_category_id": "OC2112",
+          "depth": 0,
+          "source_reported_product_count": null,
+          "direct_unique_products": 1800,
+          "pages": 6,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 10,
+          "children_traversed": false
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 0,
+      "aggregate_root_with_children": true,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    },
+    {
+      "label": "Postres",
+      "rid": "OC1602",
+      "source_reported_product_count": 344,
+      "food_products_recursive_union": 291,
+      "recursive_categories_visited": 19,
+      "api_error_categories": 4,
+      "children_without_retailer_category_id": 0,
+      "unresolved": [
+        {
+          "label": "Otros postres",
+          "retailer_category_id": "OC160215",
+          "depth": 1,
+          "source_reported_product_count": 38,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Kéfir",
+          "retailer_category_id": "OC160211",
+          "depth": 1,
+          "source_reported_product_count": 70,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Crema Catalana",
+          "retailer_category_id": "OC16021002",
+          "depth": 2,
+          "source_reported_product_count": 2,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Copas",
+          "retailer_category_id": "OCCopas",
+          "depth": 2,
+          "source_reported_product_count": 9,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        }
+      ],
+      "missing_retailer_ids": [],
+      "deduplication_identity": "retailer_sku_else_product_id",
+      "max_depth": 64,
+      "aggregate_root_with_children": false,
+      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
+      "source_product_count_is_diagnostic_only": true,
+      "ok": false
+    }
+  ],
+  "recursive_category_nodes_visited": 484,
+  "api_error_categories": 44,
   "children_without_retailer_category_id": 0,
-  "source_reported_product_count_sum_diagnostic_only": 72,
-  "product_rows_before_global_dedup": 36,
-  "unique_products_after_dedup": 36,
+  "source_reported_product_count_sum_diagnostic_only": 7765,
+  "product_rows_before_global_dedup": 13464,
+  "unique_products_after_dedup": 8358,
   "deduplication_identity": "retailer_sku_else_product_id",
   "minimum_products_sanity_floor": 5000,
   "completeness_basis": "all_scheduled_root_shards_plus_recursive_first_party_category_tree_plus_pageToken_exhaustion_then_listing_identity_dedup",
