@@ -11,6 +11,7 @@ on:
       - 'tools/catalog/augment_carrefour_first_party_from_network.py'
       - 'tools/catalog/carrefour_first_party_analytics_inventory.py'
       - 'tools/catalog/merge_carrefour_first_party_cumulative.py'
+      - 'tools/catalog/run_carrefour_first_party_cumulative_merge.py'
       - 'tools/catalog/sanitize_carrefour_first_party_output.py'
       - 'tools/catalog/extract_carrefour_public_gtin.py'
       - 'tools/catalog/fixtures/carrefour_candidate_urls_radarsuper.jsonl'
@@ -136,7 +137,7 @@ jobs:
           # Restore it before persisting so the data commit contains observations only.
           git restore tools/catalog/carrefour_first_party_browser_inventory.py
           cd tools/catalog
-          python merge_carrefour_first_party_cumulative.py \
+          python run_carrefour_first_party_cumulative_merge.py \
             --fixtures fixtures \
             --fresh carrefour-first-party-fresh-inventory \
             --frontier carrefour-first-party-category-frontier \
