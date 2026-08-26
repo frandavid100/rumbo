@@ -39,10 +39,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p baseline candidate-baseline
-          # Recent successful enumeration jobs can contain partial recovery artifacts.
-          # Never let a newer partial artifact silently replace the stable 13,877-SKU
-          # inventory. Inspect every downloadable candidate and retain the largest
-          # unique first-party SKU set; fail closed if the stable floor is unavailable.
+          # Recent enumeration jobs can contain partial recovery artifacts. Never let
+          # a newer partial artifact replace the stable 13,877-SKU inventory.
           mapfile -t run_ids < <(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
@@ -61,20 +59,7 @@ jobs:
                 -n alcampo-food-catalog-sharded-enumeration \
                 -D candidate-baseline >/tmp/alcampo-baseline-download.log 2>&1; then
               if test -s candidate-baseline/products.jsonl && test -s candidate-baseline/enumeration_report.json; then
-                count=$(python - candidate-baseline/products.jsonl <<'PY'
-import json, sys
-seen = set()
-with open(sys.argv[1], encoding='utf-8') as fh:
-    for line in fh:
-        if not line.strip():
-            continue
-        row = json.loads(line)
-        sku = str(row.get('sku') or row.get('retailer_sku') or '').strip()
-        if sku:
-            seen.add(sku)
-print(len(seen))
-PY
-                )
+                count=$(jq -r '.sku // .retailer_sku // empty' candidate-baseline/products.jsonl | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
                 echo "candidate enumeration run=$run_id unique_skus=$count"
                 if (( count > best_count )); then
                   rm -rf baseline/*
@@ -103,8 +88,7 @@ PY
           best_run=''
           best_count=0
           # A recent successful wave may itself have been built from a partial
-          # enumeration. Search backwards and keep the widest snapshot rather than
-          # trusting recency, so an accidental narrow cut cannot erase old evidence.
+          # enumeration. Search backwards and keep the widest snapshot.
           mapfile -t run_ids < <(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
@@ -122,20 +106,7 @@ PY
                 -n alcampo-fast-detail-classified-snapshot \
                 -D candidate-previous >/tmp/alcampo-previous-download.log 2>&1; then
               if test -s candidate-previous/details.jsonl; then
-                count=$(python - candidate-previous/details.jsonl <<'PY'
-import json, sys
-seen = set()
-with open(sys.argv[1], encoding='utf-8') as fh:
-    for line in fh:
-        if not line.strip():
-            continue
-        row = json.loads(line)
-        sku = str(row.get('sku') or row.get('retailer_sku') or '').strip()
-        if sku:
-            seen.add(sku)
-print(len(seen))
-PY
-                )
+                count=$(jq -r '.sku // .retailer_sku // empty' candidate-previous/details.jsonl | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
                 echo "candidate detail run=$run_id unique_skus=$count"
                 if (( count > best_count )); then
                   rm -rf previous/*
@@ -270,20 +241,7 @@ PY
           touch ../../alcampo-fast-final/details.jsonl
       - name: Guard stable inventory before canonical build
         run: |
-          count=$(python - baseline/products.jsonl <<'PY'
-import json, sys
-seen = set()
-with open(sys.argv[1], encoding='utf-8') as fh:
-    for line in fh:
-        if not line.strip():
-            continue
-        row = json.loads(line)
-        sku = str(row.get('sku') or row.get('retailer_sku') or '').strip()
-        if sku:
-            seen.add(sku)
-print(len(seen))
-PY
-          )
+          count=$(jq -r '.sku // .retailer_sku // empty' baseline/products.jsonl | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
           if (( count < 13877 )); then
             echo "::error::Refusing canonical build from partial Alcampo inventory ($count < 13877)."
             exit 1
