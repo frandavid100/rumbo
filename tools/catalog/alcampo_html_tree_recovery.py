@@ -19,7 +19,7 @@ from alcampo_html_leaf_recovery import (
     request_html,
 )
 
-VERSION = "alcampo-html-tree-recovery-v4"
+VERSION = "alcampo-html-tree-recovery-v5"
 CATEGORY_LINK_RE = re.compile(
     r'href=["\']([^"\']*/categories/[^"\']+/(OC[0-9A-Za-z]+)(?:\?[^"\']*)?)["\']',
     re.I,
@@ -38,14 +38,7 @@ def slug_label(url: str, fallback: str) -> str:
 
 
 def direct_children(body: str, final_url: str, parent_rid: str) -> list[dict]:
-    """Return only category links proven to be direct descendants of this page.
-
-    Alcampo renders global navigation category links in every SSR page. A child of
-    the current category is distinguishable because its canonical path is exactly
-    `<parent canonical path without RID>/<child slug>/<child RID>`. Requiring this
-    path shape prevents the global navigation from turning a recovery shard into a
-    crawl of the whole store.
-    """
+    """Return only category links proven to be direct descendants of this page."""
     parent_path = urlsplit(final_url).path.rstrip("/")
     if parent_path.rsplit("/", 1)[-1].lower() == parent_rid.lower():
         parent_base = parent_path.rsplit("/", 1)[0]
@@ -113,6 +106,32 @@ def parse_node(label: str, rid: str, depth: int) -> tuple[dict, dict[str, Produc
     return node, products, children
 
 
+def collect_api_fresh(label: str, rid: str, attempts: int = 3) -> tuple[list[Product], dict, list[str], int]:
+    """Retry a narrow official API category with a fresh anonymous session.
+
+    A category can remain pending (202) for one cookie-bound session while the same
+    category is immediately available to a fresh session. Keep the richest clean
+    first-party response and never combine an errored partial response with a clean
+    one.
+    """
+    best_products: list[Product] = []
+    best_meta: dict = {}
+    errors: list[str] = []
+    for attempt in range(1, max(1, attempts) + 1):
+        try:
+            plist, meta = collect_api_root(label, rid, 0)
+        except Exception as exc:
+            errors.append(f"attempt_{attempt}:{type(exc).__name__}:{exc}")
+            continue
+        current_errors = [str(x) for x in (meta.get("errors") or [])]
+        if not current_errors:
+            return plist, meta, [], attempt
+        errors.extend(f"attempt_{attempt}:{x}" for x in current_errors)
+        if len(plist) > len(best_products):
+            best_products, best_meta = plist, meta
+    return best_products, best_meta, errors, max(1, attempts)
+
+
 def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int, max_nodes: int) -> int:
     out.mkdir(parents=True, exist_ok=True)
     queue = deque([(label, rid, 0)])
@@ -161,42 +180,80 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
     traversal_truncated = bool(queue)
     ssr_skus = sorted({str(p.sku) for p in products.values() if p.sku})
 
-    # The official category SSR surface deliberately renders at most 50 cards on
-    # many leaf categories. When that first-party HTML cannot reach the source
-    # productCount (or a descendant is stuck on transient 202), use Alcampo's own
-    # v6 product-pages API as a narrow fallback for this one category. v8 exhausts
-    # the cookie-bound pageToken sequence and retries 202 responses, so this is a
-    # bounded first-party pagination recovery rather than a second broad crawl.
-    api_fallback_attempted = bool(
-        source_target and (len(ssr_skus) < required or request_failures or traversal_truncated)
+    # First recover only descendants that SSR itself proved exist but left pending.
+    # This is narrower and more reliable than repeatedly asking the broad parent.
+    child_api_attempts: list[dict] = []
+    for failure in request_failures:
+        child_rid = str(failure.get("retailer_category_id") or "").strip()
+        if not child_rid or child_rid == rid:
+            continue
+        child_label = str(failure.get("label") or child_rid)
+        plist, meta, errors, attempts_used = collect_api_fresh(child_label, child_rid, attempts=3)
+        for p in plist:
+            key = stable_key(p)
+            products[key] = merge(products[key], p) if key in products else p
+        child_api_attempts.append({
+            "label": child_label,
+            "retailer_category_id": child_rid,
+            "products": len(plist),
+            "pages": int(meta.get("pages") or 0),
+            "errors": errors,
+            "attempts": attempts_used,
+            "ok": bool(not errors and int(meta.get("pages") or 0) > 0),
+        })
+
+    interim_skus = sorted({str(p.sku) for p in products.values() if p.sku})
+    root_api_attempted = bool(
+        source_target and (len(interim_skus) < required or traversal_truncated)
     )
-    api_fallback_meta: dict = {}
-    api_fallback_errors: list[str] = []
-    api_fallback_products = 0
-    if api_fallback_attempted:
-        try:
-            api_products, api_fallback_meta = collect_api_root(label, rid, 0)
-            api_fallback_errors = [str(x) for x in (api_fallback_meta.get("errors") or [])]
-            api_fallback_products = len(api_products)
-            for p in api_products:
-                key = stable_key(p)
-                products[key] = merge(products[key], p) if key in products else p
-        except Exception as exc:
-            api_fallback_errors = [f"{type(exc).__name__}:{exc}"]
+    root_api_meta: dict = {}
+    root_api_errors: list[str] = []
+    root_api_products = 0
+    root_api_attempts = 0
+    if root_api_attempted:
+        api_products, root_api_meta, root_api_errors, root_api_attempts = collect_api_fresh(label, rid, attempts=3)
+        root_api_products = len(api_products)
+        for p in api_products:
+            key = stable_key(p)
+            products[key] = merge(products[key], p) if key in products else p
 
     skus = sorted({str(p.sku) for p in products.values() if p.sku})
-    target_satisfied = len(skus) >= required if source_target else bool(skus)
-    api_fallback_enumeration_ok = bool(
-        api_fallback_attempted
-        and not api_fallback_errors
-        and int(api_fallback_meta.get("pages") or 0) > 0
+    normal_target_satisfied = len(skus) >= required if source_target else bool(skus)
+
+    # A stale productCount must not create a permanent false failure. Only accept an
+    # empty category when two independent first-party surfaces agree on current
+    # emptiness: SSR is HTTP 200 with no identities/children and the official API
+    # returns a clean exhausted page with zero products. This does not add a product;
+    # it records that the historical source count is no longer current.
+    root_node = nodes[0] if nodes else {}
+    source_product_count_stale = bool(
+        source_target > 0
+        and not ssr_skus
+        and len(nodes) == 1
+        and root_node.get("html_status") == 200
+        and int(root_node.get("identity_materialized_products") or 0) == 0
+        and int(root_node.get("direct_children_count") or 0) == 0
+        and root_api_attempted
+        and not root_api_errors
+        and int(root_api_meta.get("pages") or 0) > 0
+        and root_api_products == 0
+    )
+    target_satisfied = normal_target_satisfied or source_product_count_stale
+
+    child_failures_resolved = all(x.get("ok") for x in child_api_attempts) if child_api_attempts else not request_failures
+    root_api_enumeration_ok = bool(
+        root_api_attempted
+        and not root_api_errors
+        and int(root_api_meta.get("pages") or 0) > 0
         and target_satisfied
     )
-    enumeration_ok = (
-        target_satisfied
-        and not traversal_truncated
-        and (not request_failures or api_fallback_enumeration_ok)
+    failures_overridden = bool(
+        not request_failures
+        or child_failures_resolved
+        or root_api_enumeration_ok
+        or source_product_count_stale
     )
+    enumeration_ok = target_satisfied and not traversal_truncated and failures_overridden
 
     meta = [{
         "label": label,
@@ -207,31 +264,44 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
         ),
         "version": VERSION,
         "source_reported_product_count": source_target or None,
+        "source_product_count_stale": source_product_count_stale,
         "categories_visited": len(nodes),
         "max_depth": max_depth,
         "max_nodes": max_nodes,
         "traversal_truncated": traversal_truncated,
         "unique_visible_product_skus": len(skus),
         "ssr_visible_product_skus": len(ssr_skus),
-        "api_fallback_attempted": api_fallback_attempted,
-        "api_fallback_products": api_fallback_products,
-        "api_fallback_pages": int(api_fallback_meta.get("pages") or 0),
-        "api_fallback_errors": api_fallback_errors,
-        "api_fallback_enumeration_ok": api_fallback_enumeration_ok,
+        "child_api_attempts": child_api_attempts,
+        "api_fallback_attempted": root_api_attempted,
+        "api_fallback_products": root_api_products,
+        "api_fallback_pages": int(root_api_meta.get("pages") or 0),
+        "api_fallback_errors": root_api_errors,
+        "api_fallback_attempts": root_api_attempts,
+        "api_fallback_enumeration_ok": root_api_enumeration_ok,
         "nodes": nodes,
     }]
     summary = write_outputs(out, list(products.values()), meta)
     effective_unresolved = [] if enumeration_ok else request_failures
+    decoration_ok = bool(
+        enumeration_ok
+        and (
+            root_api_enumeration_ok
+            or source_product_count_stale
+            or any(x.get("ok") and x.get("products", 0) > 0 for x in child_api_attempts)
+        )
+    )
     check = {
         "label": label,
         "rid": rid,
         "source_reported_product_count": source_target or None,
+        "source_product_count_stale": source_product_count_stale,
         "food_products_recursive_union": summary["counts"]["food_products"],
         "recursive_categories_visited": len(nodes),
-        "api_error_categories": 0 if enumeration_ok else len(request_failures) + len(api_fallback_errors),
+        "api_error_categories": 0 if enumeration_ok else len(request_failures) + len(root_api_errors),
         "children_without_retailer_category_id": 0,
         "unresolved": effective_unresolved,
         "ssr_unresolved": request_failures,
+        "child_api_attempts": child_api_attempts,
         "missing_retailer_ids": [],
         "deduplication_identity": "retailer_sku_else_product_id",
         "max_depth": max_depth,
@@ -239,24 +309,25 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
         "completeness_basis": (
             "first_party_category_html_recursive_direct_descendants_paired_identity_vectors"
             "_plus_narrow_v6_pageToken_exhaustion"
-            if api_fallback_attempted
+            if (root_api_attempted or child_api_attempts)
             else "first_party_category_html_recursive_direct_descendants_paired_identity_vectors"
         ),
-        "source_product_count_is_diagnostic_only": False if source_target else True,
+        "source_product_count_is_diagnostic_only": bool(source_product_count_stale or not source_target),
         "html_product_links": len(ssr_skus),
         "html_link_skus": ssr_skus,
         "enumerated_skus": skus,
         "identity_materialized_products": len(products),
         "identity_mapping_error": None,
         "traversal_truncated": traversal_truncated,
-        "api_fallback_attempted": api_fallback_attempted,
-        "api_fallback_products": api_fallback_products,
-        "api_fallback_pages": int(api_fallback_meta.get("pages") or 0),
-        "api_fallback_errors": api_fallback_errors,
-        "api_fallback_enumeration_ok": api_fallback_enumeration_ok,
+        "api_fallback_attempted": root_api_attempted,
+        "api_fallback_products": root_api_products,
+        "api_fallback_pages": int(root_api_meta.get("pages") or 0),
+        "api_fallback_errors": root_api_errors,
+        "api_fallback_attempts": root_api_attempts,
+        "api_fallback_enumeration_ok": root_api_enumeration_ok,
         "enumeration_ok": enumeration_ok,
-        "decoration_ok": api_fallback_enumeration_ok,
-        "decoration_errors": [] if api_fallback_enumeration_ok else ["not_attempted_or_failed_known_v6_products"],
+        "decoration_ok": decoration_ok,
+        "decoration_errors": [] if decoration_ok else ["not_attempted_or_failed_known_v6_products"],
         "ok": enumeration_ok,
     }
     (out / "child_check.json").write_text(json.dumps(check, ensure_ascii=False, indent=2), encoding="utf-8")
