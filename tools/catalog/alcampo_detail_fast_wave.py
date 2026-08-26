@@ -14,7 +14,7 @@ from urllib.error import HTTPError, URLError
 import alcampo_detail_enricher as base
 from nutrition_validation import validate_nutrition
 
-VERSION = "alcampo-detail-fast-wave-v1.4"
+VERSION = "alcampo-detail-fast-wave-v1.5"
 _TLS = threading.local()
 
 
@@ -83,6 +83,13 @@ def failure(sku: str, url: str, error: str):
 
 
 def fetch_fast(sku: str, name_hint: str | None, exact_url: str | None = None):
+    # Once this runner has seen two consecutive first-party 202 responses, all
+    # subsequent requests from the same worker have empirically been 202 as well.
+    # Do not keep hammering Alcampo for another ~40 SKUs. Mark them as a transient
+    # circuit skip so the next fresh runner/wave can retry them safely.
+    if getattr(_TLS, "waf_circuit_open", False):
+        return failure(str(sku), normalize_exact_url(exact_url) or stable_url(str(sku)), "WAF_PENDING_CIRCUIT_OPEN")
+
     # Highest-confidence route: use the canonical product URL actually observed in
     # Alcampo's own category/listing HTML. The previous wave discarded that field
     # and reconstructed a slug from the name, which needlessly turned valid products
@@ -112,10 +119,16 @@ def fetch_fast(sku: str, name_hint: str | None, exact_url: str | None = None):
             pace_requests()
             status, final, raw, body = base._request(op, url, base.BASE + "/")
             if status == 202 or ("window.gokuProps" in body and len(body) < 10000):
+                streak = int(getattr(_TLS, "waf_pending_streak", 0)) + 1
+                _TLS.waf_pending_streak = streak
+                if streak >= 2:
+                    _TLS.waf_circuit_open = True
                 last = f"WAF_PENDING_{status}"
                 return failure(str(sku), url, last)
+            _TLS.waf_pending_streak = 0
             return parse_success(str(sku), url, status, final, raw, body)
         except HTTPError as exc:
+            _TLS.waf_pending_streak = 0
             try:
                 preview = exc.read().decode("utf-8", errors="replace")[:160]
             except Exception:
@@ -127,11 +140,13 @@ def fetch_fast(sku: str, name_hint: str | None, exact_url: str | None = None):
                 continue
             return failure(str(sku), url, last)
         except (URLError, TimeoutError) as exc:
+            _TLS.waf_pending_streak = 0
             last = f"{type(exc).__name__}:{exc}"
             if idx < len(urls) - 1:
                 op = opener(reset=True)
                 continue
         except Exception as exc:
+            _TLS.waf_pending_streak = 0
             last = f"{type(exc).__name__}:{exc}"
             if idx < len(urls) - 1:
                 op = opener(reset=True)
@@ -167,6 +182,7 @@ def summarize(details, requested: int, targets):
             "completed_rows": len(details),
             "fetched": sum(d.error is None for d in details),
             "errors": sum(d.error is not None for d in details),
+            "circuit_skips": sum("CIRCUIT_OPEN" in str(d.error or "") for d in details),
             "with_name": sum(bool(d.name) for d in details),
             "with_gtin": sum(bool(d.gtin) for d in details),
             "with_legal_name": sum(bool(d.legal_name) for d in details),
@@ -177,7 +193,7 @@ def summarize(details, requested: int, targets):
             "declared_invalid_nutrition": sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
             "downloaded_html_bytes": sum(d.html_bytes for d in details),
         },
-        "policy": "FIRST_PARTY_PRODUCT_SLUG_PACED_X_ONLY_FOR_MISSING_SLUG_CHECKPOINT_EACH_RESULT",
+        "policy": "FIRST_PARTY_PRODUCT_SLUG_PACED_STOP_AFTER_TWO_CONSECUTIVE_202_X_ONLY_FOR_MISSING_SLUG_CHECKPOINT_EACH_RESULT",
     }
 
 
