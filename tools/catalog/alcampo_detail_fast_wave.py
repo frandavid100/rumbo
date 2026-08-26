@@ -5,6 +5,7 @@ import concurrent.futures as cf
 import json
 import os
 import threading
+import time
 import urllib.parse
 from dataclasses import asdict
 from pathlib import Path
@@ -13,7 +14,7 @@ from urllib.error import HTTPError, URLError
 import alcampo_detail_enricher as base
 from nutrition_validation import validate_nutrition
 
-VERSION = "alcampo-detail-fast-wave-v1.3"
+VERSION = "alcampo-detail-fast-wave-v1.4"
 _TLS = threading.local()
 
 
@@ -23,6 +24,23 @@ def opener(reset: bool = False):
         # server-rendered product URL already contains the declared detail fields.
         _TLS.opener = base._new_opener()
     return _TLS.opener
+
+
+def pace_requests(min_interval: float = 1.25):
+    """Avoid bursting Alcampo PDP requests from one runner.
+
+    Empirically, the first-party SSR route yields several real product pages and
+    then starts returning transient 202 responses when requests are sent in a
+    tight burst. A small per-runner interval is both gentler and more useful than
+    retrying the same transient response immediately.
+    """
+    now = time.monotonic()
+    last = getattr(_TLS, "last_request_at", None)
+    if last is not None:
+        wait = min_interval - (now - last)
+        if wait > 0:
+            time.sleep(wait)
+    _TLS.last_request_at = time.monotonic()
 
 
 def parse_success(sku: str, requested_url: str, status: int, final: str, raw: bytes, body: str):
@@ -57,13 +75,21 @@ def normalize_exact_url(value: str | None) -> str | None:
     return url.split("#", 1)[0]
 
 
+def failure(sku: str, url: str, error: str):
+    return base.Detail(
+        str(sku), url, None, None, None, None, None, None,
+        None, None, None, None, None, None, None, "FETCH_ERROR", error, 0
+    )
+
+
 def fetch_fast(sku: str, name_hint: str | None, exact_url: str | None = None):
     # Highest-confidence route: use the canonical product URL actually observed in
     # Alcampo's own category/listing HTML. The previous wave discarded that field
     # and reconstructed a slug from the name, which needlessly turned valid products
     # into 202/404 misses when the retailer's slug did not match our transliteration.
-    # Keep /products/x/<sku> as the single stable fallback and cap the request budget
-    # at two first-party requests per product.
+    # Keep /products/x/<sku> only as a fallback for a stale/incorrect slug. A 202 is
+    # treated as a transient WAF/rate response and is not immediately retried via a
+    # second route, which only doubles pressure without adding first-party evidence.
     urls = []
     exact = normalize_exact_url(exact_url)
     if exact:
@@ -83,12 +109,11 @@ def fetch_fast(sku: str, name_hint: str | None, exact_url: str | None = None):
     for idx, url in enumerate(urls):
         last_url = url
         try:
+            pace_requests()
             status, final, raw, body = base._request(op, url, base.BASE + "/")
             if status == 202 or ("window.gokuProps" in body and len(body) < 10000):
                 last = f"WAF_PENDING_{status}"
-                if idx < len(urls) - 1:
-                    op = opener(reset=True)
-                continue
+                return failure(str(sku), url, last)
             return parse_success(str(sku), url, status, final, raw, body)
         except HTTPError as exc:
             try:
@@ -96,21 +121,22 @@ def fetch_fast(sku: str, name_hint: str | None, exact_url: str | None = None):
             except Exception:
                 preview = ""
             last = f"HTTP_{exc.code}:{preview}"
-            if idx < len(urls) - 1:
+            # Only a concrete missing/stale slug justifies trying /products/x/<sku>.
+            if exc.code in (404, 410) and idx < len(urls) - 1:
                 op = opener(reset=True)
                 continue
+            return failure(str(sku), url, last)
         except (URLError, TimeoutError) as exc:
             last = f"{type(exc).__name__}:{exc}"
             if idx < len(urls) - 1:
                 op = opener(reset=True)
+                continue
         except Exception as exc:
             last = f"{type(exc).__name__}:{exc}"
             if idx < len(urls) - 1:
                 op = opener(reset=True)
-    return base.Detail(
-        str(sku), last_url, None, None, None, None, None, None,
-        None, None, None, None, None, None, None, "FETCH_ERROR", last, 0
-    )
+                continue
+    return failure(str(sku), last_url, last or "FETCH_ERROR")
 
 
 def load_targets(path: Path):
@@ -151,7 +177,7 @@ def summarize(details, requested: int, targets):
             "declared_invalid_nutrition": sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
             "downloaded_html_bytes": sum(d.html_bytes for d in details),
         },
-        "policy": "OBSERVED_FIRST_PARTY_PRODUCT_URL_FIRST_X_FALLBACK_MAX_TWO_REQUESTS_CHECKPOINT_EACH_RESULT",
+        "policy": "FIRST_PARTY_PRODUCT_SLUG_PACED_X_ONLY_FOR_MISSING_SLUG_CHECKPOINT_EACH_RESULT",
     }
 
 
@@ -175,10 +201,7 @@ def main():
                 try:
                     detail = fut.result()
                 except Exception as exc:
-                    detail = base.Detail(
-                        str(sku), stable_url(str(sku)), None, None, None, None, None, None,
-                        None, None, None, None, None, None, None, "FETCH_ERROR", f"WORKER:{type(exc).__name__}:{exc}", 0
-                    )
+                    detail = failure(str(sku), stable_url(str(sku)), f"WORKER:{type(exc).__name__}:{exc}")
                 details.append(detail)
                 fh.write(json.dumps(asdict(detail), ensure_ascii=False) + "\n")
                 if n % 10 == 0:
