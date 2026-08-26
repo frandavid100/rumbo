@@ -14,11 +14,29 @@ def score(row: dict) -> tuple[int, int, int]:
     )
 
 
+def merge_file(path: Path, best: dict[str, dict]) -> int:
+    if not path.exists():
+        return 0
+    count = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        sku = str(row.get("sku") or "").strip()
+        if not sku:
+            continue
+        count += 1
+        if sku not in best or score(row) > score(best[sku]):
+            best[sku] = row
+    return count
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--downloaded", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--expected-products", type=Path, required=True)
+    p.add_argument("--previous-details", type=Path)
     a = p.parse_args()
 
     expected = []
@@ -32,17 +50,11 @@ def main() -> int:
     expected = list(dict.fromkeys(expected))
 
     best: dict[str, dict] = {}
+    previous_rows = merge_file(a.previous_details, best) if a.previous_details else 0
     files = sorted(a.downloaded.rglob("details.jsonl"))
+    new_rows = 0
     for path in files:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            sku = str(row.get("sku") or "").strip()
-            if not sku:
-                continue
-            if sku not in best or score(row) > score(best[sku]):
-                best[sku] = row
+        new_rows += merge_file(path, best)
 
     a.out.parent.mkdir(parents=True, exist_ok=True)
     with a.out.open("w", encoding="utf-8") as f:
@@ -57,7 +69,9 @@ def main() -> int:
     fetched = [sku for sku in expected if sku in best and best[sku].get("error") is None]
     report = {
         "expected_products": len(expected),
+        "previous_detail_rows": previous_rows,
         "detail_artifacts": len(files),
+        "new_detail_rows": new_rows,
         "detail_rows": len(best),
         "fetched": len(fetched),
         "declared_valid_nutrition": len(valid),
