@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import subprocess
+import tempfile
 from pathlib import Path
 
 
@@ -14,8 +17,8 @@ def score(row: dict) -> tuple[int, int, int]:
     )
 
 
-def merge_file(path: Path, best: dict[str, dict]) -> int:
-    if not path.exists():
+def merge_file(path: Path | None, best: dict[str, dict]) -> int:
+    if path is None or not path.exists():
         return 0
     count = 0
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -29,6 +32,48 @@ def merge_file(path: Path, best: dict[str, dict]) -> int:
         if sku not in best or score(row) > score(best[sku]):
             best[sku] = row
     return count
+
+
+def discover_previous_details() -> tuple[Path | None, str | None, tempfile.TemporaryDirectory | None]:
+    """Read the latest successful first-party detail artifact when CI credentials allow it.
+
+    The workflow already grants actions:read. Keeping this fallback inside the merger
+    makes repeated waves monotonic even when an older workflow invocation did not pass
+    --previous-details explicitly.
+    """
+    if not os.environ.get("GH_TOKEN") or not os.environ.get("GITHUB_REPOSITORY"):
+        return None, None, None
+    repo = os.environ["GITHUB_REPOSITORY"]
+    branch = os.environ.get("GITHUB_REF_NAME") or "agent/catalog-phase1"
+    try:
+        listed = subprocess.run(
+            [
+                "gh", "run", "list", "--repo", repo,
+                "--workflow", "catalog-alcampo-fast-detail-wave.yml",
+                "--branch", branch, "--status", "success", "--limit", "1",
+                "--json", "databaseId", "--jq", ".[0].databaseId // empty",
+            ],
+            check=True, capture_output=True, text=True, timeout=30,
+        )
+        run_id = listed.stdout.strip()
+        if not run_id:
+            return None, None, None
+        temp = tempfile.TemporaryDirectory(prefix="alcampo-previous-detail-")
+        target = Path(temp.name)
+        subprocess.run(
+            [
+                "gh", "run", "download", run_id, "--repo", repo,
+                "-n", "alcampo-fast-detail-classified-snapshot", "-D", str(target),
+            ],
+            check=True, capture_output=True, text=True, timeout=120,
+        )
+        details = target / "details.jsonl"
+        if details.exists():
+            return details, run_id, temp
+        temp.cleanup()
+    except Exception as exc:
+        print(f"previous-detail discovery unavailable: {type(exc).__name__}: {exc}")
+    return None, None, None
 
 
 def main() -> int:
@@ -49,8 +94,14 @@ def main() -> int:
             expected.append(sku)
     expected = list(dict.fromkeys(expected))
 
+    previous_path = a.previous_details
+    previous_run = None
+    temp = None
+    if previous_path is None:
+        previous_path, previous_run, temp = discover_previous_details()
+
     best: dict[str, dict] = {}
-    previous_rows = merge_file(a.previous_details, best) if a.previous_details else 0
+    previous_rows = merge_file(previous_path, best)
     files = sorted(a.downloaded.rglob("details.jsonl"))
     new_rows = 0
     for path in files:
@@ -69,6 +120,7 @@ def main() -> int:
     fetched = [sku for sku in expected if sku in best and best[sku].get("error") is None]
     report = {
         "expected_products": len(expected),
+        "previous_run": previous_run,
         "previous_detail_rows": previous_rows,
         "detail_artifacts": len(files),
         "new_detail_rows": new_rows,
@@ -79,10 +131,13 @@ def main() -> int:
         "missing_detail_rows": len(missing),
         "missing_skus": missing[:500],
         "error_skus": errors[:500],
+        "fetched_skus": fetched,
     }
     report_path = a.out.with_name("detail_merge_summary.json")
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    print(json.dumps({k: v for k, v in report.items() if k != "fetched_skus"}, ensure_ascii=False, indent=2))
+    if temp is not None:
+        temp.cleanup()
     # Missing rows mean a workflow/artifact failure. Per-product fetch errors remain valid REVIEW evidence.
     return 0 if not missing else 2
 
