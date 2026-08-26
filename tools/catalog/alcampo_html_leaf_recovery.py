@@ -16,7 +16,7 @@ PRODUCTS_ENDPOINT = BASE + "/api/webproductpagews/v6/products"
 PRODUCT_ID_RE = re.compile(r'["\']productId["\']\s*:\s*["\']([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})["\']', re.I)
 RETAILER_ID_RE = re.compile(r'["\']retailerProductId["\']\s*:\s*["\']?([^"\',}\s]+)', re.I)
 PRODUCT_LINK_RE = re.compile(r'href=["\']([^"\']*/products/[^"\']+/(\d{3,}))["\']', re.I)
-VERSION = "alcampo-html-leaf-recovery-v2"
+VERSION = "alcampo-html-leaf-recovery-v3"
 
 
 def request_html(opener, rid: str):
@@ -75,6 +75,57 @@ def put_products(opener, ids: list[str], referer: str, attempts: int = 4):
     raise RuntimeError(last or "PUT product decoration failed")
 
 
+def materialize_visible_identities(
+    label: str,
+    final_url: str,
+    product_ids: list[str],
+    retailer_ids: list[str],
+    links: list[tuple[str, str]],
+) -> tuple[dict[str, Product], str | None]:
+    """Materialize only identity fields proven by one-to-one SSR ordering.
+
+    Alcampo's category SSR repeats productId, retailerProductId and product links in
+    the same product-card order. Historical probes confirmed exact one-to-one order
+    on independent categories. We still fail closed: if any count/order/uniqueness
+    invariant differs, no identity row is emitted rather than guessing a pairing.
+    """
+    link_skus = list(dict.fromkeys(sku for _, sku in links))
+    link_by_sku = {sku: href for href, sku in links}
+    if not product_ids or not retailer_ids or not link_skus:
+        return {}, "missing_identity_vector"
+    if not (len(product_ids) == len(retailer_ids) == len(link_skus)):
+        return {}, f"identity_vector_count_mismatch:{len(product_ids)}:{len(retailer_ids)}:{len(link_skus)}"
+    if retailer_ids != link_skus:
+        return {}, "retailer_id_link_sku_order_mismatch"
+    if len(set(product_ids)) != len(product_ids) or len(set(retailer_ids)) != len(retailer_ids):
+        return {}, "identity_vector_not_unique"
+
+    products: dict[str, Product] = {}
+    for product_id, sku in zip(product_ids, retailer_ids):
+        href = link_by_sku.get(sku)
+        if not href:
+            return {}, f"missing_product_link_for_sku:{sku}"
+        p = Product(
+            product_id=product_id,
+            sku=sku,
+            name=None,
+            brand=None,
+            pack_size=None,
+            category_path=[label],
+            alcohol=None,
+            available=None,
+            image_url=None,
+            product_url=BASE + htmlmod.unescape(href),
+            price_eur=None,
+            unit_price_eur=None,
+            unit_price_unit=None,
+            source_roots=[label],
+            evidence_endpoint=final_url,
+        )
+        products[f"sku:{sku}"] = p
+    return products, None
+
+
 def recover(label: str, rid: str, out: Path, expected: int | None = None):
     out.mkdir(parents=True, exist_ok=True)
     jar = http.cookiejar.CookieJar()
@@ -110,9 +161,17 @@ def recover(label: str, rid: str, out: Path, expected: int | None = None):
         and overlap >= min(required, len(link_skus))
     )
 
+    # Materialize the identity that the SSR itself proves, even if the optional
+    # detail-decoration PUT is WAF-blocked. This is deliberately fail-closed: only
+    # exact one-to-one productId/SKU/link vectors become Product rows.
+    products, identity_mapping_error = materialize_visible_identities(
+        label, final_url, product_ids, retailer_ids, links
+    )
+    identity_materialized = len(products)
+
     # Decoration remains useful when it works because it supplies structured fields,
     # but a decoration 403 must not erase valid first-party enumeration evidence.
-    products: dict[str, Product] = {}
+    decorated_keys: set[str] = set()
     for start in range(0, len(product_ids), 40):
         chunk = product_ids[start:start + 40]
         try:
@@ -134,11 +193,12 @@ def recover(label: str, rid: str, out: Path, expected: int | None = None):
                 p.product_url = BASE + htmlmod.unescape(link_by_sku[p.sku])
             key = f"sku:{p.sku}" if p.sku else f"product:{p.product_id}"
             products[key] = merge(products[key], p) if key in products else p
+            decorated_keys.add(key)
 
     meta = [{
         "label": label,
         "retailer_category_id": rid,
-        "method": "FIRST_PARTY_CATEGORY_HTML_VISIBLE_LINKS_PLUS_OPTIONAL_V6_PRODUCTS_DECORATION",
+        "method": "FIRST_PARTY_CATEGORY_HTML_VISIBLE_LINKS_IDENTITY_PLUS_OPTIONAL_V6_PRODUCTS_DECORATION",
         "requested_url": f"{BASE}/categories/~/{rid}",
         "final_url": final_url,
         "html_status": status,
@@ -150,13 +210,15 @@ def recover(label: str, rid: str, out: Path, expected: int | None = None):
         "html_link_skus": link_skus,
         "html_retailer_ids": retailer_ids,
         "visible_id_overlap": overlap,
+        "identity_materialized_products": identity_materialized,
+        "identity_mapping_error": identity_mapping_error,
         "enumeration_ok": enumeration_ok,
-        "decorated_products": len(products),
+        "decorated_products": len(decorated_keys),
         "decoration_errors": decoration_errors,
     }]
     summary = write_outputs(out, list(products.values()), meta)
     recovered = summary["counts"]["food_products"]
-    decoration_ok = not decoration_errors and recovered >= max(1, int(observed_target * 0.95)) if observed_target else False
+    decoration_ok = not decoration_errors and len(decorated_keys) >= max(1, int(observed_target * 0.95)) if observed_target else False
 
     check = {
         "label": label,
@@ -177,6 +239,8 @@ def recover(label: str, rid: str, out: Path, expected: int | None = None):
         "html_product_ids": len(product_ids),
         "html_retailer_product_ids": len(retailer_ids),
         "html_link_skus": link_skus,
+        "identity_materialized_products": identity_materialized,
+        "identity_mapping_error": identity_mapping_error,
         "enumeration_ok": enumeration_ok,
         "decoration_ok": decoration_ok,
         "decoration_errors": decoration_errors,
