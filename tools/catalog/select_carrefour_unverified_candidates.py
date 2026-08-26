@@ -20,10 +20,9 @@ from typing import Any, Iterable
 SKU_IN_URL_RE = re.compile(r"/R-([^/]+)/p(?:$|[?#])", re.IGNORECASE)
 
 # This queue exists to drive Rumbo's food-catalog verification. Keep every external
-# candidate in the audit counts, but put obvious food candidates ahead of alcohol and
-# non-food supermarket items. This is only scheduling metadata: it does not create or
-# suppress Carrefour evidence, and uncertain URLs remain in the queue after food-like
-# candidates rather than being discarded.
+# candidate in the audit counts, but put obvious human-food candidates ahead of alcohol,
+# pet products and other non-food supermarket items. This is scheduling metadata only:
+# it never creates or suppresses Carrefour evidence.
 FOOD_URL_SIGNAL_RE = re.compile(
     r"/(?:"
     r"aceite|aceituna|agua-mineral|arroz|avena|azucar|barrita|bebida-vegetal|"
@@ -36,10 +35,21 @@ FOOD_URL_SIGNAL_RE = re.compile(
 )
 DEPRIORITIZED_URL_SIGNAL_RE = re.compile(
     r"/(?:"
+    # Alcohol.
     r"whisky|ron-|vodka|ginebra|licor|vermut|cerveza|vino-|cava-|champagne|"
-    r"agua-de-colonia|perfume|desodorante|crema-hidratante|champu|gel-de-ducha|"
+    # Personal care / cosmetics. Keep these before generic food signals such as leche.
+    r"agua-de-colonia|perfume|desodorante|crema-hidratante|crema-corporal|"
+    r"crema-facial|crema-de-manos|leche-corporal|champu|gel-de-ducha|"
+    # Household / hygiene.
     r"ambientador|lavavajillas|detergente|limpiador|lejia|plumero|atrapapolvo|"
-    r"papel-higienico|panal|compresa|tampon|dentifrico|cepillo-de-dientes"
+    r"papel-higienico|panal|compresa|tampon|dentifrico|cepillo-de-dientes|"
+    # Pet food and animal-care products. These can contain strong human-food tokens
+    # (galletas, barritas, leche, etc.) and therefore must be checked first.
+    r"pienso|comida-para-perro|comida-para-gato|alimento-para-perro|"
+    r"alimento-para-gato|galletas-para-perro|galletas-para-gato|"
+    r"galletas-para-roedores|barritas?.*para-canarios|para-perros?(?:-|/)|"
+    r"para-gatos?(?:-|/)|para-roedores?(?:-|/)|para-canarios?(?:-|/)|"
+    r"arena-para-gato|mascotas?"
     r")",
     re.IGNORECASE,
 )
@@ -87,9 +97,9 @@ def candidate_sku(row: dict[str, Any]) -> tuple[str | None, str]:
 def candidate_food_priority(row: dict[str, Any]) -> int:
     """Return queue priority without treating an external URL slug as product evidence.
 
-    0 = URL looks food-like and is useful for Rumbo first.
+    0 = URL looks like human food and is useful for Rumbo first.
     1 = uncertain/general supermarket candidate; keep it in the queue.
-    2 = obvious alcohol or non-food candidate; retain but verify after food candidates.
+    2 = obvious alcohol, pet or non-food candidate; retain but verify last.
     """
     url = str(row.get("canonical_url_candidate") or row.get("canonical_url") or row.get("url") or "")
     if DEPRIORITIZED_URL_SIGNAL_RE.search(url):
@@ -223,14 +233,14 @@ def main() -> None:
     priority_counts = {
         "food_like": sum(1 for row in unverified if candidate_food_priority(row) == 0),
         "uncertain": sum(1 for row in unverified if candidate_food_priority(row) == 1),
-        "deprioritized_obvious_alcohol_or_nonfood": sum(
+        "deprioritized_obvious_alcohol_pet_or_nonfood": sum(
             1 for row in unverified if candidate_food_priority(row) == 2
         ),
     }
     selected_priority_counts = {
         "food_like": sum(1 for row in selected_rows if candidate_food_priority(row) == 0),
         "uncertain": sum(1 for row in selected_rows if candidate_food_priority(row) == 1),
-        "deprioritized_obvious_alcohol_or_nonfood": sum(
+        "deprioritized_obvious_alcohol_pet_or_nonfood": sum(
             1 for row in selected_rows if candidate_food_priority(row) == 2
         ),
     }
@@ -262,13 +272,14 @@ def main() -> None:
         "food_priority_counts": priority_counts,
         "emitted_food_priority_counts": selected_priority_counts,
         "queue_order": (
-            "Rumbo food-like URL slugs first; uncertain/general candidates second; obvious alcohol/non-food "
-            "last. Within each tier: external GTIN hint, name hint, casefolded name, Carrefour URL product ID."
+            "Rumbo human-food-like URL slugs first; uncertain/general candidates second; obvious alcohol, pet and non-food last. "
+            "Within each tier: external GTIN hint, name hint, casefolded name, Carrefour URL product ID."
         ),
         "notes": [
             "This queue is only a prioritization aid for direct official Carrefour verification.",
             "No external candidate value is promoted to CARREFOUR_FIRST_PARTY evidence by this script.",
             "URL-slug food priority is scheduling metadata only. Candidates are retained regardless of tier and require direct Carrefour observation before any field becomes evidence.",
+            "Pet/cosmetic exclusions are evaluated before generic food tokens so URLs such as galletas-para-perro or leche-corporal do not consume the human-food verification head.",
             "Persisted terminal outcomes are official-route observations only; they exclude stale candidate IDs but do not create product evidence.",
             "The RadarSuper export carries an external retailer_sku_candidate that can be a slug; the Carrefour R- ID is therefore parsed preferentially from the candidate URL.",
             "Pending direct first-party batch fixtures may be included as verified inputs so the queue remains current before the cumulative merge commit lands.",
