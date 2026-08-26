@@ -13,7 +13,7 @@ from urllib.error import HTTPError, URLError
 import alcampo_detail_enricher as base
 from nutrition_validation import validate_nutrition
 
-VERSION = "alcampo-detail-fast-wave-v1.2"
+VERSION = "alcampo-detail-fast-wave-v1.3"
 _TLS = threading.local()
 
 
@@ -45,17 +45,34 @@ def stable_url(sku: str) -> str:
     return f"{base.BASE}/products/x/{urllib.parse.quote(str(sku), safe='')}"
 
 
-def fetch_fast(sku: str, name_hint: str | None):
-    # The SSR smoke proved that the canonical slug page exposes ingredients,
-    # legal denomination and a parseable declared nutrition table. Prefer the
-    # name-derived canonical route so a success costs one request instead of an
-    # /products/x redirect plus the canonical request. Keep /products/x as the
-    # stable fallback when Alcampo's slug differs from our transliteration.
-    guessed = base.candidate_urls(str(sku), name_hint)
+def normalize_exact_url(value: str | None) -> str | None:
+    """Accept only first-party Alcampo product URLs already observed in the listing."""
+    if not value:
+        return None
+    url = urllib.parse.urljoin(base.BASE + "/", str(value).strip())
+    parsed = urllib.parse.urlparse(url)
+    base_parsed = urllib.parse.urlparse(base.BASE)
+    if parsed.netloc != base_parsed.netloc or "/products/" not in parsed.path:
+        return None
+    return url.split("#", 1)[0]
+
+
+def fetch_fast(sku: str, name_hint: str | None, exact_url: str | None = None):
+    # Highest-confidence route: use the canonical product URL actually observed in
+    # Alcampo's own category/listing HTML. The previous wave discarded that field
+    # and reconstructed a slug from the name, which needlessly turned valid products
+    # into 202/404 misses when the retailer's slug did not match our transliteration.
+    # Keep /products/x/<sku> as the single stable fallback and cap the request budget
+    # at two first-party requests per product.
     urls = []
-    for u in guessed:
-        if "/products/x/" not in u and u not in urls:
-            urls.append(u)
+    exact = normalize_exact_url(exact_url)
+    if exact:
+        urls.append(exact)
+    else:
+        for u in base.candidate_urls(str(sku), name_hint):
+            if "/products/x/" not in u and u not in urls:
+                urls.append(u)
+                break
     x = stable_url(str(sku))
     if x not in urls:
         urls.append(x)
@@ -107,16 +124,20 @@ def load_targets(path: Path):
         if sku is None or str(sku) in seen:
             continue
         seen.add(str(sku))
-        out.append((str(sku), str(row.get("name") or "").strip() or None))
+        name = str(row.get("name") or "").strip() or None
+        exact_url = row.get("url") or row.get("product_url") or row.get("canonical_url")
+        out.append((str(sku), name, normalize_exact_url(str(exact_url)) if exact_url else None))
     return out
 
 
-def summarize(details, requested: int):
+def summarize(details, requested: int, targets):
+    exact_url_targets = sum(bool(t[2]) for t in targets)
     return {
         "source": base.BASE,
         "version": VERSION,
         "counts": {
             "requested": requested,
+            "targets_with_observed_product_url": exact_url_targets,
             "completed_rows": len(details),
             "fetched": sum(d.error is None for d in details),
             "errors": sum(d.error is not None for d in details),
@@ -130,7 +151,7 @@ def summarize(details, requested: int):
             "declared_invalid_nutrition": sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
             "downloaded_html_bytes": sum(d.html_bytes for d in details),
         },
-        "policy": "CANONICAL_SLUG_FIRST_X_FALLBACK_MAX_TWO_FIRST_PARTY_REQUESTS_CHECKPOINT_EACH_RESULT",
+        "policy": "OBSERVED_FIRST_PARTY_PRODUCT_URL_FIRST_X_FALLBACK_MAX_TWO_REQUESTS_CHECKPOINT_EACH_RESULT",
     }
 
 
@@ -148,7 +169,7 @@ def main():
     # step can salvage completed rows even if a runner is cancelled or times out.
     with path.open("w", encoding="utf-8", buffering=1) as fh:
         with cf.ThreadPoolExecutor(max_workers=max(1, args.workers)) as ex:
-            futures = {ex.submit(fetch_fast, sku, name): sku for sku, name in targets}
+            futures = {ex.submit(fetch_fast, sku, name, exact_url): sku for sku, name, exact_url in targets}
             for n, fut in enumerate(cf.as_completed(futures), 1):
                 sku = futures[fut]
                 try:
@@ -168,7 +189,7 @@ def main():
                         pass
                     valid = sum(d.nutrition_status == "DECLARED_VALID" for d in details)
                     print(f"checkpoint={n}/{len(targets)} valid={valid}", flush=True)
-    summary = summarize(details, len(targets))
+    summary = summarize(details, len(targets), targets)
     (args.out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
