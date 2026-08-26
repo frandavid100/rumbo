@@ -46,16 +46,18 @@ jobs:
               if prev is None or candidate['expected'] > prev['expected']:
                   found[rid]=candidate
 
-          # The first recursive pass can discover child categories that were never
-          # top-level recovery targets. Retry those children directly instead of
-          # repeatedly traversing the broad parent. HTTP 202 is transient on the
-          # Alcampo SSR category surface, while a 200 identity mismatch merits a
-          # narrowly scoped diagnostic/recovery attempt with the raw identity
-          # vectors emitted by alcampo_html_tree_recovery.py.
+          # Recovery reports expose failed parents under failed_recovery_targets,
+          # while older reports used roots. Inspect both shapes. A previous bug only
+          # read roots, so transient child leaves such as OC100805027 were never
+          # scheduled as independent narrow jobs even after being discovered.
           t=Path('tools/catalog/fixtures/alcampo_html_tree_recovery_latest.json')
           if t.exists():
               prior=json.loads(t.read_text(encoding='utf-8'))
-              for root in prior.get('roots') or []:
+              parents=[]
+              parents.extend(prior.get('roots') or [])
+              parents.extend(prior.get('failed_recovery_targets') or [])
+              for root in parents:
+                  if not isinstance(root,dict): continue
                   for row in root.get('unresolved') or []:
                       if not isinstance(row,dict): continue
                       rid=str(row.get('rid') or row.get('retailer_category_id') or '').strip()
