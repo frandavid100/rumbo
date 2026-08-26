@@ -1,0 +1,21 @@
+{
+  "retailer": "ALCAMPO",
+  "source": "https://www.compraonline.alcampo.es",
+  "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
+  "importer_version": "alcampo-direct-v6.0",
+  "built_at": "2026-08-26T16:31:21.432711+00:00",
+  "roots": [],
+  "counts": {
+    "unique_products_before_filter": 13915,
+    "food_products": 13915,
+    "excluded_alcohol": 0,
+    "with_sku": 13915,
+    "with_name": 13877,
+    "with_brand": 13876,
+    "with_pack_size": 13396,
+    "with_image": 13877,
+    "with_product_url": 34,
+    "available": 13570
+  },
+  "third_party_product_data": false
+}
