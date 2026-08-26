@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/catalog-alcampo-html-tree-recovery.yml'
       - 'tools/catalog/alcampo_html_tree_recovery.py'
+      - 'tools/catalog/alcampo_recovery_union.py'
+      - 'tools/catalog/fixtures/alcampo_html_recovery_descendant_targets_latest.json'
   workflow_dispatch:
 permissions:
   contents: write
@@ -47,9 +49,7 @@ jobs:
                   found[rid]=candidate
 
           # Recovery reports expose failed parents under failed_recovery_targets,
-          # while older reports used roots. Inspect both shapes. A previous bug only
-          # read roots, so transient child leaves such as OC100805027 were never
-          # scheduled as independent narrow jobs even after being discovered.
+          # while older reports used roots. Inspect both shapes.
           t=Path('tools/catalog/fixtures/alcampo_html_tree_recovery_latest.json')
           if t.exists():
               prior=json.loads(t.read_text(encoding='utf-8'))
@@ -72,6 +72,23 @@ jobs:
                           'expected':int(row.get('source_reported_product_count') or 0),
                           'priority':priority,
                       }
+
+          # Persist independently discovered descendant leaves outside the volatile
+          # run report. A cancelled matrix run must not erase the fact that Alcampo
+          # exposed these canonical child category IDs in an earlier audited page.
+          d=Path('tools/catalog/fixtures/alcampo_html_recovery_descendant_targets_latest.json')
+          if d.exists():
+              durable=json.loads(d.read_text(encoding='utf-8'))
+              for row in durable.get('targets') or []:
+                  if not isinstance(row,dict) or row.get('active') is False: continue
+                  rid=str(row.get('rid') or row.get('retailer_category_id') or '').strip()
+                  if not rid or rid in found: continue
+                  found[rid]={
+                      'rid':rid,
+                      'label':str(row.get('label') or rid),
+                      'expected':int(row.get('expected') or row.get('source_reported_product_count') or 0),
+                      'priority':1,
+                  }
 
           ordered=sorted(found.values(), key=lambda x:(x['priority'],x['rid']))[:48]
           include=[{'rid':x['rid'],'label':x['label'],'expected':x['expected']} for x in ordered]
@@ -151,6 +168,20 @@ jobs:
           code=$?
           echo "$code" > ../../alcampo-html-tree-union/recovery_exit_code.txt
           set -e
+      - name: Refuse to persist a cancelled or partial matrix snapshot
+        env:
+          EXPECTED_CHECKS: ${{ needs.prepare.outputs.count }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          expected=int(os.environ['EXPECTED_CHECKS'])
+          report=json.loads(Path('alcampo-html-tree-union/recovery_report.json').read_text(encoding='utf-8'))
+          actual=int(report.get('recovery_checks') or 0)
+          if actual != expected:
+              raise SystemExit(f'partial recovery snapshot: scheduled={expected}, materialized_checks={actual}; refusing persistence')
+          print(f'complete scheduled artifact set: {actual}/{expected}')
+          PY
       - name: Persist auditable subtree recovery state
         run: |
           cp alcampo-html-tree-union/recovery_report.json tools/catalog/fixtures/alcampo_html_tree_recovery_latest.json
