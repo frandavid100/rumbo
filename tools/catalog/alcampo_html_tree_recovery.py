@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
 
 from alcampo_direct_catalog_v6 import Product, merge, write_outputs
+from alcampo_direct_catalog_v8 import collect_root as collect_api_root
 from alcampo_html_leaf_recovery import (
     BASE,
     PRODUCT_ID_RE,
@@ -18,7 +19,7 @@ from alcampo_html_leaf_recovery import (
     request_html,
 )
 
-VERSION = "alcampo-html-tree-recovery-v3"
+VERSION = "alcampo-html-tree-recovery-v4"
 CATEGORY_LINK_RE = re.compile(
     r'href=["\']([^"\']*/categories/[^"\']+/(OC[0-9A-Za-z]+)(?:\?[^"\']*)?)["\']',
     re.I,
@@ -39,9 +40,9 @@ def slug_label(url: str, fallback: str) -> str:
 def direct_children(body: str, final_url: str, parent_rid: str) -> list[dict]:
     """Return only category links proven to be direct descendants of this page.
 
-    Alcampo renders global navigation category links in every SSR page.  A child of
+    Alcampo renders global navigation category links in every SSR page. A child of
     the current category is distinguishable because its canonical path is exactly
-    `<parent canonical path without RID>/<child slug>/<child RID>`.  Requiring this
+    `<parent canonical path without RID>/<child slug>/<child RID>`. Requiring this
     path shape prevents the global navigation from turning a recovery shard into a
     crawl of the whole store.
     """
@@ -155,17 +156,55 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
             queue.append((str(child.get("label") or child_rid), child_rid, depth + 1))
             queued.add(child_rid)
 
-    skus = sorted({str(p.sku) for p in products.values() if p.sku})
     source_target = max(0, int(expected or 0))
     required = max(1, int(source_target * 0.95)) if source_target else 1
-    target_satisfied = len(skus) >= required if source_target else bool(skus)
     traversal_truncated = bool(queue)
-    enumeration_ok = target_satisfied and not request_failures and not traversal_truncated
+    ssr_skus = sorted({str(p.sku) for p in products.values() if p.sku})
+
+    # The official category SSR surface deliberately renders at most 50 cards on
+    # many leaf categories. When that first-party HTML cannot reach the source
+    # productCount (or a descendant is stuck on transient 202), use Alcampo's own
+    # v6 product-pages API as a narrow fallback for this one category. v8 exhausts
+    # the cookie-bound pageToken sequence and retries 202 responses, so this is a
+    # bounded first-party pagination recovery rather than a second broad crawl.
+    api_fallback_attempted = bool(
+        source_target and (len(ssr_skus) < required or request_failures or traversal_truncated)
+    )
+    api_fallback_meta: dict = {}
+    api_fallback_errors: list[str] = []
+    api_fallback_products = 0
+    if api_fallback_attempted:
+        try:
+            api_products, api_fallback_meta = collect_api_root(label, rid, 0)
+            api_fallback_errors = [str(x) for x in (api_fallback_meta.get("errors") or [])]
+            api_fallback_products = len(api_products)
+            for p in api_products:
+                key = stable_key(p)
+                products[key] = merge(products[key], p) if key in products else p
+        except Exception as exc:
+            api_fallback_errors = [f"{type(exc).__name__}:{exc}"]
+
+    skus = sorted({str(p.sku) for p in products.values() if p.sku})
+    target_satisfied = len(skus) >= required if source_target else bool(skus)
+    api_fallback_enumeration_ok = bool(
+        api_fallback_attempted
+        and not api_fallback_errors
+        and int(api_fallback_meta.get("pages") or 0) > 0
+        and target_satisfied
+    )
+    enumeration_ok = (
+        target_satisfied
+        and not traversal_truncated
+        and (not request_failures or api_fallback_enumeration_ok)
+    )
 
     meta = [{
         "label": label,
         "retailer_category_id": rid,
-        "method": "FIRST_PARTY_CATEGORY_HTML_RECURSIVE_DIRECT_DESCENDANTS_PAIRED_IDENTITY_VECTORS",
+        "method": (
+            "FIRST_PARTY_CATEGORY_HTML_RECURSIVE_DIRECT_DESCENDANTS_PAIRED_IDENTITY_VECTORS"
+            "_PLUS_NARROW_V6_PAGETOKEN_FALLBACK"
+        ),
         "version": VERSION,
         "source_reported_product_count": source_target or None,
         "categories_visited": len(nodes),
@@ -173,32 +212,51 @@ def recover_tree(label: str, rid: str, expected: int, out: Path, max_depth: int,
         "max_nodes": max_nodes,
         "traversal_truncated": traversal_truncated,
         "unique_visible_product_skus": len(skus),
+        "ssr_visible_product_skus": len(ssr_skus),
+        "api_fallback_attempted": api_fallback_attempted,
+        "api_fallback_products": api_fallback_products,
+        "api_fallback_pages": int(api_fallback_meta.get("pages") or 0),
+        "api_fallback_errors": api_fallback_errors,
+        "api_fallback_enumeration_ok": api_fallback_enumeration_ok,
         "nodes": nodes,
     }]
     summary = write_outputs(out, list(products.values()), meta)
+    effective_unresolved = [] if enumeration_ok else request_failures
     check = {
         "label": label,
         "rid": rid,
         "source_reported_product_count": source_target or None,
         "food_products_recursive_union": summary["counts"]["food_products"],
         "recursive_categories_visited": len(nodes),
-        "api_error_categories": len(request_failures),
+        "api_error_categories": 0 if enumeration_ok else len(request_failures) + len(api_fallback_errors),
         "children_without_retailer_category_id": 0,
-        "unresolved": request_failures,
+        "unresolved": effective_unresolved,
+        "ssr_unresolved": request_failures,
         "missing_retailer_ids": [],
         "deduplication_identity": "retailer_sku_else_product_id",
         "max_depth": max_depth,
         "aggregate_root_with_children": len(nodes) > 1,
-        "completeness_basis": "first_party_category_html_recursive_direct_descendants_paired_identity_vectors",
+        "completeness_basis": (
+            "first_party_category_html_recursive_direct_descendants_paired_identity_vectors"
+            "_plus_narrow_v6_pageToken_exhaustion"
+            if api_fallback_attempted
+            else "first_party_category_html_recursive_direct_descendants_paired_identity_vectors"
+        ),
         "source_product_count_is_diagnostic_only": False if source_target else True,
-        "html_product_links": len(skus),
-        "html_link_skus": skus,
+        "html_product_links": len(ssr_skus),
+        "html_link_skus": ssr_skus,
+        "enumerated_skus": skus,
         "identity_materialized_products": len(products),
         "identity_mapping_error": None,
         "traversal_truncated": traversal_truncated,
+        "api_fallback_attempted": api_fallback_attempted,
+        "api_fallback_products": api_fallback_products,
+        "api_fallback_pages": int(api_fallback_meta.get("pages") or 0),
+        "api_fallback_errors": api_fallback_errors,
+        "api_fallback_enumeration_ok": api_fallback_enumeration_ok,
         "enumeration_ok": enumeration_ok,
-        "decoration_ok": False,
-        "decoration_errors": ["not_attempted_known_v6_products_waf_403"],
+        "decoration_ok": api_fallback_enumeration_ok,
+        "decoration_errors": [] if api_fallback_enumeration_ok else ["not_attempted_or_failed_known_v6_products"],
         "ok": enumeration_ok,
     }
     (out / "child_check.json").write_text(json.dumps(check, ensure_ascii=False, indent=2), encoding="utf-8")
