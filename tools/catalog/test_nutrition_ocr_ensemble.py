@@ -9,16 +9,36 @@ def reading(status, basis, nutrition, confidence, *reasons):
 
 
 class OCREnsembleTest(unittest.TestCase):
-    def test_almost_good_complete_reading_can_be_confirmed(self):
+    def test_same_engine_layouts_do_not_count_as_independent_corroboration(self):
         a = reading('REVIEW', '100_g', {
             'calories': 568.0, 'fat_g': 42.0, 'carbohydrate_g': 32.0, 'protein_g': 10.0
         }, .8495, 'LOW_EXTRACTION_CONFIDENCE')
         b = reading('REVIEW', '100_g', {
             'calories': 568.0, 'fat_g': 42.0
         }, .888, 'MISSING_CORE:carbohydrate_g,protein_g')
-        r = fuse_ocr_readings([ParsedOCRReading('psm6', a), ParsedOCRReading('psm11', b)])
+        r = fuse_ocr_readings([
+            ParsedOCRReading('psm6', a, engine_family='tesseract'),
+            ParsedOCRReading('psm11', b, engine_family='tesseract'),
+        ])
+        self.assertEqual(r.status, 'REVIEW', r)
+        self.assertEqual(r.independent_engine_families, 1)
+        self.assertEqual(r.corroborated_fields, 0)
+        self.assertIn('INSUFFICIENT_INDEPENDENT_OCR_ENGINES', r.reasons)
+
+    def test_independent_engines_can_confirm_a_complete_reading(self):
+        a = reading('REVIEW', '100_g', {
+            'calories': 568.0, 'fat_g': 42.0, 'carbohydrate_g': 32.0, 'protein_g': 10.0
+        }, .8495, 'LOW_EXTRACTION_CONFIDENCE')
+        b = reading('REVIEW', '100_g', {
+            'calories': 568.0, 'fat_g': 42.0, 'carbohydrate_g': 32.0, 'protein_g': 10.0
+        }, .91)
+        r = fuse_ocr_readings([
+            ParsedOCRReading('psm6', a, engine_family='tesseract'),
+            ParsedOCRReading('paddle-region', b, engine_family='paddleocr'),
+        ])
         self.assertEqual(r.status, 'DECLARED', r)
-        self.assertGreaterEqual(r.corroborated_fields, 2)
+        self.assertGreaterEqual(r.corroborated_fields, 4)
+        self.assertEqual(r.independent_engine_families, 2)
         self.assertEqual(r.nutrition['fat_g'], 42.0)
         self.assertEqual(r.nutrition['carbohydrate_g'], 32.0)
         self.assertEqual(r.nutrition['protein_g'], 10.0)
@@ -30,7 +50,10 @@ class OCREnsembleTest(unittest.TestCase):
         b = reading('REVIEW', '100_g', {
             'calories': 427.0, 'protein_g': 7.4
         }, .879, 'MISSING_CORE:fat_g,carbohydrate_g')
-        r = fuse_ocr_readings([ParsedOCRReading('psm6', a), ParsedOCRReading('psm11', b)])
+        r = fuse_ocr_readings([
+            ParsedOCRReading('psm6', a, engine_family='tesseract'),
+            ParsedOCRReading('paddle-region', b, engine_family='paddleocr'),
+        ])
         self.assertEqual(r.status, 'REVIEW')
         self.assertEqual(r.nutrition['calories'], 427.0)
         self.assertEqual(r.nutrition['protein_g'], 7.4)
@@ -43,7 +66,10 @@ class OCREnsembleTest(unittest.TestCase):
         b = reading('REVIEW', '100_g', {
             'calories': 400.0, 'fat_g': 30.0, 'carbohydrate_g': 20.0, 'protein_g': 20.0
         }, .92)
-        r = fuse_ocr_readings([ParsedOCRReading('a', a), ParsedOCRReading('b', b)])
+        r = fuse_ocr_readings([
+            ParsedOCRReading('tesseract', a, engine_family='tesseract'),
+            ParsedOCRReading('paddle', b, engine_family='paddleocr'),
+        ])
         self.assertEqual(r.status, 'REVIEW')
         self.assertTrue(any(x.startswith('OCR_FIELD_CONFLICT') for x in r.reasons))
 
