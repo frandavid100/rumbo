@@ -202,7 +202,10 @@ jobs:
     needs: prepare
     strategy:
       fail-fast: false
-      max-parallel: 12
+      # Tail-recovery is dominated by Alcampo's transient 202/WAF window. Keep
+      # fresh runners sparse enough to reduce correlated throttling while every
+      # unresolved microbatch remains well inside the observed 6-request window.
+      max-parallel: 6
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
