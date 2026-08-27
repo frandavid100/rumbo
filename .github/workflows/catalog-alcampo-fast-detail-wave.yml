@@ -70,16 +70,17 @@ jobs:
             fi
           done
 
-          # Every successful fast-detail snapshot also preserves the exact
-          # first-party enumeration used to build it as source_products.jsonl.
-          # These snapshots outlive some original enumeration artifacts, so use
-          # their preserved source inventory as another first-party baseline input.
+          # A fast-detail workflow can be overall failed because one detail shard
+          # failed while its always-run merge still produced the best cumulative
+          # snapshot. Therefore inspect every completed run, not only runs whose
+          # overall conclusion is success, and accept only snapshots that actually
+          # contain preserved first-party source_products.jsonl.
           mapfile -t detail_run_ids < <(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
               --workflow catalog-alcampo-fast-detail-wave.yml \
               --branch agent/catalog-phase1 \
-              --status success \
+              --status completed \
               --limit 40 \
               --json databaseId,createdAt \
               --jq 'sort_by(.createdAt) | reverse | .[].databaseId'
@@ -118,7 +119,7 @@ jobs:
           echo "product_count=$count" >> "$GITHUB_OUTPUT"
           echo "Using cumulative Alcampo enumeration union with $count unique SKUs from $downloaded downloadable first-party artifacts"
       - id: previous
-        name: Select largest successful detail snapshot for monotonic recovery
+        name: Select widest completed detail snapshot for monotonic recovery
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -126,14 +127,15 @@ jobs:
           mkdir -p previous candidate-previous
           best_run=''
           best_count=0
-          # A recent successful wave may itself have been built from a partial
-          # enumeration. Search backwards and keep the widest snapshot.
+          # A detail workflow may have a failed shard while its always-run merge
+          # still publishes a stronger cumulative snapshot. Search all completed
+          # runs and trust only a downloadable details.jsonl artifact.
           mapfile -t run_ids < <(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \
               --workflow catalog-alcampo-fast-detail-wave.yml \
               --branch agent/catalog-phase1 \
-              --status success \
+              --status completed \
               --limit 40 \
               --json databaseId,createdAt \
               --jq 'sort_by(.createdAt) | reverse | .[].databaseId'
@@ -165,7 +167,7 @@ jobs:
             echo 'run_id=' >> "$GITHUB_OUTPUT"
             echo 'row_count=0' >> "$GITHUB_OUTPUT"
             touch previous/.none
-            echo 'No previous non-expired successful detail snapshot is available; this wave will start from first-party baseline only.'
+            echo 'No previous non-expired completed detail snapshot is available; this wave will start from first-party baseline only.'
           fi
       - id: split
         name: Split only unresolved products into fresh-runner microbatches
@@ -320,10 +322,24 @@ jobs:
             --enumeration-report ../../baseline/enumeration_report.json
           cp ../../baseline/products.jsonl ../../alcampo-fast-final/source_products.jsonl
           cp ../../baseline/enumeration_report.json ../../alcampo-fast-final/enumeration_report.json
-      - name: Persist coverage and semantic queue
+      - name: Persist coverage and semantic queue monotonically
         run: |
+          new_merge=alcampo-fast-final/detail_merge_summary.json
+          old_merge=tools/catalog/fixtures/alcampo_fast_detail_merge_latest.json
+          if test -s "$old_merge"; then
+            new_expected=$(jq -r '.expected_products // 0' "$new_merge")
+            old_expected=$(jq -r '.expected_products // 0' "$old_merge")
+            new_fetched=$(jq -r '.fetched // .fetched_ok // 0' "$new_merge")
+            old_fetched=$(jq -r '.fetched // .fetched_ok // 0' "$old_merge")
+            new_valid=$(jq -r '.declared_valid_nutrition // 0' "$new_merge")
+            old_valid=$(jq -r '.declared_valid_nutrition // 0' "$old_merge")
+            if (( new_expected < old_expected || new_fetched < old_fetched || new_valid < old_valid )); then
+              echo "::warning::Skipping regressive persisted snapshot: expected $new_expected/$old_expected, fetched $new_fetched/$old_fetched, valid nutrition $new_valid/$old_valid."
+              exit 0
+            fi
+          fi
           cp alcampo-fast-final/summary.json tools/catalog/fixtures/alcampo_fast_detail_summary_latest.json
-          cp alcampo-fast-final/detail_merge_summary.json tools/catalog/fixtures/alcampo_fast_detail_merge_latest.json
+          cp "$new_merge" tools/catalog/fixtures/alcampo_fast_detail_merge_latest.json
           cp alcampo-fast-final/semantic_review_next.jsonl tools/catalog/fixtures/alcampo_fast_semantic_review_next.jsonl
           cp alcampo-fast-final/semantic_review_progress.json tools/catalog/fixtures/alcampo_fast_semantic_review_progress_latest.json
           git config user.name "github-actions[bot]"
