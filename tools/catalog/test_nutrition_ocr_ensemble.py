@@ -25,6 +25,28 @@ class OCREnsembleTest(unittest.TestCase):
         self.assertEqual(r.corroborated_fields, 0)
         self.assertIn('INSUFFICIENT_INDEPENDENT_OCR_ENGINES', r.reasons)
 
+    def test_same_engine_layouts_can_fill_complementary_fields_without_becoming_extra_evidence(self):
+        paddle = reading('DECLARED', '100_g', {
+            'calories': 184.0, 'fat_g': 12.0, 'carbohydrate_g': 2.0, 'protein_g': 17.0
+        }, .98)
+        tess_psm6 = reading('REVIEW', None, {
+            'calories': 184.0, 'fat_g': 12.0, 'protein_g': 17.0
+        }, .81, 'MISSING_100G_100ML_BASIS', 'MISSING_CORE:carbohydrate_g')
+        tess_psm11 = reading('REVIEW', '100_g', {
+            'carbohydrate_g': 2.0
+        }, .86, 'MISSING_CORE:calories,fat_g,protein_g')
+        r = fuse_ocr_readings([
+            ParsedOCRReading('paddle-region', paddle, engine_family='paddleocr'),
+            ParsedOCRReading('tesseract-psm6', tess_psm6, engine_family='tesseract'),
+            ParsedOCRReading('tesseract-psm11', tess_psm11, engine_family='tesseract'),
+        ])
+        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.independent_engine_families, 2)
+        self.assertEqual(r.corroborated_fields, 4)
+        self.assertEqual(r.nutrition, {
+            'calories': 184.0, 'fat_g': 12.0, 'carbohydrate_g': 2.0, 'protein_g': 17.0
+        })
+
     def test_independent_engines_can_confirm_a_complete_reading(self):
         a = reading('REVIEW', '100_g', {
             'calories': 568.0, 'fat_g': 42.0, 'carbohydrate_g': 32.0, 'protein_g': 10.0
