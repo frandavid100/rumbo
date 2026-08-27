@@ -18,6 +18,7 @@ from nutrition_visual_table_detector import detect_visual_table_regions
 
 MAX_REGIONS_PER_PRODUCT = 2
 OCR_ENGINES = ("paddleocr", "tesseract")
+OCR_STRATEGIES = ("paddleocr", "tesseract-psm6", "tesseract-psm11")
 
 
 def _load(path: Path) -> list[dict[str, Any]]:
@@ -84,27 +85,33 @@ def _ensemble_payload(ensemble) -> dict[str, Any]:
 
 
 def _extract_region(evidence: LabelImageEvidence, region_path: Path):
+    # PSM 6 and PSM 11 are intentionally both used because nutrition tables
+    # often linearise differently as a compact block vs sparse text. They remain
+    # one Tesseract engine family: complementary fields are useful, but the two
+    # layouts never count as independent corroboration.
     readings = []
     engine_errors: dict[str, str] = {}
-    for family, extractor in (
-        ("paddleocr", extract_with_paddleocr),
-        ("tesseract", lambda path: extract_with_tesseract(path, language="spa", psm=6)),
-    ):
+    extractor_specs = (
+        ("paddleocr", "paddleocr", extract_with_paddleocr),
+        ("tesseract-psm6", "tesseract", lambda path: extract_with_tesseract(path, language="spa", psm=6)),
+        ("tesseract-psm11", "tesseract", lambda path: extract_with_tesseract(path, language="spa", psm=11)),
+    )
+    for strategy, family, extractor in extractor_specs:
         try:
             extracted = extractor(region_path)
             reading = _reading(evidence, extracted)
-            readings.append((family, reading))
+            readings.append((strategy, family, reading))
         except Exception as exc:
-            engine_errors[family] = f"{type(exc).__name__}:{exc}"
+            engine_errors[strategy] = f"{type(exc).__name__}:{exc}"
 
     ensemble = fuse_ocr_readings(
         ParsedOCRReading(
-            strategy=f"{family}:visual-region",
+            strategy=f"{strategy}:visual-region",
             result=reading.parsed,
             extraction_confidence=reading.extraction.confidence,
             engine_family=family,
         )
-        for family, reading in readings
+        for strategy, family, reading in readings
     )
     return readings, engine_errors, ensemble
 
@@ -190,8 +197,8 @@ def main() -> int:
                             "line_density": region.line_density,
                         },
                         "engines": {
-                            family: _reading_payload(reading)
-                            for family, reading in readings
+                            strategy: _reading_payload(reading)
+                            for strategy, _family, reading in readings
                         },
                         "engine_errors": engine_errors,
                         "ensemble": _ensemble_payload(ensemble),
@@ -203,7 +210,8 @@ def main() -> int:
                         item["nutrition"] = ensemble.nutrition
                         item["claim"] = (
                             f"{OCR_EVIDENCE_LEVEL}; source=MERCADONA_FIRST_PARTY/label image; "
-                            f"reader=ensemble-{ENSEMBLE_VERSION}; engines=paddleocr+tesseract; "
+                            f"reader=ensemble-{ENSEMBLE_VERSION}; "
+                            f"strategies=paddleocr+tesseract-psm6+tesseract-psm11; "
                             f"independent_engines={ensemble.independent_engine_families}; "
                             f"corroborated_fields={ensemble.corroborated_fields}; basis={ensemble.basis}"
                         )
@@ -224,6 +232,7 @@ def main() -> int:
         "evidence_level": OCR_EVIDENCE_LEVEL,
         "mode": "PADDLEOCR_TESSERACT_INDEPENDENT_ENSEMBLE_VISUAL_REGIONS_BACK_LABEL",
         "ocr_engines": list(OCR_ENGINES),
+        "ocr_strategies": list(OCR_STRATEGIES),
         "ensemble_version": ENSEMBLE_VERSION,
         "inventory_products": len(all_rows),
         "eligible_products": len(eligible),
