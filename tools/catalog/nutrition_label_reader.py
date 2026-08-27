@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.0"
+READER_VERSION = "1.4.1"
 
 
 @dataclass(frozen=True)
@@ -126,10 +126,11 @@ def _interleaved_carbohydrate(text: str) -> float | None:
     In narrow Mercadona tables the visual text `Hidratos de Carbono | 2.0 g`
     is often linearised as `Hidratos de / 2.0 g / Carbono`. The value is safe
     only when it is literally bracketed by the two halves of that same label.
+    Observed OCR unit glyphs include g, 9, y, q and the two-character `yg`.
     """
     folded = _strip_ocr_unit_parentheses(_fold(text))
     m = re.search(
-        r"hidratos?\s+de\s+([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|y|q)?\s+carbono\b",
+        r"hidratos?\s+de\s+([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|yg|y|q)?\s+carbono\b",
         folded,
         flags=re.I,
     )
