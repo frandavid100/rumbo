@@ -8,11 +8,17 @@ from urllib.request import Request, urlopen
 
 from label_text_extractor import TextExtraction, extract_with_tesseract
 from mercadona_label_evidence import LabelImageEvidence
-from mercadona_nutrition_reader import VisionExtraction, MercadonaLabelReading, read_evidence, to_candidate
+from mercadona_nutrition_reader import (
+    OCR_EVIDENCE_LEVEL,
+    VisionExtraction,
+    MercadonaLabelReading,
+    read_evidence,
+    to_candidate,
+)
 from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, OCREnsembleResult, fuse_ocr_readings
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 
-PIPELINE_VERSION = "1.2.2"
+PIPELINE_VERSION = "1.2.3"
 USER_AGENT = "RumboCatalog/0.1 (label reader; contact: frandavid100@users.noreply.github.com)"
 
 
@@ -89,8 +95,8 @@ def _ensemble_candidate(
         upstream_license=None,
         redistribution_allowed=False,
         source_family="Mercadona label",
-        evidence_level="DECLARED",
-        claim=(f"DECLARED from one pack image via OCR ensemble {ENSEMBLE_VERSION}; "
+        evidence_level=OCR_EVIDENCE_LEVEL,
+        claim=(f"{OCR_EVIDENCE_LEVEL}; one pack image via OCR ensemble {ENSEMBLE_VERSION}; "
                f"confidence={ensemble.confidence:.3f}; corroborated_fields={ensemble.corroborated_fields}; "
                f"{field_trace}"),
     )
