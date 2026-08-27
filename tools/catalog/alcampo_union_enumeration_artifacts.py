@@ -18,6 +18,24 @@ def score(row: dict[str, Any]) -> int:
     return sum(1 for value in row.values() if useful(value))
 
 
+def as_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def audit_score(report: dict[str, Any], observed_products: int) -> tuple[int, int, int, int, int, int]:
+    """Rank a *single-run* enumeration report by audit quality, not just width."""
+    seen = as_int(report.get("root_shards_seen"))
+    failed = as_int(report.get("root_shards_failed"))
+    successful = max(0, seen - failed)
+    unique = as_int(report.get("unique_products_after_dedup")) or observed_products
+    nodes = as_int(report.get("recursive_category_nodes_visited"))
+    complete = 1 if report.get("complete_enumeration") is True else 0
+    return (complete, successful, seen, unique, -failed, nodes)
+
+
 def merge_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     # Start from the richest exact first-party observation and only fill blanks.
     # Conflicting observed values are deliberately not guessed or combined.
@@ -45,7 +63,7 @@ def main() -> int:
     by_sku: dict[str, list[dict[str, Any]]] = {}
     source_counts: dict[str, int] = {}
     best_report: dict[str, Any] = {}
-    best_report_count = -1
+    best_report_score: tuple[int, int, int, int, int, int] | None = None
     best_report_source = ""
 
     for products_path in candidates:
@@ -69,10 +87,10 @@ def main() -> int:
                 report = json.loads(report_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 report = {}
-            reported = int(report.get("unique_products_after_dedup") or len(seen_here))
-            if reported > best_report_count:
+            current_score = audit_score(report, len(seen_here))
+            if best_report_score is None or current_score > best_report_score:
                 best_report = report
-                best_report_count = reported
+                best_report_score = current_score
                 best_report_source = source
 
     merged = [merge_rows(rows) for _, rows in sorted(by_sku.items())]
@@ -91,8 +109,10 @@ def main() -> int:
                 "Preserves the widest observed SKU inventory but is not proof of complete enumeration."
             ),
             "cumulative_union": True,
+            "cumulative_union_artifact_count": len(candidates),
             "cumulative_union_sources": source_counts,
             "cumulative_union_best_report_source": best_report_source,
+            "cumulative_union_best_report_audit_score": list(best_report_score or ()),
         }
     )
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
@@ -101,6 +121,8 @@ def main() -> int:
         "artifacts": len(candidates),
         "unique_products": len(merged),
         "largest_single_artifact": max(source_counts.values(), default=0),
+        "best_single_run_report_source": best_report_source,
+        "best_single_run_audit_score": list(best_report_score or ()),
         "sources": source_counts,
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
