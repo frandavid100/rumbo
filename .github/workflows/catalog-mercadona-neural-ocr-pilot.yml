@@ -1,5 +1,6 @@
 name: Catalog Mercadona neural OCR pilot
 
+# Bounded regression pilot for parser/layout changes; keep sample deterministic.
 on:
   push:
     branches: [agent/catalog-phase1]
