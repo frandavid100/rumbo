@@ -91,6 +91,86 @@ Sal 1,1 g 1,1 g
         self.assertIn("MULTIPLE_NUTRITION_COLUMNS", r.reasons)
         self.assertIsNone(r.nutrition)
 
+    def test_kj_kcal_header_before_values_is_parsed_conservatively(self):
+        observed = """Información Nutricional por 100 g de Producto
+Valor energético (kJ/kcal)
+442/106
+Grasas (g)
+1.8
+De las cuales saturadas (g)
+0.5
+Hidratos de carbono (g)
+0
+De los cuales azúcares (g)
+0
+Proteínas (g)
+22
+Sal (g)
+0.16
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition, {
+            "calories": 106.0, "fat_g": 1.8,
+            "carbohydrate_g": 0.0, "protein_g": 22.0,
+        })
+
+    def test_ocr_unit_parentheses_are_not_read_as_macro_values(self):
+        observed = """Información Nutricional por 100 g de Producto
+Valor energético 442 kJ / 106 kcal
+Grasas (9) 1.8
+De las cuales saturadas (9) 0.5
+Hidratos de carbono (0) 0
+De los cuales azúcares (9) 0
+Proteínas (0) 22
+Sal (y) 0.16
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.93)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition["fat_g"], 1.8)
+        self.assertEqual(r.nutrition["protein_g"], 22.0)
+
+    def test_interleaved_carbohydrate_value_between_split_label_is_supported(self):
+        observed = """100 g
+Valor
+767 kJ
+Energético
+184 kcal
+Grasas
+12 g
+de las cuales:
+- Saturadas
+5.4 g
+Hidratos de
+2.0 g
+Carbono
+de los cuales:
+0.5 g
+- Azúcares
+Proteínas
+17 g
+Sal
+0.42 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition, {
+            "calories": 184.0, "fat_g": 12.0,
+            "carbohydrate_g": 2.0, "protein_g": 17.0,
+        })
+
+    def test_inequality_macro_is_not_promoted_to_exact_value(self):
+        observed = """Información nutricional por 100 g
+Valor energético 683 kJ / 163 kcal
+Grasas 9.1 g
+Hidratos de carbono <0.5 g
+Proteínas 20 g
+Sal 1.4 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertIn("MISSING_CORE:carbohydrate_g", r.reasons)
+
     def test_multiline_cells_and_terminal_g_read_as_9(self):
         noisy = """1009
 Valor Energético/Energía 427 kcal
