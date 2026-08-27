@@ -5,6 +5,11 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - 'tools/catalog/mercadona_neural_ocr_wave.py'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/test_nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_ocr_ensemble.py'
       - '.github/workflows/catalog-mercadona-neural-ocr-pilot.yml'
   workflow_dispatch:
 
@@ -41,10 +46,16 @@ jobs:
           path: tools/catalog/mercadona-first-party-final
           github-token: ${{ github.token }}
           run-id: 33046950149
-      - name: Install PP-OCRv6 and visual detector dependencies
+      - name: Install independent OCR engines and visual detector dependencies
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
           python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
           python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' opencv-python-headless Pillow
+      - name: Run conservative OCR regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_nutrition_label_reader.py test_nutrition_ocr_ensemble.py test_mercadona_label_pipeline.py
       - name: OCR deterministic food sample
         working-directory: tools/catalog
         run: |
@@ -59,5 +70,62 @@ jobs:
         with:
           name: mercadona-neural-ocr-pilot-${{ matrix.shard }}
           path: tools/catalog/mercadona-neural-ocr-pilot/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-pilot-*
+          path: input
+          merge-multiple: true
+      - name: Merge auditable pilot results
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json
+          from pathlib import Path
+
+          rows = []
+          for path in sorted(glob.glob('input/results-*.jsonl')):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      rows.append(json.loads(line))
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          declared = [row for row in rows if row.get('status') == 'DECLARED']
+          invalid_declared = []
+          for row in declared:
+              attempts = row.get('attempts') or []
+              accepted = next((a for a in attempts if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              ensemble = (accepted or {}).get('ensemble') or {}
+              if ensemble.get('independent_engine_families', 0) < 2 or ensemble.get('corroborated_fields', 0) < 4:
+                  invalid_declared.append(row.get('product_id'))
+          summary = {
+              'inventory_products': 4280,
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared_rate': round(len(declared) / len(rows), 4) if rows else 0.0,
+              'declared_with_two_independent_engines_and_four_corroborated_fields': len(declared) - len(invalid_declared),
+              'invalid_declared_product_ids': invalid_declared,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows), encoding='utf-8')
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if invalid_declared:
+              raise SystemExit('Unsafe DECLARED rows detected: ' + ','.join(map(str, invalid_declared)))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-pilot-merged
+          path: merged/
           retention-days: 30
           if-no-files-found: warn

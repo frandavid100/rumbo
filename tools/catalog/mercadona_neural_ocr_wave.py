@@ -9,12 +9,15 @@ import time
 from typing import Any
 
 from label_neural_extractor import extract_with_paddleocr
+from label_text_extractor import extract_with_tesseract
 from mercadona_label_evidence import LabelImageEvidence
 from mercadona_label_pipeline import download_label_image
-from mercadona_nutrition_reader import OCR_EVIDENCE_LEVEL, VisionExtraction, read_evidence, to_candidate
+from mercadona_nutrition_reader import OCR_EVIDENCE_LEVEL, VisionExtraction, read_evidence
+from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, fuse_ocr_readings
 from nutrition_visual_table_detector import detect_visual_table_regions
 
 MAX_REGIONS_PER_PRODUCT = 2
+OCR_ENGINES = ("paddleocr", "tesseract")
 
 
 def _load(path: Path) -> list[dict[str, Any]]:
@@ -35,6 +38,15 @@ def _eligible(row: dict[str, Any]) -> bool:
     return bool(row.get("ingredients") and _back_photo(row))
 
 
+def _reading(evidence: LabelImageEvidence, extracted):
+    return read_evidence(evidence, VisionExtraction(
+        text=extracted.text,
+        confidence=extracted.confidence,
+        engine=extracted.engine,
+        engine_version=extracted.engine_version,
+    ))
+
+
 def _reading_payload(reading) -> dict[str, Any]:
     return {
         "status": reading.parsed.status,
@@ -44,8 +56,57 @@ def _reading_payload(reading) -> dict[str, Any]:
         "reasons": list(reading.parsed.reasons),
         "engine": reading.extraction.engine,
         "engine_version": reading.extraction.engine_version,
-        "ocr_text": reading.extraction.text,
+        # Keep normalized OCR evidence for audit; never persist image bytes.
+        "normalized_ocr_text": reading.parsed.normalized_text,
     }
+
+
+def _ensemble_payload(ensemble) -> dict[str, Any]:
+    return {
+        "status": ensemble.status,
+        "basis": ensemble.basis,
+        "nutrition": ensemble.nutrition,
+        "confidence": ensemble.confidence,
+        "corroborated_fields": ensemble.corroborated_fields,
+        "independent_engine_families": ensemble.independent_engine_families,
+        "reasons": list(ensemble.reasons),
+        "fields": [
+            {
+                "name": field.name,
+                "value": field.value,
+                "strategies": list(field.strategies),
+                "engine_families": list(field.engine_families),
+                "corroborated": field.corroborated,
+            }
+            for field in ensemble.fields
+        ],
+    }
+
+
+def _extract_region(evidence: LabelImageEvidence, region_path: Path):
+    readings = []
+    engine_errors: dict[str, str] = {}
+    for family, extractor in (
+        ("paddleocr", extract_with_paddleocr),
+        ("tesseract", lambda path: extract_with_tesseract(path, language="spa", psm=6)),
+    ):
+        try:
+            extracted = extractor(region_path)
+            reading = _reading(evidence, extracted)
+            readings.append((family, reading))
+        except Exception as exc:
+            engine_errors[family] = f"{type(exc).__name__}:{exc}"
+
+    ensemble = fuse_ocr_readings(
+        ParsedOCRReading(
+            strategy=f"{family}:visual-region",
+            result=reading.parsed,
+            extraction_confidence=reading.extraction.confidence,
+            engine_family=family,
+        )
+        for family, reading in readings
+    )
+    return readings, engine_errors, ensemble
 
 
 def main() -> int:
@@ -102,6 +163,7 @@ def main() -> int:
             "image_index": image_index,
             "perspective": 9,
             "source": "MERCADONA_FIRST_PARTY",
+            "source_record_kind": "label image",
             "evidence_level": OCR_EVIDENCE_LEVEL,
             "redistribution_allowed": False,
             "status": "UNRESOLVED",
@@ -117,13 +179,7 @@ def main() -> int:
                 if not regions:
                     item["status"] = "NO_VISUAL_REGION"
                 for region in regions[:MAX_REGIONS_PER_PRODUCT]:
-                    extracted = extract_with_paddleocr(region.path)
-                    reading = read_evidence(evidence, VisionExtraction(
-                        text=extracted.text,
-                        confidence=extracted.confidence,
-                        engine=extracted.engine,
-                        engine_version=extracted.engine_version,
-                    ))
+                    readings, engine_errors, ensemble = _extract_region(evidence, region.path)
                     attempt = {
                         "region": {
                             "name": region.name,
@@ -133,17 +189,26 @@ def main() -> int:
                             "vertical_lines": region.vertical_lines,
                             "line_density": region.line_density,
                         },
-                        **_reading_payload(reading),
+                        "engines": {
+                            family: _reading_payload(reading)
+                            for family, reading in readings
+                        },
+                        "engine_errors": engine_errors,
+                        "ensemble": _ensemble_payload(ensemble),
                     }
                     item["attempts"].append(attempt)
-                    candidate = to_candidate(reading, gtin=row.get("ean"), brand=row.get("brand"), format=row.get("packaging"))
-                    if candidate is not None:
+                    if ensemble.declared_usable:
                         item["status"] = "DECLARED"
-                        item["basis"] = reading.parsed.basis
-                        item["nutrition"] = candidate.nutrition
-                        item["claim"] = candidate.claim
+                        item["basis"] = ensemble.basis
+                        item["nutrition"] = ensemble.nutrition
+                        item["claim"] = (
+                            f"{OCR_EVIDENCE_LEVEL}; source=MERCADONA_FIRST_PARTY/label image; "
+                            f"reader=ensemble-{ENSEMBLE_VERSION}; engines=paddleocr+tesseract; "
+                            f"independent_engines={ensemble.independent_engine_families}; "
+                            f"corroborated_fields={ensemble.corroborated_fields}; basis={ensemble.basis}"
+                        )
                         break
-                    if reading.parsed.nutrition is not None or reading.parsed.status == "REVIEW":
+                    if ensemble.nutrition is not None or ensemble.status == "REVIEW":
                         item["status"] = "REVIEW"
         except Exception as exc:
             item["status"] = "ERROR"
@@ -155,8 +220,11 @@ def main() -> int:
     result_path.write_text("".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in results), encoding="utf-8")
     summary = {
         "source": "MERCADONA_FIRST_PARTY",
+        "source_record_kind": "label image",
         "evidence_level": OCR_EVIDENCE_LEVEL,
-        "mode": "PP-OCRv6_VISUAL_REGIONS_BACK_LABEL",
+        "mode": "PADDLEOCR_TESSERACT_INDEPENDENT_ENSEMBLE_VISUAL_REGIONS_BACK_LABEL",
+        "ocr_engines": list(OCR_ENGINES),
+        "ensemble_version": ENSEMBLE_VERSION,
         "inventory_products": len(all_rows),
         "eligible_products": len(eligible),
         "shard_index": args.shard_index,
