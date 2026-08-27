@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.1"
+READER_VERSION = "1.4.2"
 
 
 @dataclass(frozen=True)
@@ -242,13 +242,30 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     protein = _number_after((r"proteinas?",), block)
 
     values = {"calories": calories, "fat_g": fat, "carbohydrate_g": carbs, "protein_g": protein}
-    missing = [k for k, v in values.items() if v is None]
+
+    # Reject individually impossible OCR values before returning a partial read.
+    # Previously plausibility checks ran only after all four core fields existed,
+    # so a partial `4106 kcal` or `222 g protein` could contaminate the ensemble
+    # and create a false conflict against a correct independent engine.
+    partial: dict[str, float] = {}
+    for key, value in values.items():
+        if value is None:
+            continue
+        if key == "calories":
+            if value < 0 or value > 1000:
+                reasons.append("IMPOSSIBLE_CALORIES")
+                continue
+        elif value < 0 or value > 100:
+            reasons.append(f"IMPOSSIBLE_{key.upper()}")
+            continue
+        partial[key] = float(value)
+
+    missing = [k for k in values if k not in partial]
     if missing:
         reasons.append("MISSING_CORE:" + ",".join(missing))
-        partial = {k: float(v) for k, v in values.items() if v is not None}
         return LabelReadResult("REVIEW", basis, partial or None, min(extraction_confidence, .60), tuple(reasons), normalized)
 
-    nutrition = {k: float(v) for k, v in values.items()}
+    nutrition = partial
     plausible, plausibility_reasons = _plausible(nutrition)
     reasons.extend(plausibility_reasons)
     if not plausible:
