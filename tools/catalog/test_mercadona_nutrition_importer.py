@@ -46,7 +46,7 @@ class NutritionImporterTest(unittest.TestCase):
             result = import_from_label_file(
                 self.evidence(), source, gtin="8480000230499", brand="Hacendado",
                 tesseract_strategies=(("cheap", empty),), neural_extractor=neural,
-                region_detector=detector, work_dir=root,
+                rotation_preparer=lambda path, out: [], region_detector=detector, work_dir=root,
             )
         self.assertEqual(result.status, "REVIEW")
         self.assertIsNone(result.candidate)
