@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.2"
+READER_VERSION = "1.4.3"
 
 
 @dataclass(frozen=True)
@@ -130,7 +130,7 @@ def _interleaved_carbohydrate(text: str) -> float | None:
     """
     folded = _strip_ocr_unit_parentheses(_fold(text))
     m = re.search(
-        r"hidratos?\s+de\s+([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|yg|y|q)?\s+carbono\b",
+        r"(?:^|\n)\s*hidratos?\s+de\s+([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|yg|y|q)?\s+carbono\b",
         folded,
         flags=re.I,
     )
@@ -235,11 +235,18 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
         reasons.append("MISSING_100G_100ML_BASIS")
 
     calories = _energy_kcal(block)
-    fat = _number_after((r"grasas?", r"lipidos?", r"grasa total"), block)
+    fat = _number_after((
+        r"(?:^|\n)\s*grasas?(?:\s*/\s*lipidos?)?\b",
+        r"(?:^|\n)\s*lipidos?\b",
+        r"(?:^|\n)\s*grasa total\b",
+    ), block)
     carbs = _interleaved_carbohydrate(block)
     if carbs is None:
-        carbs = _number_after((r"hidratos? de carbono", r"carbohidratos?"), block)
-    protein = _number_after((r"proteinas?",), block)
+        carbs = _number_after((
+            r"(?:^|\n)\s*hidratos? de carbono\b",
+            r"(?:^|\n)\s*carbohidratos?\b",
+        ), block)
+    protein = _number_after((r"(?:^|\n)\s*proteinas?\b",), block)
 
     values = {"calories": calories, "fat_g": fat, "carbohydrate_g": carbs, "protein_g": protein}
 
