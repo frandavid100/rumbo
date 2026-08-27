@@ -17,6 +17,14 @@ PROTEÍNAS 2,1 g
 SAL 0,21 g
 """
 
+PARTIAL = """INFORMACIÓN NUTRICIONAL
+VALORES MEDIOS por 100 ml
+VALOR ENERGÉTICO 252 kJ / 60 kcal
+GRASAS 0,6 g
+PROTEÍNAS 2,1 g
+SAL 0,21 g
+"""
+
 
 class NutritionImporterTest(unittest.TestCase):
     def evidence(self):
@@ -83,6 +91,35 @@ class NutritionImporterTest(unittest.TestCase):
         ])
         self.assertEqual(calls, ["tesseract", "tesseract", "neural"])
         self.assertEqual(detector_calls, [])
+
+    def test_review_original_skips_expensive_rotation_fallback(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "back.jpg"; source.write_bytes(b"x")
+            rotation_calls = []
+
+            def rotations(path, out):
+                rotation_calls.append((path, out))
+                raise AssertionError("rotation fallback must not run for an upright REVIEW")
+
+            def tesseract(path):
+                return TextExtraction(PARTIAL, .95, "tesseract", "5", "spa")
+
+            def neural(path):
+                return TextExtraction(PARTIAL, .97, "paddleocr-PP-OCRv6", "3.7", "es")
+
+            result = import_from_label_file(
+                self.evidence(), source, gtin="8480000230499", brand="Hacendado",
+                tesseract_strategies=(("psm6", tesseract),), neural_extractor=neural,
+                rotation_preparer=rotations, region_detector=lambda path, out: [], work_dir=root,
+            )
+
+        self.assertEqual(result.status, "REVIEW")
+        self.assertIsNone(result.candidate)
+        self.assertEqual(rotation_calls, [])
+        self.assertEqual([a.stage for a in result.attempts], [
+            "TESSERACT_ORIGINAL", "INDEPENDENT_OCR_ORIGINAL"
+        ])
 
     def test_rotated_original_can_be_independently_corroborated_before_visual_region(self):
         with tempfile.TemporaryDirectory() as td:
