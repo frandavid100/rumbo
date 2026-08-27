@@ -140,6 +140,21 @@ Sal 1 g
         self.assertEqual(r.status, "REVIEW")
         self.assertTrue(any(x.startswith("ENERGY_MACRO_MISMATCH") for x in r.reasons))
 
+    def test_subtle_row_column_mix_is_blocked_by_energy(self):
+        # Observed PP-OCR failure: individually plausible values from different
+        # rows/columns produced a complete but false tuple. Precision is more
+        # important than recall, so a >10%/8-kcal mismatch must be reviewed.
+        noisy = """Información nutricional por 100 g de producto
+Valor energético 1600 kJ 400 kcal
+Grasas 32 g
+Hidratos de Carbono 49 g
+Proteínas 1.99 g
+Sal 1.9 g
+"""
+        r = read_nutrition_label(noisy, extraction_confidence=.97)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertTrue(any(x.startswith("ENERGY_MACRO_MISMATCH") for x in r.reasons))
+
     def test_front_pack_is_not_nutrition(self):
         r = read_nutrition_label("Hacendado Galletas tostadas. Peso neto 800 g. Conservar en lugar fresco.")
         self.assertEqual(r.status, "NOT_NUTRITION_LABEL")
