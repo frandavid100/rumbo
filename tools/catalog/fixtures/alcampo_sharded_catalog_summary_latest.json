@@ -3,7 +3,7 @@
   "source": "https://www.compraonline.alcampo.es",
   "catalogue_endpoint": "https://www.compraonline.alcampo.es/api/webproductpagews/v6/product-pages",
   "importer_version": "alcampo-direct-v6.0",
-  "built_at": "2026-08-27T02:41:26.724217+00:00",
+  "built_at": "2026-08-27T03:41:18.491097+00:00",
   "roots": [
     {
       "label": "Vinos y bebidas sin alcohol",
@@ -21,94 +21,6 @@
       "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
       "source_product_count_is_diagnostic_only": true,
       "ok": true
-    },
-    {
-      "label": "Refrescos",
-      "rid": "OC1103",
-      "source_reported_product_count": 544,
-      "food_products_recursive_union": 506,
-      "recursive_categories_visited": 26,
-      "api_error_categories": 5,
-      "children_without_retailer_category_id": 0,
-      "unresolved": [
-        {
-          "label": "Bebidas isotónicas",
-          "retailer_category_id": "OC1103111",
-          "depth": 1,
-          "source_reported_product_count": 69,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Refrescos en polvo",
-          "retailer_category_id": "OC110310",
-          "depth": 1,
-          "source_reported_product_count": 12,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Refresco de cola normal",
-          "retailer_category_id": "OCRefrescoColaNormal",
-          "depth": 2,
-          "source_reported_product_count": 33,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Refresco de cola light",
-          "retailer_category_id": "OCRefrescoColaLight",
-          "depth": 2,
-          "source_reported_product_count": 9,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Refresco de cola Sin Cafeína",
-          "retailer_category_id": "OCRefrescoColaSin",
-          "depth": 2,
-          "source_reported_product_count": 19,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        }
-      ],
-      "missing_retailer_ids": [],
-      "deduplication_identity": "retailer_sku_else_product_id",
-      "max_depth": 64,
-      "aggregate_root_with_children": false,
-      "completeness_basis": "scheduled_shard_category_tree_plus_pageToken_exhaustion",
-      "source_product_count_is_diagnostic_only": true,
-      "ok": false
     },
     {
       "label": "Bebidas ecológicas",
@@ -133,28 +45,14 @@
       "source_reported_product_count": 247,
       "food_products_recursive_union": 212,
       "recursive_categories_visited": 13,
-      "api_error_categories": 2,
+      "api_error_categories": 1,
       "children_without_retailer_category_id": 0,
       "unresolved": [
         {
-          "label": "Agua botella y garrafas de más de 2,5 l.",
-          "retailer_category_id": "OC11010413",
+          "label": "Agua con gas formatos más de 1 l.",
+          "retailer_category_id": "OC11010423",
           "depth": 2,
-          "source_reported_product_count": 16,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Aguas aromatizadas sin gas",
-          "retailer_category_id": "OC11010431",
-          "depth": 2,
-          "source_reported_product_count": 23,
+          "source_reported_product_count": 15,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -177,7 +75,7 @@
       "label": "Bebidas energéticas",
       "rid": "OC110311",
       "source_reported_product_count": 72,
-      "food_products_recursive_union": 72,
+      "food_products_recursive_union": 62,
       "recursive_categories_visited": 1,
       "api_error_categories": 0,
       "children_without_retailer_category_id": 0,
@@ -212,29 +110,15 @@
       "rid": "OC1102",
       "source_reported_product_count": 305,
       "food_products_recursive_union": 247,
-      "recursive_categories_visited": 18,
+      "recursive_categories_visited": 17,
       "api_error_categories": 4,
       "children_without_retailer_category_id": 0,
       "unresolved": [
         {
-          "label": "Mosto",
-          "retailer_category_id": "OC110208",
-          "depth": 1,
-          "source_reported_product_count": 2,
-          "direct_unique_products": 0,
-          "pages": 0,
-          "fresh_session_attempts": 6,
-          "errors": [
-            "RuntimeError:catalogue page pending status=202"
-          ],
-          "children_discovered": 0,
-          "children_traversed": true
-        },
-        {
-          "label": "Concentrados",
-          "retailer_category_id": "OC63310722",
+          "label": "Néctar",
+          "retailer_category_id": "OC63310711",
           "depth": 2,
-          "source_reported_product_count": 39,
+          "source_reported_product_count": 97,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -246,9 +130,9 @@
         },
         {
           "label": "Otras frutas",
-          "retailer_category_id": "OC633107116",
+          "retailer_category_id": "OC633107121",
           "depth": 3,
-          "source_reported_product_count": 47,
+          "source_reported_product_count": 18,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -259,10 +143,24 @@
           "children_traversed": true
         },
         {
-          "label": "Naranja",
-          "retailer_category_id": "OC633107122",
+          "label": "Vegetales",
+          "retailer_category_id": "OC633107118",
           "depth": 3,
-          "source_reported_product_count": 12,
+          "source_reported_product_count": 7,
+          "direct_unique_products": 0,
+          "pages": 0,
+          "fresh_session_attempts": 6,
+          "errors": [
+            "RuntimeError:catalogue page pending status=202"
+          ],
+          "children_discovered": 0,
+          "children_traversed": true
+        },
+        {
+          "label": "Manzana, pera y melocotón",
+          "retailer_category_id": "OC633107117",
+          "depth": 3,
+          "source_reported_product_count": 13,
           "direct_unique_products": 0,
           "pages": 0,
           "fresh_session_attempts": 6,
@@ -285,7 +183,7 @@
       "label": "Bebidas",
       "rid": "OCC11",
       "source_reported_product_count": 0,
-      "food_products_recursive_union": 1012,
+      "food_products_recursive_union": 999,
       "recursive_categories_visited": 1,
       "api_error_categories": 1,
       "children_without_retailer_category_id": 0,
@@ -334,7 +232,7 @@
       "label": "Frescos",
       "rid": "OC2112",
       "source_reported_product_count": 0,
-      "food_products_recursive_union": 1798,
+      "food_products_recursive_union": 1799,
       "recursive_categories_visited": 1,
       "api_error_categories": 1,
       "children_without_retailer_category_id": 0,
@@ -364,16 +262,16 @@
     }
   ],
   "counts": {
-    "unique_products_before_filter": 2996,
-    "food_products": 2996,
+    "unique_products_before_filter": 2928,
+    "food_products": 2928,
     "excluded_alcohol": 0,
-    "with_sku": 2996,
-    "with_name": 2996,
-    "with_brand": 2996,
-    "with_pack_size": 2918,
-    "with_image": 2996,
+    "with_sku": 2928,
+    "with_name": 2928,
+    "with_brand": 2928,
+    "with_pack_size": 2852,
+    "with_image": 2928,
     "with_product_url": 0,
-    "available": 2939
+    "available": 2882
   },
   "third_party_product_data": false
 }
