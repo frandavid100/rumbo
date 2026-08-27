@@ -159,6 +159,28 @@ Sal
             "carbohydrate_g": 2.0, "protein_g": 17.0,
         })
 
+    def test_interleaved_carbohydrate_accepts_observed_yg_unit_glyph(self):
+        # Observed Mercadona Tesseract output for a real back label: the printed
+        # `g` after the carbohydrate value was linearised as `yg` while the
+        # value remained bracketed by the split label `Hidratos de ... Carbono`.
+        observed = """100 q
+Valor 767 kJ
+Energético 184 kcal
+Grasas 12 g
+de las cuales saturadas 5.4 g
+Hidratos de 2.0 yg
+Carbono
+de los cuales azúcares 0.9 g
+Proteínas 17 g
+Sal 0.42 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.93)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition, {
+            "calories": 184.0, "fat_g": 12.0,
+            "carbohydrate_g": 2.0, "protein_g": 17.0,
+        })
+
     def test_inequality_macro_is_not_promoted_to_exact_value(self):
         observed = """Información nutricional por 100 g
 Valor energético 683 kJ / 163 kcal
