@@ -8,6 +8,8 @@ on:
       - 'tools/catalog/mercadona_label_pipeline.py'
       - 'tools/catalog/mercadona_nutrition_reader.py'
       - 'tools/catalog/mercadona_nutrition_importer.py'
+      - 'tools/catalog/label_neural_extractor.py'
+      - 'tools/catalog/label_text_extractor.py'
       - 'tools/catalog/fixtures/mercadona_ocr_first_party_pilot_32.json'
       - '.github/workflows/catalog-mercadona-ocr-first-party-pilot.yml'
   workflow_dispatch:
@@ -17,6 +19,10 @@ permissions:
 
 jobs:
   ocr-first-party-pilot:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -24,6 +30,8 @@ jobs:
       MERCADONA_OCR_BATCH_FILE: fixtures/mercadona_ocr_first_party_pilot_32.json
       MERCADONA_OCR_OUTPUT_DIR: mercadona-ocr-first-party-pilot-output
       MERCADONA_OCR_MAX_LABEL_IMAGES: '2'
+      MERCADONA_OCR_SHARD_COUNT: '4'
+      MERCADONA_OCR_SHARD_INDEX: '${{ matrix.shard }}'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -41,7 +49,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mercadona-ocr-first-party-pilot-32
+          name: mercadona-ocr-first-party-pilot-32-shard-${{ matrix.shard }}
           path: |
             tools/catalog/mercadona-ocr-first-party-pilot-output/summary.json
             tools/catalog/mercadona-ocr-first-party-pilot-output/report.json
