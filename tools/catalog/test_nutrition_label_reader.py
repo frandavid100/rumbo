@@ -1,7 +1,12 @@
 import unittest
 
 from mercadona_label_evidence import LabelImageEvidence
-from mercadona_nutrition_reader import VisionExtraction, read_evidence, to_candidate
+from mercadona_nutrition_reader import (
+    OCR_EVIDENCE_LEVEL,
+    VisionExtraction,
+    read_evidence,
+    to_candidate,
+)
 from nutrition_label_reader import read_nutrition_label
 
 
@@ -166,10 +171,12 @@ Sal 1 g
         reading = read_evidence(evidence, VisionExtraction(GOOD, .98, "fixture-vision", "1"))
         c = to_candidate(reading, gtin="8480000000000", brand="Hacendado")
         self.assertIsNotNone(c)
-        self.assertEqual(c.source, "Mercadona label")
+        self.assertEqual(c.source, "Mercadona label image OCR")
         self.assertEqual(c.identity.gtin, "8480000000000")
         self.assertFalse(c.redistribution_allowed)
-        self.assertIn("DECLARED", c.claim)
+        self.assertEqual(c.evidence_level, OCR_EVIDENCE_LEVEL)
+        self.assertIn(OCR_EVIDENCE_LEVEL, c.claim)
+        self.assertNotEqual(c.evidence_level, "DECLARED")
 
     def test_review_is_not_converted_to_candidate(self):
         evidence = LabelImageEvidence(
