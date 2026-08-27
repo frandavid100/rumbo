@@ -5,7 +5,8 @@ from nutrition_label_reader import LabelReadResult, read_nutrition_label
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 from mercadona_label_evidence import LabelImageEvidence
 
-ADAPTER_VERSION = "1.0.1"
+ADAPTER_VERSION = "1.0.2"
+OCR_EVIDENCE_LEVEL = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
 
 
 @dataclass(frozen=True)
@@ -39,12 +40,12 @@ def read_evidence(evidence: LabelImageEvidence, extraction: VisionExtraction) ->
 
 def to_candidate(reading: MercadonaLabelReading, *, gtin: str | None = None,
                  brand: str | None = None, format: str | None = None) -> NutritionCandidate | None:
-    """Convert a validated label reading into DECLARED build evidence.
+    """Convert a validated label reading into explicit OCR-derived build evidence.
 
-    The original Mercadona image remains non-redistributable. The candidate
-    represents normalized factual values extracted at build time; downstream
-    publication policy still decides whether those normalized values may be
-    distributed.
+    The source is a first-party Mercadona pack image, but its nutrition values
+    are not structured text supplied by the retailer: they were recovered by
+    OCR and then accepted by Rumbo's deterministic label parser. Keep that
+    distinction in the evidence level all the way downstream.
     """
     if not reading.accepted or reading.parsed.nutrition is None:
         return None
@@ -57,7 +58,7 @@ def to_candidate(reading: MercadonaLabelReading, *, gtin: str | None = None,
             format=format,
         ),
         nutrition=reading.parsed.nutrition,
-        source="Mercadona label",
+        source="Mercadona label image OCR",
         source_url=e.image_url,
         source_record_id=f"{e.retailer_sku}:image:{e.image_index}",
         observed_at=e.observed_at,
@@ -66,8 +67,8 @@ def to_candidate(reading: MercadonaLabelReading, *, gtin: str | None = None,
         # default until project publication policy explicitly clears them.
         redistribution_allowed=False,
         source_family="Mercadona label",
-        claim=(f"DECLARED from pack image; reader={ADAPTER_VERSION}; "
+        claim=(f"{OCR_EVIDENCE_LEVEL}; reader={ADAPTER_VERSION}; "
                f"vision={reading.extraction.engine}:{reading.extraction.engine_version or 'unknown'}; "
                f"basis={reading.parsed.basis}"),
-        evidence_level="DECLARED",
+        evidence_level=OCR_EVIDENCE_LEVEL,
     )
