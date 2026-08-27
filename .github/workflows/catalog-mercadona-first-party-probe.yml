@@ -5,6 +5,7 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - 'tools/catalog/mercadona_first_party_probe.py'
+      - 'tools/catalog/mercadona_first_party_probe_v11.py'
       - '.github/workflows/catalog-mercadona-first-party-probe.yml'
   workflow_dispatch:
 
@@ -28,11 +29,11 @@ jobs:
           python-version: '3.12'
       - name: Validate probe syntax
         working-directory: tools/catalog
-        run: python -m py_compile mercadona_first_party_probe.py
+        run: python -m py_compile mercadona_first_party_probe.py mercadona_first_party_probe_v11.py
       - name: Probe official Mercadona catalogue API conservatively
         working-directory: tools/catalog
         run: |
-          python mercadona_first_party_probe.py \
+          python mercadona_first_party_probe_v11.py \
             --out mercadona-first-party-probe \
             --delay 0.8 \
             --detail-limit 24
