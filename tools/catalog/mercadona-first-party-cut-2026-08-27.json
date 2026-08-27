@@ -1,0 +1,51 @@
+{
+  "source": "MERCADONA_FIRST_PARTY",
+  "evidence_type": "OBSERVED_API",
+  "observed_date": "2026-08-27",
+  "workflow_run_id": 33046950149,
+  "workflow_head_sha": "47149fd847b6dbcd05cf79e202f55cb81da3d432",
+  "artifact_id": 9636465626,
+  "artifact_sha256": "5a8c89661afe09fe1c05d1f67e8ed608edf25b8363530db42959ec8413fef648",
+  "status": "OK",
+  "root_leaf_categories": 151,
+  "inventory_products": 4280,
+  "products": 4280,
+  "detail_records": 4280,
+  "detail_observed_products": 4280,
+  "errors": 0,
+  "coverage": {
+    "ean": {"present": 4280, "pct": 100.0},
+    "name": {"present": 4280, "pct": 100.0},
+    "brand": {"present": 3783, "pct": 88.39},
+    "origin": {"present": 1175, "pct": 27.45},
+    "packaging": {"present": 3713, "pct": 86.75},
+    "price": {"present": 4280, "pct": 100.0},
+    "unit_price": {"present": 4280, "pct": 100.0},
+    "unit_size": {"present": 4242, "pct": 99.11},
+    "bulk_price": {"present": 4280, "pct": 100.0},
+    "category_id": {"present": 4280, "pct": 100.0},
+    "category_name": {"present": 4280, "pct": 100.0},
+    "photos": {"present": 4280, "pct": 100.0},
+    "legal_name": {"present": 2854, "pct": 66.68},
+    "description": {"present": 4280, "pct": 100.0},
+    "suppliers": {"present": 3158, "pct": 73.79},
+    "ingredients": {"present": 2719, "pct": 63.53},
+    "allergens": {"present": 2758, "pct": 64.44},
+    "mandatory_mentions": {"present": 1355, "pct": 31.66},
+    "usage_instructions": {"present": 1343, "pct": 31.38},
+    "storage_instructions": {"present": 2589, "pct": 60.49},
+    "share_url": {"present": 4280, "pct": 100.0}
+  },
+  "products_with_multiple_photos": 4175,
+  "products_with_label_candidate_photos": 4175,
+  "classification": {
+    "classified": 0,
+    "menu_eligible": 0,
+    "policy": "EXTRACTION_ONLY_NO_SEMANTIC_REVIEW"
+  },
+  "nutrition_policy": {
+    "structured_macros_from_api": false,
+    "structured_ingredients_and_allergens_from_api": true,
+    "image_macro_evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+  }
+}
