@@ -1,0 +1,50 @@
+name: Catalog Mercadona first-party OCR pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/mercadona_ocr_first_party_pilot.py'
+      - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - 'tools/catalog/mercadona_nutrition_importer.py'
+      - 'tools/catalog/fixtures/mercadona_ocr_first_party_pilot_32.json'
+      - '.github/workflows/catalog-mercadona-ocr-first-party-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ocr-first-party-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      MERCADONA_OCR_BATCH_FILE: fixtures/mercadona_ocr_first_party_pilot_32.json
+      MERCADONA_OCR_OUTPUT_DIR: mercadona-ocr-first-party-pilot-output
+      MERCADONA_OCR_MAX_LABEL_IMAGES: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar OCR y visión
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' opencv-python-headless Pillow
+      - name: Ejecutar piloto OCR first-party sin clasificación
+        working-directory: tools/catalog
+        run: python mercadona_ocr_first_party_pilot.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-ocr-first-party-pilot-32
+          path: |
+            tools/catalog/mercadona-ocr-first-party-pilot-output/summary.json
+            tools/catalog/mercadona-ocr-first-party-pilot-output/report.json
+            tools/catalog/mercadona-ocr-first-party-pilot-output/nutrition.jsonl
+          if-no-files-found: warn
+          retention-days: 14
