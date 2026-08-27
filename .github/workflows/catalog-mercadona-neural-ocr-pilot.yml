@@ -7,9 +7,14 @@ on:
       - 'tools/catalog/mercadona_neural_ocr_wave.py'
       - 'tools/catalog/nutrition_label_reader.py'
       - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/nutrition_visual_table_detector.py'
       - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - 'tools/catalog/label_neural_extractor.py'
+      - 'tools/catalog/label_text_extractor.py'
       - 'tools/catalog/test_nutrition_label_reader.py'
       - 'tools/catalog/test_nutrition_ocr_ensemble.py'
+      - 'tools/catalog/test_mercadona_label_pipeline.py'
       - '.github/workflows/catalog-mercadona-neural-ocr-pilot.yml'
   workflow_dispatch:
 
@@ -24,10 +29,10 @@ concurrency:
 jobs:
   ocr:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 4
       matrix:
         shard: [0, 1, 2, 3, 4, 5, 6, 7]
     env:
@@ -64,7 +69,7 @@ jobs:
             --out mercadona-neural-ocr-pilot \
             --shard-index ${{ matrix.shard }} \
             --shard-count 8 \
-            --limit 20
+            --limit 8
       - uses: actions/upload-artifact@v4
         if: always()
         with:
