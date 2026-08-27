@@ -84,6 +84,54 @@ class NutritionImporterTest(unittest.TestCase):
         self.assertEqual(calls, ["tesseract", "tesseract", "neural"])
         self.assertEqual(detector_calls, [])
 
+    def test_rotated_original_can_be_independently_corroborated_before_visual_region(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "back.jpg"; source.write_bytes(b"x")
+            rotated = root / "rotated-90.png"; rotated.write_bytes(b"x")
+            calls = []
+            detector_calls = []
+
+            def rotations(path, out):
+                self.assertEqual(Path(path), source)
+                return [("90", rotated)]
+
+            def detector(path, out):
+                detector_calls.append("detector")
+                return []
+
+            def tesseract(path):
+                path = Path(path)
+                calls.append(("tesseract", path.name))
+                if path == source:
+                    return TextExtraction("", 0.0, "tesseract", "5", "spa")
+                return TextExtraction(GOOD, .95, "tesseract", "5", "spa")
+
+            def neural(path):
+                path = Path(path)
+                calls.append(("neural", path.name))
+                return TextExtraction(GOOD, .97, "paddleocr-PP-OCRv6", "3.7", "es")
+
+            result = import_from_label_file(
+                self.evidence(), source, gtin="8480000230499", brand="Hacendado",
+                tesseract_strategies=(("psm6", tesseract),), neural_extractor=neural,
+                rotation_preparer=rotations, region_detector=detector, work_dir=root,
+            )
+
+        self.assertEqual(result.status, "DECLARED")
+        self.assertIsNotNone(result.candidate)
+        self.assertEqual(result.candidate.nutrition["fat_g"], .6)
+        self.assertEqual([a.stage for a in result.attempts], [
+            "TESSERACT_ORIGINAL", "TESSERACT_ROTATED_90", "INDEPENDENT_OCR_ROTATED_90"
+        ])
+        self.assertEqual(calls, [
+            ("tesseract", "back.jpg"),
+            ("tesseract", "rotated-90.png"),
+            ("tesseract", "rotated-90.png"),
+            ("neural", "rotated-90.png"),
+        ])
+        self.assertEqual(detector_calls, [])
+
 
 if __name__ == "__main__":
     unittest.main()
