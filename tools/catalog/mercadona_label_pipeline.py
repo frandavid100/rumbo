@@ -18,7 +18,7 @@ from mercadona_nutrition_reader import (
 from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, OCREnsembleResult, fuse_ocr_readings
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 
-PIPELINE_VERSION = "1.2.3"
+PIPELINE_VERSION = "1.3.0"
 USER_AGENT = "RumboCatalog/0.1 (label reader; contact: frandavid100@users.noreply.github.com)"
 
 
@@ -83,7 +83,8 @@ def _ensemble_candidate(
     if not ensemble.declared_usable or ensemble.nutrition is None:
         return None
     field_trace = ";".join(
-        f"{field.name}={field.value}@{','.join(field.strategies)}" for field in ensemble.fields
+        f"{field.name}={field.value}@{','.join(field.strategies)}[{','.join(field.engine_families)}]"
+        for field in ensemble.fields
     )
     return NutritionCandidate(
         identity=ProductIdentity(name=evidence.product_name, brand=brand, gtin=gtin, format=format),
@@ -98,7 +99,7 @@ def _ensemble_candidate(
         evidence_level=OCR_EVIDENCE_LEVEL,
         claim=(f"{OCR_EVIDENCE_LEVEL}; one pack image via OCR ensemble {ENSEMBLE_VERSION}; "
                f"confidence={ensemble.confidence:.3f}; corroborated_fields={ensemble.corroborated_fields}; "
-               f"{field_trace}"),
+               f"independent_engines={ensemble.independent_engine_families}; {field_trace}"),
     )
 
 
@@ -111,7 +112,12 @@ def process_label_file_ensemble(
     brand: str | None = None,
     format: str | None = None,
 ) -> LabelEnsemblePipelineResult:
-    """Run multiple OCR segmentations over one local image and fuse by field."""
+    """Run OCR strategies over one image and require independent-engine fusion.
+
+    Multiple layouts/crops from a single OCR engine are useful for recall but
+    are correlated observations. They are never allowed to short-circuit the
+    ensemble into a usable nutrition record.
+    """
     readings: list[tuple[str, MercadonaLabelReading]] = []
     try:
         for name, extractor in strategies:
@@ -123,12 +129,14 @@ def process_label_file_ensemble(
                 engine_version=extracted.engine_version,
             ))
             readings.append((name, reading))
-            direct = to_candidate(reading, gtin=gtin, brand=brand, format=format)
-            if direct is not None:
-                return LabelEnsemblePipelineResult("DECLARED", direct, None, tuple(readings), None)
 
         ensemble = fuse_ocr_readings(
-            ParsedOCRReading(name, reading.parsed, reading.extraction.confidence)
+            ParsedOCRReading(
+                name,
+                reading.parsed,
+                reading.extraction.confidence,
+                engine_family=reading.extraction.engine,
+            )
             for name, reading in readings
         )
         candidate = _ensemble_candidate(evidence, ensemble, gtin=gtin, brand=brand, format=format)
