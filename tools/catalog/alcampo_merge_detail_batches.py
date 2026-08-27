@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 
@@ -118,6 +119,11 @@ def main() -> int:
     errors = [sku for sku in expected if sku in best and best[sku].get("error") is not None]
     valid = [sku for sku in expected if sku in best and best[sku].get("nutrition_status") == "DECLARED_VALID"]
     fetched = [sku for sku in expected if sku in best and best[sku].get("error") is None]
+    error_reason_counts = Counter(str(best[sku].get("error") or "UNKNOWN") for sku in errors)
+    nutrition_status_counts = Counter(
+        str(best[sku].get("nutrition_status") or "UNSPECIFIED")
+        for sku in fetched
+    )
     report = {
         "expected_products": len(expected),
         "previous_run": previous_run,
@@ -128,6 +134,8 @@ def main() -> int:
         "fetched": len(fetched),
         "declared_valid_nutrition": len(valid),
         "fetch_errors": len(errors),
+        "error_reason_counts": dict(error_reason_counts.most_common()),
+        "nutrition_status_counts": dict(nutrition_status_counts.most_common()),
         "missing_detail_rows": len(missing),
         "missing_skus": missing[:500],
         "error_skus": errors[:500],
