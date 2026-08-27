@@ -14,7 +14,7 @@ from urllib.error import HTTPError, URLError
 import alcampo_detail_enricher as base
 from nutrition_validation import validate_nutrition
 
-VERSION = "alcampo-detail-fast-wave-v1.5"
+VERSION = "alcampo-detail-fast-wave-v1.6"
 _TLS = threading.local()
 
 
@@ -121,9 +121,16 @@ def fetch_fast(sku: str, name_hint: str | None, exact_url: str | None = None):
             if status == 202 or ("window.gokuProps" in body and len(body) < 10000):
                 streak = int(getattr(_TLS, "waf_pending_streak", 0)) + 1
                 _TLS.waf_pending_streak = streak
+                last = f"WAF_PENDING_{status}"
                 if streak >= 2:
                     _TLS.waf_circuit_open = True
-                last = f"WAF_PENDING_{status}"
+                else:
+                    # A first 202 often appears after a short burst of successful
+                    # first-party PDPs. Give the retailer a real quiet period and
+                    # rotate the cookie jar before deciding the runner is exhausted.
+                    # If the next SKU still returns 202, the circuit opens as before.
+                    time.sleep(15.0)
+                    op = opener(reset=True)
                 return failure(str(sku), url, last)
             _TLS.waf_pending_streak = 0
             return parse_success(str(sku), url, status, final, raw, body)
@@ -193,7 +200,7 @@ def summarize(details, requested: int, targets):
             "declared_invalid_nutrition": sum(d.nutrition_status.startswith("DECLARED_INVALID") for d in details),
             "downloaded_html_bytes": sum(d.html_bytes for d in details),
         },
-        "policy": "FIRST_PARTY_PRODUCT_SLUG_PACED_STOP_AFTER_TWO_CONSECUTIVE_202_X_ONLY_FOR_MISSING_SLUG_CHECKPOINT_EACH_RESULT",
+        "policy": "FIRST_PARTY_PRODUCT_SLUG_PACED_BACKOFF_15S_AFTER_FIRST_202_STOP_AFTER_TWO_CONSECUTIVE_202_X_ONLY_FOR_MISSING_SLUG_CHECKPOINT_EACH_RESULT",
     }
 
 
