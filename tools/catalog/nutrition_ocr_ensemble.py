@@ -5,7 +5,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.2.0"
+ENSEMBLE_VERSION = "1.2.1"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -134,6 +134,14 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
         )
     basis = next(iter(unique_bases), None)
     basis_families = {x[3] for x in bases}
+    complete_basis_families = {
+        x.family for x in readings
+        if x.result.basis == basis
+        and basis is not None
+        and x.confidence >= .70
+        and x.result.nutrition
+        and all(field in x.result.nutrition for field in FIELDS)
+    }
 
     fields: list[EnsembleField] = []
     for field in FIELDS:
@@ -159,7 +167,15 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
     if independent_families < 2:
         reasons.append("INSUFFICIENT_INDEPENDENT_OCR_ENGINES")
     if basis is not None and len(basis_families) < 2:
-        reasons.append("UNCORROBORATED_BASIS")
+        if complete_basis_families and independent_families >= 2 and corroborated == len(FIELDS):
+            # A real observed Mercadona failure mode is losing only the `100 g`
+            # glyph in one OCR engine while both independent engines agree on
+            # every core value. A single explicit basis is acceptable only when
+            # it belongs to a complete source and the whole value tuple is
+            # independently corroborated, with no competing explicit basis.
+            reasons.append("SINGLE_ENGINE_BASIS_WITH_FULL_CORE_CORROBORATION")
+        else:
+            reasons.append("UNCORROBORATED_BASIS")
     if corroborated < len(FIELDS):
         reasons.append("UNCORROBORATED_CORE_FIELDS")
 
@@ -186,9 +202,13 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
         r.startswith("OCR_FIELD_CONFLICT") or r.startswith("OCR_SAME_ENGINE_CONFLICT")
         for r in reasons
     )
+    basis_is_safely_observed = (
+        len(basis_families) >= 2
+        or bool(complete_basis_families)
+    )
     safely_corroborated = (
         independent_families >= 2
-        and len(basis_families) >= 2
+        and basis_is_safely_observed
         and corroborated == len(FIELDS)
     )
     if validated.status == "DECLARED" and basis is not None and safely_corroborated and not hard_conflict:
