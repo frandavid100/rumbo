@@ -93,9 +93,13 @@ def main() -> int:
 
     matrix = {"include": [{"batch": f"{i:03d}"} for i in range(count)]}
     nonzero_strides = [s for s in strides if s]
+    nonempty_bucket_sizes = [len(bucket) for bucket in buckets if bucket]
     summary = {
         "products": len(rows),
         "batches": count,
+        "nonempty_batches": len(nonempty_bucket_sizes),
+        "unresolved_per_batch_min": min(nonempty_bucket_sizes) if nonempty_bucket_sizes else 0,
+        "unresolved_per_batch_max": max(nonempty_bucket_sizes) if nonempty_bucket_sizes else 0,
         "previous_successes": len(done & seen),
         "baseline_products": total,
         "run_number": run_number,
