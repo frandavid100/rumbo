@@ -4,16 +4,16 @@
   "counts": {
     "products_discovered": 14976,
     "identified": 14976,
-    "nutrition_valid": 10510,
+    "nutrition_valid": 10511,
     "classified": 0,
     "menu_eligible": 0,
-    "review_open": 6798,
-    "review_reasons": 6813,
+    "review_open": 6797,
+    "review_reasons": 6812,
     "food_family_assigned": 3170,
     "portion_basis_assigned": 6924,
-    "nutritional_role_assignments": 13139,
+    "nutritional_role_assignments": 13140,
     "culinary_role_assignments": 25067,
-    "field_evidence_rows": 330044
+    "field_evidence_rows": 330060
   },
   "listing_field_coverage": {
     "retailer_product_id": 14976,
@@ -29,16 +29,16 @@
     "evidence_endpoint": 14976
   },
   "field_evidence_by_kind": {
-    "DECLARED_DETAIL": 120971,
+    "DECLARED_DETAIL": 120987,
     "OBSERVED_LISTING": 209073
   },
   "eligibility_reasons": {
-    "Pendiente de revisión semántica por el modelo": 10510,
-    "Falta nutrición comparable": 4466
+    "Pendiente de revisión semántica por el modelo": 10511,
+    "Falta nutrición comparable": 4465
   },
   "review_queue_reasons": {
     "UNKNOWN_CULINARY_TYPE": 3943,
-    "INCOMPLETE_CORE_NUTRITION": 2791,
+    "INCOMPLETE_CORE_NUTRITION": 2790,
     "PREPARED_DISH_NEEDS_PORTION_REVIEW": 79
   },
   "metadata": {
@@ -47,7 +47,7 @@
     "retailer": "Alcampo",
     "source": "https://www.compraonline.alcampo.es",
     "context": "Alcampo online España",
-    "built_at": "2026-08-27T06:04:39.950005+00:00",
+    "built_at": "2026-08-27T06:09:01.331632+00:00",
     "product_identity_source_policy": "FIRST_PARTY_ALCAMPO_ONLY",
     "nutrition_source_policy": "FIRST_PARTY_ALCAMPO_DECLARED_ONLY",
     "nutrition_basis_policy": "EXPLICIT_ALCAMPO_DETAIL_ONLY",
@@ -4795,6 +4795,7 @@
     "nutrition_basis_rule:517410": "detail.explicit_basis",
     "nutrition_basis_rule:517422": "detail.explicit_basis",
     "nutrition_basis_rule:517434": "detail.explicit_basis",
+    "nutrition_basis_rule:517448": "detail.explicit_basis",
     "nutrition_basis_rule:517453": "detail.explicit_basis",
     "nutrition_basis_rule:517456": "detail.explicit_basis",
     "nutrition_basis_rule:517482": "detail.explicit_basis",
@@ -10567,12 +10568,12 @@
     "build_count:products_input": "14976",
     "build_count:identified": "14976",
     "build_count:detail_rows": "14976",
-    "build_count:declared_valid_raw": "10513",
-    "build_count:nutrition_basis_resolved": "10510",
-    "build_count:nutritionally_usable": "10510",
-    "build_count:detail_fetch_errors": "4",
-    "build_count:with_ingredients": "13124",
-    "build_count:with_legal_name": "12955",
+    "build_count:declared_valid_raw": "10514",
+    "build_count:nutrition_basis_resolved": "10511",
+    "build_count:nutritionally_usable": "10511",
+    "build_count:detail_fetch_errors": "0",
+    "build_count:with_ingredients": "13125",
+    "build_count:with_legal_name": "12956",
     "build_count:with_gtin": "0",
     "build_count:with_retailer_product_id": "14976",
     "build_count:with_pack_size": "14387",
@@ -10582,7 +10583,7 @@
     "build_count:with_source_roots": "14976",
     "build_count:with_image": "14976",
     "build_count:with_availability_observation": "14976",
-    "build_count:field_evidence_rows": "330044",
+    "build_count:field_evidence_rows": "330060",
     "classifier_version": "4.5.1",
     "classification_policy_version": "alcampo-automatic-proposal-2026-08-20.v1+alcampo-semantic-review-v1",
     "automatic_proposal_policy": "alcampo-automatic-proposal-2026-08-20.v1",
@@ -10595,20 +10596,17 @@
   "detail_enrichment": {
     "expected_products": 14976,
     "previous_run": null,
-    "previous_detail_rows": 14960,
-    "detail_artifacts": 256,
-    "new_detail_rows": 952,
+    "previous_detail_rows": 14976,
+    "detail_artifacts": 4,
+    "new_detail_rows": 4,
     "detail_rows": 14976,
-    "fetched": 14972,
-    "declared_valid_nutrition": 10513,
-    "fetch_errors": 4,
-    "error_reason_counts": {
-      "WAF_PENDING_202": 3,
-      "WAF_PENDING_CIRCUIT_OPEN": 1
-    },
+    "fetched": 14976,
+    "declared_valid_nutrition": 10514,
+    "fetch_errors": 0,
+    "error_reason_counts": {},
     "nutrition_status_counts": {
-      "DECLARED_VALID": 10513,
-      "DECLARED_INCOMPLETE": 4418,
+      "DECLARED_VALID": 10514,
+      "DECLARED_INCOMPLETE": 4421,
       "DECLARED_INVALID:ENERGY_TOO_LOW_FOR_MACROS": 18,
       "DECLARED_INVALID:ENERGY_TOO_HIGH_FOR_MACROS": 6,
       "DECLARED_INVALID:CORE_MACRO_SUM_IMPOSSIBLE": 5,
@@ -10620,12 +10618,7 @@
     },
     "missing_detail_rows": 0,
     "missing_skus": [],
-    "error_skus": [
-      "24801",
-      "249773",
-      "517448",
-      "522710"
-    ],
+    "error_skus": [],
     "fetched_skus": [
       "10001",
       "10002",
@@ -13616,6 +13609,7 @@
       "247920",
       "24797",
       "247989",
+      "24801",
       "248069",
       "248088",
       "24809",
@@ -13667,6 +13661,7 @@
       "249761",
       "249766",
       "249768",
+      "249773",
       "249777",
       "249781",
       "249782",
@@ -16920,6 +16915,7 @@
       "517410",
       "517422",
       "517434",
+      "517448",
       "517453",
       "517456",
       "517482",
@@ -17108,6 +17104,7 @@
       "522687",
       "522698",
       "522700",
+      "522710",
       "522712",
       "52283",
       "522857",
