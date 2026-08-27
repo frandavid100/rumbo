@@ -1,0 +1,45 @@
+name: Catalog Mercadona first-party inventory probe
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/mercadona_first_party_probe.py'
+      - '.github/workflows/catalog-mercadona-first-party-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-first-party-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate probe syntax
+        working-directory: tools/catalog
+        run: python -m py_compile mercadona_first_party_probe.py
+      - name: Probe official Mercadona catalogue API conservatively
+        working-directory: tools/catalog
+        run: |
+          python mercadona_first_party_probe.py \
+            --out mercadona-first-party-probe \
+            --delay 0.8 \
+            --detail-limit 24
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-first-party-probe
+          path: tools/catalog/mercadona-first-party-probe/
+          retention-days: 14
+          if-no-files-found: warn
