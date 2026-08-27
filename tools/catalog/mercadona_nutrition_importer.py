@@ -10,7 +10,7 @@ from mercadona_label_pipeline import process_label_file_ensemble
 from nutrition_resolver import NutritionCandidate
 from nutrition_visual_table_detector import VisualTableRegion, detect_visual_table_regions
 
-IMPORTER_VERSION = "1.3.0"
+IMPORTER_VERSION = "1.3.1"
 
 
 @dataclass(frozen=True)
@@ -37,8 +37,9 @@ def prepare_right_angle_rotations(
 
     Mercadona rear-label photos are not guaranteed to have their nutrition table
     upright. OCR orientation heuristics are intentionally disabled, so explicitly
-    try only the three lossless right-angle alternatives before visual cropping.
-    Pillow is imported lazily so ordinary catalog validation does not depend on it.
+    try only the three lossless right-angle alternatives when the upright read is
+    wholly unresolved. Pillow is imported lazily so ordinary catalog validation
+    does not depend on it.
     """
     from PIL import Image, ImageOps
 
@@ -49,7 +50,10 @@ def prepare_right_angle_rotations(
         image = ImageOps.exif_transpose(raw)
         for angle in (90, 180, 270):
             path = out / f"rotated-{angle}.png"
-            image.rotate(angle, expand=True).save(path, format="PNG", optimize=True)
+            # PNG is lossless; optimization is deliberately disabled because it
+            # consumed material CPU time on the multi-megapixel label photos and
+            # has no OCR-quality benefit in a temporary file.
+            image.rotate(angle, expand=True).save(path, format="PNG")
             rotations.append((str(angle), path))
     return rotations
 
@@ -71,9 +75,11 @@ def import_from_label_file(
     Tesseract-only passes are useful for locating/parsing text but are correlated
     observations and cannot create usable OCR nutrition. If the original image
     already yields a plausible Tesseract reading, corroborate that same image
-    with the independent neural OCR family. If it does not, try right-angle
-    rotations before relying on visual table crops. No rotation can relax parser,
-    coherence or independent-engine acceptance rules.
+    with the independent neural OCR family. Right-angle retries are reserved for
+    images whose upright Tesseract read is wholly unresolved; rotating a REVIEW
+    image was empirically expensive and redundant because the nutrition structure
+    was already readable upright. No fallback can relax parser, coherence or
+    independent-engine acceptance rules.
     """
     attempts: list[NutritionImportAttempt] = []
     tesseract_strategies = tuple(tesseract_strategies)
@@ -103,16 +109,18 @@ def import_from_label_file(
         if combined_original.candidate is not None:
             return NutritionImportResult("DECLARED", combined_original.candidate, tuple(attempts), None)
 
-    # A large fraction of first-party rear-label images are sideways or inverted.
-    # Probe rotations with cheap Tesseract first; only pay for the independent
-    # neural family when a rotated image reaches REVIEW and can be corroborated.
-    try:
-        rotations = rotation_preparer(image_path, Path(work_dir) / "rotations")
-    except Exception as exc:
-        attempts.append(NutritionImportAttempt(
-            "ROTATION_PREP", None, "ERROR", f"{type(exc).__name__}:{exc}"
-        ))
-        rotations = []
+    # Only wholly unresolved upright reads are candidates for orientation rescue.
+    # A REVIEW has already demonstrated readable nutrition structure and has been
+    # checked by the independent neural family above; rotating those images added
+    # several minutes per product in the pilot without adding accepted readings.
+    rotations: list[tuple[str, Path]] = []
+    if original.status != "REVIEW":
+        try:
+            rotations = rotation_preparer(image_path, Path(work_dir) / "rotations")
+        except Exception as exc:
+            attempts.append(NutritionImportAttempt(
+                "ROTATION_PREP", None, "ERROR", f"{type(exc).__name__}:{exc}"
+            ))
 
     for rotation_name, rotation_path in rotations:
         rotated = process_label_file_ensemble(
