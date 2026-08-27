@@ -18,7 +18,7 @@ from nutrition_visual_table_detector import detect_visual_table_regions
 
 MAX_REGIONS_PER_PRODUCT = 2
 OCR_ENGINES = ("paddleocr", "tesseract")
-OCR_STRATEGIES = ("paddleocr", "tesseract-psm6", "tesseract-psm11")
+OCR_STRATEGIES = ("paddleocr", "tesseract-psm4", "tesseract-psm6", "tesseract-psm11")
 
 
 def _load(path: Path) -> list[dict[str, Any]]:
@@ -85,14 +85,15 @@ def _ensemble_payload(ensemble) -> dict[str, Any]:
 
 
 def _extract_region(evidence: LabelImageEvidence, region_path: Path):
-    # PSM 6 and PSM 11 are intentionally both used because nutrition tables
-    # often linearise differently as a compact block vs sparse text. They remain
-    # one Tesseract engine family: complementary fields are useful, but the two
-    # layouts never count as independent corroboration.
+    # PSM 4, 6 and 11 are intentionally all used because nutrition tables
+    # linearise differently as a single column, compact block or sparse text.
+    # They remain one Tesseract engine family: complementary fields are useful,
+    # but the layouts never count as independent corroboration.
     readings = []
     engine_errors: dict[str, str] = {}
     extractor_specs = (
         ("paddleocr", "paddleocr", extract_with_paddleocr),
+        ("tesseract-psm4", "tesseract", lambda path: extract_with_tesseract(path, language="spa", psm=4)),
         ("tesseract-psm6", "tesseract", lambda path: extract_with_tesseract(path, language="spa", psm=6)),
         ("tesseract-psm11", "tesseract", lambda path: extract_with_tesseract(path, language="spa", psm=11)),
     )
@@ -211,7 +212,7 @@ def main() -> int:
                         item["claim"] = (
                             f"{OCR_EVIDENCE_LEVEL}; source=MERCADONA_FIRST_PARTY/label image; "
                             f"reader=ensemble-{ENSEMBLE_VERSION}; "
-                            f"strategies=paddleocr+tesseract-psm6+tesseract-psm11; "
+                            f"strategies=paddleocr+tesseract-psm4+tesseract-psm6+tesseract-psm11; "
                             f"independent_engines={ensemble.independent_engine_families}; "
                             f"corroborated_fields={ensemble.corroborated_fields}; basis={ensemble.basis}"
                         )
