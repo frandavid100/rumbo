@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -37,6 +38,21 @@ def _eligible(row: dict[str, Any]) -> bool:
     # Structured ingredients are a strong first-party signal that this is a
     # packaged food/drink for which a nutrition panel is plausibly present.
     return bool(row.get("ingredients") and _back_photo(row))
+
+
+def _stable_sample_key(row: dict[str, Any]) -> tuple[str, str]:
+    """Spread bounded pilots across the whole eligible inventory deterministically.
+
+    Mercadona product ids are strongly clustered by product family and age. Sorting
+    numerically before applying a per-shard limit therefore made the first pilot
+    overwhelmingly fresh meat/produce and did not estimate OCR performance over
+    the packaged-food universe. A SHA-256 ordering is stable but pseudo-random,
+    while still processing every eligible row exactly once when --limit=0.
+    """
+    product_id = str(row.get("product_id") or "")
+    ean = str(row.get("ean") or "")
+    seed = f"{product_id}\0{ean}".encode("utf-8")
+    return hashlib.sha256(seed).hexdigest(), product_id
 
 
 def _reading(evidence: LabelImageEvidence, extracted):
@@ -129,7 +145,7 @@ def main() -> int:
 
     all_rows = _load(Path(args.products))
     eligible = [row for row in all_rows if _eligible(row)]
-    eligible.sort(key=lambda row: (len(str(row.get("product_id") or "")), str(row.get("product_id") or "")))
+    eligible.sort(key=_stable_sample_key)
     selected = [row for i, row in enumerate(eligible) if i % args.shard_count == args.shard_index]
     if args.limit > 0:
         selected = selected[: args.limit]
@@ -232,6 +248,7 @@ def main() -> int:
         "source_record_kind": "label image",
         "evidence_level": OCR_EVIDENCE_LEVEL,
         "mode": "PADDLEOCR_TESSERACT_INDEPENDENT_ENSEMBLE_VISUAL_REGIONS_BACK_LABEL",
+        "sample_order": "SHA256_PRODUCT_ID_EAN",
         "ocr_engines": list(OCR_ENGINES),
         "ocr_strategies": list(OCR_STRATEGIES),
         "ensemble_version": ENSEMBLE_VERSION,
