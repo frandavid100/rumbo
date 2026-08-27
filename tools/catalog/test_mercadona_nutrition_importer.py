@@ -55,12 +55,15 @@ class NutritionImporterTest(unittest.TestCase):
         ])
         self.assertEqual(calls, ["tesseract", "tesseract", "neural"])
 
-    def test_tesseract_and_neural_can_confirm_same_detected_region(self):
+    def test_tesseract_and_neural_can_confirm_original_without_visual_region(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            source, region = self.region_fixture(root)
+            source = root / "back.jpg"; source.write_bytes(b"x")
             calls = []
-            def detector(path, out): return [region]
+            detector_calls = []
+            def detector(path, out):
+                detector_calls.append("detector")
+                return []
             def tesseract(path):
                 calls.append("tesseract")
                 return TextExtraction(GOOD, .95, "tesseract", "5", "spa")
@@ -76,9 +79,10 @@ class NutritionImporterTest(unittest.TestCase):
         self.assertIsNotNone(result.candidate)
         self.assertEqual(result.candidate.nutrition["fat_g"], .6)
         self.assertEqual([a.stage for a in result.attempts], [
-            "TESSERACT_ORIGINAL", "INDEPENDENT_OCR_VISUAL_REGION"
+            "TESSERACT_ORIGINAL", "INDEPENDENT_OCR_ORIGINAL"
         ])
         self.assertEqual(calls, ["tesseract", "tesseract", "neural"])
+        self.assertEqual(detector_calls, [])
 
 
 if __name__ == "__main__":
