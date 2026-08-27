@@ -94,12 +94,17 @@ def main() -> int:
     matrix = {"include": [{"batch": f"{i:03d}"} for i in range(count)]}
     nonzero_strides = [s for s in strides if s]
     nonempty_bucket_sizes = [len(bucket) for bucket in buckets if bucket]
+    unresolved_min = min(nonempty_bucket_sizes) if nonempty_bucket_sizes else 0
+    unresolved_max = max(nonempty_bucket_sizes) if nonempty_bucket_sizes else 0
+    retry_fraction = (len(rows) / total) if total else 0.0
     summary = {
         "products": len(rows),
         "batches": count,
         "nonempty_batches": len(nonempty_bucket_sizes),
-        "unresolved_per_batch_min": min(nonempty_bucket_sizes) if nonempty_bucket_sizes else 0,
-        "unresolved_per_batch_max": max(nonempty_bucket_sizes) if nonempty_bucket_sizes else 0,
+        "unresolved_per_batch_min": unresolved_min,
+        "unresolved_per_batch_max": unresolved_max,
+        "retry_fraction": retry_fraction,
+        "fits_observed_fresh_runner_window": unresolved_max <= 6,
         "previous_successes": len(done & seen),
         "baseline_products": total,
         "run_number": run_number,
@@ -118,6 +123,8 @@ def main() -> int:
             f.write("batch_count=" + str(count) + "\n")
             f.write("retry_products=" + str(len(rows)) + "\n")
             f.write("previous_successes=" + str(len(done & seen)) + "\n")
+            f.write("unresolved_per_batch_max=" + str(unresolved_max) + "\n")
+            f.write("fits_observed_fresh_runner_window=" + ("true" if unresolved_max <= 6 else "false") + "\n")
     return 0
 
 
