@@ -1,8 +1,8 @@
 {
   "review_version": "alcampo-semantic-review-v1",
-  "nutritionally_usable_products": 6682,
+  "nutritionally_usable_products": 7859,
   "semantically_reviewed_skus": 0,
-  "remaining_semantic_review": 6682,
+  "remaining_semantic_review": 7859,
   "batch_size": 3000,
   "batch_path": "../../alcampo-fast-final/semantic_review_next.jsonl",
   "batch_priority_policy": "PRIMARY_MENU_ROLES_THEN_COMPLEMENTARY_THEN_AMBIGUOUS_SNACKS",
