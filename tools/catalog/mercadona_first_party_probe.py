@@ -224,7 +224,10 @@ def main() -> int:
         if index:
             time.sleep(args.delay)
         try:
-            payload, url = _get_json(f"/categories/{category_id}/", timeout=args.timeout, lang="es")
+            # Mercadona's current category-detail route is slash-sensitive: the
+            # collection accepts /categories/ but an individual category is
+            # /categories/{id} (a trailing slash returns 404).
+            payload, url = _get_json(f"/categories/{category_id}", timeout=args.timeout, lang="es")
             (raw_dir / f"category-{category_id}.json").write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
             category_ok += 1
@@ -238,7 +241,7 @@ def main() -> int:
 
     listing_rows = [
         _normalize(product, category_id=cid, category_name=cname,
-                   source_url=f"{API_ROOT}/categories/{cid}/" if cid else root_url,
+                   source_url=f"{API_ROOT}/categories/{cid}" if cid else root_url,
                    observed_at=observed_at, detail_observed=False)
         for product, cid, cname in listing_by_id.values()
     ]
@@ -249,7 +252,9 @@ def main() -> int:
         if index or roots:
             time.sleep(args.delay)
         try:
-            payload, url = _get_json(f"/products/{listing.product_id}/", timeout=args.timeout, lang="es")
+            # Product detail follows the same no-trailing-slash shape already
+            # used by the live Mercadona adapter in this repository.
+            payload, url = _get_json(f"/products/{listing.product_id}", timeout=args.timeout, lang="es")
             if not isinstance(payload, dict) or _string(payload.get("id")) not in (None, listing.product_id):
                 raise ValueError("Product detail payload does not match requested id")
             (raw_dir / f"product-{listing.product_id}.json").write_text(
