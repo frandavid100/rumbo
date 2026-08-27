@@ -5,6 +5,7 @@ from pathlib import Path
 from label_text_extractor import TextExtraction
 from mercadona_label_evidence import LabelImageEvidence
 from mercadona_label_pipeline import process_label_image
+from mercadona_nutrition_reader import OCR_EVIDENCE_LEVEL
 
 
 class MercadonaLabelPipelineTest(unittest.TestCase):
@@ -25,7 +26,9 @@ class MercadonaLabelPipelineTest(unittest.TestCase):
         result=process_label_image(self.evidence(),gtin='8400000000000',brand='Hacendado',downloader=downloader,extractor=extractor)
         self.assertEqual(result.status,'DECLARED')
         self.assertIsNotNone(result.candidate)
-        self.assertIn('DECLARED',result.candidate.claim)
+        self.assertEqual(result.candidate.evidence_level, OCR_EVIDENCE_LEVEL)
+        self.assertIn(OCR_EVIDENCE_LEVEL, result.candidate.claim)
+        self.assertNotIn('DECLARED;', result.candidate.claim)
         self.assertFalse(result.candidate.redistribution_allowed)
 
     def test_bad_image_never_produces_candidate(self):
