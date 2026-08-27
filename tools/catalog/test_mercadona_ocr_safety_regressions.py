@@ -35,6 +35,49 @@ Sal 0.16 g
         self.assertNotIn("protein_g", result.nutrition or {})
         self.assertIn("IMPOSSIBLE_PROTEIN_G", result.reasons)
 
+    def test_ingredient_fat_percentage_cannot_shadow_explicit_nutrition_row(self):
+        # Observed PP-OCR output for Mercadona product 15101. The image OCR is
+        # very high confidence, but the package has no explicit nutrition-section
+        # heading. The old generic `grasa` search matched `materia grasa láctea`
+        # in the ingredients and borrowed `Cacao: 31%`, silently replacing the
+        # actual later `Grasas/Lípidos\n35 g` row. Macro labels must be row-like.
+        observed = """CHOCOLATE EXTRAFINO CON LECHE
+INGREDIENTES
+Azúcar. leche entera en polvo. manteca de cacao. pasta de cacao.
+leche descremada en polvo. materia grasa láctea anhidra. emulgente:
+lecitinas. aroma. Cacao: 31% mínimo.
+100g
+Valor
+2320 kJ
+Energético/Energia 556 kcal
+Grasas/Lípidos
+35 g
+1.6 g
+de las cuales/dos quais:
+22g
+- Saturadas/Saturados
+1.0 g
+Hidratos de Carbono
+50g
+2.2g
+de los cuales/dos quais:
+49 g
+2.2g
+- Azúcares/Açúcares
+Proteínas
+9.3 g
+Sal
+0.2g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(result.status, "DECLARED", result)
+        self.assertEqual(result.nutrition, {
+            "calories": 556.0,
+            "fat_g": 35.0,
+            "carbohydrate_g": 50.0,
+            "protein_g": 9.3,
+        })
+
     def test_one_explicit_basis_is_enough_when_all_core_fields_are_independently_corroborated(self):
         # Observed on Mercadona product 2689: Paddle reads the explicit `100 g`
         # basis and all four macros, while Tesseract independently reads the same
