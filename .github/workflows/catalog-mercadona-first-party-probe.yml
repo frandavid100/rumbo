@@ -6,6 +6,8 @@ on:
     paths:
       - 'tools/catalog/mercadona_first_party_probe.py'
       - 'tools/catalog/mercadona_first_party_probe_v11.py'
+      - 'tools/catalog/mercadona_first_party_details.py'
+      - 'tools/catalog/mercadona_first_party_merge.py'
       - '.github/workflows/catalog-mercadona-first-party-probe.yml'
   workflow_dispatch:
 
@@ -17,9 +19,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  probe:
+  inventory:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,20 +29,93 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate probe syntax
+      - name: Validate Mercadona first-party scripts
         working-directory: tools/catalog
-        run: python -m py_compile mercadona_first_party_probe.py mercadona_first_party_probe_v11.py
-      - name: Probe official Mercadona catalogue API conservatively
+        run: python -m py_compile mercadona_first_party_probe.py mercadona_first_party_probe_v11.py mercadona_first_party_details.py mercadona_first_party_merge.py
+      - name: Enumerate official Mercadona catalogue
         working-directory: tools/catalog
         run: |
           python mercadona_first_party_probe_v11.py \
-            --out mercadona-first-party-probe \
-            --delay 0.8 \
-            --detail-limit 24
+            --out mercadona-first-party-inventory \
+            --delay 0.5 \
+            --detail-limit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-first-party-inventory
+          path: tools/catalog/mercadona-first-party-inventory/
+          retention-days: 14
+          if-no-files-found: error
+
+  details:
+    needs: inventory
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-inventory
+          path: tools/catalog/mercadona-inventory
+      - name: Fetch first-party product details
+        working-directory: tools/catalog
+        run: |
+          python mercadona_first_party_details.py \
+            --inventory mercadona-inventory/products.jsonl \
+            --out mercadona-detail-shard \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 16 \
+            --delay 0.4
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mercadona-first-party-probe
-          path: tools/catalog/mercadona-first-party-probe/
+          name: mercadona-detail-shard-${{ matrix.shard }}
+          path: tools/catalog/mercadona-detail-shard/
           retention-days: 14
           if-no-files-found: warn
+
+  merge:
+    needs: [inventory, details]
+    if: always() && needs.inventory.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-inventory
+          path: tools/catalog/mercadona-inventory
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-detail-shard-*
+          path: tools/catalog/mercadona-details
+          merge-multiple: true
+      - name: Merge auditable Mercadona first-party cut
+        working-directory: tools/catalog
+        run: |
+          python mercadona_first_party_merge.py \
+            --inventory mercadona-inventory/products.jsonl \
+            --details-glob 'mercadona-details/details-*.jsonl' \
+            --errors-glob 'mercadona-details/errors-*.jsonl' \
+            --out mercadona-first-party-final
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final/
+          retention-days: 14
+          if-no-files-found: error
