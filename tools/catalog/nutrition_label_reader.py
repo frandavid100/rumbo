@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.2.0"
+READER_VERSION = "1.3.0"
 
 
 @dataclass(frozen=True)
@@ -138,7 +138,12 @@ def _plausible(n: dict[str, float]) -> tuple[bool, list[str]]:
         reasons.append("IMPOSSIBLE_CALORIES")
 
     estimated = 9 * n["fat_g"] + 4 * n["carbohydrate_g"] + 4 * n["protein_g"]
-    tolerance = max(35.0, n["calories"] * 0.25)
+    # OCR false positives frequently combine individually plausible values from
+    # adjacent rows/columns. For an automatically usable OCR record we prefer
+    # precision over recall: allow ordinary label rounding, but route wider
+    # discrepancies to REVIEW. Products whose energy includes fibre/polyols/
+    # organic acids may therefore require review rather than unsafe inference.
+    tolerance = max(8.0, n["calories"] * 0.10)
     if abs(estimated - n["calories"]) > tolerance:
         reasons.append(f"ENERGY_MACRO_MISMATCH:{estimated:.1f}")
     return not reasons, reasons
