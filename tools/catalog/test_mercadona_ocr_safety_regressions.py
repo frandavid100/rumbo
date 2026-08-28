@@ -1,10 +1,29 @@
+import tempfile
 import unittest
+from pathlib import Path
 
+from mercadona_neural_ocr_wave import _ocr_targets
 from nutrition_label_reader import read_nutrition_label
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
 
 class MercadonaOCRSafetyRegressionsTest(unittest.TestCase):
+    def test_no_visual_region_falls_back_to_full_back_image(self):
+        # Real 256-product validation showed a material class of packaged foods
+        # whose rear label contains nutrition text but no sufficiently ruled table
+        # for the morphology detector. A detector miss must not become a hard OCR
+        # miss: retry the same official rear-label image, while keeping the normal
+        # independent-engine/parser/coherence acceptance gates unchanged.
+        with tempfile.TemporaryDirectory() as td:
+            image_path = Path(td) / "back-label.jpg"
+            image_path.write_bytes(b"fixture")
+            targets = _ocr_targets(image_path, [])
+        self.assertEqual(len(targets), 1)
+        kind, target_path, region = targets[0]
+        self.assertEqual(kind, "full_back_image")
+        self.assertEqual(target_path, image_path)
+        self.assertIsNone(region)
+
     def test_impossible_partial_calories_do_not_enter_ensemble_evidence(self):
         # Observed Tesseract failure on a real Mercadona back label: the printed
         # `442 kJ / 106 kcal` was linearised as `442/4106`, while other rows
