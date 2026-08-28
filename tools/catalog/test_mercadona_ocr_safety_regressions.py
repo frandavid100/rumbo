@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mercadona_neural_ocr_wave import _ocr_targets
+from mercadona_neural_ocr_wave import _fuse_declared_only_readings, _ocr_targets
 from nutrition_label_reader import read_nutrition_label
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
@@ -23,6 +23,69 @@ class MercadonaOCRSafetyRegressionsTest(unittest.TestCase):
         self.assertEqual(kind, "full_back_image")
         self.assertEqual(target_path, image_path)
         self.assertIsNone(region)
+
+    def test_declared_only_fallback_can_ignore_noncredible_review_noise(self):
+        # A third independent family is useful only if it can corroborate a clean
+        # Paddle reading without being vetoed by a Tesseract layout that already
+        # failed Rumbo's own deterministic energy/macro validation. REVIEW is not
+        # positive evidence and must not be allowed to poison two independently
+        # DECLARED, matching observations.
+        clean = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 711 kJ / 170 kcal
+Grasas 10 g
+Hidratos de carbono 0.8 g
+Proteínas 19 g
+Sal 0.3 g
+""", extraction_confidence=.98)
+        noisy = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 711 kJ / 170 kcal
+Grasas 90 g
+Hidratos de carbono 0.8 g
+Proteínas 19 g
+Sal 0.3 g
+""", extraction_confidence=.92)
+        self.assertEqual(clean.status, "DECLARED")
+        self.assertEqual(noisy.status, "REVIEW")
+        readings = (
+            ("paddleocr", "paddleocr", clean, .98),
+            ("easyocr", "easyocr", clean, .96),
+            ("tesseract-psm6", "tesseract", noisy, .92),
+        )
+        raw = fuse_ocr_readings(
+            ParsedOCRReading(strategy, result, confidence, family)
+            for strategy, family, result, confidence in readings
+        )
+        self.assertEqual(raw.status, "REVIEW")
+        strict = _fuse_declared_only_readings(readings, "visual_region")
+        self.assertEqual(strict.status, "DECLARED", strict)
+        self.assertEqual(strict.independent_engine_families, 2)
+        self.assertEqual(strict.corroborated_fields, 4)
+
+    def test_declared_only_fallback_keeps_credible_engine_conflict(self):
+        clean = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 711 kJ / 170 kcal
+Grasas 10 g
+Hidratos de carbono 0.8 g
+Proteínas 19 g
+Sal 0.3 g
+""", extraction_confidence=.98)
+        conflicting = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 690 kJ / 165 kcal
+Grasas 5 g
+Hidratos de carbono 10 g
+Proteínas 20 g
+Sal 0.3 g
+""", extraction_confidence=.94)
+        self.assertEqual(clean.status, "DECLARED")
+        self.assertEqual(conflicting.status, "DECLARED")
+        readings = (
+            ("paddleocr", "paddleocr", clean, .98),
+            ("easyocr", "easyocr", clean, .96),
+            ("tesseract-psm6", "tesseract", conflicting, .94),
+        )
+        strict = _fuse_declared_only_readings(readings, "visual_region")
+        self.assertEqual(strict.status, "REVIEW")
+        self.assertTrue(any(reason.startswith("OCR_FIELD_CONFLICT") for reason in strict.reasons))
 
     def test_impossible_partial_calories_do_not_enter_ensemble_evidence(self):
         # Observed Tesseract failure on a real Mercadona back label: the printed
