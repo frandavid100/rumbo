@@ -83,6 +83,9 @@ jobs:
       - name: Probar pipeline Mercadona etiqueta a DECLARED
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_label_pipeline.py
+      - name: Probar regresiones de seguridad OCR Mercadona
+        working-directory: tools/catalog
+        run: python -m unittest -v test_mercadona_ocr_safety_regressions.py
       - name: Probar importador nutricional con fallback neuronal
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_nutrition_importer.py
