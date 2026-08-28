@@ -1,0 +1,179 @@
+name: Catalog Mercadona neural OCR wave 512
+
+# Second bounded scale-up after the validated 64- and 256-product waves.
+# The deterministic sample is exactly the first 512 eligible rows in SHA-256
+# order, so it is a strict superset of both previous validation waves.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-wave-512.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-wave-512-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative OCR regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+      - name: OCR deterministic 512-product validation wave
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-neural-ocr-wave-512 \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 32 \
+            --limit 16
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-wave-512-${{ matrix.shard }}
+          path: tools/catalog/mercadona-neural-ocr-wave-512/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-wave-512-*
+          path: input
+          merge-multiple: true
+      - name: Merge and enforce OCR safety contract
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json
+          from pathlib import Path
+
+          rows = []
+          shard_summaries = []
+          for path in sorted(glob.glob('input/results-*.jsonl')):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      rows.append(json.loads(line))
+          for path in sorted(glob.glob('input/summary-*.json')):
+              shard_summaries.append(json.loads(Path(path).read_text(encoding='utf-8')))
+
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          declared = [row for row in rows if row.get('status') == 'DECLARED']
+          invalid_declared = []
+          provenance_errors = []
+          duplicate_ids = []
+          seen_ids = set()
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if pid in seen_ids:
+                  duplicate_ids.append(pid)
+              seen_ids.add(pid)
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(f'{pid}:evidence_level')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(f'{pid}:source')
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(f'{pid}:redistribution')
+              if 'classified' in row or 'menu_eligible' in row or 'CLASSIFIED' in row or 'MENU_ELIGIBLE' in row:
+                  provenance_errors.append(f'{pid}:classification')
+
+          for row in declared:
+              attempts = row.get('attempts') or []
+              accepted = next((a for a in attempts if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              ensemble = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+              if (
+                  ensemble.get('independent_engine_families', 0) < 2
+                  or ensemble.get('corroborated_fields', 0) < 4
+                  or any(nutrition.get(field) is None for field in required)
+              ):
+                  invalid_declared.append(row.get('product_id'))
+
+          eligible = max((int(s.get('eligible_products', 0)) for s in shard_summaries), default=0)
+          expected = 512
+          summary = {
+              'inventory_products': 4280,
+              'eligible_products': eligible,
+              'expected_sample': expected,
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared_rate': round(len(declared) / len(rows), 4) if rows else 0.0,
+              'usable_macro_counts': {
+                  'calories': len(declared),
+                  'protein_g': len(declared),
+                  'carbohydrate_g': len(declared),
+                  'fat_g': len(declared),
+              },
+              'declared_with_two_independent_engines_and_four_corroborated_fields': len(declared) - len(invalid_declared),
+              'invalid_declared_product_ids': invalid_declared,
+              'duplicate_product_ids': duplicate_ids,
+              'provenance_errors': provenance_errors,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows), encoding='utf-8')
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if len(rows) != expected:
+              raise SystemExit(f'Incomplete validation wave: processed={len(rows)} expected={expected}')
+          if duplicate_ids:
+              raise SystemExit('Duplicate product ids: ' + ','.join(duplicate_ids[:20]))
+          if provenance_errors:
+              raise SystemExit('Provenance contract violated: ' + ','.join(provenance_errors[:20]))
+          if invalid_declared:
+              raise SystemExit('Unsafe DECLARED rows detected: ' + ','.join(map(str, invalid_declared)))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-wave-512-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: warn
