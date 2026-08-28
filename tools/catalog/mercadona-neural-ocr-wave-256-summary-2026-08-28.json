@@ -1,0 +1,34 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33137728499,
+  "workflow_conclusion": "success",
+  "inventory_products": 4280,
+  "eligible_products": 2630,
+  "sample_order": "SHA256_PRODUCT_ID_EAN",
+  "expected_sample": 256,
+  "processed": 256,
+  "status_counts": {
+    "DECLARED": 13,
+    "REVIEW": 243,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.0508,
+  "usable_macro_counts": {
+    "calories": 13,
+    "protein_g": 13,
+    "carbohydrate_g": 13,
+    "fat_g": 13
+  },
+  "declared_with_two_independent_engines_and_four_corroborated_fields": 13,
+  "invalid_declared_product_ids": [],
+  "safety_assessment": "VALIDATED_CONSERVATIVE",
+  "notes": [
+    "All 13 accepted rows have at least two independent OCR engine families and four corroborated core fields.",
+    "No REVIEW row is promoted to usable nutrition.",
+    "The 5.08% acceptance rate is close to the previous 64-product pilot and supports a further bounded scale-up rather than immediate full-universe execution.",
+    "The next 512-product validation wave is a strict deterministic superset of this sample and adds explicit provenance, duplicate-id, redistribution and classification-field guards."
+  ]
+}
