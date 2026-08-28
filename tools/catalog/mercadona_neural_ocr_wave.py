@@ -15,7 +15,7 @@ from mercadona_label_evidence import LabelImageEvidence
 from mercadona_label_pipeline import download_label_image
 from mercadona_nutrition_reader import OCR_EVIDENCE_LEVEL, VisionExtraction, read_evidence
 from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, fuse_ocr_readings
-from nutrition_visual_table_detector import detect_visual_table_regions
+from nutrition_visual_table_detector import VisualTableRegion, detect_visual_table_regions
 
 MAX_REGIONS_PER_PRODUCT = 2
 OCR_ENGINES = ("paddleocr", "tesseract")
@@ -53,6 +53,23 @@ def _stable_sample_key(row: dict[str, Any]) -> tuple[str, str]:
     ean = str(row.get("ean") or "")
     seed = f"{product_id}\0{ean}".encode("utf-8")
     return hashlib.sha256(seed).hexdigest(), product_id
+
+
+def _ocr_targets(
+    image_path: Path,
+    regions: list[VisualTableRegion],
+) -> list[tuple[str, Path, VisualTableRegion | None]]:
+    """Choose bounded OCR targets without treating morphology as a hard gate.
+
+    The visual detector deliberately looks for ruled/table-like structure. Real
+    Mercadona rear labels also contain borderless nutrition panels, so a detector
+    miss cannot prove the absence of nutrition. In that case retry the official
+    rear-label image itself. Acceptance remains entirely downstream: the parser,
+    energy/macro coherence and two-independent-engine corroboration are unchanged.
+    """
+    if regions:
+        return [("visual_region", region.path, region) for region in regions[:MAX_REGIONS_PER_PRODUCT]]
+    return [("full_back_image", image_path, None)]
 
 
 def _reading(evidence: LabelImageEvidence, extracted):
@@ -201,18 +218,29 @@ def main() -> int:
                 regions = detect_visual_table_regions(image_path, base / "regions")
                 item["visual_regions_detected"] = len(regions)
                 if not regions:
+                    # Keep this diagnostic if even the bounded full-image rescue
+                    # remains wholly unresolved; REVIEW/DECLARED may supersede it.
                     item["status"] = "NO_VISUAL_REGION"
-                for region in regions[:MAX_REGIONS_PER_PRODUCT]:
-                    readings, engine_errors, ensemble = _extract_region(evidence, region.path)
+                for target_kind, target_path, region in _ocr_targets(image_path, regions):
+                    readings, engine_errors, ensemble = _extract_region(evidence, target_path)
+                    region_payload = {
+                        "name": region.name,
+                        "box": list(region.box),
+                        "score": region.score,
+                        "horizontal_lines": region.horizontal_lines,
+                        "vertical_lines": region.vertical_lines,
+                        "line_density": region.line_density,
+                    } if region is not None else {
+                        "name": "full_back_image",
+                        "box": None,
+                        "score": None,
+                        "horizontal_lines": None,
+                        "vertical_lines": None,
+                        "line_density": None,
+                    }
                     attempt = {
-                        "region": {
-                            "name": region.name,
-                            "box": list(region.box),
-                            "score": region.score,
-                            "horizontal_lines": region.horizontal_lines,
-                            "vertical_lines": region.vertical_lines,
-                            "line_density": region.line_density,
-                        },
+                        "target_kind": target_kind,
+                        "region": region_payload,
                         "engines": {
                             strategy: _reading_payload(reading)
                             for strategy, _family, reading in readings
