@@ -117,7 +117,7 @@ def _ensemble_payload(ensemble) -> dict[str, Any]:
     }
 
 
-def _extract_region(evidence: LabelImageEvidence, region_path: Path):
+def _extract_region(evidence: LabelImageEvidence, region_path: Path, target_kind: str):
     # PSM 4, 6 and 11 are intentionally all used because nutrition tables
     # linearise differently as a single column, compact block or sparse text.
     # They remain one Tesseract engine family: complementary fields are useful,
@@ -140,7 +140,7 @@ def _extract_region(evidence: LabelImageEvidence, region_path: Path):
 
     ensemble = fuse_ocr_readings(
         ParsedOCRReading(
-            strategy=f"{strategy}:visual-region",
+            strategy=f"{strategy}:{target_kind}",
             result=reading.parsed,
             extraction_confidence=reading.extraction.confidence,
             engine_family=family,
@@ -222,7 +222,7 @@ def main() -> int:
                     # remains wholly unresolved; REVIEW/DECLARED may supersede it.
                     item["status"] = "NO_VISUAL_REGION"
                 for target_kind, target_path, region in _ocr_targets(image_path, regions):
-                    readings, engine_errors, ensemble = _extract_region(evidence, target_path)
+                    readings, engine_errors, ensemble = _extract_region(evidence, target_path, target_kind)
                     region_payload = {
                         "name": region.name,
                         "box": list(region.box),
@@ -255,7 +255,7 @@ def main() -> int:
                         item["nutrition"] = ensemble.nutrition
                         item["claim"] = (
                             f"{OCR_EVIDENCE_LEVEL}; source=MERCADONA_FIRST_PARTY/label image; "
-                            f"reader=ensemble-{ENSEMBLE_VERSION}; "
+                            f"reader=ensemble-{ENSEMBLE_VERSION}; target={target_kind}; "
                             f"strategies=paddleocr+tesseract-psm4+tesseract-psm6+tesseract-psm11; "
                             f"independent_engines={ensemble.independent_engine_families}; "
                             f"corroborated_fields={ensemble.corroborated_fields}; basis={ensemble.basis}"
@@ -275,7 +275,8 @@ def main() -> int:
         "source": "MERCADONA_FIRST_PARTY",
         "source_record_kind": "label image",
         "evidence_level": OCR_EVIDENCE_LEVEL,
-        "mode": "PADDLEOCR_TESSERACT_INDEPENDENT_ENSEMBLE_VISUAL_REGIONS_BACK_LABEL",
+        "mode": "PADDLEOCR_TESSERACT_INDEPENDENT_ENSEMBLE_VISUAL_REGIONS_WITH_FULL_BACK_FALLBACK",
+        "fallback_policy": "FULL_BACK_IMAGE_ONLY_WHEN_NO_VISUAL_REGION",
         "sample_order": "SHA256_PRODUCT_ID_EAN",
         "ocr_engines": list(OCR_ENGINES),
         "ocr_strategies": list(OCR_STRATEGIES),
