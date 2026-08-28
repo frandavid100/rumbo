@@ -1,0 +1,263 @@
+name: Catalog Mercadona neural OCR wave 2048
+
+# Fourth bounded scale-up after validated 64, 256, 512 and recovered/finalized
+# 1024-product waves. 128 shards x 16 rows covers exactly the first 2048
+# eligible rows in stable SHA-256 order, a strict deterministic superset.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-wave-2048.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-wave-2048-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative OCR regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+      - name: OCR deterministic 2048-product validation wave
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-neural-ocr-wave-2048 \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 128 \
+            --limit 16
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-wave-2048-${{ matrix.shard }}
+          path: tools/catalog/mercadona-neural-ocr-wave-2048/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-wave-2048-*
+          path: input
+          merge-multiple: true
+      - name: Download validated final 1024-wave baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-neural-ocr-wave-1024-final
+          path: prior-1024
+          github-token: ${{ github.token }}
+          run-id: 33189633845
+      - name: Merge, persist staging and enforce OCR safety/reproducibility contract
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json, sqlite3
+          from pathlib import Path
+
+          rows = []
+          shard_summaries = []
+          for path in sorted(glob.glob('input/results-*.jsonl')):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      rows.append(json.loads(line))
+          for path in sorted(glob.glob('input/summary-*.json')):
+              shard_summaries.append(json.loads(Path(path).read_text(encoding='utf-8')))
+
+          prior_path = Path('prior-1024/results.jsonl')
+          prior_rows = [json.loads(line) for line in prior_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          prior_by_id = {str(row.get('product_id') or ''): row for row in prior_rows}
+          current_by_id = {str(row.get('product_id') or ''): row for row in rows}
+
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          declared = [row for row in rows if row.get('status') == 'DECLARED']
+          invalid_declared = []
+          provenance_errors = []
+          duplicate_ids = []
+          seen_ids = set()
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if pid in seen_ids:
+                  duplicate_ids.append(pid)
+              seen_ids.add(pid)
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(f'{pid}:evidence_level')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(f'{pid}:source')
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(f'{pid}:redistribution')
+              if any(k in row for k in ('classified', 'menu_eligible', 'CLASSIFIED', 'MENU_ELIGIBLE')):
+                  provenance_errors.append(f'{pid}:classification')
+
+          for row in declared:
+              attempts = row.get('attempts') or []
+              accepted = next((a for a in attempts if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              ensemble = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+              if (
+                  ensemble.get('independent_engine_families', 0) < 2
+                  or ensemble.get('corroborated_fields', 0) < 4
+                  or any(nutrition.get(field) is None for field in required)
+              ):
+                  invalid_declared.append(row.get('product_id'))
+
+          missing_prior_ids = sorted(set(prior_by_id) - set(current_by_id))
+          overlap_status_changes = []
+          overlap_declared_value_conflicts = []
+          for pid, prior in prior_by_id.items():
+              current = current_by_id.get(pid)
+              if current is None:
+                  continue
+              if prior.get('status') != current.get('status'):
+                  overlap_status_changes.append({
+                      'product_id': pid,
+                      'prior': prior.get('status'),
+                      'current': current.get('status'),
+                  })
+              if prior.get('status') == 'DECLARED' and current.get('status') == 'DECLARED' and prior.get('nutrition') != current.get('nutrition'):
+                  overlap_declared_value_conflicts.append({
+                      'product_id': pid,
+                      'prior': prior.get('nutrition'),
+                      'current': current.get('nutrition'),
+                  })
+
+          new_rows = [row for row in rows if str(row.get('product_id') or '') not in prior_by_id]
+          new_counts = Counter(row.get('status', 'UNKNOWN') for row in new_rows)
+          eligible = max((int(s.get('eligible_products', 0)) for s in shard_summaries), default=0)
+          expected = 2048
+          summary = {
+              'inventory_products': 4280,
+              'eligible_products': eligible,
+              'expected_sample': expected,
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared_rate': round(len(declared) / len(rows), 4) if rows else 0.0,
+              'usable_macro_counts': {
+                  'calories': len(declared),
+                  'protein_g': len(declared),
+                  'carbohydrate_g': len(declared),
+                  'fat_g': len(declared),
+              },
+              'declared_with_two_independent_engines_and_four_corroborated_fields': len(declared) - len(invalid_declared),
+              'invalid_declared_product_ids': invalid_declared,
+              'duplicate_product_ids': duplicate_ids,
+              'provenance_errors': provenance_errors,
+              'reproducibility_against_1024_wave': {
+                  'baseline_products': len(prior_rows),
+                  'missing_prior_product_ids': missing_prior_ids,
+                  'status_changes': overlap_status_changes,
+                  'declared_value_conflicts': overlap_declared_value_conflicts,
+              },
+              'new_1024_status_counts': dict(sorted(new_counts.items())),
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows), encoding='utf-8')
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+
+          db = sqlite3.connect('merged/results.sqlite')
+          db.execute('''CREATE TABLE ocr_results (
+              product_id TEXT PRIMARY KEY,
+              ean TEXT,
+              name TEXT,
+              brand TEXT,
+              category_id TEXT,
+              category_name TEXT,
+              status TEXT NOT NULL,
+              calories REAL,
+              protein_g REAL,
+              carbohydrate_g REAL,
+              fat_g REAL,
+              image_url TEXT,
+              evidence_level TEXT NOT NULL,
+              source TEXT NOT NULL,
+              source_record_kind TEXT NOT NULL,
+              redistribution_allowed INTEGER NOT NULL,
+              json_payload TEXT NOT NULL
+          )''')
+          for row in rows:
+              nutrition = row.get('nutrition') or {}
+              db.execute('''INSERT INTO ocr_results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (
+                  str(row.get('product_id') or ''), row.get('ean'), row.get('name'), row.get('brand'),
+                  row.get('category_id'), row.get('category_name'), row.get('status'), nutrition.get('calories'),
+                  nutrition.get('protein_g'), nutrition.get('carbohydrate_g'), nutrition.get('fat_g'), row.get('image_url'),
+                  row.get('evidence_level'), row.get('source'), row.get('source_record_kind'),
+                  0 if row.get('redistribution_allowed') is False else 1,
+                  json.dumps(row, ensure_ascii=False, sort_keys=True),
+              ))
+          db.execute('CREATE INDEX idx_ocr_status ON ocr_results(status)')
+          db.commit()
+          db.close()
+
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if len(rows) != expected:
+              raise SystemExit(f'Incomplete validation wave: processed={len(rows)} expected={expected}')
+          if len(prior_rows) != 1024:
+              raise SystemExit(f'Invalid 1024-wave baseline: rows={len(prior_rows)}')
+          if missing_prior_ids:
+              raise SystemExit('2048 wave is not a strict superset of 1024 baseline')
+          if overlap_status_changes:
+              raise SystemExit('OCR reproducibility regression on 1024-wave overlap')
+          if overlap_declared_value_conflicts:
+              raise SystemExit('Conflicting DECLARED nutrition on 1024-wave overlap')
+          if duplicate_ids:
+              raise SystemExit('Duplicate product ids: ' + ','.join(duplicate_ids[:20]))
+          if provenance_errors:
+              raise SystemExit('Provenance contract violated: ' + ','.join(provenance_errors[:20]))
+          if invalid_declared:
+              raise SystemExit('Unsafe DECLARED rows detected: ' + ','.join(map(str, invalid_declared)))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-wave-2048-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: warn
