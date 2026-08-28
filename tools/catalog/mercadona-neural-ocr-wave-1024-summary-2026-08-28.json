@@ -1,0 +1,58 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33189633845,
+  "workflow_conclusion": "success",
+  "source_workflow_runs": {
+    "main_partial": 33155099676,
+    "recovery_shard_30": 33166509642,
+    "recovery_shard_57": 33179357598,
+    "baseline_512": 33143994012
+  },
+  "artifact": "mercadona-neural-ocr-wave-1024-final",
+  "inventory_products": 4280,
+  "eligible_products": 2630,
+  "sample_order": "SHA256_PRODUCT_ID_EAN",
+  "expected_sample": 1024,
+  "processed": 1024,
+  "status_counts": {
+    "DECLARED": 53,
+    "REVIEW": 971,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.0518,
+  "usable_macro_counts": {
+    "calories": 53,
+    "protein_g": 53,
+    "carbohydrate_g": 53,
+    "fat_g": 53
+  },
+  "declared_with_two_independent_engines_and_four_corroborated_fields": 53,
+  "invalid_declared_product_ids": [],
+  "duplicate_conflicts": [],
+  "provenance_errors": [],
+  "reproducibility_against_512_wave": {
+    "baseline_products": 512,
+    "missing_prior_product_ids": [],
+    "status_changes": [],
+    "declared_value_conflicts": []
+  },
+  "new_512_status_counts": {
+    "DECLARED": 31,
+    "REVIEW": 481,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "safety_assessment": "VALIDATED_CONSERVATIVE_STABLE",
+  "notes": [
+    "The original 1024 workflow completed 992 rows; timed-out shards 30 and 57 were rerun independently and contributed the missing 32 rows.",
+    "A dedicated finalization workflow consolidated all 1024 rows into auditable JSONL and SQLite and re-enforced the complete safety, provenance and reproducibility contract.",
+    "All 53 accepted rows have at least two independent OCR engine families and four corroborated core fields, with calories, protein, carbohydrate and fat present.",
+    "No REVIEW row is promoted to usable nutrition; there are no ERROR or NO_VISUAL_REGION outcomes in the final sample.",
+    "The recovered 1024-product wave is a strict deterministic superset of the validated 512-product wave.",
+    "All 512 prior statuses reproduced exactly and every prior DECLARED nutrition value remained identical.",
+    "The 5.18% acceptance rate remains deliberately conservative and supports a further bounded 2048-product scale-up before executing the full 2630-product eligible universe."
+  ]
+}
