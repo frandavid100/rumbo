@@ -9,6 +9,7 @@ import tempfile
 import time
 from typing import Any
 
+from label_easyocr_extractor import extract_with_easyocr
 from label_neural_extractor import extract_with_paddleocr
 from label_text_extractor import extract_with_tesseract
 from mercadona_label_evidence import LabelImageEvidence
@@ -18,8 +19,8 @@ from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, fuse_ocr_
 from nutrition_visual_table_detector import VisualTableRegion, detect_visual_table_regions
 
 MAX_REGIONS_PER_PRODUCT = 2
-OCR_ENGINES = ("paddleocr", "tesseract")
-OCR_STRATEGIES = ("paddleocr", "tesseract-psm4", "tesseract-psm6", "tesseract-psm11")
+OCR_ENGINES = ("paddleocr", "tesseract", "easyocr")
+OCR_STRATEGIES = ("paddleocr", "tesseract-psm4", "tesseract-psm6", "tesseract-psm11", "easyocr")
 
 
 def _load(path: Path) -> list[dict[str, Any]]:
@@ -117,6 +118,38 @@ def _ensemble_payload(ensemble) -> dict[str, Any]:
     }
 
 
+def _fuse_declared_only_readings(readings, target_kind: str):
+    """Fuse only independently parser-validated observations.
+
+    A REVIEW reading is useful audit evidence, but it must not veto two matching
+    readings that have each already passed the deterministic label parser and
+    energy/macro checks. Conversely, every conflicting DECLARED observation stays
+    in the fusion and therefore still forces REVIEW.
+    """
+    return fuse_ocr_readings(
+        ParsedOCRReading(
+            strategy=f"{strategy}:{target_kind}",
+            result=result,
+            extraction_confidence=confidence,
+            engine_family=family,
+        )
+        for strategy, family, result, confidence in readings
+        if getattr(result, "status", None) == "DECLARED"
+    )
+
+
+def _as_parsed_readings(readings, target_kind: str):
+    return tuple(
+        ParsedOCRReading(
+            strategy=f"{strategy}:{target_kind}",
+            result=reading.parsed,
+            extraction_confidence=reading.extraction.confidence,
+            engine_family=family,
+        )
+        for strategy, family, reading in readings
+    )
+
+
 def _extract_region(evidence: LabelImageEvidence, region_path: Path, target_kind: str):
     # PSM 4, 6 and 11 are intentionally all used because nutrition tables
     # linearise differently as a single column, compact block or sparse text.
@@ -138,15 +171,36 @@ def _extract_region(evidence: LabelImageEvidence, region_path: Path, target_kind
         except Exception as exc:
             engine_errors[strategy] = f"{type(exc).__name__}:{exc}"
 
-    ensemble = fuse_ocr_readings(
-        ParsedOCRReading(
-            strategy=f"{strategy}:{target_kind}",
-            result=reading.parsed,
-            extraction_confidence=reading.extraction.confidence,
-            engine_family=family,
-        )
-        for strategy, family, reading in readings
-    )
+    ensemble = fuse_ocr_readings(_as_parsed_readings(readings, target_kind))
+
+    # EasyOCR is deliberately a bounded rescue, not a compulsory third vote.
+    # It cannot make an unsafe parse valid by itself, so only pay its CPU/model
+    # cost when another independent engine already has a parser-DECLARED reading
+    # that lacks safe corroboration from the Paddle/Tesseract baseline.
+    if not ensemble.declared_usable and any(reading.parsed.status == "DECLARED" for _s, _f, reading in readings):
+        try:
+            extracted = extract_with_easyocr(region_path)
+            reading = _reading(evidence, extracted)
+            readings.append(("easyocr", "easyocr", reading))
+        except Exception as exc:
+            engine_errors["easyocr"] = f"{type(exc).__name__}:{exc}"
+        else:
+            raw_with_easyocr = fuse_ocr_readings(_as_parsed_readings(readings, target_kind))
+            if raw_with_easyocr.declared_usable:
+                ensemble = raw_with_easyocr
+            else:
+                strict = _fuse_declared_only_readings(
+                    (
+                        (strategy, family, reading.parsed, reading.extraction.confidence)
+                        for strategy, family, reading in readings
+                    ),
+                    target_kind,
+                )
+                # REVIEW observations are not positive evidence. If their only
+                # effect was to poison two matching, independently DECLARED reads,
+                # use the clean fusion. Credible DECLARED conflicts remain REVIEW.
+                ensemble = strict if strict.declared_usable else raw_with_easyocr
+
     return readings, engine_errors, ensemble
 
 
@@ -253,10 +307,11 @@ def main() -> int:
                         item["status"] = "DECLARED"
                         item["basis"] = ensemble.basis
                         item["nutrition"] = ensemble.nutrition
+                        attempted_strategies = "+".join(strategy for strategy, _family, _reading_obj in readings)
                         item["claim"] = (
                             f"{OCR_EVIDENCE_LEVEL}; source=MERCADONA_FIRST_PARTY/label image; "
                             f"reader=ensemble-{ENSEMBLE_VERSION}; target={target_kind}; "
-                            f"strategies=paddleocr+tesseract-psm4+tesseract-psm6+tesseract-psm11; "
+                            f"strategies={attempted_strategies}; "
                             f"independent_engines={ensemble.independent_engine_families}; "
                             f"corroborated_fields={ensemble.corroborated_fields}; basis={ensemble.basis}"
                         )
@@ -275,8 +330,8 @@ def main() -> int:
         "source": "MERCADONA_FIRST_PARTY",
         "source_record_kind": "label image",
         "evidence_level": OCR_EVIDENCE_LEVEL,
-        "mode": "PADDLEOCR_TESSERACT_INDEPENDENT_ENSEMBLE_VISUAL_REGIONS_WITH_FULL_BACK_FALLBACK",
-        "fallback_policy": "FULL_BACK_IMAGE_ONLY_WHEN_NO_VISUAL_REGION",
+        "mode": "PADDLEOCR_TESSERACT_WITH_CONDITIONAL_EASYOCR_CORROBORATION",
+        "fallback_policy": "FULL_BACK_IMAGE_ONLY_WHEN_NO_VISUAL_REGION; EASYOCR_ONLY_WHEN_BASELINE_HAS_DECLARED_UNCORROBORATED_READING",
         "sample_order": "SHA256_PRODUCT_ID_EAN",
         "ocr_engines": list(OCR_ENGINES),
         "ocr_strategies": list(OCR_STRATEGIES),
