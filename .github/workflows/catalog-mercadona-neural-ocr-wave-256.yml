@@ -47,11 +47,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
           python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
-          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' opencv-python-headless Pillow
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
       - name: Run conservative OCR regression tests
         working-directory: tools/catalog
         run: |
           python -m unittest -v \
+            test_label_easyocr_extractor.py \
             test_nutrition_label_reader.py \
             test_nutrition_ocr_ensemble.py \
             test_mercadona_label_pipeline.py \
