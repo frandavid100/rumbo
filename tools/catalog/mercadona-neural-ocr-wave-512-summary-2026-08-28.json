@@ -1,0 +1,49 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33143994012,
+  "workflow_conclusion": "success",
+  "inventory_products": 4280,
+  "eligible_products": 2630,
+  "sample_order": "SHA256_PRODUCT_ID_EAN",
+  "expected_sample": 512,
+  "processed": 512,
+  "status_counts": {
+    "DECLARED": 22,
+    "REVIEW": 490,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.043,
+  "usable_macro_counts": {
+    "calories": 22,
+    "protein_g": 22,
+    "carbohydrate_g": 22,
+    "fat_g": 22
+  },
+  "declared_with_two_independent_engines_and_four_corroborated_fields": 22,
+  "invalid_declared_product_ids": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "reproducibility_against_256_wave": {
+    "overlap_products": 256,
+    "status_transitions": {
+      "DECLARED_TO_DECLARED": 13,
+      "REVIEW_TO_REVIEW": 243,
+      "OTHER": 0
+    },
+    "prior_declared_reproduced": 13,
+    "prior_declared_regressed": 0,
+    "declared_value_conflicts": 0
+  },
+  "safety_assessment": "VALIDATED_CONSERVATIVE_STABLE",
+  "notes": [
+    "All 22 accepted rows have at least two independent OCR engine families and four corroborated core fields.",
+    "No REVIEW row is promoted to usable nutrition and there are no ERROR or NO_VISUAL_REGION outcomes in this sample.",
+    "The 512-product wave is a strict deterministic superset of the prior 256-product wave.",
+    "All 13 DECLARED rows from the prior 256-product wave reproduced as DECLARED with identical nutrition values; all 243 REVIEW rows remained REVIEW.",
+    "The acceptance rate decreased modestly from 5.08% to 4.30%, consistent with a conservative parser rather than unsafe broadening.",
+    "This stability supports a further bounded 1024-product scale-up before full eligible-universe execution."
+  ]
+}
