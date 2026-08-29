@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.2.1"
+ENSEMBLE_VERSION = "1.3.0"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -81,22 +82,58 @@ def _field_candidates(readings: Iterable[ParsedOCRReading], field: str):
     return out
 
 
+def _family_representative(field: str, family_candidates):
+    """Reduce correlated layouts to one value without letting one OCR outlier veto a majority.
+
+    Multiple Tesseract PSM layouts are not independent evidence, but they are useful
+    repeated observations from the same engine family. When a unique strict majority
+    of those layouts agrees within the ordinary field tolerance, an isolated layout
+    outlier may be discarded. A 1-vs-1 split, two equally large compatible clusters,
+    or any other ambiguous family remains a hard same-engine conflict.
+    """
+    family_candidates = tuple(family_candidates)
+    if not family_candidates:
+        return None
+    if len(family_candidates) == 1:
+        return family_candidates[0]
+
+    for size in range(len(family_candidates), 1, -1):
+        compatible = []
+        for group in combinations(family_candidates, size):
+            if all(_close(field, a[0], b[0]) for a, b in combinations(group, 2)):
+                compatible.append(group)
+        if not compatible:
+            continue
+        # More than one maximum-size compatible cluster means the family itself
+        # is ambiguous. Do not choose by confidence in that situation.
+        if len(compatible) != 1:
+            return None
+        group = compatible[0]
+        # A majority is required to overrule excluded layouts. With three PSM
+        # modes, two matching reads can reject one outlier; two disagreeing reads
+        # cannot choose a winner.
+        if len(group) * 2 <= len(family_candidates):
+            return None
+        return max(group, key=lambda x: x[1])
+    return None
+
+
 def _choose_field(field: str, candidates):
     if not candidates:
         return None, None
 
     # OCR layouts/crops from the same engine are correlated observations, not
     # independent evidence. First reduce each engine family to one internally
-    # consistent representative. If a family contradicts itself, the field is
-    # unsafe and must remain review-only.
+    # consistent representative. A unique strict same-family majority may drop
+    # one isolated layout outlier, but ambiguous splits remain REVIEW-only.
     by_family: dict[str, list[tuple[float, float, str, str]]] = {}
     for candidate in candidates:
         by_family.setdefault(candidate[3], []).append(candidate)
 
     representatives = []
     for family, family_candidates in sorted(by_family.items()):
-        selected = max(family_candidates, key=lambda x: x[1])
-        if any(not _close(field, selected[0], other[0]) for other in family_candidates):
+        selected = _family_representative(field, family_candidates)
+        if selected is None:
             return None, f"OCR_SAME_ENGINE_CONFLICT:{field}:{family}"
         representatives.append(selected)
 
