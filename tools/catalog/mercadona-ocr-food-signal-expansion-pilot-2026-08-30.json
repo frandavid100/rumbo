@@ -1,0 +1,42 @@
+{
+  "date": "2026-08-30",
+  "workflow_run_id": 33278134827,
+  "head_sha": "8ea4c20200d47fb68d8c38fa7fde369034b4413f",
+  "artifact": {
+    "id": 9722458299,
+    "name": "mercadona-neural-ocr-food-signal-expansion-pilot-merged",
+    "sha256": "131f6f87ac8880a378418fdae51c2ec9e9531c74065fbcfb48660b7769663e7f"
+  },
+  "inventory_products": 4280,
+  "priority_universe_already_processed": 2630,
+  "eligibility_mode": "p9-no-ingredients-food-signal",
+  "eligible_expansion_products": 121,
+  "processed": 64,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 64,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.0,
+  "safety": {
+    "invalid_declared_product_ids": [],
+    "duplicate_product_ids": [],
+    "candidate_mode_errors": [],
+    "provenance_errors": []
+  },
+  "diagnostic": {
+    "systematic_parser_issue_found": true,
+    "example_product_id": "51198",
+    "example_product_name": "Queso lonchas fundido burger mezcla Hacendado",
+    "finding": "Whole-package OCR can place ingredient prose beginning with Proteínas before the nutrition row, causing an additive E-number to be read as protein; PP-OCRv6 can also linearise carbohydrate/protein values immediately before their row labels.",
+    "action": "Regression tests added first; parser hardened in commit c699ddb6de15e290a58410dc0251ad7147179148. A fresh end-to-end pilot rerun is required before any newly recovered value is accepted."
+  },
+  "provenance_policy": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
