@@ -8,6 +8,8 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-neural-ocr-wave-512.yml'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/test_nutrition_ocr_ensemble.py'
   workflow_dispatch:
 
 permissions:
