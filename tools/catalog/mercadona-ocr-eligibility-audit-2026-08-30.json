@@ -1,0 +1,38 @@
+{
+  "date": "2026-08-30",
+  "source_run_id": 33278054780,
+  "source_artifact_id": 9722115671,
+  "inventory_products": 4280,
+  "priority_universe": {
+    "definition": "structured ingredients + perspective=9 zoom",
+    "products": 2630,
+    "processed": 2630,
+    "declared_after_validated_replay": 130,
+    "review_after_validated_replay": 2500
+  },
+  "expansion_audit": {
+    "perspective_9_with_zoom_total": 4145,
+    "perspective_9_without_structured_ingredients": 1515,
+    "structured_ingredients_without_perspective_9": 89,
+    "multiple_photos_without_perspective_9": 30,
+    "any_zoom_without_perspective_9": 135,
+    "p9_without_ingredients_first_party_signals": {
+      "legal_name": 117,
+      "packaging": 1247,
+      "allergens": 71
+    }
+  },
+  "interpretation": {
+    "finding": "The original 2630-row OCR universe was a prioritisation subset, not the full set of products with Mercadona perspective=9 imagery.",
+    "risk": "The 1515-row remainder contains many non-food categories, so processing it indiscriminately would waste OCR and increase false-positive exposure.",
+    "next_safe_step": "Pilot the no-ingredients remainder only where independent first-party food signals exist (legal denomination/name or allergens); keep packaging alone insufficient because it is common in non-food products.",
+    "workflow": ".github/workflows/catalog-mercadona-neural-ocr-food-signal-expansion-pilot.yml"
+  },
+  "provenance_policy": {
+    "nutrition_evidence_if_accepted": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
