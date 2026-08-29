@@ -47,6 +47,48 @@ class OCREnsembleTest(unittest.TestCase):
             'calories': 184.0, 'fat_g': 12.0, 'carbohydrate_g': 2.0, 'protein_g': 17.0
         })
 
+    def test_same_engine_majority_can_discard_one_layout_outlier(self):
+        paddle = reading('DECLARED', '100_g', {
+            'calories': 46.0, 'fat_g': 1.5, 'carbohydrate_g': 4.6, 'protein_g': 3.0
+        }, .96)
+        tess_bad = reading('REVIEW', '100_g', {
+            'calories': 46.0, 'fat_g': 1.5, 'carbohydrate_g': 46.0, 'protein_g': 3.0
+        }, .97, 'ENERGY_MACRO_MISMATCH:209.5')
+        tess_good_a = reading('DECLARED', '100_g', {
+            'calories': 46.0, 'fat_g': 1.5, 'carbohydrate_g': 4.6, 'protein_g': 3.0
+        }, .91)
+        tess_good_b = reading('DECLARED', '100_g', {
+            'calories': 46.0, 'fat_g': 1.5, 'carbohydrate_g': 4.6, 'protein_g': 3.0
+        }, .89)
+        r = fuse_ocr_readings([
+            ParsedOCRReading('paddle-region', paddle, engine_family='paddleocr'),
+            ParsedOCRReading('tesseract-psm4', tess_bad, engine_family='tesseract'),
+            ParsedOCRReading('tesseract-psm6', tess_good_a, engine_family='tesseract'),
+            ParsedOCRReading('tesseract-psm11', tess_good_b, engine_family='tesseract'),
+        ])
+        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.independent_engine_families, 2)
+        self.assertEqual(r.corroborated_fields, 4)
+        self.assertEqual(r.nutrition['carbohydrate_g'], 4.6)
+
+    def test_same_engine_split_without_majority_remains_review(self):
+        paddle = reading('DECLARED', '100_g', {
+            'calories': 46.0, 'fat_g': 1.5, 'carbohydrate_g': 4.6, 'protein_g': 3.0
+        }, .96)
+        tess_bad = reading('REVIEW', '100_g', {
+            'calories': 46.0, 'fat_g': 1.5, 'carbohydrate_g': 46.0, 'protein_g': 3.0
+        }, .97, 'ENERGY_MACRO_MISMATCH:209.5')
+        tess_good = reading('DECLARED', '100_g', {
+            'calories': 46.0, 'fat_g': 1.5, 'carbohydrate_g': 4.6, 'protein_g': 3.0
+        }, .91)
+        r = fuse_ocr_readings([
+            ParsedOCRReading('paddle-region', paddle, engine_family='paddleocr'),
+            ParsedOCRReading('tesseract-psm4', tess_bad, engine_family='tesseract'),
+            ParsedOCRReading('tesseract-psm6', tess_good, engine_family='tesseract'),
+        ])
+        self.assertEqual(r.status, 'REVIEW', r)
+        self.assertIn('OCR_SAME_ENGINE_CONFLICT:carbohydrate_g:tesseract', r.reasons)
+
     def test_independent_engines_can_confirm_a_complete_reading(self):
         a = reading('REVIEW', '100_g', {
             'calories': 568.0, 'fat_g': 42.0, 'carbohydrate_g': 32.0, 'protein_g': 10.0
