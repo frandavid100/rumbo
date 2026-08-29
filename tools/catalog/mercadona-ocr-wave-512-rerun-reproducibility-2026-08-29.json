@@ -1,0 +1,97 @@
+{
+  "kind": "MERCADONA_OCR_WAVE_512_RERUN_REPRODUCIBILITY_AUDIT",
+  "date": "2026-08-29",
+  "branch": "agent/catalog-phase1",
+  "baseline": {
+    "workflow_run_id": 33143994012,
+    "head_sha": "8d32539baf18dab3969a975e4bf58148a1fb37fc",
+    "artifact_id": 9678735369,
+    "artifact_name": "mercadona-neural-ocr-wave-512-merged",
+    "artifact_digest": "sha256:1e115947a2c03fd39a3975ddec5c0e207b24039dce88929d3888909c2f3e0a51",
+    "processed": 512,
+    "DECLARED": 22,
+    "REVIEW": 490
+  },
+  "rerun": {
+    "workflow_run_id": 33252183695,
+    "head_sha": "cb7bd9de592c55225ee4925129f17db2a84cf22a",
+    "artifact_id": 9716908061,
+    "artifact_name": "mercadona-neural-ocr-wave-512-merged",
+    "artifact_digest": "sha256:5da7c20109ecc23ce0810cfe767f27d83b8d578dbcd72b13be8f84f07436a17e",
+    "processed": 512,
+    "DECLARED": 24,
+    "REVIEW": 488,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "comparison": {
+    "same_product_universe": true,
+    "baseline_declared_still_declared": 22,
+    "baseline_declared_regressions": 0,
+    "baseline_declared_nutrition_value_conflicts": 0,
+    "status_changes_total": 2,
+    "status_changes_other_than_REVIEW_to_DECLARED": 0,
+    "new_DECLARED": 2,
+    "all_new_DECLARED_in_independently_audited_replay_promotions": true,
+    "result": "REPRODUCED_WITH_TWO_SAFE_PROMOTIONS"
+  },
+  "new_declared": [
+    {
+      "product_id": "34194",
+      "ean": "8402001000515",
+      "name": "Castañas cocidas y peladas Hacendado",
+      "baseline_status": "REVIEW",
+      "rerun_status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 172.0,
+        "protein_g": 4.11,
+        "carbohydrate_g": 33.0,
+        "fat_g": 1.5
+      },
+      "independent_promotion_audit_safe": true
+    },
+    {
+      "product_id": "63114",
+      "ean": "8480000631145",
+      "name": "Filetes de boquerón en tempura Hacendado ultracongelado",
+      "baseline_status": "REVIEW",
+      "rerun_status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 189.0,
+        "protein_g": 14.0,
+        "carbohydrate_g": 14.0,
+        "fat_g": 8.7
+      },
+      "independent_promotion_audit_safe": true
+    }
+  ],
+  "independent_promotion_audit": {
+    "workflow_run_id": 33259432733,
+    "artifact_id": 9716810436,
+    "artifact_name": "mercadona-ocr-promotion-audit",
+    "audited_promotions": 8,
+    "safe_promotions": 8,
+    "unsafe_promotions": 0,
+    "includes_product_ids": [
+      "13025",
+      "13568",
+      "33640",
+      "34194",
+      "60690",
+      "63114",
+      "69757",
+      "86835"
+    ]
+  },
+  "provenance_invariants": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
