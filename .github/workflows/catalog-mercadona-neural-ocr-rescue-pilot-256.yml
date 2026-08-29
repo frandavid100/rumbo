@@ -1,0 +1,241 @@
+name: Catalog Mercadona neural OCR rescue pilot 256
+
+# Re-run the first 256 deterministic eligible products with a broader but still
+# bounded EasyOCR rescue. This is an A/B safety validation against the already
+# validated 512-wave baseline, not a replacement of the stable pipeline yet.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-rescue-pilot-256.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-rescue-pilot-256-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Install OCR engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative OCR and rescue-policy tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_neural_ocr_wave_rescue.py
+      - name: OCR deterministic 256-product A/B rescue pilot
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave_rescue.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-neural-ocr-rescue-pilot-256 \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 16 \
+            --limit 16
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-rescue-pilot-256-${{ matrix.shard }}
+          path: tools/catalog/mercadona-neural-ocr-rescue-pilot-256/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-rescue-pilot-256-*
+          path: input
+          merge-multiple: true
+      - name: Download validated 512-wave baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-neural-ocr-wave-512-merged
+          path: baseline-512
+          github-token: ${{ github.token }}
+          run-id: 33143994012
+      - name: Merge and enforce A/B safety contract
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json, sqlite3
+          from pathlib import Path
+
+          rows = []
+          for path in sorted(glob.glob('input/results-*.jsonl')):
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+          baseline = [json.loads(line) for line in Path('baseline-512/results.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+
+          by_id = {}
+          duplicate_ids = []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if pid in by_id:
+                  duplicate_ids.append(pid)
+              by_id[pid] = row
+
+          baseline_by_id = {str(r.get('product_id') or ''): r for r in baseline}
+          counts = Counter(r.get('status', 'UNKNOWN') for r in rows)
+          invalid_declared = []
+          provenance_errors = []
+          old_declared_regressions = []
+          old_declared_value_conflicts = []
+          promotions = []
+          unexpected_status_changes = []
+          required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(f'{pid}:evidence_level')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(f'{pid}:source')
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(f'{pid}:redistribution')
+              if any(k in row for k in ('classified', 'menu_eligible', 'CLASSIFIED', 'MENU_ELIGIBLE')):
+                  provenance_errors.append(f'{pid}:classification')
+
+              if row.get('status') == 'DECLARED':
+                  accepted = next((a for a in (row.get('attempts') or []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+                  ensemble = (accepted or {}).get('ensemble') or {}
+                  nutrition = row.get('nutrition') or {}
+                  if (
+                      ensemble.get('independent_engine_families', 0) < 2
+                      or ensemble.get('corroborated_fields', 0) < 4
+                      or any(nutrition.get(field) is None for field in required)
+                  ):
+                      invalid_declared.append(pid)
+
+              prior = baseline_by_id.get(pid)
+              if prior is None:
+                  unexpected_status_changes.append({'product_id': pid, 'error': 'missing_baseline'})
+                  continue
+              old_status = prior.get('status')
+              new_status = row.get('status')
+              if old_status == 'DECLARED':
+                  if new_status != 'DECLARED':
+                      old_declared_regressions.append({'product_id': pid, 'prior': old_status, 'current': new_status})
+                  elif prior.get('nutrition') != row.get('nutrition'):
+                      old_declared_value_conflicts.append({'product_id': pid, 'prior': prior.get('nutrition'), 'current': row.get('nutrition')})
+              elif old_status == 'REVIEW' and new_status == 'DECLARED':
+                  promotions.append(pid)
+              elif old_status != new_status:
+                  unexpected_status_changes.append({'product_id': pid, 'prior': old_status, 'current': new_status})
+
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'inventory_products': 4280,
+              'eligible_products': 2630,
+              'expected_sample': 256,
+              'processed': len(rows),
+              'status_counts': {
+                  'DECLARED': counts.get('DECLARED', 0),
+                  'REVIEW': counts.get('REVIEW', 0),
+                  'NO_VISUAL_REGION': counts.get('NO_VISUAL_REGION', 0),
+                  'ERROR': counts.get('ERROR', 0),
+              },
+              'declared_rate': round(counts.get('DECLARED', 0) / len(rows), 4) if rows else 0.0,
+              'review_to_declared_promotions': len(promotions),
+              'promoted_product_ids': sorted(promotions),
+              'invalid_declared_product_ids': invalid_declared,
+              'old_declared_regressions': old_declared_regressions,
+              'old_declared_value_conflicts': old_declared_value_conflicts,
+              'unexpected_status_changes': unexpected_status_changes,
+              'duplicate_product_ids': duplicate_ids,
+              'provenance_errors': provenance_errors,
+              'rescue_policy_version': '2.0.0',
+              'safety_assessment': 'VALIDATED' if (
+                  len(rows) == 256 and not invalid_declared and not old_declared_regressions
+                  and not old_declared_value_conflicts and not unexpected_status_changes
+                  and not duplicate_ids and not provenance_errors
+              ) else 'FAILED',
+          }
+
+          Path('merged').mkdir(exist_ok=True)
+          rows = sorted(rows, key=lambda r: str(r.get('product_id') or ''))
+          Path('merged/results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows), encoding='utf-8')
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+
+          db = sqlite3.connect('merged/results.sqlite')
+          db.execute('''CREATE TABLE ocr_results (
+              product_id TEXT PRIMARY KEY, status TEXT NOT NULL, calories REAL,
+              protein_g REAL, carbohydrate_g REAL, fat_g REAL, image_url TEXT,
+              evidence_level TEXT NOT NULL, source TEXT NOT NULL,
+              redistribution_allowed INTEGER NOT NULL, json_payload TEXT NOT NULL
+          )''')
+          for row in rows:
+              n = row.get('nutrition') or {}
+              db.execute('INSERT INTO ocr_results VALUES (?,?,?,?,?,?,?,?,?,?,?)', (
+                  str(row.get('product_id') or ''), row.get('status'), n.get('calories'),
+                  n.get('protein_g'), n.get('carbohydrate_g'), n.get('fat_g'), row.get('image_url'),
+                  row.get('evidence_level'), row.get('source'),
+                  0 if row.get('redistribution_allowed') is False else 1,
+                  json.dumps(row, ensure_ascii=False, sort_keys=True),
+              ))
+          db.commit(); db.close()
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+          if len(rows) != 256:
+              raise SystemExit(f'Incomplete rescue pilot: processed={len(rows)} expected=256')
+          if duplicate_ids:
+              raise SystemExit('Duplicate product ids: ' + ','.join(duplicate_ids[:20]))
+          if provenance_errors:
+              raise SystemExit('Provenance contract violated: ' + ','.join(provenance_errors[:20]))
+          if invalid_declared:
+              raise SystemExit('Unsafe DECLARED rows: ' + ','.join(invalid_declared[:20]))
+          if old_declared_regressions:
+              raise SystemExit('Previously DECLARED rows regressed')
+          if old_declared_value_conflicts:
+              raise SystemExit('Previously DECLARED values changed')
+          if unexpected_status_changes:
+              raise SystemExit('Unexpected A/B status changes')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-rescue-pilot-256-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: warn
