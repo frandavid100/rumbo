@@ -1,0 +1,53 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "inventory_products": 4280,
+  "eligible_products": 2630,
+  "sample_order": "SHA256_PRODUCT_ID_EAN",
+  "expected_sample": 2048,
+  "processed": 2048,
+  "status_counts": {
+    "DECLARED": 101,
+    "REVIEW": 1947,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.0493,
+  "usable_macro_counts": {
+    "calories": 101,
+    "protein_g": 101,
+    "carbohydrate_g": 101,
+    "fat_g": 101
+  },
+  "declared_with_two_independent_engines_and_four_corroborated_fields": 101,
+  "invalid_declared_product_ids": [],
+  "duplicate_conflicts": [],
+  "provenance_errors": [],
+  "reproducibility_against_1024_wave": {
+    "baseline_products": 1024,
+    "missing_prior_product_ids": [],
+    "status_changes": [],
+    "declared_value_conflicts": []
+  },
+  "new_1024_status_counts": {
+    "DECLARED": 48,
+    "REVIEW": 976,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "safety_assessment": "VALIDATED_CONSERVATIVE_STABLE",
+  "workflow_run": 33238350841,
+  "artifact": {
+    "id": 9710595988,
+    "name": "mercadona-neural-ocr-wave-2048-final",
+    "sha256": "e26446e62848c04c1f60b37e4cf2413167c7091c8a9ddb2861bbb24c8eac4305",
+    "contains": ["results.jsonl", "results.sqlite", "summary.json"]
+  },
+  "source_workflow_runs": {
+    "main_partial": 33189737223,
+    "main_partial_artifact_id": 9709214992,
+    "recovery_shard_94": 33233618283,
+    "baseline_1024": 33189633845
+  }
+}
