@@ -33,6 +33,21 @@
     "status_changes_other_than_REVIEW_to_DECLARED": 0,
     "new_DECLARED": 2,
     "all_new_DECLARED_in_independently_audited_replay_promotions": true,
+    "audited_replay_promotions_present_in_512_sample": 2,
+    "audited_replay_promotions_present_in_512_sample_ids": [
+      "34194",
+      "63114"
+    ],
+    "all_audited_replay_promotions_present_in_512_sample_reproduced_end_to_end": true,
+    "audited_replay_promotions_outside_512_sample": 6,
+    "audited_replay_promotions_outside_512_sample_ids": [
+      "13025",
+      "13568",
+      "33640",
+      "60690",
+      "69757",
+      "86835"
+    ],
     "result": "REPRODUCED_WITH_TWO_SAFE_PROMOTIONS"
   },
   "new_declared": [
