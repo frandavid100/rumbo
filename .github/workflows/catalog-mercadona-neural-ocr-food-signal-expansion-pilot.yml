@@ -1,0 +1,177 @@
+name: Catalog Mercadona neural OCR food-signal expansion pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/mercadona_neural_ocr_wave.py'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/nutrition_visual_table_detector.py'
+      - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - 'tools/catalog/label_neural_extractor.py'
+      - 'tools/catalog/label_easyocr_extractor.py'
+      - 'tools/catalog/label_text_extractor.py'
+      - '.github/workflows/catalog-mercadona-neural-ocr-food-signal-expansion-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-food-signal-expansion-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative OCR regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+      - name: OCR deterministic expansion sample
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-neural-ocr-food-signal-expansion-pilot \
+            --eligibility-mode p9-no-ingredients-food-signal \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 8 \
+            --limit 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-food-signal-expansion-pilot-${{ matrix.shard }}
+          path: tools/catalog/mercadona-neural-ocr-food-signal-expansion-pilot/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-food-signal-expansion-pilot-*
+          path: input
+          merge-multiple: true
+      - name: Merge and validate auditable expansion results
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json
+          from pathlib import Path
+
+          rows = []
+          shard_summaries = []
+          for path in sorted(glob.glob('input/results-*.jsonl')):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      rows.append(json.loads(line))
+          for path in sorted(glob.glob('input/summary-*.json')):
+              shard_summaries.append(json.loads(Path(path).read_text(encoding='utf-8')))
+
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          declared = [row for row in rows if row.get('status') == 'DECLARED']
+          invalid_declared = []
+          provenance_errors = []
+          candidate_errors = []
+          ids = [str(row.get('product_id') or '') for row in rows]
+          duplicate_ids = sorted(pid for pid, count in Counter(ids).items() if count > 1)
+
+          for row in rows:
+              if row.get('eligibility_mode') != 'p9-no-ingredients-food-signal':
+                  candidate_errors.append(str(row.get('product_id')))
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(str(row.get('product_id')))
+
+          for row in declared:
+              attempts = row.get('attempts') or []
+              accepted = next((a for a in attempts if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              ensemble = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              if (
+                  ensemble.get('independent_engine_families', 0) < 2
+                  or ensemble.get('corroborated_fields', 0) < 4
+                  or any(nutrition.get(k) is None for k in ('calories', 'protein_g', 'carbohydrate_g', 'fat_g'))
+              ):
+                  invalid_declared.append(str(row.get('product_id')))
+
+          eligible_counts = sorted({int(s.get('eligible_products', -1)) for s in shard_summaries})
+          summary = {
+              'inventory_products': 4280,
+              'priority_universe_already_processed': 2630,
+              'eligibility_mode': 'p9-no-ingredients-food-signal',
+              'eligible_expansion_products': eligible_counts[0] if len(eligible_counts) == 1 else None,
+              'eligible_count_observations': eligible_counts,
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared': len(declared),
+              'declared_rate': round(len(declared) / len(rows), 4) if rows else 0.0,
+              'invalid_declared_product_ids': invalid_declared,
+              'duplicate_product_ids': duplicate_ids,
+              'candidate_mode_errors': candidate_errors,
+              'provenance_errors': provenance_errors,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows), encoding='utf-8')
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          failures = []
+          if invalid_declared: failures.append('unsafe DECLARED')
+          if duplicate_ids: failures.append('duplicate ids')
+          if candidate_errors: failures.append('candidate mode mismatch')
+          if provenance_errors: failures.append('provenance errors')
+          if len(eligible_counts) != 1: failures.append('eligible universe disagreement')
+          if failures:
+              raise SystemExit('; '.join(failures))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-food-signal-expansion-pilot-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
