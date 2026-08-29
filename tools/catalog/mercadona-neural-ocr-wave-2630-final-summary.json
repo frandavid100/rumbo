@@ -1,0 +1,59 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "inventory_products": 4280,
+  "eligible_products": 2630,
+  "eligibility": "structured ingredients + official Mercadona rear photo perspective=9 with zoom URL",
+  "sample_order": "SHA256_PRODUCT_ID_EAN",
+  "baseline_products": 2048,
+  "remaining_expected": 582,
+  "remaining_processed": 582,
+  "processed": 2630,
+  "status_counts": {
+    "DECLARED": 122,
+    "REVIEW": 2508,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "remaining_status_counts": {
+    "DECLARED": 21,
+    "REVIEW": 561
+  },
+  "declared_rate": 0.0464,
+  "usable_macro_counts": {
+    "calories": 122,
+    "protein_g": 122,
+    "carbohydrate_g": 122,
+    "fat_g": 122
+  },
+  "declared_with_two_independent_engines_and_four_corroborated_fields": 122,
+  "invalid_declared_product_ids": [],
+  "duplicate_baseline_product_ids": [],
+  "duplicate_remaining_product_ids": [],
+  "baseline_remaining_overlap_product_ids": [],
+  "provenance_errors": [],
+  "baseline_reused_without_reprocessing": true,
+  "safety_assessment": "VALIDATED",
+  "classification": {
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0,
+    "note": "OCR extraction remains separate from semantic Rumbo classification"
+  },
+  "workflow_run": 33242633755,
+  "artifact": {
+    "id": 9713988423,
+    "name": "mercadona-neural-ocr-wave-2630-final",
+    "sha256": "3626e797b15757faf4595539acea8febff2db1a5e44475d4915001cb5639c3c5",
+    "size_bytes": 9732315,
+    "contains": [
+      "results.jsonl",
+      "results.sqlite",
+      "summary.json"
+    ]
+  },
+  "baseline_artifact": {
+    "workflow_run": 33238350841,
+    "name": "mercadona-neural-ocr-wave-2048-final"
+  }
+}
