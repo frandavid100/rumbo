@@ -21,6 +21,11 @@ from nutrition_visual_table_detector import VisualTableRegion, detect_visual_tab
 MAX_REGIONS_PER_PRODUCT = 2
 OCR_ENGINES = ("paddleocr", "tesseract", "easyocr")
 OCR_STRATEGIES = ("paddleocr", "tesseract-psm4", "tesseract-psm6", "tesseract-psm11", "easyocr")
+ELIGIBILITY_MODES = (
+    "priority",
+    "p9-no-ingredients-food-signal",
+    "p9-no-ingredients-all",
+)
 
 
 def _load(path: Path) -> list[dict[str, Any]]:
@@ -35,10 +40,31 @@ def _back_photo(row: dict[str, Any]) -> tuple[int, dict[str, Any]] | None:
     return None
 
 
-def _eligible(row: dict[str, Any]) -> bool:
-    # Structured ingredients are a strong first-party signal that this is a
-    # packaged food/drink for which a nutrition panel is plausibly present.
-    return bool(row.get("ingredients") and _back_photo(row))
+def _structured_food_signal(row: dict[str, Any]) -> bool:
+    """Return strong first-party food signals other than structured ingredients.
+
+    These fields are used only to route a bounded OCR expansion pilot. They do not
+    classify the product and do not make nutrition usable by themselves.
+    """
+    return bool(
+        row.get("legal_name")
+        or row.get("legal_denomination")
+        or row.get("allergens")
+    )
+
+
+def _eligible(row: dict[str, Any], mode: str = "priority") -> bool:
+    if _back_photo(row) is None:
+        return False
+    if mode == "priority":
+        # Structured ingredients are a strong first-party signal that this is a
+        # packaged food/drink for which a nutrition panel is plausibly present.
+        return bool(row.get("ingredients"))
+    if mode == "p9-no-ingredients-food-signal":
+        return not row.get("ingredients") and _structured_food_signal(row)
+    if mode == "p9-no-ingredients-all":
+        return not row.get("ingredients")
+    raise ValueError(f"Unsupported eligibility mode: {mode}")
 
 
 def _stable_sample_key(row: dict[str, Any]) -> tuple[str, str]:
@@ -212,10 +238,11 @@ def main() -> int:
     ap.add_argument("--shard-count", type=int, required=True)
     ap.add_argument("--limit", type=int, default=0, help="0 means all rows in this shard")
     ap.add_argument("--delay", type=float, default=0.15)
+    ap.add_argument("--eligibility-mode", choices=ELIGIBILITY_MODES, default="priority")
     args = ap.parse_args()
 
     all_rows = _load(Path(args.products))
-    eligible = [row for row in all_rows if _eligible(row)]
+    eligible = [row for row in all_rows if _eligible(row, args.eligibility_mode)]
     eligible.sort(key=_stable_sample_key)
     selected = [row for i, row in enumerate(eligible) if i % args.shard_count == args.shard_index]
     if args.limit > 0:
@@ -257,6 +284,7 @@ def main() -> int:
             "image_url": image_url,
             "image_index": image_index,
             "perspective": 9,
+            "eligibility_mode": args.eligibility_mode,
             "source": "MERCADONA_FIRST_PARTY",
             "source_record_kind": "label image",
             "evidence_level": OCR_EVIDENCE_LEVEL,
@@ -331,6 +359,7 @@ def main() -> int:
         "source_record_kind": "label image",
         "evidence_level": OCR_EVIDENCE_LEVEL,
         "mode": "PADDLEOCR_TESSERACT_WITH_CONDITIONAL_EASYOCR_CORROBORATION",
+        "eligibility_mode": args.eligibility_mode,
         "fallback_policy": "FULL_BACK_IMAGE_ONLY_WHEN_NO_VISUAL_REGION; EASYOCR_ONLY_WHEN_BASELINE_HAS_DECLARED_UNCORROBORATED_READING",
         "sample_order": "SHA256_PRODUCT_ID_EAN",
         "ocr_engines": list(OCR_ENGINES),
