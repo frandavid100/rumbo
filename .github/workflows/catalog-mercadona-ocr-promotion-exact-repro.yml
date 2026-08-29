@@ -1,0 +1,185 @@
+name: Catalog Mercadona OCR promotion exact reproduction
+
+# Lightweight artifact-to-artifact check: prove that all eight independently
+# audited REVIEW->DECLARED replay promotions reproduce exactly (status + four
+# macro values) in independent end-to-end OCR runs. No images are downloaded.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ocr-promotion-exact-repro.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - name: Download 2630-product consensus replay
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: evidence/replay
+          github-token: ${{ github.token }}
+          run-id: 33256669736
+
+      - name: Download deterministic 512-product end-to-end rerun
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-neural-ocr-wave-512-merged
+          path: evidence/e2e-512
+          github-token: ${{ github.token }}
+          run-id: 33252183695
+
+      - name: Download targeted six-promotion end-to-end rerun
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-neural-ocr-audited-promotions
+          path: evidence/e2e-six
+          github-token: ${{ github.token }}
+          run-id: 33273020577
+
+      - name: Compare all eight promotions exactly
+        run: |
+          python - <<'PY'
+          from decimal import Decimal
+          import json
+          from pathlib import Path
+
+          ids_512 = {'34194', '63114'}
+          ids_six = {'13025', '13568', '33640', '60690', '69757', '86835'}
+          expected_ids = ids_512 | ids_six
+          required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+
+          def load_rows(root):
+              rows = {}
+              for path in sorted(Path(root).rglob('*.jsonl')):
+                  for line in path.read_text(encoding='utf-8').splitlines():
+                      if not line.strip():
+                          continue
+                      row = json.loads(line)
+                      pid = str(row.get('product_id') or '')
+                      if not pid:
+                          continue
+                      if pid in rows:
+                          # Artifacts should not contain competing rows for a product.
+                          old = rows[pid]
+                          if old != row:
+                              raise SystemExit(f'Conflicting duplicate row for {pid} under {root}')
+                      else:
+                          rows[pid] = row
+              return rows
+
+          replay = load_rows('evidence/replay')
+          e2e_512 = load_rows('evidence/e2e-512')
+          e2e_six = load_rows('evidence/e2e-six')
+
+          missing_replay = expected_ids - set(replay)
+          missing_512 = ids_512 - set(e2e_512)
+          missing_six = ids_six - set(e2e_six)
+          if missing_replay or missing_512 or missing_six:
+              raise SystemExit(
+                  f'Missing rows: replay={sorted(missing_replay)} '
+                  f'e2e512={sorted(missing_512)} e2esix={sorted(missing_six)}'
+              )
+
+          def canonical(nutrition):
+              nutrition = nutrition or {}
+              values = {}
+              for field in required:
+                  value = nutrition.get(field)
+                  if value is None:
+                      raise ValueError(f'missing {field}')
+                  values[field] = Decimal(str(value))
+              return values
+
+          comparisons = {}
+          mismatches = []
+          provenance_errors = []
+          for pid in sorted(expected_ids):
+              replay_row = replay[pid]
+              observed = e2e_512[pid] if pid in ids_512 else e2e_six[pid]
+              if replay_row.get('status') != 'DECLARED':
+                  mismatches.append(f'{pid}:replay_status={replay_row.get("status")}')
+              if observed.get('status') != 'DECLARED':
+                  mismatches.append(f'{pid}:e2e_status={observed.get("status")}')
+
+              replay_values = canonical(replay_row.get('nutrition'))
+              observed_values = canonical(observed.get('nutrition'))
+              exact = replay_values == observed_values
+              if not exact:
+                  mismatches.append(
+                      f'{pid}:nutrition replay={replay_values} e2e={observed_values}'
+                  )
+
+              for label, row in (('replay', replay_row), ('e2e', observed)):
+                  if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                      provenance_errors.append(f'{pid}:{label}:evidence_level')
+                  if row.get('source') != 'MERCADONA_FIRST_PARTY':
+                      provenance_errors.append(f'{pid}:{label}:source')
+                  if row.get('source_record_kind') != 'label image':
+                      provenance_errors.append(f'{pid}:{label}:source_record_kind')
+                  if row.get('redistribution_allowed') is not False:
+                      provenance_errors.append(f'{pid}:{label}:redistribution')
+
+              comparisons[pid] = {
+                  'replay_status': replay_row.get('status'),
+                  'e2e_status': observed.get('status'),
+                  'replay_nutrition': {k: float(v) for k, v in replay_values.items()},
+                  'e2e_nutrition': {k: float(v) for k, v in observed_values.items()},
+                  'exact_macro_match': exact,
+                  'e2e_source_run_id': 33252183695 if pid in ids_512 else 33273020577,
+              }
+
+          if provenance_errors:
+              raise SystemExit('Provenance errors: ' + ', '.join(provenance_errors))
+          if mismatches:
+              raise SystemExit('Exact reproduction failed: ' + ' | '.join(mismatches))
+
+          summary = {
+              'kind': 'MERCADONA_OCR_REPLAY_PROMOTIONS_EXACT_END_TO_END_REPRODUCTION',
+              'date': '2026-08-29',
+              'replay_run_id': 33256669736,
+              'e2e_512_run_id': 33252183695,
+              'e2e_targeted_six_run_id': 33273020577,
+              'promotions_expected': 8,
+              'promotions_compared': len(comparisons),
+              'exact_status_matches': sum(
+                  1 for row in comparisons.values()
+                  if row['replay_status'] == row['e2e_status'] == 'DECLARED'
+              ),
+              'exact_macro_matches': sum(
+                  1 for row in comparisons.values() if row['exact_macro_match']
+              ),
+              'mismatches': mismatches,
+              'provenance_errors': provenance_errors,
+              'comparisons': comparisons,
+              'evidence': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_downloaded': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'result': 'ALL_8_REPLAY_PROMOTIONS_REPRODUCED_E2E_VALUE_FOR_VALUE',
+          }
+          out = Path('mercadona-ocr-promotion-exact-repro-summary.json')
+          out.write_text(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-ocr-promotion-exact-repro
+          path: mercadona-ocr-promotion-exact-repro-summary.json
+          retention-days: 30
+          if-no-files-found: warn
