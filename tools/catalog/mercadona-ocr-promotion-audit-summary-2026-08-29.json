@@ -1,0 +1,42 @@
+{
+  "mode": "INDEPENDENT_PROMOTION_AUDIT_FROM_PERSISTED_OCR_EVIDENCE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "inventory_products": 4280,
+  "eligible_products": 2630,
+  "replay_baseline_declared": 122,
+  "replay_current_declared": 130,
+  "review_to_declared_promotions": 8,
+  "independently_audited_promotions": 8,
+  "safe_promotions": 8,
+  "unsafe_promotions": 0,
+  "missing_promotion_rows": 0,
+  "safety_checks": [
+    "raw per-engine evidence rechecked",
+    "at least two independent OCR families corroborate every core macro",
+    "explicit per-100g/per-100ml basis present on a complete source",
+    "no competing explicit basis",
+    "energy/macros coherence within conservative parser tolerance",
+    "promotion nutrition equals replayed nutrition",
+    "no missing values inferred"
+  ],
+  "images_downloaded": false,
+  "ocr_rerun": false,
+  "workflow_run": 33259432733,
+  "artifact": {
+    "id": 9716810436,
+    "name": "mercadona-ocr-promotion-audit",
+    "sha256": "427f130ed82ba290c584a277fe67f53de95e15a9bd985bbbad1bb0ce25e2067f",
+    "size_bytes": 1631,
+    "contains": [
+      "promotion-audit.json",
+      "summary.json"
+    ]
+  },
+  "classification": {
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0,
+    "note": "OCR extraction remains separate from semantic Rumbo classification"
+  }
+}
