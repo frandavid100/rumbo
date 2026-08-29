@@ -1,0 +1,122 @@
+name: Catalog Mercadona OCR eligibility audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ocr-eligibility-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: input
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Audit OCR candidate universes
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import json
+          from pathlib import Path
+
+          path = Path('input/products.jsonl')
+          rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+
+          def photos(row):
+              value = row.get('photos')
+              return value if isinstance(value, list) else []
+
+          def has_perspective(row, perspective):
+              return any(
+                  isinstance(photo, dict)
+                  and str(photo.get('perspective')) == str(perspective)
+                  and bool(photo.get('zoom'))
+                  for photo in photos(row)
+              )
+
+          def has_any_zoom(row):
+              return any(isinstance(photo, dict) and bool(photo.get('zoom')) for photo in photos(row))
+
+          current = [row for row in rows if row.get('ingredients') and has_perspective(row, 9)]
+          p9 = [row for row in rows if has_perspective(row, 9)]
+          p9_no_ingredients = [row for row in p9 if not row.get('ingredients')]
+          ingredients_no_p9 = [row for row in rows if row.get('ingredients') and not has_perspective(row, 9)]
+          multi_no_p9 = [row for row in rows if len(photos(row)) > 1 and not has_perspective(row, 9)]
+          zoom_no_p9 = [row for row in rows if has_any_zoom(row) and not has_perspective(row, 9)]
+
+          perspective_histogram = Counter()
+          for row in rows:
+              for photo in photos(row):
+                  if isinstance(photo, dict) and photo.get('zoom'):
+                      perspective_histogram[str(photo.get('perspective'))] += 1
+
+          def top_categories(items, limit=25):
+              c = Counter((str(r.get('category_id') or ''), str(r.get('category_name') or '')) for r in items)
+              return [
+                  {'category_id': cid, 'category_name': name, 'count': count}
+                  for (cid, name), count in c.most_common(limit)
+              ]
+
+          # First-party structured fields can independently indicate packaged food.
+          # Report them only as candidate-prioritisation signals; they do not alter
+          # OCR provenance or make nutrition usable.
+          p9_no_ingredients_signals = {
+              'legal_name': sum(bool(r.get('legal_name') or r.get('legal_denomination')) for r in p9_no_ingredients),
+              'supplier': sum(bool(r.get('supplier') or r.get('provider')) for r in p9_no_ingredients),
+              'packaging': sum(bool(r.get('packaging')) for r in p9_no_ingredients),
+              'allergens': sum(bool(r.get('allergens')) for r in p9_no_ingredients),
+              'storage': sum(bool(r.get('storage') or r.get('conservation')) for r in p9_no_ingredients),
+          }
+
+          summary = {
+              'inventory_products': len(rows),
+              'current_priority_eligible_ingredients_plus_perspective_9': len(current),
+              'perspective_9_with_zoom_total': len(p9),
+              'perspective_9_without_structured_ingredients': len(p9_no_ingredients),
+              'structured_ingredients_without_perspective_9': len(ingredients_no_p9),
+              'multiple_photos_without_perspective_9': len(multi_no_p9),
+              'any_zoom_without_perspective_9': len(zoom_no_p9),
+              'perspective_zoom_histogram': dict(sorted(perspective_histogram.items(), key=lambda kv: (-kv[1], kv[0]))),
+              'p9_without_ingredients_first_party_signals': p9_no_ingredients_signals,
+              'p9_without_ingredients_top_categories': top_categories(p9_no_ingredients),
+              'ingredients_without_p9_top_categories': top_categories(ingredients_no_p9),
+              'policy': {
+                  'nutrition_evidence_if_ocr_succeeds': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+                  'source': 'MERCADONA_FIRST_PARTY/label image',
+                  'redistribution_allowed': False,
+                  'CLASSIFIED': 0,
+                  'MENU_ELIGIBLE': 0,
+              },
+          }
+          out = Path('mercadona-ocr-eligibility-audit')
+          out.mkdir(exist_ok=True)
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          (out / 'p9-without-ingredients-ids.json').write_text(
+              json.dumps([str(r.get('product_id') or '') for r in p9_no_ingredients], ensure_ascii=False, indent=2),
+              encoding='utf-8',
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if len(current) != 2630:
+              raise SystemExit(f'Priority universe drifted: expected 2630, got {len(current)}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-ocr-eligibility-audit
+          path: mercadona-ocr-eligibility-audit/
+          retention-days: 30
+          if-no-files-found: error
