@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.3"
+READER_VERSION = "1.4.4"
 
 
 @dataclass(frozen=True)
@@ -110,10 +110,42 @@ def _number_after(label_patterns: tuple[str, ...], text: str) -> float | None:
             prefix = tail[:number.start()].strip()
             if any(marker in prefix for marker in blockers):
                 continue
+            # If prose occurs between the row label and the first number, this
+            # is not a numeric nutrition cell. Whole-package OCR can otherwise
+            # bind an ingredients line such as `Proteínas de leite ... E-331`
+            # to the additive number 331 and hide the real table row later on.
+            if re.search(r"[a-z]", prefix, flags=re.I):
+                continue
             # An upper/lower bound is useful evidence but is not an exact macro.
             # Keep the whole row in REVIEW instead of silently promoting 0.5.
             if number.group(1) in ("<", ">"):
                 return None
+            value = _repair_ocr_number(number.group(2))
+            if value is not None:
+                return value
+    return None
+
+
+def _number_immediately_before(label_patterns: tuple[str, ...], text: str) -> float | None:
+    """Read a value placed on the immediately preceding OCR line.
+
+    Column-aware OCR occasionally linearises a two-column nutrition table as
+    `12.2 g / Hidratos de Carbono` and `12.4 g / Proteínas`. This helper is
+    intentionally narrow: it requires a dedicated numeric line, an explicit
+    gram-like unit glyph, no inequality and no intervening prose. Callers must
+    still require whole-tuple energy coherence before using these values.
+    """
+    folded = _fold(text)
+    for label in label_patterns:
+        for label_match in re.finditer(label, folded, flags=re.I):
+            head = folded[max(0, label_match.start() - 60):label_match.start()]
+            number = re.search(
+                r"(?:^|\n)\s*([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|q|yg|y)\s*$",
+                head,
+                flags=re.I,
+            )
+            if not number or number.group(1) in ("<", ">"):
+                continue
             value = _repair_ocr_number(number.group(2))
             if value is not None:
                 return value
@@ -234,21 +266,51 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     if basis is None:
         reasons.append("MISSING_100G_100ML_BASIS")
 
-    calories = _energy_kcal(block)
-    fat = _number_after((
+    fat_patterns = (
         r"(?:^|\n)\s*grasas?(?:\s*/\s*lipidos?)?\b",
         r"(?:^|\n)\s*lipidos?\b",
         r"(?:^|\n)\s*grasa total\b",
-    ), block)
+    )
+    carb_patterns = (
+        r"(?:^|\n)\s*hidratos? de carbono\b",
+        r"(?:^|\n)\s*carbohidratos?\b",
+    )
+    protein_patterns = (r"(?:^|\n)\s*proteinas?\b",)
+
+    calories = _energy_kcal(block)
+    fat = _number_after(fat_patterns, block)
     carbs = _interleaved_carbohydrate(block)
     if carbs is None:
-        carbs = _number_after((
-            r"(?:^|\n)\s*hidratos? de carbono\b",
-            r"(?:^|\n)\s*carbohidratos?\b",
-        ), block)
-    protein = _number_after((r"(?:^|\n)\s*proteinas?\b",), block)
+        carbs = _number_after(carb_patterns, block)
+    protein = _number_after(protein_patterns, block)
 
     values = {"calories": calories, "fat_g": fat, "carbohydrate_g": carbs, "protein_g": protein}
+
+    # A visual table can be linearised value-before-label. Use that layout only
+    # when at least two macro fields are missing, every missing macro has an
+    # explicit immediately-preceding gram value, and the completed four-field
+    # tuple independently passes the strict energy/macronutrient coherence test.
+    # Single-field backfills remain REVIEW because a preceding sugar/saturate
+    # value can otherwise be mistaken for the next row in ordinary reading order.
+    macro_patterns = {
+        "fat_g": fat_patterns,
+        "carbohydrate_g": carb_patterns,
+        "protein_g": protein_patterns,
+    }
+    missing_macros = [key for key in macro_patterns if values[key] is None]
+    if calories is not None and len(missing_macros) >= 2:
+        reversed_values = {
+            key: _number_immediately_before(macro_patterns[key], block)
+            for key in missing_macros
+        }
+        if all(value is not None for value in reversed_values.values()):
+            completed = dict(values)
+            completed.update(reversed_values)
+            if all(completed.get(key) is not None for key in ("calories", "fat_g", "carbohydrate_g", "protein_g")):
+                completed_nutrition = {key: float(completed[key]) for key in ("calories", "fat_g", "carbohydrate_g", "protein_g")}
+                coherent, _ = _plausible(completed_nutrition)
+                if coherent:
+                    values.update(reversed_values)
 
     # Reject individually impossible OCR values before returning a partial read.
     # Previously plausibility checks ran only after all four core fields existed,
