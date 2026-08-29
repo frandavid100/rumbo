@@ -70,7 +70,6 @@ jobs:
                       if not pid:
                           continue
                       if pid in rows:
-                          # Artifacts should not contain competing rows for a product.
                           old = rows[pid]
                           if old != row:
                               raise SystemExit(f'Conflicting duplicate row for {pid} under {root}')
@@ -106,13 +105,16 @@ jobs:
           provenance_errors = []
           for pid in sorted(expected_ids):
               replay_row = replay[pid]
+              replay_consensus = replay_row.get('replay') or {}
               observed = e2e_512[pid] if pid in ids_512 else e2e_six[pid]
-              if replay_row.get('status') != 'DECLARED':
-                  mismatches.append(f'{pid}:replay_status={replay_row.get("status")}')
+
+              replay_status = replay_consensus.get('status')
+              if replay_status != 'DECLARED':
+                  mismatches.append(f'{pid}:replay_status={replay_status}')
               if observed.get('status') != 'DECLARED':
                   mismatches.append(f'{pid}:e2e_status={observed.get("status")}')
 
-              replay_values = canonical(replay_row.get('nutrition'))
+              replay_values = canonical(replay_consensus.get('nutrition'))
               observed_values = canonical(observed.get('nutrition'))
               exact = replay_values == observed_values
               if not exact:
@@ -131,7 +133,7 @@ jobs:
                       provenance_errors.append(f'{pid}:{label}:redistribution')
 
               comparisons[pid] = {
-                  'replay_status': replay_row.get('status'),
+                  'replay_status': replay_status,
                   'e2e_status': observed.get('status'),
                   'replay_nutrition': {k: float(v) for k, v in replay_values.items()},
                   'e2e_nutrition': {k: float(v) for k, v in observed_values.items()},
