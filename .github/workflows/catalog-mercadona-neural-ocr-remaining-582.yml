@@ -47,26 +47,39 @@ jobs:
         working-directory: tools/catalog
         run: |
           python - <<'PY'
+          import hashlib
           import json
           from pathlib import Path
-          from mercadona_neural_ocr_wave import _eligible, _stable_sample_key
+
+          def back_photo(row):
+              photos = row.get('photos') if isinstance(row.get('photos'), list) else []
+              return next((photo for photo in photos if isinstance(photo, dict) and str(photo.get('perspective')) == '9' and photo.get('zoom')), None)
+
+          def eligible(row):
+              return bool(row.get('ingredients') and back_photo(row))
+
+          def stable_sample_key(row):
+              product_id = str(row.get('product_id') or '')
+              ean = str(row.get('ean') or '')
+              seed = f'{product_id}\0{ean}'.encode('utf-8')
+              return hashlib.sha256(seed).hexdigest(), product_id
 
           source = Path('mercadona-first-party-final/products.jsonl')
           rows = [json.loads(line) for line in source.read_text(encoding='utf-8').splitlines() if line.strip()]
-          eligible = [row for row in rows if _eligible(row)]
-          eligible.sort(key=_stable_sample_key)
+          eligible_rows = [row for row in rows if eligible(row)]
+          eligible_rows.sort(key=stable_sample_key)
           if len(rows) != 4280:
               raise SystemExit(f'Unexpected Mercadona inventory size: {len(rows)}')
-          if len(eligible) != 2630:
-              raise SystemExit(f'Unexpected OCR-eligible universe: {len(eligible)}')
-          remaining = eligible[2048:2630]
+          if len(eligible_rows) != 2630:
+              raise SystemExit(f'Unexpected OCR-eligible universe: {len(eligible_rows)}')
+          remaining = eligible_rows[2048:2630]
           if len(remaining) != 582:
               raise SystemExit(f'Unexpected remaining slice size: {len(remaining)}')
           Path('mercadona-ocr-remaining-582.jsonl').write_text(
               ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in remaining),
               encoding='utf-8',
           )
-          print(json.dumps({'inventory': len(rows), 'eligible': len(eligible), 'slice_start': 2048, 'slice_end': 2630, 'remaining': len(remaining)}))
+          print(json.dumps({'inventory': len(rows), 'eligible': len(eligible_rows), 'slice_start': 2048, 'slice_end': 2630, 'remaining': len(remaining)}))
           PY
       - name: Install independent OCR engines and visual detector dependencies
         run: |
