@@ -1,0 +1,70 @@
+name: Catalog Mercadona OCR promotion audit
+
+# Independently re-check REVIEW->DECLARED replay promotions from raw persisted
+# per-engine OCR/parser evidence. No Mercadona image is downloaded or rerun.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ocr-promotion-audit.yml'
+      - 'tools/catalog/audit_mercadona_ocr_promotions.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-ocr-promotion-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - name: Download full 2630-product OCR replay artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: replay
+          github-token: ${{ github.token }}
+          run-id: 33256669736
+      - name: Audit every REVIEW to DECLARED promotion from raw engine evidence
+        run: |
+          python tools/catalog/audit_mercadona_ocr_promotions.py \
+            --replayed replay/results-replayed.jsonl \
+            --promotions replay/promotions.json \
+            --out promotion-audit \
+            --expected-promotions 8
+      - name: Assert provenance and classification boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          s = json.loads(Path('promotion-audit/summary.json').read_text(encoding='utf-8'))
+          assert s['processed_corpus'] == 2630, s
+          assert s['promotions'] == 8, s
+          assert s['safe_promotions'] == 8, s
+          assert s['unsafe_promotions'] == 0, s
+          assert not s['missing_promotion_rows'], s
+          assert s['images_downloaded'] is False, s
+          assert s['ocr_rerun'] is False, s
+          assert s['missing_values_inferred'] is False, s
+          assert s['evidence_level'] == 'OCR_DERIVED_FROM_MERCADONA_IMAGE', s
+          assert s['source'] == 'MERCADONA_FIRST_PARTY/label image', s
+          assert s['redistribution_allowed'] is False, s
+          assert s['CLASSIFIED'] == 0 and s['MENU_ELIGIBLE'] == 0, s
+          print(json.dumps(s, ensure_ascii=False, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-ocr-promotion-audit
+          path: promotion-audit/
+          retention-days: 30
+          if-no-files-found: error
