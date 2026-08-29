@@ -12,11 +12,14 @@
     "replay_REVIEW": 2500,
     "replay_promotions": 8,
     "e2e_verified_promotions": 8,
-    "e2e_verified_rate": 1.0
+    "e2e_verified_rate": 1.0,
+    "exact_status_matches": 8,
+    "exact_macro_matches": 8
   },
   "verification_sources": {
     "replay": {
       "workflow_run_id": 33256669736,
+      "artifact_id": 9716009900,
       "artifact_name": "mercadona-ocr-replay-2630"
     },
     "independent_promotion_audit": {
@@ -28,6 +31,7 @@
     },
     "deterministic_512_rerun": {
       "workflow_run_id": 33252183695,
+      "artifact_id": 9716908061,
       "artifact_name": "mercadona-neural-ocr-wave-512-merged",
       "promotion_ids": ["34194", "63114"]
     },
@@ -41,55 +45,76 @@
       "DECLARED": 6,
       "unsafe_declared": 0,
       "provenance_errors": 0
+    },
+    "exact_artifact_comparison": {
+      "workflow_run_id": 33275851591,
+      "job_id": 99162304556,
+      "artifact_id": 9721459816,
+      "artifact_name": "mercadona-ocr-promotion-exact-repro",
+      "promotions_compared": 8,
+      "exact_status_matches": 8,
+      "exact_macro_matches": 8,
+      "mismatches": 0,
+      "provenance_errors": 0
     }
   },
   "e2e_promotions": {
     "13025": {
       "status": "DECLARED",
       "nutrition": {"calories": 351.0, "protein_g": 13.0, "carbohydrate_g": 70.0, "fat_g": 1.4},
-      "verification_run_id": 33273020577
+      "verification_run_id": 33273020577,
+      "exact_replay_match": true
     },
     "13568": {
       "status": "DECLARED",
       "nutrition": {"calories": 42.0, "protein_g": 1.2, "carbohydrate_g": 7.9, "fat_g": 0.2},
-      "verification_run_id": 33273020577
+      "verification_run_id": 33273020577,
+      "exact_replay_match": true
     },
     "33640": {
       "status": "DECLARED",
       "nutrition": {"calories": 481.0, "protein_g": 8.2, "carbohydrate_g": 61.0, "fat_g": 22.0},
-      "verification_run_id": 33273020577
+      "verification_run_id": 33273020577,
+      "exact_replay_match": true
     },
     "34194": {
       "status": "DECLARED",
       "nutrition": {"calories": 172.0, "protein_g": 4.11, "carbohydrate_g": 33.0, "fat_g": 1.5},
-      "verification_run_id": 33252183695
+      "verification_run_id": 33252183695,
+      "exact_replay_match": true
     },
     "60690": {
       "status": "DECLARED",
       "nutrition": {"calories": 340.0, "protein_g": 3.5, "carbohydrate_g": 36.4, "fat_g": 19.9},
-      "verification_run_id": 33273020577
+      "verification_run_id": 33273020577,
+      "exact_replay_match": true
     },
     "63114": {
       "status": "DECLARED",
       "nutrition": {"calories": 189.0, "protein_g": 14.0, "carbohydrate_g": 14.0, "fat_g": 8.7},
-      "verification_run_id": 33252183695
+      "verification_run_id": 33252183695,
+      "exact_replay_match": true
     },
     "69757": {
       "status": "DECLARED",
       "nutrition": {"calories": 24.0, "protein_g": 1.8, "carbohydrate_g": 2.8, "fat_g": 0.3},
-      "verification_run_id": 33273020577
+      "verification_run_id": 33273020577,
+      "exact_replay_match": true
     },
     "86835": {
       "status": "DECLARED",
       "nutrition": {"calories": 527.0, "protein_g": 13.0, "carbohydrate_g": 51.8, "fat_g": 28.9},
-      "verification_run_id": 33273020577
+      "verification_run_id": 33273020577,
+      "exact_replay_match": true
     }
   },
   "status_reproducibility": {
     "all_8_replay_promotions_reproduced_end_to_end_as_DECLARED": true,
     "safe_under_current_ensemble_contract": true,
-    "exact_replay_macro_value_match_checked": false,
-    "note": "End-to-end status and safety are verified for 8/8. Exact macro equality against the replay artifact is intentionally left unclaimed until a direct artifact-to-artifact comparison is executed."
+    "exact_replay_macro_value_match_checked": true,
+    "all_8_exact_replay_macro_value_matches": true,
+    "mismatches": [],
+    "note": "All eight REVIEW-to-DECLARED replay promotions independently reproduce end-to-end with identical kcal, protein, carbohydrate and fat values."
   },
   "provenance_invariants": {
     "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
@@ -100,5 +125,5 @@
     "CLASSIFIED": 0,
     "MENU_ELIGIBLE": 0
   },
-  "result": "ALL_8_REPLAY_PROMOTIONS_REPRODUCED_E2E_SAFE_PENDING_EXACT_VALUE_COMPARISON"
+  "result": "ALL_8_REPLAY_PROMOTIONS_REPRODUCED_E2E_VALUE_FOR_VALUE"
 }
