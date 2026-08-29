@@ -1,0 +1,29 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "inventory_products": 4280,
+  "eligible_products": 2630,
+  "expected_sample": 256,
+  "processed": 256,
+  "status_counts": {
+    "DECLARED": 13,
+    "REVIEW": 243,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.0508,
+  "review_to_declared_promotions": 0,
+  "promoted_product_ids": [],
+  "invalid_declared_product_ids": [],
+  "old_declared_regressions": [],
+  "old_declared_value_conflicts": [],
+  "unexpected_status_changes": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "rescue_policy_version": "2.0.0",
+  "safety_assessment": "VALIDATED",
+  "workflow_run_id": 33235359981,
+  "artifact": "mercadona-neural-ocr-rescue-pilot-256-merged",
+  "decision": "DO_NOT_SCALE_RESCUE; zero REVIEW-to-DECLARED promotions over the validated conservative baseline"
+}
