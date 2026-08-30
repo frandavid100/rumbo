@@ -1,0 +1,174 @@
+name: Catalog Mercadona neural OCR non-p9 p2 pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-non-p9-p2-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-non-p9-p2-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative OCR regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_ocr_image_candidates.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+          python -m py_compile mercadona_neural_ocr_non_p9.py
+      - name: OCR deterministic perspective-2 sample
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_non_p9.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-neural-ocr-non-p9-p2-pilot \
+            --required-perspective 2 \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 4 \
+            --limit 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-non-p9-p2-pilot-${{ matrix.shard }}
+          path: tools/catalog/mercadona-neural-ocr-non-p9-p2-pilot/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-non-p9-p2-pilot-*
+          path: input
+          merge-multiple: true
+      - name: Merge, audit and stage results
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json, sqlite3
+          from pathlib import Path
+
+          rows = []
+          summaries = []
+          for path in sorted(glob.glob('input/results-*.jsonl')):
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+          for path in sorted(glob.glob('input/summary-*.json')):
+              summaries.append(json.loads(Path(path).read_text(encoding='utf-8')))
+
+          ids = [str(row.get('product_id') or '') for row in rows]
+          duplicates = sorted(pid for pid, n in Counter(ids).items() if n > 1)
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          provenance_errors, perspective_errors, invalid_declared = [], [], []
+          declared_examples = []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image' or row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(pid)
+              if str(row.get('perspective')) != '2' or str(row.get('required_perspective')) != '2':
+                  perspective_errors.append(pid)
+              if row.get('status') == 'DECLARED':
+                  accepted = next((a for a in row.get('attempts') or [] if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+                  ensemble = (accepted or {}).get('ensemble') or {}
+                  nutrition = row.get('nutrition') or {}
+                  if int(ensemble.get('independent_engine_families') or 0) < 2 or int(ensemble.get('corroborated_fields') or 0) < 4 or any(nutrition.get(k) is None for k in ('calories','protein_g','carbohydrate_g','fat_g')):
+                      invalid_declared.append(pid)
+                  if len(declared_examples) < 8:
+                      declared_examples.append({'product_id': pid, 'name': row.get('name'), 'nutrition': nutrition, 'independent_engine_families': ensemble.get('independent_engine_families'), 'corroborated_fields': ensemble.get('corroborated_fields')})
+
+          eligible = sorted({int(s.get('eligible_products', -1)) for s in summaries})
+          summary = {
+              'inventory_products': 4280,
+              'cohort': 'structured ingredients + no perspective 9 + true perspective 2 zoom',
+              'eligible_products': 60,
+              'eligible_count_observations': eligible,
+              'sample_policy': 'SHA256_PRODUCT_ID_EAN; 4 shards; first 8 per shard',
+              'processed': len(rows),
+              'DECLARED': counts.get('DECLARED',0), 'REVIEW': counts.get('REVIEW',0), 'NO_VISUAL_REGION': counts.get('NO_VISUAL_REGION',0), 'ERROR': counts.get('ERROR',0),
+              'status_counts': dict(sorted(counts.items())),
+              'declared_rate': round(counts.get('DECLARED',0)/len(rows),4) if rows else 0.0,
+              'duplicate_product_ids': duplicates,
+              'provenance_errors': provenance_errors,
+              'perspective_errors': perspective_errors,
+              'invalid_declared_product_ids': invalid_declared,
+              'declared_examples': declared_examples,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0
+          }
+          out = Path('merged'); out.mkdir(exist_ok=True)
+          (out/'results.jsonl').write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True)+'\n' for row in rows), encoding='utf-8')
+          (out/'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          db = sqlite3.connect(out/'staging.sqlite')
+          try:
+              db.execute('CREATE TABLE ocr_result (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, perspective TEXT, calories REAL, protein_g REAL, carbohydrate_g REAL, fat_g REAL, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, payload_json TEXT NOT NULL)')
+              for row in rows:
+                  n = row.get('nutrition') or {}
+                  db.execute('INSERT INTO ocr_result VALUES (?,?,?,?,?,?,?,?,?,?,?)', (str(row.get('product_id') or ''), row.get('status'), str(row.get('perspective')), n.get('calories'), n.get('protein_g'), n.get('carbohydrate_g'), n.get('fat_g'), row.get('evidence_level'), row.get('source'), 0, json.dumps(row, ensure_ascii=False, sort_keys=True)))
+              db.commit()
+          finally:
+              db.close()
+          print('PILOT_SUMMARY=' + json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          failures=[]
+          if eligible != [60]: failures.append(f'eligible universe mismatch: {eligible}')
+          if len(rows) != 32: failures.append(f'processed {len(rows)} != 32')
+          if duplicates: failures.append('duplicate ids')
+          if provenance_errors: failures.append('provenance errors')
+          if perspective_errors: failures.append('true-perspective errors')
+          if invalid_declared: failures.append('unsafe DECLARED')
+          if counts.get('ERROR',0): failures.append('product-level OCR errors')
+          if failures: raise SystemExit('; '.join(failures))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-non-p9-p2-pilot-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
