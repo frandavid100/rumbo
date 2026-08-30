@@ -40,8 +40,7 @@ jobs:
         working-directory: tools/catalog
         run: |
           # This probe replays persisted OCR text only. Visual detection and image
-          # extraction code are unchanged, so keep the regression environment free
-          # of OpenCV/Paddle/EasyOCR and test the code paths this change exercises.
+          # extraction code are unchanged, so test only the parser/ensemble paths.
           python -m unittest -v \
             test_nutrition_label_reader.py \
             test_nutrition_ocr_ensemble.py \
@@ -55,19 +54,28 @@ jobs:
             --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
             --out mercadona-ocr-typo-recovery-probe
 
-      - name: Assert provenance and non-canonical probe invariants
+      - name: Assert provenance and isolated non-canonical probe invariants
         working-directory: tools/catalog
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          p = Path('mercadona-ocr-typo-recovery-probe/summary.json')
-          s = json.loads(p.read_text(encoding='utf-8'))
+          root = Path('mercadona-ocr-typo-recovery-probe')
+          s = json.loads((root / 'summary.json').read_text(encoding='utf-8'))
+          promotions = json.loads((root / 'promotions.json').read_text(encoding='utf-8'))
           assert s['input_rows'] == 2630, s
           assert s['prior_declared'] == 130, s
           assert s['prior_review'] == 2500, s
           assert s['safety_gate_passed'] is True, s
+          assert s['incremental_typo_review_to_declared'] == len(promotions), s
+          assert not s['historical_declared_conflicts'], s
+          assert not s['repair_declared_regressions'], s
+          assert not s['repair_declared_value_changes'], s
+          assert not s['repaired_conflicting_declared_attempts'], s
+          assert all(p['independent_engine_families'] >= 2 for p in promotions), promotions
+          assert all(p['corroborated_fields'] == 4 for p in promotions), promotions
+          assert all(p['usable'] is False for p in promotions), promotions
           assert s['canonical_promotions_applied'] == 0, s
           assert s['images_downloaded'] is False, s
           assert s['images_persisted'] is False, s
