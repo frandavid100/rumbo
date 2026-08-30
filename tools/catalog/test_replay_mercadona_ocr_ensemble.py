@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from replay_mercadona_ocr_ensemble import replay_attempt
+from replay_mercadona_ocr_ensemble import replay_attempt, replay_product
 
 
 RICE_FLOUR_TEXT = """100 g
@@ -61,6 +62,48 @@ class ReplayMercadonaOCRTest(unittest.TestCase):
         result = replay_attempt(self._attempt(), reparse_label_text=True)
         self.assertEqual(result["status"], "REVIEW")
         self.assertIn("MISSING_CORE:calories,fat_g,carbohydrate_g,protein_g", result["reasons"])
+
+    def test_later_coherent_complete_review_replaces_only_incoherent_fallback(self):
+        # Observed at product 21594: the first crop produced a complete but
+        # energy-incoherent REVIEW tuple (carbohydrate 15 instead of 25.9), while
+        # the next independent crop preserved a complete coherent tuple. REVIEW
+        # remains REVIEW; this only prevents known-bad conflict evidence from
+        # shadowing the safer observation.
+        bad = {
+            "status": "REVIEW",
+            "basis": "100_g",
+            "nutrition": {
+                "calories": 242.0,
+                "fat_g": 10.2,
+                "carbohydrate_g": 15.0,
+                "protein_g": 10.9,
+            },
+            "confidence": 0.84,
+            "reasons": ["UNCORROBORATED_CORE_FIELDS", "ENERGY_MACRO_MISMATCH:195.4"],
+        }
+        coherent = {
+            "status": "REVIEW",
+            "basis": "100_g",
+            "nutrition": {
+                "calories": 242.0,
+                "fat_g": 10.2,
+                "carbohydrate_g": 25.9,
+                "protein_g": 10.9,
+            },
+            "confidence": 0.78,
+            "reasons": ["UNCORROBORATED_CORE_FIELDS", "LOW_EXTRACTION_CONFIDENCE"],
+        }
+        row = {"status": "REVIEW", "attempts": [{}, {}]}
+        with patch(
+            "replay_mercadona_ocr_ensemble.replay_attempt",
+            side_effect=[bad, coherent],
+        ):
+            status, nutrition, basis, replayed = replay_product(row)
+
+        self.assertEqual(status, "REVIEW")
+        self.assertEqual(basis, "100_g")
+        self.assertEqual(nutrition, coherent["nutrition"])
+        self.assertEqual(replayed, [bad, coherent])
 
 
 if __name__ == "__main__":
