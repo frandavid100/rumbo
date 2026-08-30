@@ -7,7 +7,7 @@ from nutrition_label_reader import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.0"
+READER_VERSION = "1.0.1"
 
 
 _FAT_PATTERNS = (
@@ -81,10 +81,14 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     ambiguity = _row_order_ambiguity(result)
     if ambiguity is None:
         return result
+    # REVIEW reads normally remain useful as corroborating evidence in the OCR
+    # ensemble. Row-order ambiguity is different: the tuple itself is known to
+    # contain a competing binding, so exposing it would let an unsafe value
+    # corroborate another engine. Preserve text/basis/reason for audit only.
     return LabelReadResult(
         status="REVIEW",
         basis=result.basis,
-        nutrition=result.nutrition,
+        nutrition=None,
         confidence=min(result.confidence, 0.65),
         reasons=tuple(result.reasons) + (ambiguity,),
         normalized_text=result.normalized_text,
