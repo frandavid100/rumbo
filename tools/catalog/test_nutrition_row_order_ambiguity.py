@@ -4,7 +4,7 @@ from mercadona_nutrition_label_reader import read_nutrition_label
 
 
 class NutritionRowOrderAmbiguityTest(unittest.TestCase):
-    def test_value_before_label_competing_with_following_row_is_review(self):
+    def test_value_before_label_competing_with_following_row_is_review_without_usable_values(self):
         # Observed PP-OCRv6 output for Mercadona product 29130 (harina de arroz).
         # The numeric column was linearised before its labels near the bottom of
         # the table: 7 g belongs to Proteinas and 0.01 g belongs to Sal. A naive
@@ -37,7 +37,10 @@ Peso Neto:"""
         r = read_nutrition_label(observed, extraction_confidence=.99)
         self.assertEqual(r.status, "REVIEW", r)
         self.assertIn("AMBIGUOUS_VALUE_BEFORE_LABEL:protein_g", r.reasons)
-        self.assertEqual(r.nutrition["protein_g"], 0.01)
+        # Ambiguous row ordering is not allowed to corroborate another OCR
+        # engine's values in the ensemble. Keep the text/reason for audit, but
+        # expose no nutrition tuple as usable evidence.
+        self.assertIsNone(r.nutrition)
 
     def test_normal_label_then_value_layout_remains_declared(self):
         observed = """100 g
