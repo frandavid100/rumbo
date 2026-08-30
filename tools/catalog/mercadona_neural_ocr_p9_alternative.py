@@ -44,6 +44,17 @@ def _still_review_baseline(path: Path) -> dict[str, dict[str, Any]]:
     return selected
 
 
+def selection_exit_code(*, processed: int, eligible: int, skip_first: int) -> int:
+    """Treat a deterministically exhausted perspective stratum as a clean no-op.
+
+    An empty result is still an error while unprocessed eligible rows should remain,
+    so accidental selection regressions cannot silently pass CI.
+    """
+    if processed:
+        return 0
+    return 0 if skip_first >= eligible else 2
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--products", required=True)
@@ -196,6 +207,7 @@ def main() -> int:
         "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in results),
         encoding="utf-8",
     )
+    exhausted = not results and args.skip_first >= len(eligible_hits)
     summary = {
         "source": "MERCADONA_FIRST_PARTY",
         "source_record_kind": "label image",
@@ -214,6 +226,7 @@ def main() -> int:
         "processed": len(results),
         "status_counts": dict(sorted(status_counts.items())),
         "declared_rate": round(status_counts["DECLARED"] / len(results), 4) if results else 0.0,
+        "stratum_exhausted": exhausted,
         "redistribution_allowed": False,
         "CLASSIFIED": 0,
         "MENU_ELIGIBLE": 0,
@@ -222,7 +235,9 @@ def main() -> int:
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0 if results else 2
+    return selection_exit_code(
+        processed=len(results), eligible=len(eligible_hits), skip_first=args.skip_first
+    )
 
 
 if __name__ == "__main__":
