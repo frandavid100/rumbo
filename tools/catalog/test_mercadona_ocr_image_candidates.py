@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from mercadona_ocr_image_candidates import (
+    deterministic_shard_window,
     has_p9_zoom,
     non_p9_zoom_candidates,
     structured_ingredients_no_p9_candidate,
@@ -53,6 +54,22 @@ class MercadonaOCRImageCandidatesTest(unittest.TestCase):
         index, chosen = structured_ingredients_no_p9_candidate(row)
         self.assertEqual(1, index)
         self.assertEqual(2, chosen["perspective"])
+
+    def test_shard_window_can_continue_after_a_pilot_prefix(self):
+        selected = deterministic_shard_window(
+            list(range(20)),
+            shard_index=1,
+            shard_count=4,
+            skip_first=2,
+            limit=2,
+        )
+        self.assertEqual([9, 13], selected)
+
+    def test_shard_window_validates_bounds(self):
+        with self.assertRaises(ValueError):
+            deterministic_shard_window([1, 2], shard_index=2, shard_count=2)
+        with self.assertRaises(ValueError):
+            deterministic_shard_window([1, 2], shard_index=0, shard_count=2, skip_first=-1)
 
 
 if __name__ == "__main__":
