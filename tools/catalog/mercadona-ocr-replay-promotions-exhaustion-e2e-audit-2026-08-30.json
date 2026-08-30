@@ -1,0 +1,76 @@
+{
+  "kind": "MERCADONA_REPLAY_PROMOTION_EXHAUSTION_E2E_AUDIT",
+  "date": "2026-08-30",
+  "branch": "agent/catalog-phase1",
+  "workflow_run": 33314050203,
+  "artifact_id": 9732984174,
+  "artifact_name": "mercadona-neural-ocr-replay-promotions-wave",
+  "artifact_sha256": "1f0fadb864efcbe2c021769673ecddcea5c4ca3c7dfb0e846dc495ca73acd273",
+  "selection_policy": "remaining untrusted replay REVIEW->DECLARED rows with 3 independent OCR engine families and all 4 fields corroborated",
+  "processed": 6,
+  "status_counts": {
+    "DECLARED": 4,
+    "REVIEW": 2
+  },
+  "selected_ids": [
+    "10505",
+    "10781",
+    "14347",
+    "5042",
+    "6331",
+    "82190"
+  ],
+  "reproduced_declared_ids": [
+    "10505",
+    "14347",
+    "5042",
+    "82190"
+  ],
+  "review_ids": [
+    "10781",
+    "6331"
+  ],
+  "declared_nutrition": {
+    "10505": {
+      "basis": "100_ml",
+      "calories": 46.0,
+      "protein_g": 3.2,
+      "carbohydrate_g": 4.7,
+      "fat_g": 1.6
+    },
+    "14347": {
+      "basis": "100_g",
+      "calories": 340.0,
+      "protein_g": 10.0,
+      "carbohydrate_g": 59.0,
+      "fat_g": 4.4
+    },
+    "5042": {
+      "basis": "100_g",
+      "calories": 349.0,
+      "protein_g": 6.7,
+      "carbohydrate_g": 78.0,
+      "fat_g": 0.9
+    },
+    "82190": {
+      "basis": "100_g",
+      "calories": 522.0,
+      "protein_g": 8.6,
+      "carbohydrate_g": 53.0,
+      "fat_g": 30.0
+    }
+  },
+  "exact_replay_agreement": true,
+  "conflicts": [],
+  "unsafe_declared": [],
+  "provenance_errors": [],
+  "canonical_additions_applied": 4,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "note": "This exhausts the bounded high-confidence replay promotion queue selected by the current 3-family/4-field policy. Two candidates did not reproduce and remain REVIEW; they are not usable nutrition."
+}
