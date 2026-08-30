@@ -1,0 +1,122 @@
+{
+  "kind": "MERCADONA_OCR_CUMULATIVE_SAFE_CUT_AUDIT",
+  "date": "2026-08-30",
+  "branch": "agent/catalog-phase1",
+  "catalog_universe": 4280,
+  "main_prioritized_cohort": {
+    "processed": 2630,
+    "trusted_DECLARED": 130,
+    "REVIEW": 2500,
+    "baseline_DECLARED": 122,
+    "independently_audited_promotions": 8,
+    "promotion_product_ids": [
+      "13025",
+      "13568",
+      "33640",
+      "34194",
+      "60690",
+      "63114",
+      "69757",
+      "86835"
+    ],
+    "row_order_ambiguity_hits": 17,
+    "row_order_ambiguity_product_ids": [
+      "11513",
+      "11630",
+      "12530",
+      "14430",
+      "16288",
+      "21791",
+      "34035",
+      "51072",
+      "51191",
+      "52406",
+      "52637",
+      "64464",
+      "84629",
+      "86145",
+      "9333",
+      "9377",
+      "9641"
+    ],
+    "ambiguity_hits_among_original_122_DECLARED": 0,
+    "ambiguity_hits_among_8_promotions": 0,
+    "ambiguity_hits_among_trusted_130_DECLARED": 0
+  },
+  "secondary_food_signal_cohort": {
+    "processed": 121,
+    "DECLARED": 3,
+    "REVIEW": 118,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "declared_products": [
+      {
+        "product_id": "25243",
+        "ean": "8412610036188",
+        "name": "Patas de pollo",
+        "nutrition": {
+          "calories": 176.0,
+          "carbohydrate_g": 0.6,
+          "fat_g": 11.0,
+          "protein_g": 19.0
+        },
+        "basis": "100_g"
+      },
+      {
+        "product_id": "4949",
+        "ean": "2105100049497",
+        "name": "Lagarto de cerdo",
+        "nutrition": {
+          "calories": 152.0,
+          "carbohydrate_g": 0.0,
+          "fat_g": 8.9,
+          "protein_g": 18.0
+        },
+        "basis": "100_g"
+      },
+      {
+        "product_id": "51198",
+        "ean": "8480000511980",
+        "name": "Queso lonchas fundido burger mezcla Hacendado",
+        "nutrition": {
+          "calories": 240.0,
+          "carbohydrate_g": 12.2,
+          "fat_g": 15.7,
+          "protein_g": 12.4
+        },
+        "basis": "100_g"
+      }
+    ],
+    "known_safety_demotion": {
+      "product_id": "29130",
+      "reason": "AMBIGUOUS_VALUE_BEFORE_LABEL:protein_g",
+      "old_unsafe_protein_g": 0.01,
+      "status": "REVIEW",
+      "nutrition_usable": false
+    }
+  },
+  "cohort_disjointness": {
+    "main_ids": 2630,
+    "secondary_ids": 121,
+    "overlap": 0
+  },
+  "cumulative_safe_cut": {
+    "processed": 2751,
+    "DECLARED": 133,
+    "REVIEW": 2618,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "macro_complete_DECLARED": 133,
+    "coverage_of_4280_percent": 3.1075,
+    "DECLARED_yield_of_processed_percent": 4.8346
+  },
+  "provenance_invariants": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
