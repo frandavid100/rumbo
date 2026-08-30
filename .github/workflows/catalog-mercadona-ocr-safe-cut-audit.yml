@@ -1,0 +1,59 @@
+name: Catalog Mercadona OCR safe cut audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ocr-safe-cut-audit.yml'
+      - 'tools/catalog/mercadona_ocr_safe_cut_audit.py'
+      - 'tools/catalog/mercadona_nutrition_label_reader.py'
+      - 'tools/catalog/mercadona-ocr-wave-512-rerun-reproducibility-2026-08-29.json'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-ocr-safe-cut-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download main validated OCR cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-neural-ocr-wave-2630-final
+          path: tools/catalog/main-2630
+          github-token: ${{ github.token }}
+          run-id: 33242633755
+      - name: Download secondary safe replay
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-food-signal-safe-replay
+          path: tools/catalog/secondary-safe
+          github-token: ${{ github.token }}
+          run-id: 33287664828
+      - name: Build and verify cumulative safe cut
+        working-directory: tools/catalog
+        run: |
+          python mercadona_ocr_safe_cut_audit.py \
+            --main-results main-2630/results.jsonl \
+            --secondary-safe-results secondary-safe/results-replayed.jsonl \
+            --promotion-audit mercadona-ocr-wave-512-rerun-reproducibility-2026-08-29.json \
+            --out mercadona-ocr-cumulative-safe-cut-2026-08-30.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-ocr-cumulative-safe-cut-2026-08-30
+          path: tools/catalog/mercadona-ocr-cumulative-safe-cut-2026-08-30.json
+          retention-days: 90
+          if-no-files-found: error
