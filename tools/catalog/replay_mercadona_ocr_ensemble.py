@@ -20,6 +20,8 @@ from mercadona_nutrition_label_reader import read_nutrition_label as read_mercad
 from nutrition_label_reader import LabelReadResult
 from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, fuse_ocr_readings
 
+CORE_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
+
 
 def _family(strategy: str, payload: dict[str, Any]) -> str:
     text = f"{strategy} {payload.get('engine') or ''}".lower()
@@ -113,6 +115,57 @@ def replay_attempt(attempt: dict[str, Any], *, reparse_label_text: bool = False)
     return _ensemble_payload(ensemble)
 
 
+def _complete_plausible_core(nutrition: Any) -> dict[str, float] | None:
+    if not isinstance(nutrition, dict) or any(nutrition.get(key) is None for key in CORE_FIELDS):
+        return None
+    try:
+        values = {key: float(nutrition[key]) for key in CORE_FIELDS}
+    except (TypeError, ValueError):
+        return None
+    if not 0 <= values["calories"] <= 1000:
+        return None
+    if any(not 0 <= values[key] <= 100 for key in ("fat_g", "carbohydrate_g", "protein_g")):
+        return None
+    return values
+
+
+def _energy_consistent_core(nutrition: Any) -> bool:
+    values = _complete_plausible_core(nutrition)
+    if values is None:
+        return False
+    estimated = (
+        9 * values["fat_g"]
+        + 4 * values["carbohydrate_g"]
+        + 4 * values["protein_g"]
+    )
+    return abs(estimated - values["calories"]) <= max(8.0, values["calories"] * 0.10)
+
+
+def _safer_review_fallback(
+    current_nutrition: Any,
+    current_basis: str | None,
+    candidate: dict[str, Any],
+) -> bool:
+    """Prefer a later complete coherent REVIEW only over a complete bad tuple.
+
+    This is intentionally much narrower than generic REVIEW ranking. It exists
+    for the observed Mercadona 21594 failure mode where the first crop binds a
+    neighbouring row into a complete energy-incoherent tuple and a later crop of
+    the same first-party image supplies a complete energy-coherent tuple on the
+    same explicit per-100 basis. Status remains REVIEW; no value is inferred.
+    """
+    candidate_basis = candidate.get("basis")
+    if current_basis is None or candidate_basis != current_basis:
+        return False
+    if _complete_plausible_core(current_nutrition) is None:
+        return False
+    if _energy_consistent_core(current_nutrition):
+        return False
+    if _complete_plausible_core(candidate.get("nutrition")) is None:
+        return False
+    return _energy_consistent_core(candidate.get("nutrition"))
+
+
 def replay_product(
     row: dict[str, Any], *, reparse_label_text: bool = False
 ) -> tuple[str, dict[str, float] | None, str | None, list[dict[str, Any]]]:
@@ -131,6 +184,9 @@ def replay_product(
         if ensemble.get("nutrition") is not None:
             best_status = "REVIEW"
             if best_nutrition is None:
+                best_nutrition = ensemble.get("nutrition")
+                best_basis = ensemble.get("basis")
+            elif _safer_review_fallback(best_nutrition, best_basis, ensemble):
                 best_nutrition = ensemble.get("nutrition")
                 best_basis = ensemble.get("basis")
 
