@@ -57,6 +57,26 @@ def structured_ingredients_no_p9_candidate(
     return candidates[0] if candidates else None
 
 
+def structured_ingredients_p9_alternative_candidate(
+    row: dict[str, Any],
+    *,
+    required_perspective: str | int,
+) -> tuple[int, dict[str, Any]] | None:
+    """Return one genuine non-p9 image for a p9 food row, never a semantic claim.
+
+    This helper exists for bounded rescue OCR on products whose official p9 image
+    has already remained REVIEW. The required alternative perspective is explicit
+    so pilot yields can be audited by image view instead of silently mixing them.
+    """
+    wanted = str(required_perspective)
+    if wanted == "9" or not row.get("ingredients") or not has_p9_zoom(row):
+        return None
+    for index, photo in enumerate(photos(row)):
+        if str(photo.get("perspective")) == wanted and photo.get("zoom"):
+            return index, photo
+    return None
+
+
 def deterministic_shard_window(
     items: list[T],
     *,
