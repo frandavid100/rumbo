@@ -1,0 +1,61 @@
+{
+  "inventory_products": 4280,
+  "cohort": "structured ingredients + no perspective 9 + true perspective 2 zoom",
+  "eligible_products": 60,
+  "pilot_processed": 32,
+  "completion_processed": 28,
+  "processed": 60,
+  "status_counts": {
+    "DECLARED": 2,
+    "REVIEW": 58
+  },
+  "DECLARED": 2,
+  "REVIEW": 58,
+  "NO_VISUAL_REGION": 0,
+  "ERROR": 0,
+  "declared_rate": 0.0333,
+  "eligible_count_observations": [60],
+  "completion_skip_first_observations": [8],
+  "pilot_completion_overlap": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "perspective_errors": [],
+  "invalid_declared_product_ids": [],
+  "declared_examples": [
+    {
+      "product_id": "9995",
+      "name": "Solomillo de pavo",
+      "nutrition": {
+        "calories": 96.0,
+        "carbohydrate_g": 1.0,
+        "fat_g": 0.5,
+        "protein_g": 23.0
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "13943",
+      "name": "Pizza Truffata con queso, champiñones y trufa Hacendado ultracongelada",
+      "nutrition": {
+        "calories": 285.0,
+        "carbohydrate_g": 29.9,
+        "fat_g": 12.7,
+        "protein_g": 11.8
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    }
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "workflow_run_id": 33295113740,
+  "artifact": "mercadona-neural-ocr-non-p9-p2-full",
+  "artifact_id": 9727349397,
+  "artifact_digest": "sha256:7d612a598041c12386e7e5874b8811479526936dbf02b87619b6241db3f6df0d",
+  "status": "CLOSED_CONSERVATIVE"
+}
