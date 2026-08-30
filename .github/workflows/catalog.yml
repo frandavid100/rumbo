@@ -86,6 +86,9 @@ jobs:
       - name: Probar regresiones de seguridad OCR Mercadona
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_ocr_safety_regressions.py
+      - name: Probar límites de auditoría de vistas alternativas Mercadona
+        working-directory: tools/catalog
+        run: python -m unittest -v test_merge_mercadona_p9_alternative_wave.py
       - name: Probar importador nutricional con fallback neuronal
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_nutrition_importer.py
