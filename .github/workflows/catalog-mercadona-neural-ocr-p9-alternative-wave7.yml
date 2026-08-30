@@ -46,7 +46,7 @@ jobs:
           name: mercadona-ocr-replay-2630
           path: tools/catalog/mercadona-ocr-replay-2630
           github-token: ${{ github.token }}
-          run-id: 33308586301
+          run-id: 33331091953
       - name: Install independent OCR engines and visual detector dependencies
         run: |
           sudo apt-get update -qq
