@@ -39,8 +39,8 @@ def _still_review_baseline(path: Path) -> dict[str, dict[str, Any]]:
         for row in rows
         if row.get("status") == "REVIEW" and (row.get("replay") or {}).get("status") == "REVIEW"
     }
-    if len(selected) != 2500:
-        raise ValueError(f"expected 2500 still-REVIEW p9 rows, got {len(selected)}")
+    if not selected:
+        raise ValueError("persisted p9 replay contains no rows that remain REVIEW in both passes")
     return selected
 
 
