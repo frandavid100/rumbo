@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from mercadona_neural_ocr_p9_alternative import selection_exit_code
 from mercadona_ocr_image_candidates import (
     deterministic_shard_window,
     has_p9_zoom,
@@ -110,6 +111,15 @@ class MercadonaOCRImageCandidatesTest(unittest.TestCase):
             deterministic_shard_window([1, 2], shard_index=2, shard_count=2)
         with self.assertRaises(ValueError):
             deterministic_shard_window([1, 2], shard_index=0, shard_count=2, skip_first=-1)
+
+    def test_exhausted_alternative_stratum_is_a_clean_noop(self):
+        self.assertEqual(0, selection_exit_code(processed=0, eligible=51, skip_first=64))
+
+    def test_empty_selection_before_stratum_end_remains_failure(self):
+        self.assertEqual(2, selection_exit_code(processed=0, eligible=80, skip_first=64))
+
+    def test_nonempty_selection_is_success(self):
+        self.assertEqual(0, selection_exit_code(processed=16, eligible=80, skip_first=64))
 
 
 if __name__ == "__main__":
