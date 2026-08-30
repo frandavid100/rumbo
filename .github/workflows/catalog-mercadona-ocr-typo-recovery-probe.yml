@@ -1,0 +1,86 @@
+name: Catalog Mercadona OCR typo recovery probe
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ocr-typo-recovery-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-ocr-typo-recovery-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download persisted Mercadona p9 OCR replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          github-token: ${{ github.token }}
+          run-id: 33256669736
+
+      - name: Run parser safety regressions first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_ocr_typo_recovery_probe.py
+          python -m py_compile mercadona_ocr_typo_recovery_probe.py
+
+      - name: Replay narrow OCR typo repairs from persisted text only
+        working-directory: tools/catalog
+        run: |
+          python mercadona_ocr_typo_recovery_probe.py \
+            --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-ocr-typo-recovery-probe
+
+      - name: Assert provenance and non-canonical probe invariants
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path('mercadona-ocr-typo-recovery-probe/summary.json')
+          s = json.loads(p.read_text(encoding='utf-8'))
+          assert s['input_rows'] == 2630, s
+          assert s['prior_declared'] == 130, s
+          assert s['prior_review'] == 2500, s
+          assert s['safety_gate_passed'] is True, s
+          assert s['canonical_promotions_applied'] == 0, s
+          assert s['images_downloaded'] is False, s
+          assert s['images_persisted'] is False, s
+          assert s['missing_values_inferred'] is False, s
+          assert s['evidence_level'] == 'OCR_DERIVED_FROM_MERCADONA_IMAGE', s
+          assert s['source'] == 'MERCADONA_FIRST_PARTY/label image', s
+          assert s['redistribution_allowed'] is False, s
+          assert s['CLASSIFIED'] == 0 and s['MENU_ELIGIBLE'] == 0, s
+          print(json.dumps(s, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-ocr-typo-recovery-probe
+          path: tools/catalog/mercadona-ocr-typo-recovery-probe/
+          retention-days: 30
+          if-no-files-found: warn
