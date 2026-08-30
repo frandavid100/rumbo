@@ -33,7 +33,7 @@ class ReplayMercadonaOCRTest(unittest.TestCase):
     def _attempt(self):
         wrong = {
             "status": "DECLARED",
-            "basis": "PER_100G",
+            "basis": "100_g",
             "nutrition": {
                 "calories": 354.0,
                 "fat_g": 1.2,
@@ -60,7 +60,7 @@ class ReplayMercadonaOCRTest(unittest.TestCase):
     def test_reparse_from_persisted_text_applies_current_safety_guard(self):
         result = replay_attempt(self._attempt(), reparse_label_text=True)
         self.assertEqual(result["status"], "REVIEW")
-        self.assertIn("NO_DECLARED_OCR_READ", result["reasons"])
+        self.assertIn("MISSING_CORE:calories,fat_g,carbohydrate_g,protein_g", result["reasons"])
 
 
 if __name__ == "__main__":
