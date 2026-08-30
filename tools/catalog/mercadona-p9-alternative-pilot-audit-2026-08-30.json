@@ -1,0 +1,48 @@
+{
+  "kind": "MERCADONA_P9_ALTERNATIVE_VIEW_OCR_PILOT_AUDIT",
+  "date": "2026-08-30",
+  "branch": "agent/catalog-phase1",
+  "workflow_run": 33306676591,
+  "workflow": ".github/workflows/catalog-mercadona-neural-ocr-p9-alternative-pilot.yml",
+  "artifact": {
+    "id": 9730887554,
+    "name": "mercadona-neural-ocr-p9-alternative-pilot-merged",
+    "sha256": "32944d46f4341913ef321730ca26f67e302c324655c319b5c395ac9baaf14bbc"
+  },
+  "baseline_p9_still_review_products": 2500,
+  "expected_eligible_by_perspective": {
+    "1": 1047,
+    "2": 1395,
+    "3": 123,
+    "10": 52
+  },
+  "processed_observations": 32,
+  "distinct_products_processed": 31,
+  "sample_per_perspective": 8,
+  "status_counts": {
+    "REVIEW": 32
+  },
+  "raw_alternative_DECLARED": 0,
+  "safe_new_promotion_products": 0,
+  "p9_partial_conflicts": [],
+  "cross_alternative_conflicts": [],
+  "duplicate_product_perspective_keys": [],
+  "provenance_errors": [],
+  "baseline_membership_errors": [],
+  "invalid_declared": [],
+  "diagnostic": {
+    "attempts_with_zero_independent_engine_families": 31,
+    "attempts_with_one_independent_engine_family": 1,
+    "attempts_with_any_corroborated_core_field": 0,
+    "interpretation": "The random alternative-view pilot produced no usable nutrition and almost all images contained no parser-valid nutrition observation. Do not scale all 2499 alternative-view products blindly; pursue a higher-yield parser/evidence rescue path first."
+  },
+  "provenance_invariants": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
