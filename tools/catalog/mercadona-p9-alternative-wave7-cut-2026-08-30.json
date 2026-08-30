@@ -1,0 +1,107 @@
+{
+  "kind": "MERCADONA_P9_REVIEW_ALTERNATIVE_VIEW_WAVE7_SAFE_CUT",
+  "date": "2026-08-30",
+  "branch": "agent/catalog-phase1",
+  "source_run": {
+    "workflow": ".github/workflows/catalog-mercadona-neural-ocr-p9-alternative-wave7.yml",
+    "run_id": 33331139819,
+    "html_url": "https://github.com/frandavid100/rumbo/actions/runs/33331139819",
+    "workflow_source_commit": "4d8c86a40e2dd108bff3eba94a02672558b4aa4e",
+    "prerequisite_p9_replay_run_id": 33331091953,
+    "artifact": "mercadona-neural-ocr-p9-alternative-wave7-merged",
+    "artifact_id": 9738092809,
+    "artifact_sha256": "1e82483dfbb91647253b1f8b167d4a74c1897c0501e385c51d16888ea6ce9a87"
+  },
+  "policy": {
+    "selection": "STRUCTURED_INGREDIENTS_WITH_P9; historical p9 and current safe replay both REVIEW; true non-p9 official alternative image",
+    "sample_order": "SHA256_PRODUCT_ID_EAN; positions 81-96 independently per perspective stratum; positions 1-80 completed previously",
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  },
+  "wave7": {
+    "inventory_products": 4280,
+    "baseline_p9_still_review_products": 2459,
+    "eligible_by_perspective": {
+      "1": 1034,
+      "2": 1367,
+      "3": 122,
+      "10": 51
+    },
+    "processed": 48,
+    "distinct_products_processed": 48,
+    "processed_by_perspective": {
+      "1": 16,
+      "2": 16,
+      "3": 16,
+      "10": 0
+    },
+    "status_counts": {
+      "DECLARED": 1,
+      "REVIEW": 47,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "safe_new_promotion_count": 1,
+    "safe_new_promotion_product_ids": [
+      "21594"
+    ],
+    "unsafe_declared": [],
+    "p9_partial_conflicts": [],
+    "cross_alternative_conflicts": [],
+    "duplicate_product_perspective_keys": [],
+    "provenance_errors": [],
+    "baseline_membership_errors": [],
+    "full_coverage": true
+  },
+  "safe_promotion": {
+    "product_id": "21594",
+    "ean": "8402001047534",
+    "name": "Pizza Kebab con pollo asado Hacendado ultracongelada",
+    "alternative_perspective": "2",
+    "basis": "100_g",
+    "nutrition": {
+      "calories": 242.0,
+      "protein_g": 10.9,
+      "carbohydrate_g": 25.9,
+      "fat_g": 10.2
+    },
+    "p9_replay_status": "REVIEW",
+    "p9_replay_basis": "100_g",
+    "p9_replay_nutrition": {
+      "calories": 242.0,
+      "protein_g": 10.9,
+      "carbohydrate_g": 25.9,
+      "fat_g": 10.2
+    },
+    "independent_engine_families": 2,
+    "corroborated_fields": 4,
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "reason": "Official perspective=2 independently corroborates all four macros with two OCR engine families and exactly agrees with the partial p9 replay evidence; no basis or macro conflict."
+  },
+  "cumulative_safe_after_wave7": {
+    "universe_total": 4280,
+    "ocr_processed_distinct": 2840,
+    "DECLARED_complete": 160,
+    "REVIEW": 2680,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "complete_macro_coverage_pct": 3.7383,
+    "main_p9_structured_safe_DECLARED": 155
+  },
+  "gates": {
+    "declared_requires_complete_four_macros": true,
+    "declared_requires_independent_engine_families_at_least": 2,
+    "declared_requires_corroborated_fields_at_least": 4,
+    "declared_rejects_conflicting_basis_or_p9_partial_values": true,
+    "review_never_usable": true,
+    "no_semantic_classification_performed": true
+  },
+  "next_step": "Independently reproduce product 21594 end-to-end from its official perspective=2 image before expanding the next deterministic alternative-view window."
+}
