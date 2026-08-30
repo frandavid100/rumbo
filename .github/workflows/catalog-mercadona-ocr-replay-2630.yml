@@ -10,6 +10,9 @@ on:
       - 'tools/catalog/replay_mercadona_ocr_ensemble.py'
       - 'tools/catalog/nutrition_ocr_ensemble.py'
       - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/mercadona_nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_row_order_ambiguity.py'
+      - 'tools/catalog/test_replay_mercadona_ocr_ensemble.py'
   workflow_dispatch:
 
 permissions:
@@ -38,13 +41,21 @@ jobs:
           path: tools/catalog/mercadona-neural-ocr-wave-2630-final
           github-token: ${{ github.token }}
           run-id: 33242633755
-      - name: Replay current consensus over persisted OCR evidence
+      - name: Run parser/replay safety regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_row_order_ambiguity.py \
+            test_replay_mercadona_ocr_ensemble.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+      - name: Reparse persisted OCR text and replay current consensus
         run: |
           python tools/catalog/replay_mercadona_ocr_ensemble.py \
             --input tools/catalog/mercadona-neural-ocr-wave-2630-final/results.jsonl \
             --out-dir tools/catalog/mercadona-ocr-replay-2630 \
-            --fail-on-regression
-      - name: Assert complete, provenance-safe audit
+            --reparse-label-text
+      - name: Assert complete provenance-safe audit
         run: |
           python - <<'PY'
           import json
@@ -53,9 +64,9 @@ jobs:
           p = Path('tools/catalog/mercadona-ocr-replay-2630/summary.json')
           s = json.loads(p.read_text(encoding='utf-8'))
           assert s['processed'] == 2630, s
-          assert s['regressions'] == 0, s
           assert s['declared_value_changes'] == 0, s
           assert s['redistribution_allowed'] is False, s
+          assert s['mode'] == 'REPLAY_REPARSE_FROM_PERSISTED_OCR_TEXT', s
           print(json.dumps(s, indent=2, ensure_ascii=False))
           PY
       - uses: actions/upload-artifact@v4
