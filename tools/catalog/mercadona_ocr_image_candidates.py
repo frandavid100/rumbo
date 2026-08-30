@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any, Iterable, TypeVar
+
+
+T = TypeVar("T")
 
 
 def photos(row: dict[str, Any]) -> list[dict[str, Any]]:
@@ -52,3 +55,35 @@ def structured_ingredients_no_p9_candidate(
         return None
     candidates = non_p9_zoom_candidates(row, preferred_perspectives=preferred_perspectives)
     return candidates[0] if candidates else None
+
+
+def deterministic_shard_window(
+    items: list[T],
+    *,
+    shard_index: int,
+    shard_count: int,
+    skip_first: int = 0,
+    limit: int = 0,
+) -> list[T]:
+    """Select a stable shard and optional suffix window without reprocessing its prefix.
+
+    The caller must sort ``items`` deterministically before calling this helper.  This
+    makes bounded follow-up OCR runs auditable: a pilot may process the first N items
+    of every shard and a later run can continue with ``skip_first=N`` instead of
+    downloading and OCRing the pilot rows again.
+    """
+    if shard_count <= 0:
+        raise ValueError("shard_count must be positive")
+    if shard_index < 0 or shard_index >= shard_count:
+        raise ValueError("shard_index must be within shard_count")
+    if skip_first < 0:
+        raise ValueError("skip_first must be non-negative")
+    if limit < 0:
+        raise ValueError("limit must be non-negative")
+
+    selected = [item for index, item in enumerate(items) if index % shard_count == shard_index]
+    if skip_first:
+        selected = selected[skip_first:]
+    if limit:
+        selected = selected[:limit]
+    return selected
