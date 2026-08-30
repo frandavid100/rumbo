@@ -5,41 +5,44 @@
   "processed_distinct_products": 2840,
   "processed_catalog_coverage_pct": 66.3551,
   "status_counts": {
-    "DECLARED": 155,
-    "REVIEW": 2685,
+    "DECLARED": 159,
+    "REVIEW": 2681,
     "NO_VISUAL_REGION": 0,
     "ERROR": 0
   },
-  "usable_complete_macro_products": 155,
-  "usable_complete_macro_catalog_coverage_pct": 3.6215,
+  "usable_complete_macro_products": 159,
+  "usable_complete_macro_catalog_coverage_pct": 3.715,
   "usable_macro_coverage": {
-    "calories": 155,
-    "protein_g": 155,
-    "carbohydrate_g": 155,
-    "fat_g": 155
+    "calories": 159,
+    "protein_g": 159,
+    "carbohydrate_g": 159,
+    "fat_g": 159
   },
   "closed_cohorts": [
     {
       "cohort": "perspective=9 + structured ingredients",
       "distinct_products": 2630,
-      "DECLARED": 150,
-      "REVIEW": 2480,
+      "DECLARED": 154,
+      "REVIEW": 2476,
       "NO_VISUAL_REGION": 0,
       "ERROR": 0,
       "trusted_breakdown": {
         "original_declared": 122,
-        "independently_audited_replay_promotions": 24,
+        "independently_audited_replay_promotions": 28,
         "independently_reproduced_typo_recovery_promotions": 4
       },
       "latest_e2e_wave": {
-        "workflow_run": 33309141604,
-        "artifact_id": 9731622143,
+        "workflow_run": 33314050203,
+        "artifact_id": 9732984174,
         "artifact": "mercadona-neural-ocr-replay-promotions-wave",
-        "reproduced_declared": 16,
-        "review": 0,
+        "processed": 6,
+        "reproduced_declared": 4,
+        "review": 2,
         "conflicts": 0,
+        "unsafe_declared": 0,
         "provenance_errors": 0,
-        "audit_path": "tools/catalog/mercadona-ocr-replay-promotions-wave-e2e-audit-2026-08-30.json"
+        "audit_path": "tools/catalog/mercadona-ocr-replay-promotions-exhaustion-e2e-audit-2026-08-30.json",
+        "queue_state": "EXHAUSTED_FOR_CURRENT_3_FAMILY_4_FIELD_HIGH_CONFIDENCE_POLICY"
       }
     },
     {
