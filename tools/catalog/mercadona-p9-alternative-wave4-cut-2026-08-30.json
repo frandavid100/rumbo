@@ -1,0 +1,75 @@
+{
+  "generated_at": "2026-08-30T15:41:48Z",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "workflow_run_id": 33319112190,
+  "workflow_head_sha": "fc5f57e7bb7f2dd769dbb9c3f49053ce5052bb53",
+  "artifact": {
+    "id": 9734700470,
+    "name": "mercadona-neural-ocr-p9-alternative-wave4-merged",
+    "digest": "sha256:447fa79e8339d64cbac620b5fb442dae0c23491220426976cea3d0921b0f3ec3",
+    "size_in_bytes": 99803,
+    "expires_at": "2026-09-29T15:41:48Z"
+  },
+  "scope": {
+    "pilot": "official alternative views for products that remain REVIEW in both original p9 OCR and current safe replay",
+    "perspectives": [1, 2, 3, 10],
+    "deterministic_positions": "33-48 independently per perspective stratum",
+    "previous_completed_positions": "1-32",
+    "sample_order": "SHA256_PRODUCT_ID_EAN"
+  },
+  "inventory_products": 4280,
+  "baseline_p9_still_review_products": 2459,
+  "expected_eligible_by_perspective": {
+    "1": 1034,
+    "2": 1367,
+    "3": 122,
+    "10": 51
+  },
+  "observed_eligible_by_perspective": {
+    "1": 1034,
+    "2": 1367,
+    "3": 122,
+    "10": 51
+  },
+  "processed": 64,
+  "distinct_products_processed": 64,
+  "processed_by_perspective": {
+    "1": 16,
+    "2": 16,
+    "3": 16,
+    "10": 16
+  },
+  "status_counts": {
+    "REVIEW": 64,
+    "DECLARED": 0,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "raw_alternative_DECLARED": 0,
+  "safe_new_promotion_observations": 0,
+  "safe_new_promotion_products": 0,
+  "safe_new_promotion_product_ids": [],
+  "audit": {
+    "provenance_errors": [],
+    "invalid_declared": [],
+    "duplicate_product_perspective_keys": [],
+    "cross_alternative_conflicts": [],
+    "p9_partial_conflicts": [],
+    "baseline_membership_errors": []
+  },
+  "cumulative_conservative_cut_after_wave": {
+    "processed_distinct_products": 2840,
+    "DECLARED_complete_four_macros": 159,
+    "REVIEW": 2681,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "full_macro_coverage_over_inventory_percent": 3.715
+  },
+  "decision": "No promotions from positions 33-48. Continue bounded deterministic alternative-view expansion; parser safety unchanged."
+}
