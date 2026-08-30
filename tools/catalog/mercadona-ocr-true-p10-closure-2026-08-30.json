@@ -1,0 +1,53 @@
+{
+  "cut_date": "2026-08-30",
+  "inventory_products": 4280,
+  "cohort": "structured ingredients + no perspective 9 + true perspective 10 zoom",
+  "eligible_products": 20,
+  "processed": 20,
+  "pilot_processed": 8,
+  "completion_processed": 12,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 20,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.0,
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "perspective_errors": [],
+  "invalid_declared_product_ids": [],
+  "pilot_completion_overlap": [],
+  "overlap_with_closed_p2_product_ids": [
+    "3021",
+    "3170",
+    "3235",
+    "3433",
+    "3506",
+    "3824"
+  ],
+  "cross_perspective_declared_matches": [],
+  "cross_perspective_declared_conflicts": [],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "workflow_run_id": 33298731536,
+  "workflow_head_sha": "61d12641a1b8ae61bd00965dc02657dd796abdc9",
+  "artifact": {
+    "id": 9728338851,
+    "name": "mercadona-neural-ocr-non-p9-p10-full",
+    "digest": "sha256:1461fa9a6944625f6422aef312cd5aa490f577561c9d74f4b77e96ee5382a448",
+    "size_in_bytes": 34952,
+    "created_at": "2026-08-30T07:24:06Z",
+    "expires_at": "2026-09-29T07:24:05Z"
+  },
+  "assessment": "CLOSED_NO_SAFE_DECLARED",
+  "notes": [
+    "All 20 eligible true-perspective-10 products remain REVIEW; none are usable nutrition.",
+    "The six products overlapping the closed true-perspective-2 cohort produced no DECLARED-vs-DECLARED conflict.",
+    "No missing values were inferred and no REVIEW result was promoted."
+  ]
+}
