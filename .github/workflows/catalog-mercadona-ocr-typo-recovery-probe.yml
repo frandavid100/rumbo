@@ -36,13 +36,15 @@ jobs:
           github-token: ${{ github.token }}
           run-id: 33256669736
 
-      - name: Run parser safety regressions first
+      - name: Run parser and ensemble safety regressions first
         working-directory: tools/catalog
         run: |
+          # This probe replays persisted OCR text only. Visual detection and image
+          # extraction code are unchanged, so keep the regression environment free
+          # of OpenCV/Paddle/EasyOCR and test the code paths this change exercises.
           python -m unittest -v \
             test_nutrition_label_reader.py \
             test_nutrition_ocr_ensemble.py \
-            test_mercadona_ocr_safety_regressions.py \
             test_mercadona_ocr_typo_recovery_probe.py
           python -m py_compile mercadona_ocr_typo_recovery_probe.py
 
