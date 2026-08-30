@@ -1,0 +1,101 @@
+{
+  "kind": "MERCADONA_OCR_TYPO_RECOVERY_END_TO_END_AUDIT",
+  "date": "2026-08-30",
+  "branch": "agent/catalog-phase1",
+  "reader_version": "1.4.5",
+  "workflow_run": 33308611828,
+  "workflow": ".github/workflows/catalog-mercadona-neural-ocr-typo-recovery-e2e.yml",
+  "artifact": {
+    "id": 9731396198,
+    "name": "mercadona-neural-ocr-typo-recovery-e2e",
+    "sha256": "6f26902e0b986672600074e199383054bf64910b9b54accd3d1670cc0990be58"
+  },
+  "candidate_source": {
+    "kind": "PERSISTED_TEXT_ISOLATED_TYPO_RECOVERY_PROBE",
+    "workflow_run": 33308402054,
+    "artifact_id": 9731210673,
+    "artifact_sha256": "2da8ab406030e51f21ce288ce98b7e98071c94f9066d2bcf12642bca474b5dc7"
+  },
+  "processed": 4,
+  "status_counts": {
+    "DECLARED": 4
+  },
+  "candidate_ids": [
+    "12946",
+    "15589",
+    "67660",
+    "80515"
+  ],
+  "reproduced_ids": [
+    "12946",
+    "15589",
+    "67660",
+    "80515"
+  ],
+  "review_ids": [],
+  "safe_for_trusted_addition": [
+    "12946",
+    "15589",
+    "67660",
+    "80515"
+  ],
+  "nutrition": {
+    "12946": {
+      "name": "Chocolate extrafino con leche Hacendado 0% azúcares añadidos",
+      "calories": 465.0,
+      "fat_g": 31.0,
+      "carbohydrate_g": 47.0,
+      "protein_g": 9.0,
+      "basis": "100_g"
+    },
+    "15589": {
+      "name": "Patatas fritas corte ondulado Hacendado",
+      "calories": 550.0,
+      "fat_g": 34.0,
+      "carbohydrate_g": 53.0,
+      "protein_g": 5.7,
+      "basis": "100_g"
+    },
+    "67660": {
+      "name": "Café soluble cappuccino caramelo Hacendado",
+      "calories": 395.0,
+      "fat_g": 6.3,
+      "carbohydrate_g": 76.0,
+      "protein_g": 7.4,
+      "basis": "100_g"
+    },
+    "80515": {
+      "name": "Cereales estrellas de maíz Stars Hacendado con miel",
+      "calories": 403.0,
+      "fat_g": 4.7,
+      "carbohydrate_g": 80.0,
+      "protein_g": 7.9,
+      "basis": "100_g"
+    }
+  },
+  "validation": {
+    "all_candidates_reproduced_end_to_end": true,
+    "all_four_core_fields_corroborated": true,
+    "minimum_independent_engine_families": 2,
+    "probe_conflicts": [],
+    "unsafe_declared": [],
+    "provenance_errors": []
+  },
+  "trusted_effect": {
+    "trusted_main_declared_before": 130,
+    "trusted_main_declared_after": 134,
+    "overall_safe_mercadona_declared_before": 135,
+    "overall_safe_mercadona_declared_after": 139,
+    "processed_distinct_products_unchanged": 2840,
+    "overall_review_after": 2701
+  },
+  "provenance": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
