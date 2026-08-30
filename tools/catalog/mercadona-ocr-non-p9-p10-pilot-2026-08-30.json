@@ -1,0 +1,40 @@
+{
+  "date": "2026-08-30",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "cohort": "structured ingredients + no perspective 9 + true perspective 10 zoom",
+  "inventory_products": 4280,
+  "eligible_products": 20,
+  "processed": 20,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 20,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.0,
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "perspective_errors": [],
+  "invalid_declared_product_ids": [],
+  "images_persisted": false,
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "workflow_run_id": 33294112037,
+  "merged_artifact": {
+    "name": "mercadona-neural-ocr-non-p9-p10-pilot-merged",
+    "artifact_id": 9726920552,
+    "sha256_zip": "43528c175eaa199d5d92ef7c556eaf5f2ac214e812b74706e2abfe1c8dd67287",
+    "contents": ["results.jsonl", "summary.json", "staging.sqlite"]
+  },
+  "validation": {
+    "all_eligible_processed": true,
+    "all_true_perspective_10": true,
+    "conservative_regression_tests": "PASS",
+    "product_level_errors": 0,
+    "unsafe_declared": 0
+  },
+  "decision": "P10_SUBCOHORT_COMPLETE_ZERO_YIELD_DO_NOT_PRIORITIZE",
+  "notes": "Perspective metadata is used only for routing. No row was promoted to usable nutrition. REVIEW remains unusable. The result does not justify treating perspective 10 as a nutrition-label signal."
+}
