@@ -1,37 +1,38 @@
 {
   "as_of": "2026-08-30",
-  "scope": "Mercadona first-party nutrition OCR conservative closed cohorts",
+  "scope": "Mercadona first-party nutrition OCR conservative closed cohorts plus safely promoted official alternative views",
   "catalog_total": 4280,
   "processed_distinct_products": 2840,
   "processed_catalog_coverage_pct": 66.3551,
   "status_counts": {
-    "DECLARED": 159,
-    "REVIEW": 2681,
+    "DECLARED": 160,
+    "REVIEW": 2680,
     "NO_VISUAL_REGION": 0,
     "ERROR": 0
   },
-  "usable_complete_macro_products": 159,
-  "usable_complete_macro_catalog_coverage_pct": 3.715,
+  "usable_complete_macro_products": 160,
+  "usable_complete_macro_catalog_coverage_pct": 3.7383,
   "usable_macro_coverage": {
-    "calories": 159,
-    "protein_g": 159,
-    "carbohydrate_g": 159,
-    "fat_g": 159
+    "calories": 160,
+    "protein_g": 160,
+    "carbohydrate_g": 160,
+    "fat_g": 160
   },
   "closed_cohorts": [
     {
       "cohort": "perspective=9 + structured ingredients",
       "distinct_products": 2630,
-      "DECLARED": 154,
-      "REVIEW": 2476,
+      "DECLARED": 155,
+      "REVIEW": 2475,
       "NO_VISUAL_REGION": 0,
       "ERROR": 0,
       "trusted_breakdown": {
         "original_declared": 122,
         "independently_audited_replay_promotions": 28,
-        "independently_reproduced_typo_recovery_promotions": 4
+        "independently_reproduced_typo_recovery_promotions": 4,
+        "official_alternative_view_promotions": 1
       },
-      "latest_e2e_wave": {
+      "latest_replay_e2e_wave": {
         "workflow_run": 33314050203,
         "artifact_id": 9732984174,
         "artifact": "mercadona-neural-ocr-replay-promotions-wave",
@@ -43,6 +44,49 @@
         "provenance_errors": 0,
         "audit_path": "tools/catalog/mercadona-ocr-replay-promotions-exhaustion-e2e-audit-2026-08-30.json",
         "queue_state": "EXHAUSTED_FOR_CURRENT_3_FAMILY_4_FIELD_HIGH_CONFIDENCE_POLICY"
+      },
+      "latest_alternative_view_wave": {
+        "workflow_run": 33331139819,
+        "artifact_id": 9738092809,
+        "artifact": "mercadona-neural-ocr-p9-alternative-wave7-merged",
+        "artifact_sha256": "1e82483dfbb91647253b1f8b167d4a74c1897c0501e385c51d16888ea6ce9a87",
+        "processed": 48,
+        "processed_by_perspective": {
+          "1": 16,
+          "2": 16,
+          "3": 16,
+          "10": 0
+        },
+        "raw_declared": 1,
+        "safe_promotions": 1,
+        "review": 47,
+        "NO_VISUAL_REGION": 0,
+        "ERROR": 0,
+        "unsafe_declared": 0,
+        "provenance_errors": 0,
+        "baseline_membership_errors": 0,
+        "cross_alternative_conflicts": 0,
+        "safe_product_ids": [
+          "21594"
+        ],
+        "safe_product": {
+          "product_id": "21594",
+          "ean": "8402001047534",
+          "name": "Pizza Kebab con pollo asado Hacendado ultracongelada",
+          "perspective": "2",
+          "basis": "100_g",
+          "nutrition": {
+            "calories": 242.0,
+            "protein_g": 10.9,
+            "carbohydrate_g": 25.9,
+            "fat_g": 10.2
+          },
+          "independent_engine_families": 2,
+          "corroborated_fields": 4,
+          "p9_replay_status": "REVIEW",
+          "p9_replay_exact_values_agree": true
+        },
+        "audit_path": "tools/catalog/mercadona-p9-alternative-wave7-cut-2026-08-30.json"
       }
     },
     {
@@ -101,6 +145,9 @@
   "safety": {
     "review_is_usable": false,
     "missing_values_inferred": false,
-    "structured_api_ingredients_or_allergens_used_as_macro_evidence": false
+    "structured_api_ingredients_or_allergens_used_as_macro_evidence": false,
+    "alternative_view_declared_requires_two_independent_ocr_families": true,
+    "alternative_view_declared_requires_four_corroborated_core_fields": true,
+    "alternative_view_declared_rejects_p9_partial_conflict": true
   }
 }
