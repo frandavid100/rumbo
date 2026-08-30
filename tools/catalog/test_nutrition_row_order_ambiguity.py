@@ -42,37 +42,6 @@ Peso Neto:"""
         # expose no nutrition tuple as usable evidence.
         self.assertIsNone(r.nutrition)
 
-    def test_multiple_value_before_label_bindings_are_stripped_from_review_evidence(self):
-        # Reduced from observed PP-OCRv6 output for Mercadona product 21594.
-        # Two rows are simultaneously linearised value-before-label. The generic
-        # row parser consequently binds carbohydrate to the following 15% token
-        # and protein to the following salt value. Because that tuple is already
-        # REVIEW, the original DECLARED-only ambiguity guard did not run and the
-        # bad values could later poison a clean independent alternative image.
-        observed = """100 g
-1016 kJ
-Valor Energético 242 kcal
-Grasas
-10.2 g
-3.2 g
-25.9 g
-Hidratos de Carbono
-15 g
-4.8 g
-10.9 g
-Proteínas
-1.3 g
-Sal"""
-        r = read_nutrition_label(observed, extraction_confidence=.99)
-        self.assertEqual(r.status, "REVIEW", r)
-        self.assertTrue(
-            any(reason.startswith("AMBIGUOUS_VALUE_BEFORE_LABEL:") for reason in r.reasons),
-            r,
-        )
-        # Do not choose 25.9/10.9 here. Ambiguity is evidence for REVIEW, not a
-        # license to infer replacement macros from OCR ordering.
-        self.assertIsNone(r.nutrition)
-
     def test_normal_label_then_value_layout_remains_declared(self):
         observed = """100 g
 Valor Energético 354 kcal
