@@ -1,21 +1,6 @@
 name: Catalog Mercadona neural OCR non-p9 p10 pilot
 
 on:
-  push:
-    branches: [agent/catalog-phase1]
-    paths:
-      - 'tools/catalog/mercadona_neural_ocr_non_p9.py'
-      - 'tools/catalog/mercadona_ocr_image_candidates.py'
-      - 'tools/catalog/test_mercadona_ocr_image_candidates.py'
-      - 'tools/catalog/nutrition_label_reader.py'
-      - 'tools/catalog/nutrition_ocr_ensemble.py'
-      - 'tools/catalog/nutrition_visual_table_detector.py'
-      - 'tools/catalog/mercadona_label_pipeline.py'
-      - 'tools/catalog/mercadona_nutrition_reader.py'
-      - 'tools/catalog/label_neural_extractor.py'
-      - 'tools/catalog/label_easyocr_extractor.py'
-      - 'tools/catalog/label_text_extractor.py'
-      - '.github/workflows/catalog-mercadona-neural-ocr-non-p9-p10-pilot.yml'
   workflow_dispatch:
 
 permissions:
