@@ -33,7 +33,7 @@ jobs:
       - name: Download completed 121-product food-signal OCR artifact
         uses: actions/download-artifact@v4
         with:
-          name: mercadona-food-signal-full
+          name: mercadona-neural-ocr-food-signal-expansion-full-merged
           path: tools/catalog/mercadona-food-signal-full
           github-token: ${{ github.token }}
           run-id: 33282798370
