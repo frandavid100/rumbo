@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.4"
+READER_VERSION = "1.4.5"
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,33 @@ def normalize_text(text: str) -> str:
     text = text.replace("\u00a0", " ").replace("\u202f", " ")
     text = text.replace(",", ".")
     text = re.sub(r"[ \t]+", " ", text)
+
+    # Narrow OCR token repairs observed repeatedly in Mercadona nutrition-label
+    # evidence. These alter no numeric value and are accepted only in structural
+    # contexts that identify a nutrition token rather than free prose.
+    text = re.sub(
+        r"(?i)(\b\d{1,4}(?:\.\d{1,2})?)[ \t]*(?:keal|kcai|kcall|kcali)(?![a-z0-9])",
+        r"\1 kcal",
+        text,
+    )
+
+    # A rarer OCR failure drops the leading `k` from kcal (`Ícal`/`ical`).
+    # Repair it only when a numeric kJ token is visible on that same line, so a
+    # standalone prose-like token can never manufacture an energy observation.
+    text = re.sub(
+        r"(?im)^([^\n]*\b\d{2,4}(?:\.\d+)?[ \t]*k[ \t]*j\b[^\n]*?)"
+        r"(\b\d{1,4}(?:\.\d{1,2})?)[ \t]*[ií]cal(?![a-z0-9])",
+        r"\1\2 kcal",
+        text,
+    )
+
+    # Exact standalone row-label substitutions observed in PP-OCR/Tesseract.
+    # Deliberately do not repair looser strings or prose such as `a las brasas`.
+    text = re.sub(
+        r"(?im)^([ \t]*)(?:brasas|vrasas)([ \t]*)$",
+        r"\1Grasas\2",
+        text,
+    )
     return text.strip()
 
 
