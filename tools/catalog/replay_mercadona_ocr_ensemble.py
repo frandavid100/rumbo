@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-"""Re-run Mercadona OCR consensus without downloading or re-reading images.
+"""Re-run Mercadona OCR parsing/consensus without downloading images.
 
-The neural OCR artifacts intentionally persist normalized OCR text and each
-engine's deterministic label-parser result, but never image bytes.  Ensemble
-changes can therefore be audited cheaply against the exact evidence already
-collected instead of spending hours re-running OCR.  This script does not infer
-missing values and never changes source/provenance metadata.
+Neural OCR artifacts persist normalized OCR text and each engine's prior
+label-parser result, but never image bytes. Ensemble-only changes can replay the
+stored parser result; parser changes can instead reparse the exact persisted
+OCR text before recomputing consensus. Neither mode infers missing values or
+changes source/provenance metadata.
 """
 
 import argparse
@@ -15,6 +15,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from mercadona_nutrition_label_reader import READER_VERSION as MERCADONA_READER_VERSION
+from mercadona_nutrition_label_reader import read_nutrition_label as read_mercadona_nutrition_label
 from nutrition_label_reader import LabelReadResult
 from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, fuse_ocr_readings
 
@@ -30,7 +32,14 @@ def _family(strategy: str, payload: dict[str, Any]) -> str:
     return strategy.split(":", 1)[0].lower() or "unknown"
 
 
-def _label_result(payload: dict[str, Any]) -> LabelReadResult:
+def _label_result(payload: dict[str, Any], *, reparse_label_text: bool = False) -> LabelReadResult:
+    normalized_text = str(payload.get("normalized_ocr_text") or "")
+    if reparse_label_text and normalized_text:
+        return read_mercadona_nutrition_label(
+            normalized_text,
+            extraction_confidence=float(payload.get("confidence") or 0.0),
+        )
+
     nutrition = payload.get("nutrition")
     if not isinstance(nutrition, dict):
         nutrition = None
@@ -40,11 +49,11 @@ def _label_result(payload: dict[str, Any]) -> LabelReadResult:
         nutrition=nutrition,
         confidence=float(payload.get("confidence") or 0.0),
         reasons=tuple(str(x) for x in (payload.get("reasons") or ())),
-        normalized_text=str(payload.get("normalized_ocr_text") or ""),
+        normalized_text=normalized_text,
     )
 
 
-def _readings(attempt: dict[str, Any]) -> tuple[ParsedOCRReading, ...]:
+def _readings(attempt: dict[str, Any], *, reparse_label_text: bool = False) -> tuple[ParsedOCRReading, ...]:
     target = str(attempt.get("target_kind") or "stored_evidence")
     readings: list[ParsedOCRReading] = []
     for strategy, payload in (attempt.get("engines") or {}).items():
@@ -53,9 +62,9 @@ def _readings(attempt: dict[str, Any]) -> tuple[ParsedOCRReading, ...]:
         readings.append(
             ParsedOCRReading(
                 strategy=f"{strategy}:{target}",
-                result=_label_result(payload),
+                result=_label_result(payload, reparse_label_text=reparse_label_text),
                 # The live pipeline deliberately fuses with extraction confidence,
-                # not the parser's capped REVIEW confidence.  Persisted artifacts
+                # not the parser's capped REVIEW confidence. Persisted artifacts
                 # store that extraction confidence in the engine payload.
                 extraction_confidence=float(payload.get("confidence") or 0.0),
                 engine_family=_family(str(strategy), payload),
@@ -87,12 +96,12 @@ def _ensemble_payload(ensemble) -> dict[str, Any]:
     }
 
 
-def replay_attempt(attempt: dict[str, Any]) -> dict[str, Any]:
-    readings = _readings(attempt)
+def replay_attempt(attempt: dict[str, Any], *, reparse_label_text: bool = False) -> dict[str, Any]:
+    readings = _readings(attempt, reparse_label_text=reparse_label_text)
     ensemble = fuse_ocr_readings(readings)
 
     # Mirror mercadona_neural_ocr_wave._extract_region exactly: EasyOCR is a
-    # bounded rescue.  If REVIEW observations merely poison two independently
+    # bounded rescue. If REVIEW observations merely poison two independently
     # parser-DECLARED matching reads, retry consensus from positive reads only.
     has_easyocr = any(reading.family == "easyocr" for reading in readings)
     if not ensemble.declared_usable and has_easyocr:
@@ -104,7 +113,9 @@ def replay_attempt(attempt: dict[str, Any]) -> dict[str, Any]:
     return _ensemble_payload(ensemble)
 
 
-def replay_product(row: dict[str, Any]) -> tuple[str, dict[str, float] | None, str | None, list[dict[str, Any]]]:
+def replay_product(
+    row: dict[str, Any], *, reparse_label_text: bool = False
+) -> tuple[str, dict[str, float] | None, str | None, list[dict[str, Any]]]:
     replayed: list[dict[str, Any]] = []
     best_status = "NO_VISUAL_REGION" if row.get("status") == "NO_VISUAL_REGION" else "REVIEW"
     best_nutrition: dict[str, float] | None = None
@@ -113,7 +124,7 @@ def replay_product(row: dict[str, Any]) -> tuple[str, dict[str, float] | None, s
     for attempt in row.get("attempts") or ():
         if not isinstance(attempt, dict):
             continue
-        ensemble = replay_attempt(attempt)
+        ensemble = replay_attempt(attempt, reparse_label_text=reparse_label_text)
         replayed.append(ensemble)
         if ensemble["status"] == "DECLARED":
             return "DECLARED", ensemble.get("nutrition"), ensemble.get("basis"), replayed
@@ -132,6 +143,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True, help="Prior Mercadona OCR results.jsonl")
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument(
+        "--reparse-label-text",
+        action="store_true",
+        help="Reparse persisted normalized OCR text with the current conservative Mercadona reader before consensus",
+    )
     ap.add_argument(
         "--fail-on-regression",
         action="store_true",
@@ -158,7 +174,9 @@ def main() -> int:
         old_status = str(row.get("status") or "UNRESOLVED")
         old_counts[old_status] += 1
 
-        status, nutrition, basis, replayed = replay_product(row)
+        status, nutrition, basis, replayed = replay_product(
+            row, reparse_label_text=args.reparse_label_text
+        )
         new_counts[status] += 1
         transitions[f"{old_status}->{status}"] += 1
 
@@ -182,6 +200,8 @@ def main() -> int:
         updated = dict(row)
         updated["replay"] = {
             "ensemble_version": ENSEMBLE_VERSION,
+            "mercadona_reader_version": MERCADONA_READER_VERSION if args.reparse_label_text else None,
+            "reparsed_label_text": bool(args.reparse_label_text),
             "prior_status": old_status,
             "status": status,
             "basis": basis,
@@ -198,8 +218,13 @@ def main() -> int:
         json.dumps(promotions, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     summary = {
-        "mode": "REPLAY_FROM_PERSISTED_OCR_EVIDENCE",
+        "mode": (
+            "REPLAY_REPARSE_FROM_PERSISTED_OCR_TEXT"
+            if args.reparse_label_text
+            else "REPLAY_FROM_PERSISTED_OCR_EVIDENCE"
+        ),
         "ensemble_version": ENSEMBLE_VERSION,
+        "mercadona_reader_version": MERCADONA_READER_VERSION if args.reparse_label_text else None,
         "processed": len(output_rows),
         "old_status_counts": dict(sorted(old_counts.items())),
         "new_status_counts": dict(sorted(new_counts.items())),
