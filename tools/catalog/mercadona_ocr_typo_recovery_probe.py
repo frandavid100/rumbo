@@ -12,7 +12,7 @@ from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
 
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
-PROBE_VERSION = "1.0.0"
+PROBE_VERSION = "1.1.0"
 
 
 def _load(path: Path) -> list[dict[str, Any]]:
@@ -86,29 +86,24 @@ def repair_observed_ocr_typos(text: str) -> tuple[str, tuple[str, ...]]:
     return repaired, tuple(dict.fromkeys(repairs))
 
 
-def _attempt_replay(attempt: dict[str, Any]) -> tuple[dict[str, Any], dict[str, tuple[str, ...]]]:
-    readings: list[ParsedOCRReading] = []
-    repairs_by_strategy: dict[str, tuple[str, ...]] = {}
-    target_kind = str(attempt.get("target_kind") or "persisted_target")
+def _safe_fuse(readings: list[ParsedOCRReading]):
+    """Mirror the production ensemble's REVIEW-poisoning safety behavior.
 
-    for strategy, payload in sorted((attempt.get("engines") or {}).items()):
-        if not isinstance(payload, dict):
-            continue
-        text = str(payload.get("normalized_ocr_text") or "")
-        repaired, repairs = repair_observed_ocr_typos(text)
-        if repairs:
-            repairs_by_strategy[strategy] = repairs
-        confidence = float(payload.get("confidence") or 0.0)
-        parsed = read_nutrition_label(repaired, extraction_confidence=confidence)
-        readings.append(ParsedOCRReading(
-            strategy=f"{strategy}:{target_kind}",
-            result=parsed,
-            extraction_confidence=confidence,
-            engine_family=_engine_family(strategy),
-        ))
+    REVIEW observations are audit evidence, not positive votes. First use the full
+    conservative fusion. If it does not declare, retry using only independently
+    parser-DECLARED readings; that strict result may win only if it independently
+    satisfies all normal ensemble/basis/energy safeguards. This is the same narrow
+    rescue used by the neural OCR path after a corroborating engine is available.
+    """
+    raw = fuse_ocr_readings(readings)
+    if raw.declared_usable:
+        return raw
+    strict = fuse_ocr_readings([reading for reading in readings if reading.result.status == "DECLARED"])
+    return strict if strict.declared_usable else raw
 
-    ensemble = fuse_ocr_readings(readings)
-    payload = {
+
+def _ensemble_payload(ensemble) -> dict[str, Any]:
+    return {
         "status": ensemble.status,
         "basis": ensemble.basis,
         "nutrition": ensemble.nutrition,
@@ -127,7 +122,33 @@ def _attempt_replay(attempt: dict[str, Any]) -> tuple[dict[str, Any], dict[str, 
             for field in ensemble.fields
         ],
     }
-    return payload, repairs_by_strategy
+
+
+def _attempt_replay(
+    attempt: dict[str, Any], *, apply_repairs: bool
+) -> tuple[dict[str, Any], dict[str, tuple[str, ...]]]:
+    readings: list[ParsedOCRReading] = []
+    repairs_by_strategy: dict[str, tuple[str, ...]] = {}
+    target_kind = str(attempt.get("target_kind") or "persisted_target")
+
+    for strategy, payload in sorted((attempt.get("engines") or {}).items()):
+        if not isinstance(payload, dict):
+            continue
+        text = str(payload.get("normalized_ocr_text") or "")
+        repaired, repairs = repair_observed_ocr_typos(text)
+        parse_text = repaired if apply_repairs else text
+        if apply_repairs and repairs:
+            repairs_by_strategy[strategy] = repairs
+        confidence = float(payload.get("confidence") or 0.0)
+        parsed = read_nutrition_label(parse_text, extraction_confidence=confidence)
+        readings.append(ParsedOCRReading(
+            strategy=f"{strategy}:{target_kind}",
+            result=parsed,
+            extraction_confidence=confidence,
+            engine_family=_engine_family(strategy),
+        ))
+
+    return _ensemble_payload(_safe_fuse(readings)), repairs_by_strategy
 
 
 def _close(field: str, a: float, b: float) -> bool:
@@ -151,6 +172,19 @@ def _compatible(a: dict[str, Any], b: dict[str, Any]) -> bool:
     )
 
 
+def _safe_declared_from_attempts(
+    attempt_results: list[dict[str, Any]], pid: str, conflicts: list[str]
+) -> dict[str, Any] | None:
+    declared_attempts = [x for x in attempt_results if x.get("status") == "DECLARED"]
+    if not declared_attempts:
+        return None
+    candidate = declared_attempts[0]
+    if all(_compatible(candidate, other) for other in declared_attempts[1:]):
+        return candidate
+    conflicts.append(pid)
+    return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--replay-results", required=True)
@@ -168,63 +202,88 @@ def main() -> int:
     repaired_rows: list[dict[str, Any]] = []
     repair_counts: Counter[str] = Counter()
     changed_products: set[str] = set()
-    old_declared_regressions: list[str] = []
-    old_declared_value_changes: list[str] = []
-    conflicting_declared_attempts: list[str] = []
+    baseline_declared_products: set[str] = set()
+    repaired_declared_products: set[str] = set()
+    historical_declared_unreproduced: list[str] = []
+    historical_declared_conflicts: list[str] = []
+    repair_declared_regressions: list[str] = []
+    repair_declared_value_changes: list[str] = []
+    baseline_conflicting_attempts: list[str] = []
+    repaired_conflicting_attempts: list[str] = []
 
     for row in rows:
         pid = str(row.get("product_id") or "")
         prior_replay = row.get("replay") or {}
         prior_status = str(prior_replay.get("status") or row.get("status") or "UNKNOWN")
-        attempt_results: list[dict[str, Any]] = []
+        baseline_attempt_results: list[dict[str, Any]] = []
+        repaired_attempt_results: list[dict[str, Any]] = []
         row_repairs: dict[str, dict[str, tuple[str, ...]]] = {}
 
         for index, attempt in enumerate(row.get("attempts") or []):
-            ensemble, repairs = _attempt_replay(attempt)
-            attempt_results.append(ensemble)
+            baseline_ensemble, _ = _attempt_replay(attempt, apply_repairs=False)
+            repaired_ensemble, repairs = _attempt_replay(attempt, apply_repairs=True)
+            baseline_attempt_results.append(baseline_ensemble)
+            repaired_attempt_results.append(repaired_ensemble)
             if repairs:
                 row_repairs[str(index)] = repairs
                 changed_products.add(pid)
                 for values in repairs.values():
                     repair_counts.update(values)
 
-        declared_attempts = [x for x in attempt_results if x.get("status") == "DECLARED"]
-        safe_declared: dict[str, Any] | None = None
-        if declared_attempts:
-            candidate = declared_attempts[0]
-            if all(_compatible(candidate, other) for other in declared_attempts[1:]):
-                safe_declared = candidate
-            else:
-                conflicting_declared_attempts.append(pid)
+        baseline_declared = _safe_declared_from_attempts(
+            baseline_attempt_results, pid, baseline_conflicting_attempts
+        )
+        repaired_declared = _safe_declared_from_attempts(
+            repaired_attempt_results, pid, repaired_conflicting_attempts
+        )
+        if baseline_declared is not None:
+            baseline_declared_products.add(pid)
+        if repaired_declared is not None:
+            repaired_declared_products.add(pid)
 
+        # The persisted 130-product trusted cut is immutable historical evidence.
+        # Current parser replay is diagnostic and must never demote it. A repaired
+        # parse is unsafe only if it actually produces a conflicting complete tuple.
         if prior_status == "DECLARED":
-            if safe_declared is None:
-                old_declared_regressions.append(pid)
+            if repaired_declared is None:
+                historical_declared_unreproduced.append(pid)
             else:
-                prior_nutrition = prior_replay.get("nutrition") or {}
-                prior_basis = prior_replay.get("basis")
-                if prior_basis != safe_declared.get("basis") or any(
-                    prior_nutrition.get(field) is None
-                    or not _close(field, float(prior_nutrition[field]), float((safe_declared.get("nutrition") or {})[field]))
-                    for field in FIELDS
-                ):
-                    old_declared_value_changes.append(pid)
+                persisted = {
+                    "basis": prior_replay.get("basis"),
+                    "nutrition": prior_replay.get("nutrition"),
+                }
+                if not _compatible(persisted, repaired_declared):
+                    historical_declared_conflicts.append(pid)
 
-        if prior_status == "REVIEW" and safe_declared is not None:
+        # Isolate the effect of these exact token repairs from every parser/ensemble
+        # improvement already present on the branch. Existing current-replay gains
+        # are not attributed to this probe and are not staged as typo promotions.
+        if baseline_declared is not None:
+            if repaired_declared is None:
+                repair_declared_regressions.append(pid)
+            elif not _compatible(baseline_declared, repaired_declared):
+                repair_declared_value_changes.append(pid)
+
+        if (
+            prior_status == "REVIEW"
+            and baseline_declared is None
+            and repaired_declared is not None
+            and bool(row_repairs)
+        ):
             promotions.append({
                 "product_id": pid,
                 "ean": row.get("ean"),
                 "name": row.get("name"),
-                "basis": safe_declared.get("basis"),
-                "nutrition": safe_declared.get("nutrition"),
-                "corroborated_fields": safe_declared.get("corroborated_fields"),
-                "independent_engine_families": safe_declared.get("independent_engine_families"),
+                "basis": repaired_declared.get("basis"),
+                "nutrition": repaired_declared.get("nutrition"),
+                "corroborated_fields": repaired_declared.get("corroborated_fields"),
+                "independent_engine_families": repaired_declared.get("independent_engine_families"),
                 "repairs": row_repairs,
                 "source": "MERCADONA_FIRST_PARTY/label image",
                 "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
                 "redistribution_allowed": False,
                 "usable": False,
-                "note": "probe only; requires parser integration and end-to-end OCR validation before canonical promotion",
+                "note": "incremental persisted-text probe only; requires canonical parser integration and end-to-end OCR reproduction before promotion",
             })
 
         if row_repairs:
@@ -232,9 +291,16 @@ def main() -> int:
                 "product_id": pid,
                 "prior_status": prior_status,
                 "repairs": row_repairs,
-                "attempt_ensembles": attempt_results,
+                "baseline_attempt_ensembles": baseline_attempt_results,
+                "repaired_attempt_ensembles": repaired_attempt_results,
             })
 
+    safety_gate_passed = not (
+        historical_declared_conflicts
+        or repair_declared_regressions
+        or repair_declared_value_changes
+        or repaired_conflicting_attempts
+    )
     summary = {
         "kind": "MERCADONA_PERSISTED_OCR_TYPO_RECOVERY_PROBE",
         "probe_version": PROBE_VERSION,
@@ -243,12 +309,17 @@ def main() -> int:
         "prior_review": sum(1 for row in rows if (row.get("replay") or {}).get("status") == "REVIEW"),
         "products_with_repaired_tokens": len(changed_products),
         "repair_counts": dict(sorted(repair_counts.items())),
-        "probe_review_to_declared": len(promotions),
-        "probe_promotion_product_ids": [row["product_id"] for row in promotions],
-        "old_declared_regressions": old_declared_regressions,
-        "old_declared_value_changes": old_declared_value_changes,
-        "conflicting_declared_attempts": conflicting_declared_attempts,
-        "safety_gate_passed": not old_declared_regressions and not old_declared_value_changes and not conflicting_declared_attempts,
+        "current_unrepaired_reparse_declared": len(baseline_declared_products),
+        "current_repaired_reparse_declared": len(repaired_declared_products),
+        "incremental_typo_review_to_declared": len(promotions),
+        "incremental_typo_promotion_product_ids": [row["product_id"] for row in promotions],
+        "historical_declared_unreproduced_by_current_reparse": historical_declared_unreproduced,
+        "historical_declared_conflicts": historical_declared_conflicts,
+        "repair_declared_regressions": repair_declared_regressions,
+        "repair_declared_value_changes": repair_declared_value_changes,
+        "baseline_conflicting_declared_attempts": baseline_conflicting_attempts,
+        "repaired_conflicting_declared_attempts": repaired_conflicting_attempts,
+        "safety_gate_passed": safety_gate_passed,
         "canonical_promotions_applied": 0,
         "images_downloaded": False,
         "images_persisted": False,
@@ -267,7 +338,7 @@ def main() -> int:
         encoding="utf-8",
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0 if summary["safety_gate_passed"] else 2
+    return 0 if safety_gate_passed else 2
 
 
 if __name__ == "__main__":
