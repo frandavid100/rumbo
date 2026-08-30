@@ -1,11 +1,11 @@
 {
   "date": "2026-08-30",
-  "workflow_run_id": 33278134827,
-  "head_sha": "8ea4c20200d47fb68d8c38fa7fde369034b4413f",
+  "workflow_run_id": 33280634655,
+  "head_sha": "c699ddb6de15e290a58410dc0251ad7147179148",
   "artifact": {
-    "id": 9722458299,
+    "id": 9723044437,
     "name": "mercadona-neural-ocr-food-signal-expansion-pilot-merged",
-    "sha256": "131f6f87ac8880a378418fdae51c2ec9e9531c74065fbcfb48660b7769663e7f"
+    "sha256": "73d22a2dde66e29c898bfa1a752a32764df6576752524d68eac4435c151e0179"
   },
   "inventory_products": 4280,
   "priority_universe_already_processed": 2630,
@@ -13,24 +13,38 @@
   "eligible_expansion_products": 121,
   "processed": 64,
   "status_counts": {
-    "DECLARED": 0,
-    "REVIEW": 64,
+    "DECLARED": 1,
+    "REVIEW": 63,
     "NO_VISUAL_REGION": 0,
     "ERROR": 0
   },
-  "declared_rate": 0.0,
+  "declared_rate": 0.0156,
   "safety": {
     "invalid_declared_product_ids": [],
     "duplicate_product_ids": [],
     "candidate_mode_errors": [],
     "provenance_errors": []
   },
-  "diagnostic": {
-    "systematic_parser_issue_found": true,
-    "example_product_id": "51198",
-    "example_product_name": "Queso lonchas fundido burger mezcla Hacendado",
-    "finding": "Whole-package OCR can place ingredient prose beginning with Proteínas before the nutrition row, causing an additive E-number to be read as protein; PP-OCRv6 can also linearise carbohydrate/protein values immediately before their row labels.",
-    "action": "Regression tests added first; parser hardened in commit c699ddb6de15e290a58410dc0251ad7147179148. A fresh end-to-end pilot rerun is required before any newly recovered value is accepted."
+  "parser_regression_validation": {
+    "systematic_parser_issue_fixed": true,
+    "product_id": "51198",
+    "product_name": "Queso lonchas fundido burger mezcla Hacendado",
+    "status": "DECLARED",
+    "basis": "100_g",
+    "nutrition": {
+      "calories": 240.0,
+      "protein_g": 12.4,
+      "carbohydrate_g": 12.2,
+      "fat_g": 15.7
+    },
+    "independent_engine_families": 2,
+    "corroborated_fields": 4,
+    "corroborating_engine_families": [
+      "paddleocr",
+      "tesseract"
+    ],
+    "energy_macro_check_kcal": 239.7,
+    "finding": "After the regression-first parser hardening, both PP-OCRv6 and Tesseract independently read the explicit 100 g nutrition rows as 240 kcal, 15.7 g fat, 12.2 g carbohydrate and 12.4 g protein. The prior ingredient-prose/E-number ambiguity no longer drives protein parsing; the accepted set is fully corroborated and energy-consistent."
   },
   "provenance_policy": {
     "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
@@ -38,5 +52,6 @@
     "redistribution_allowed": false,
     "CLASSIFIED": 0,
     "MENU_ELIGIBLE": 0
-  }
+  },
+  "decision": "VALIDATED_FOR_BOUNDED_EXPANSION"
 }
