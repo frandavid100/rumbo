@@ -1,0 +1,24 @@
+{
+  "kind": "MERCADONA_P9_TRUSTED_DECLARED_ID_MANIFEST",
+  "date": "2026-08-30",
+  "branch": "agent/catalog-phase1",
+  "source_replay_artifact": {
+    "workflow_run": 33256669736,
+    "artifact_id": 9716009900,
+    "name": "mercadona-ocr-replay-2630",
+    "sha256": "3d7a24f9f5433278c9b8cac589b557e8e9398d611d1fff5b2af9a351a602bb66"
+  },
+  "original_declared_count": 122,
+  "original_declared_product_ids_sha256_newline_sorted": "9b88fe1df182ffe27ea1db615759ec67ad08de4cb641dbe31c9836acc651abed",
+  "original_declared_product_ids": ["10502", "10599", "10794", "11551", "12053", "12282", "12821", "12911", "12996", "13069", "13237", "13450", "13577", "13707", "13811", "14140", "14713", "15068", "15101", "15203", "15611", "16117", "16387", "16712", "16737", "16812", "17150", "17259", "17396", "17569", "17622", "17628", "17647", "18114", "18602", "19866", "19988", "19994", "20154", "20376", "20891", "21605", "21698", "21846", "22002", "22177", "22178", "22703", "23051", "23052", "23053", "23373", "23622", "23908", "2689", "2715", "28688", "2869", "29044", "29134", "29180", "30096", "33581", "33624", "34078", "34079", "35221", "35707", "35781", "35955", "35981", "4193", "4900", "5002", "50985", "51110", "51146", "51211", "51223", "52493", "52782", "5398", "59164", "60683", "60722", "60918", "61006", "61251", "61302", "62012", "62401", "62403", "6250", "6277", "63140", "63159", "63163", "63323", "64179", "64196", "64249", "67972", "68188", "69463", "69719", "69722", "69753", "80292", "80859", "82222", "82290", "8244", "82753", "82773", "84284", "84287", "84289", "86331", "86442", "9355", "9536", "9547"],
+  "independently_audited_replay_promotions": ["13025", "13568", "33640", "34194", "60690", "63114", "69757", "86835"],
+  "trusted_main_declared_count": 130,
+  "note": "Persisted to retain exact historical membership after Actions artifacts expire; this does not add or infer nutrition values.",
+  "provenance_invariants": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
