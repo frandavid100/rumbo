@@ -32,6 +32,12 @@ def close(field: str, a: float, b: float) -> bool:
     return abs(a - b) <= tolerance
 
 
+def expected_sample_count(eligible: int, skip_first: int, limit: int) -> int:
+    """Return the bounded sample size after deterministically skipping a prefix."""
+    remaining = max(0, eligible - skip_first)
+    return min(limit, remaining)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default="input")
@@ -184,6 +190,12 @@ def main() -> None:
 
     start = args.skip_first + 1
     end = args.skip_first + args.limit
+    expected_by_perspective = {
+        perspective: expected_sample_count(
+            EXPECTED_ELIGIBLE[perspective], args.skip_first, args.limit
+        )
+        for perspective in PERSPECTIVES
+    }
     summary = {
         "inventory_products": 4280,
         "baseline_p9_still_review_products": EXPECTED_BASELINE,
@@ -192,6 +204,7 @@ def main() -> None:
         "perspectives": list(PERSPECTIVES),
         "expected_eligible_by_perspective": EXPECTED_ELIGIBLE,
         "observed_eligible_by_perspective": observed_eligible,
+        "expected_processed_by_perspective": expected_by_perspective,
         "processed": len(rows),
         "distinct_products_processed": len({str(row.get("product_id") or "") for row in rows}),
         "processed_by_perspective": dict(sorted(by_perspective.items())),
@@ -256,7 +269,7 @@ def main() -> None:
 
     print("P9_ALTERNATIVE_WAVE_SUMMARY=" + json.dumps(summary, ensure_ascii=False, sort_keys=True))
 
-    expected_total = args.limit * len(PERSPECTIVES)
+    expected_total = sum(expected_by_perspective.values())
     failures = []
     if observed_eligible != EXPECTED_ELIGIBLE:
         failures.append(f"eligible census mismatch: {observed_eligible}")
@@ -266,8 +279,10 @@ def main() -> None:
         failures.append(f"skip-first mismatch: {observed_skip_first}")
     if len(rows) != expected_total:
         failures.append(f"processed {len(rows)} != {expected_total}")
-    if any(by_perspective.get(p, 0) != args.limit for p in PERSPECTIVES):
-        failures.append(f"perspective sample mismatch: {by_perspective}")
+    if any(by_perspective.get(p, 0) != expected_by_perspective[p] for p in PERSPECTIVES):
+        failures.append(
+            f"perspective sample mismatch: observed={by_perspective} expected={expected_by_perspective}"
+        )
     if duplicates:
         failures.append("duplicate product/perspective keys")
     if provenance_errors:
