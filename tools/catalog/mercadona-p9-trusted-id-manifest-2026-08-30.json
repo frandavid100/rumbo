@@ -11,7 +11,7 @@
   "original_declared_count": 122,
   "original_declared_product_ids_sha256_newline_sorted": "9b88fe1df182ffe27ea1db615759ec67ad08de4cb641dbe31c9836acc651abed",
   "original_declared_product_ids": ["10502", "10599", "10794", "11551", "12053", "12282", "12821", "12911", "12996", "13069", "13237", "13450", "13577", "13707", "13811", "14140", "14713", "15068", "15101", "15203", "15611", "16117", "16387", "16712", "16737", "16812", "17150", "17259", "17396", "17569", "17622", "17628", "17647", "18114", "18602", "19866", "19988", "19994", "20154", "20376", "20891", "21605", "21698", "21846", "22002", "22177", "22178", "22703", "23051", "23052", "23053", "23373", "23622", "23908", "2689", "2715", "28688", "2869", "29044", "29134", "29180", "30096", "33581", "33624", "34078", "34079", "35221", "35707", "35781", "35955", "35981", "4193", "4900", "5002", "50985", "51110", "51146", "51211", "51223", "52493", "52782", "5398", "59164", "60683", "60722", "60918", "61006", "61251", "61302", "62012", "62401", "62403", "6250", "6277", "63140", "63159", "63163", "63323", "64179", "64196", "64249", "67972", "68188", "69463", "69719", "69722", "69753", "80292", "80859", "82222", "82290", "8244", "82753", "82773", "84284", "84287", "84289", "86331", "86442", "9355", "9536", "9547"],
-  "independently_audited_replay_promotions": ["10820", "11552", "13025", "13235", "13451", "13568", "14216", "14639", "17128", "21979", "23146", "24532", "33120", "33640", "34194", "34606", "60690", "63114", "67940", "69720", "69757", "80450", "82007", "86835"],
+  "independently_audited_replay_promotions": ["5042", "10505", "10820", "11552", "13025", "13235", "13451", "13568", "14216", "14347", "14639", "17128", "21979", "23146", "24532", "33120", "33640", "34194", "34606", "60690", "63114", "67940", "69720", "69757", "80450", "82007", "82190", "86835"],
   "independently_reproduced_typo_recovery_promotions": ["12946", "15589", "67660", "80515"],
   "typo_recovery_e2e_source": {
     "workflow_run": 33308611828,
@@ -29,8 +29,18 @@
     "reproduced_count": 16,
     "audit_path": "tools/catalog/mercadona-ocr-replay-promotions-wave-e2e-audit-2026-08-30.json"
   },
-  "trusted_main_declared_count": 150,
-  "note": "Persisted to retain exact historical trusted membership after Actions artifacts expire. Eight earlier replay promotions, four typo-recovery promotions and sixteen additional high-confidence replay promotions have all been independently re-run end to end from Mercadona first-party label images; exact basis and all four macros matched, with no inferred nutrition values.",
+  "replay_promotion_exhaustion_e2e_source": {
+    "workflow_run": 33314050203,
+    "artifact_id": 9732984174,
+    "artifact_name": "mercadona-neural-ocr-replay-promotions-wave",
+    "sha256": "1f0fadb864efcbe2c021769673ecddcea5c4ca3c7dfb0e846dc495ca73acd273",
+    "processed": 6,
+    "reproduced_count": 4,
+    "review_count": 2,
+    "audit_path": "tools/catalog/mercadona-ocr-replay-promotions-exhaustion-e2e-audit-2026-08-30.json"
+  },
+  "trusted_main_declared_count": 154,
+  "note": "Persisted to retain exact historical trusted membership after Actions artifacts expire. Eight earlier replay promotions, four typo-recovery promotions, sixteen additional replay promotions and four final high-confidence replay promotions have all been independently re-run end to end from Mercadona first-party label images; exact basis and all four macros matched for trusted additions, with no inferred nutrition values. The two remaining candidates in the final bounded replay queue did not reproduce and remain REVIEW.",
   "provenance_invariants": {
     "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
     "source": "MERCADONA_FIRST_PARTY/label image",
