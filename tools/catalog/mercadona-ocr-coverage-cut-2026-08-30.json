@@ -86,7 +86,22 @@
           "p9_replay_status": "REVIEW",
           "p9_replay_exact_values_agree": true
         },
-        "audit_path": "tools/catalog/mercadona-p9-alternative-wave7-cut-2026-08-30.json"
+        "audit_path": "tools/catalog/mercadona-p9-alternative-wave7-cut-2026-08-30.json",
+        "e2e_verification": {
+          "workflow_run": 33336303721,
+          "artifact_id": 9739212772,
+          "artifact": "mercadona-p9-alternative-wave7-p21594-e2e",
+          "artifact_sha256": "09b45a1764fe8b6c3ebe151239a463c1ed43c247459ff41e9e116495837cc3cb",
+          "product_id": "21594",
+          "exact_status_match": true,
+          "exact_basis_match": true,
+          "exact_macro_match": true,
+          "independent_engine_families": 2,
+          "corroborated_fields": 4,
+          "provenance_errors": 0,
+          "audit_path": "tools/catalog/mercadona-p9-alternative-wave7-p21594-e2e-audit-2026-08-30.json",
+          "result": "PRODUCT_21594_REPRODUCED_E2E_VALUE_FOR_VALUE"
+        }
       }
     },
     {
