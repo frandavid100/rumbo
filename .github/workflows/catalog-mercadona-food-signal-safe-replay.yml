@@ -1,0 +1,110 @@
+name: Catalog Mercadona food-signal safe replay
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-food-signal-safe-replay.yml'
+      - 'tools/catalog/replay_mercadona_ocr_ensemble.py'
+      - 'tools/catalog/mercadona_nutrition_label_reader.py'
+      - 'tools/catalog/test_replay_mercadona_ocr_ensemble.py'
+      - 'tools/catalog/test_nutrition_row_order_ambiguity.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-food-signal-safe-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download completed 121-product food-signal OCR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-food-signal-full
+          path: tools/catalog/mercadona-food-signal-full
+          github-token: ${{ github.token }}
+          run-id: 33282798370
+      - name: Run parser and replay regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_row_order_ambiguity.py \
+            test_replay_mercadona_ocr_ensemble.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+      - name: Reparse persisted OCR text and recompute consensus
+        working-directory: tools/catalog
+        run: |
+          python replay_mercadona_ocr_ensemble.py \
+            --input mercadona-food-signal-full/results.jsonl \
+            --out-dir mercadona-food-signal-safe-replay \
+            --reparse-label-text
+      - name: Audit expected conservative transition
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          out = Path('mercadona-food-signal-safe-replay')
+          summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
+          regressions = json.loads((out / 'regressions.json').read_text(encoding='utf-8')) if (out / 'regressions.json').exists() else []
+          promotions = json.loads((out / 'promotions.json').read_text(encoding='utf-8'))
+          changes = json.loads((out / 'declared-value-changes.json').read_text(encoding='utf-8')) if (out / 'declared-value-changes.json').exists() else []
+
+          if summary.get('processed') != 121:
+              raise SystemExit(f"expected 121 products, got {summary.get('processed')}")
+          if summary.get('new_status_counts') != {'DECLARED': 3, 'REVIEW': 118}:
+              raise SystemExit(f"unexpected safe replay statuses: {summary.get('new_status_counts')}")
+          if promotions:
+              raise SystemExit(f'unexpected promotions: {promotions}')
+          if changes:
+              raise SystemExit(f'unexpected DECLARED value changes: {changes}')
+          if len(regressions) != 1 or str(regressions[0].get('product_id')) != '29130':
+              raise SystemExit(f'unexpected regressions: {regressions}')
+          if float((regressions[0].get('old_nutrition') or {}).get('protein_g', -1)) != 0.01:
+              raise SystemExit(f'29130 did not carry the known unsafe protein value: {regressions[0]}')
+
+          audit = {
+              'decision': 'SAFE_REPLAY_VALIDATED',
+              'cohort': 'p9-no-ingredients-food-signal',
+              'universe_total': 4280,
+              'cohort_eligible': 121,
+              'processed': 121,
+              'status_counts': summary['new_status_counts'],
+              'safety_demotions': 1,
+              'demoted_product_ids': ['29130'],
+              'declared_value_changes': 0,
+              'promotions': 0,
+              'evidence': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'note': 'Reparsed persisted OCR text only; no image download, no OCR rerun, no missing-value inference.',
+          }
+          (out / 'validated-summary.json').write_text(
+              json.dumps(audit, ensure_ascii=False, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(audit, ensure_ascii=False, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-food-signal-safe-replay
+          path: tools/catalog/mercadona-food-signal-safe-replay/
+          retention-days: 30
+          if-no-files-found: error
