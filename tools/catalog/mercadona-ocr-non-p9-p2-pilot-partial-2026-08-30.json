@@ -1,0 +1,51 @@
+{
+  "date": "2026-08-30",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "cohort": "structured ingredients + no perspective 9 + true perspective 2 zoom",
+  "inventory_products": 4280,
+  "eligible_products": 60,
+  "pilot_target": 32,
+  "processed_so_far": 24,
+  "status_counts_so_far": {
+    "DECLARED": 0,
+    "REVIEW": 24,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "perspective_errors": [],
+  "images_persisted": false,
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "workflow_run_id": 33294377204,
+  "completed_shards": [0, 1, 2],
+  "pending_shards": [3],
+  "artifacts": [
+    {
+      "shard": 0,
+      "artifact_id": 9727016714,
+      "sha256_zip": "d11a40321fd449d3f979ff4f661dafe8553296dbf54a861cfdfd5146a1cf515a"
+    },
+    {
+      "shard": 1,
+      "artifact_id": 9727034182,
+      "sha256_zip": "46f48e71488700675ba5a28f310a47e3a3da0bee75dd20e1ab6f7272eadde66e"
+    },
+    {
+      "shard": 2,
+      "artifact_id": 9726998127,
+      "sha256_zip": "96c15157499be310b4fddd212a6a011a57ea70fd7cd16e5a826c1b7fb8ffee69"
+    }
+  ],
+  "validation_so_far": {
+    "all_true_perspective_2": true,
+    "conservative_regression_tests": "PASS",
+    "product_level_errors": 0,
+    "unsafe_declared": 0
+  },
+  "decision": "IN_PROGRESS_DO_NOT_INTERPRET_AS_FINAL",
+  "notes": "Partial checkpoint only. REVIEW remains unusable. No row has been promoted to usable nutrition. Shard 3 and the merged audit are still pending; the running workflow was not duplicated or modified."
+}
