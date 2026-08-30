@@ -20,6 +20,8 @@ from mercadona_nutrition_label_reader import read_nutrition_label as read_mercad
 from nutrition_label_reader import LabelReadResult
 from nutrition_ocr_ensemble import ENSEMBLE_VERSION, ParsedOCRReading, fuse_ocr_readings
 
+CORE_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
+
 
 def _family(strategy: str, payload: dict[str, Any]) -> str:
     text = f"{strategy} {payload.get('engine') or ''}".lower()
@@ -113,6 +115,35 @@ def replay_attempt(attempt: dict[str, Any], *, reparse_label_text: bool = False)
     return _ensemble_payload(ensemble)
 
 
+def _review_evidence_rank(ensemble: dict[str, Any]) -> tuple[int, int, int, int, float]:
+    """Rank REVIEW-only evidence without turning it into usable nutrition.
+
+    REVIEW tuples are retained only as conflict evidence for later independent
+    image observations. An internally energy-incoherent tuple must therefore not
+    shadow a coherent observation from another crop/region of the same first-party
+    label. Completeness, explicit basis and corroboration are only tie-breakers
+    after that safety property.
+    """
+    reasons = tuple(str(x) for x in (ensemble.get("reasons") or ()))
+    energy_incoherent = any(
+        reason.startswith("ENERGY_MACRO_MISMATCH")
+        or reason.startswith("ENERGY_TOO_LOW_FOR_MACROS")
+        or reason.startswith("ENERGY_TOO_HIGH_FOR_MACROS")
+        for reason in reasons
+    )
+    nutrition = ensemble.get("nutrition")
+    if not isinstance(nutrition, dict):
+        nutrition = {}
+    complete_fields = sum(nutrition.get(field) is not None for field in CORE_FIELDS)
+    return (
+        0 if energy_incoherent else 1,
+        complete_fields,
+        1 if ensemble.get("basis") else 0,
+        int(ensemble.get("corroborated_fields") or 0),
+        float(ensemble.get("confidence") or 0.0),
+    )
+
+
 def replay_product(
     row: dict[str, Any], *, reparse_label_text: bool = False
 ) -> tuple[str, dict[str, float] | None, str | None, list[dict[str, Any]]]:
@@ -120,6 +151,7 @@ def replay_product(
     best_status = "NO_VISUAL_REGION" if row.get("status") == "NO_VISUAL_REGION" else "REVIEW"
     best_nutrition: dict[str, float] | None = None
     best_basis: str | None = None
+    best_review_rank: tuple[int, int, int, int, float] | None = None
 
     for attempt in row.get("attempts") or ():
         if not isinstance(attempt, dict):
@@ -130,7 +162,9 @@ def replay_product(
             return "DECLARED", ensemble.get("nutrition"), ensemble.get("basis"), replayed
         if ensemble.get("nutrition") is not None:
             best_status = "REVIEW"
-            if best_nutrition is None:
+            rank = _review_evidence_rank(ensemble)
+            if best_review_rank is None or rank > best_review_rank:
+                best_review_rank = rank
                 best_nutrition = ensemble.get("nutrition")
                 best_basis = ensemble.get("basis")
 
