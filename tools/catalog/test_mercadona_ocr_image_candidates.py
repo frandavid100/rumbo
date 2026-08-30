@@ -7,6 +7,7 @@ from mercadona_ocr_image_candidates import (
     has_p9_zoom,
     non_p9_zoom_candidates,
     structured_ingredients_no_p9_candidate,
+    structured_ingredients_p9_alternative_candidate,
 )
 
 
@@ -54,6 +55,45 @@ class MercadonaOCRImageCandidatesTest(unittest.TestCase):
         index, chosen = structured_ingredients_no_p9_candidate(row)
         self.assertEqual(1, index)
         self.assertEqual(2, chosen["perspective"])
+
+    def test_p9_alternative_requires_food_p9_and_exact_non_p9_view(self):
+        row = {
+            "ingredients": "water",
+            "photos": [
+                {"perspective": 1, "zoom": "https://example/1.jpg"},
+                {"perspective": 2, "zoom": "https://example/2.jpg"},
+                {"perspective": 9, "zoom": "https://example/9.jpg"},
+            ],
+        }
+        index, chosen = structured_ingredients_p9_alternative_candidate(
+            row, required_perspective=2
+        )
+        self.assertEqual(1, index)
+        self.assertEqual(2, chosen["perspective"])
+        self.assertIsNone(
+            structured_ingredients_p9_alternative_candidate(row, required_perspective=10)
+        )
+        self.assertIsNone(
+            structured_ingredients_p9_alternative_candidate(row, required_perspective=9)
+        )
+
+    def test_p9_alternative_rejects_missing_ingredients_or_missing_p9(self):
+        no_ingredients = {
+            "photos": [
+                {"perspective": 2, "zoom": "https://example/2.jpg"},
+                {"perspective": 9, "zoom": "https://example/9.jpg"},
+            ]
+        }
+        no_p9 = {
+            "ingredients": "water",
+            "photos": [{"perspective": 2, "zoom": "https://example/2.jpg"}],
+        }
+        self.assertIsNone(
+            structured_ingredients_p9_alternative_candidate(no_ingredients, required_perspective=2)
+        )
+        self.assertIsNone(
+            structured_ingredients_p9_alternative_candidate(no_p9, required_perspective=2)
+        )
 
     def test_shard_window_can_continue_after_a_pilot_prefix(self):
         selected = deterministic_shard_window(
