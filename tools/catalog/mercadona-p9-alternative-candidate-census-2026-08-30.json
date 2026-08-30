@@ -1,0 +1,60 @@
+{
+  "kind": "MERCADONA_P9_STILL_REVIEW_ALTERNATIVE_VIEW_CENSUS",
+  "date": "2026-08-30",
+  "branch": "agent/catalog-phase1",
+  "catalog_universe": 4280,
+  "source_artifacts": {
+    "first_party": {
+      "workflow_run": 33046950149,
+      "artifact_id": 9636465626,
+      "name": "mercadona-first-party-final",
+      "sha256": "5a8c89661afe09fe1c05d1f67e8ed608edf25b8363530db42959ec8413fef648"
+    },
+    "p9_safe_replay": {
+      "workflow_run": 33256669736,
+      "artifact_id": 9716009900,
+      "name": "mercadona-ocr-replay-2630",
+      "sha256": "3d7a24f9f5433278c9b8cac589b557e8e9398d611d1fff5b2af9a351a602bb66"
+    }
+  },
+  "selection": "structured ingredients + official perspective=9 baseline + status REVIEW in original OCR and safe replay",
+  "p9_still_review_products": 2500,
+  "with_at_least_one_official_non_p9_zoom": 2499,
+  "without_official_non_p9_zoom": 1,
+  "without_alternative": {
+    "product_id": "2815",
+    "ean": "2105100028157",
+    "name": "Panceta de cerdo"
+  },
+  "products_with_perspective": {
+    "1": 1047,
+    "2": 1395,
+    "3": 123,
+    "4": 2,
+    "7": 2,
+    "10": 52
+  },
+  "alternative_perspective_sets": [
+    {"perspectives": ["2"], "products": 1305},
+    {"perspectives": ["1"], "products": 931},
+    {"perspectives": ["3"], "products": 120},
+    {"perspectives": ["1", "2"], "products": 84},
+    {"perspectives": ["1", "10"], "products": 27},
+    {"perspectives": ["10"], "products": 22},
+    {"perspectives": ["2", "3"], "products": 3},
+    {"perspectives": ["1", "7"], "products": 2},
+    {"perspectives": ["1", "4"], "products": 2},
+    {"perspectives": ["2", "10"], "products": 2},
+    {"perspectives": ["1", "2", "10"], "products": 1}
+  ],
+  "routing_note": "Perspective metadata is candidate routing only; it is not semantic classification and cannot make OCR nutrition usable.",
+  "provenance_invariants": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
