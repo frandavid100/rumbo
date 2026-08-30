@@ -1,0 +1,47 @@
+{
+  "kind": "MERCADONA_PERSISTED_OCR_TYPO_RECOVERY_PROBE_AUDIT",
+  "date": "2026-08-30",
+  "branch": "agent/catalog-phase1",
+  "workflow_run": 33308402054,
+  "artifact": {
+    "id": 9731210673,
+    "name": "mercadona-ocr-typo-recovery-probe",
+    "sha256": "2da8ab406030e51f21ce288ce98b7e98071c94f9066d2bcf12642bca474b5dc7"
+  },
+  "input_rows": 2630,
+  "trusted_prior_declared": 130,
+  "trusted_prior_review": 2500,
+  "products_with_repaired_tokens": 155,
+  "repair_counts": {
+    "ENERGY_UNIT_DROPPED_K": 2,
+    "ENERGY_UNIT_OCR_VARIANT": 153,
+    "FAT_LABEL_OCR_VARIANT": 14
+  },
+  "current_unrepaired_reparse_declared": 148,
+  "current_repaired_reparse_declared": 152,
+  "isolated_incremental_review_to_declared": 4,
+  "isolated_candidate_ids": [
+    "12946",
+    "15589",
+    "67660",
+    "80515"
+  ],
+  "historical_declared_conflicts": [],
+  "repair_declared_regressions": [],
+  "repair_declared_value_changes": [],
+  "baseline_conflicting_declared_attempts": [],
+  "repaired_conflicting_declared_attempts": [],
+  "safety_gate_passed": true,
+  "canonical_promotions_applied": 0,
+  "candidate_status": "PERSISTED_TEXT_PROBE_ONLY_REQUIRES_END_TO_END_REPRODUCTION",
+  "provenance": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_downloaded": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
