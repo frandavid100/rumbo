@@ -1,7 +1,8 @@
 import unittest
 
-from mercadona_ocr_typo_recovery_probe import repair_observed_ocr_typos
+from mercadona_ocr_typo_recovery_probe import _safe_fuse, repair_observed_ocr_typos
 from nutrition_label_reader import read_nutrition_label
+from nutrition_ocr_ensemble import ParsedOCRReading
 
 
 class MercadonaOCRTypoRecoveryProbeTest(unittest.TestCase):
@@ -90,6 +91,31 @@ Proteínas 18 g 21 g
         parsed = read_nutrition_label(repaired, extraction_confidence=.99)
         self.assertEqual(parsed.status, "REVIEW")
         self.assertIn("MULTIPLE_NUTRITION_COLUMNS", parsed.reasons)
+
+    def test_safe_fuse_ignores_review_only_poison_after_two_declared_engines_agree(self):
+        good = """Información nutricional por 100 g
+Valor energético 503 kJ / 120 kcal
+Grasas 4 g
+Hidratos de carbono 0 g
+Proteínas 21 g
+Sal 0.2 g
+"""
+        poison = good.replace("120 kcal", "420 kcal")
+        paddle = read_nutrition_label(good, extraction_confidence=.96)
+        tess = read_nutrition_label(good, extraction_confidence=.94)
+        easy_review = read_nutrition_label(poison, extraction_confidence=.92)
+        self.assertEqual(paddle.status, "DECLARED")
+        self.assertEqual(tess.status, "DECLARED")
+        self.assertEqual(easy_review.status, "REVIEW")
+        fused = _safe_fuse([
+            ParsedOCRReading("paddleocr:x", paddle, .96, "paddleocr"),
+            ParsedOCRReading("tesseract-psm11:x", tess, .94, "tesseract"),
+            ParsedOCRReading("easyocr:x", easy_review, .92, "easyocr"),
+        ])
+        self.assertEqual(fused.status, "DECLARED", fused)
+        self.assertEqual(fused.nutrition["calories"], 120.0)
+        self.assertEqual(fused.independent_engine_families, 2)
+        self.assertEqual(fused.corroborated_fields, 4)
 
 
 if __name__ == "__main__":
