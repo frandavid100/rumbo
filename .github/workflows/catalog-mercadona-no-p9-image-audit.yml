@@ -1,0 +1,131 @@
+name: Catalog Mercadona no-p9 image audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-no-p9-image-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-no-p9-image-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Audit structured-food products without perspective 9
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import json
+          from pathlib import Path
+
+          src = Path('mercadona-first-party-final/products.jsonl')
+          rows = [json.loads(line) for line in src.read_text(encoding='utf-8').splitlines() if line.strip()]
+
+          def photos(row):
+              raw = row.get('photos')
+              return [p for p in raw if isinstance(p, dict)] if isinstance(raw, list) else []
+
+          def p9_zoom(row):
+              return any(str(p.get('perspective')) == '9' and p.get('zoom') for p in photos(row))
+
+          target = [row for row in rows if row.get('ingredients') and not p9_zoom(row)]
+          with_zoom = []
+          candidates = []
+          perspective_occurrences = Counter()
+          per_row_perspectives = Counter()
+          zoom_count_dist = Counter()
+          numeric_max_dist = Counter()
+          single_zoom_perspective = Counter()
+
+          for row in target:
+              zooms = []
+              for idx, photo in enumerate(photos(row)):
+                  if not photo.get('zoom'):
+                      continue
+                  perspective = str(photo.get('perspective') if photo.get('perspective') is not None else '')
+                  if perspective == '9':
+                      continue
+                  zooms.append((idx, perspective, str(photo['zoom'])))
+                  perspective_occurrences[perspective or '<missing>'] += 1
+              zoom_count_dist[len(zooms)] += 1
+              if not zooms:
+                  continue
+              with_zoom.append(row)
+              unique = tuple(sorted({p or '<missing>' for _i, p, _u in zooms}))
+              per_row_perspectives['|'.join(unique)] += 1
+              if len(zooms) == 1:
+                  single_zoom_perspective[zooms[0][1] or '<missing>'] += 1
+              numeric = [(int(p), idx, p, url) for idx, p, url in zooms if p.isdigit()]
+              chosen = max(numeric, default=None)
+              if chosen is None:
+                  idx, p, url = zooms[-1]
+                  strategy = 'last_available_no_numeric_perspective'
+              else:
+                  _n, idx, p, url = chosen
+                  strategy = 'highest_numeric_perspective'
+                  numeric_max_dist[p] += 1
+              candidates.append({
+                  'product_id': str(row.get('product_id') or ''),
+                  'ean': row.get('ean'),
+                  'name': row.get('name'),
+                  'category_id': row.get('category_id'),
+                  'category_name': row.get('category_name'),
+                  'candidate_image_index': idx,
+                  'candidate_perspective': p or None,
+                  'candidate_image_url': url,
+                  'candidate_strategy': strategy,
+                  'available_non_p9_zoom_perspectives': [x[1] or None for x in zooms],
+              })
+
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY',
+              'inventory_products': len(rows),
+              'definition': 'structured ingredients + no perspective=9 zoom',
+              'structured_ingredients_without_p9_zoom': len(target),
+              'with_any_non_p9_zoom': len(with_zoom),
+              'without_any_zoom': len(target) - len(with_zoom),
+              'non_p9_zoom_occurrences_by_perspective': dict(sorted(perspective_occurrences.items())),
+              'per_row_perspective_sets': dict(sorted(per_row_perspectives.items())),
+              'non_p9_zoom_count_per_row': {str(k): v for k, v in sorted(zoom_count_dist.items())},
+              'single_zoom_perspective': dict(sorted(single_zoom_perspective.items())),
+              'highest_numeric_perspective_if_selected': dict(sorted(numeric_max_dist.items())),
+              'candidate_rows': len(candidates),
+              'images_downloaded': False,
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          out = Path('mercadona-no-p9-image-audit')
+          out.mkdir(exist_ok=True)
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          (out / 'candidates.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in candidates), encoding='utf-8')
+          print('AUDIT_SUMMARY=' + json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          if len(target) != 89:
+              raise SystemExit(f'expected 89 structured-ingredients rows without p9, got {len(target)}')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-no-p9-image-audit
+          path: tools/catalog/mercadona-no-p9-image-audit/
+          retention-days: 30
+          if-no-files-found: error
