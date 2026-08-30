@@ -5,27 +5,42 @@
   "processed_distinct_products": 2840,
   "processed_catalog_coverage_pct": 66.3551,
   "status_counts": {
-    "DECLARED": 135,
-    "REVIEW": 2705,
+    "DECLARED": 155,
+    "REVIEW": 2685,
     "NO_VISUAL_REGION": 0,
     "ERROR": 0
   },
-  "usable_complete_macro_products": 135,
-  "usable_complete_macro_catalog_coverage_pct": 3.1542,
+  "usable_complete_macro_products": 155,
+  "usable_complete_macro_catalog_coverage_pct": 3.6215,
   "usable_macro_coverage": {
-    "calories": 135,
-    "protein_g": 135,
-    "carbohydrate_g": 135,
-    "fat_g": 135
+    "calories": 155,
+    "protein_g": 155,
+    "carbohydrate_g": 155,
+    "fat_g": 155
   },
   "closed_cohorts": [
     {
       "cohort": "perspective=9 + structured ingredients",
       "distinct_products": 2630,
-      "DECLARED": 130,
-      "REVIEW": 2500,
+      "DECLARED": 150,
+      "REVIEW": 2480,
       "NO_VISUAL_REGION": 0,
-      "ERROR": 0
+      "ERROR": 0,
+      "trusted_breakdown": {
+        "original_declared": 122,
+        "independently_audited_replay_promotions": 24,
+        "independently_reproduced_typo_recovery_promotions": 4
+      },
+      "latest_e2e_wave": {
+        "workflow_run": 33309141604,
+        "artifact_id": 9731622143,
+        "artifact": "mercadona-neural-ocr-replay-promotions-wave",
+        "reproduced_declared": 16,
+        "review": 0,
+        "conflicts": 0,
+        "provenance_errors": 0,
+        "audit_path": "tools/catalog/mercadona-ocr-replay-promotions-wave-e2e-audit-2026-08-30.json"
+      }
     },
     {
       "cohort": "perspective=9 + no structured ingredients + first-party food signal",
