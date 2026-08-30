@@ -18,7 +18,11 @@ from mercadona_neural_ocr_wave import (
     _stable_sample_key,
 )
 from mercadona_nutrition_reader import OCR_EVIDENCE_LEVEL
-from mercadona_ocr_image_candidates import has_p9_zoom, non_p9_zoom_candidates
+from mercadona_ocr_image_candidates import (
+    deterministic_shard_window,
+    has_p9_zoom,
+    non_p9_zoom_candidates,
+)
 from nutrition_ocr_ensemble import ENSEMBLE_VERSION
 from nutrition_visual_table_detector import detect_visual_table_regions
 
@@ -49,7 +53,8 @@ def main() -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--shard-index", type=int, required=True)
     ap.add_argument("--shard-count", type=int, required=True)
-    ap.add_argument("--limit", type=int, default=0, help="0 means all rows in this shard")
+    ap.add_argument("--skip-first", type=int, default=0, help="skip this many deterministic rows in each shard")
+    ap.add_argument("--limit", type=int, default=0, help="0 means all remaining rows in this shard")
     ap.add_argument("--delay", type=float, default=0.15)
     ap.add_argument("--required-perspective", default=None)
     ap.add_argument("--preferred-perspectives", default="10,4,2,1")
@@ -67,9 +72,13 @@ def main() -> int:
         )) is not None
     ]
     eligible_hits.sort(key=lambda pair: _stable_sample_key(pair[0]))
-    selected = [pair for i, pair in enumerate(eligible_hits) if i % args.shard_count == args.shard_index]
-    if args.limit > 0:
-        selected = selected[: args.limit]
+    selected = deterministic_shard_window(
+        eligible_hits,
+        shard_index=args.shard_index,
+        shard_count=args.shard_count,
+        skip_first=args.skip_first,
+        limit=args.limit,
+    )
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -194,6 +203,7 @@ def main() -> int:
         "eligible_products": len(eligible_hits),
         "shard_index": args.shard_index,
         "shard_count": args.shard_count,
+        "skip_first": args.skip_first,
         "selected": len(selected),
         "processed": len(results),
         "selected_perspectives": dict(sorted(selected_perspectives.items())),
