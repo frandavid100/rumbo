@@ -1,0 +1,58 @@
+{
+  "cut_date": "2026-08-30",
+  "source_artifact": {
+    "workflow_run_id": 33046950149,
+    "artifact_id": 9636465626,
+    "name": "mercadona-first-party-final",
+    "digest": "sha256:5a8c89661afe09fe1c05d1f67e8ed608edf25b8363530db42959ec8413fef648"
+  },
+  "inventory_products": 4280,
+  "selection_base": "structured ingredients + no perspective 9 + zoom image",
+  "unique_products_with_any_non_p9_zoom_candidate": 89,
+  "perspective_product_counts": {
+    "1": 15,
+    "2": 60,
+    "4": 3,
+    "10": 20
+  },
+  "perspective_photo_counts": {
+    "1": 15,
+    "2": 63,
+    "4": 3,
+    "10": 20
+  },
+  "intersections": {
+    "p1_p2": 0,
+    "p1_p4": 1,
+    "p1_p10": 0,
+    "p2_p4": 2,
+    "p2_p10": 6,
+    "p4_p10": 0
+  },
+  "closed_product_coverage": {
+    "p2_union_p10_unique_products": 74,
+    "remaining_unique_products": 15
+  },
+  "remaining_products_all_have_perspective": "1",
+  "remaining_p1_product_ids": [
+    "17649",
+    "21576",
+    "22844",
+    "3499",
+    "4911",
+    "7014",
+    "83284",
+    "83664",
+    "84358",
+    "84458",
+    "84663",
+    "84692",
+    "84940",
+    "92998",
+    "9664"
+  ],
+  "p4_additional_unique_products_after_p2_p10": ["7014"],
+  "next_safe_expansion": "Process true perspective 1 for all 15 remaining unique products; this also covers the only p4 product not already present in p2/p10.",
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
