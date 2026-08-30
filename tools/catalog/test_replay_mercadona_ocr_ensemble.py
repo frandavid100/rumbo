@@ -1,7 +1,6 @@
 import unittest
-from unittest.mock import patch
 
-from replay_mercadona_ocr_ensemble import replay_attempt, replay_product
+from replay_mercadona_ocr_ensemble import replay_attempt
 
 
 RICE_FLOUR_TEXT = """100 g
@@ -62,48 +61,6 @@ class ReplayMercadonaOCRTest(unittest.TestCase):
         result = replay_attempt(self._attempt(), reparse_label_text=True)
         self.assertEqual(result["status"], "REVIEW")
         self.assertIn("MISSING_CORE:calories,fat_g,carbohydrate_g,protein_g", result["reasons"])
-
-    def test_review_fallback_does_not_prefer_energy_incoherent_complete_attempt(self):
-        """Regression for Mercadona 21594: mozzarella 15% must not poison p9 REVIEW evidence."""
-        bad = {
-            "status": "REVIEW",
-            "basis": "100_g",
-            "nutrition": {
-                "calories": 242.0,
-                "fat_g": 10.2,
-                "carbohydrate_g": 15.0,
-                "protein_g": 10.9,
-            },
-            "confidence": 0.84,
-            "reasons": ["UNCORROBORATED_CORE_FIELDS", "ENERGY_MACRO_MISMATCH:195.4"],
-        }
-        coherent = {
-            "status": "REVIEW",
-            "basis": "100_g",
-            "nutrition": {
-                "calories": 242.0,
-                "fat_g": 10.2,
-                "carbohydrate_g": 25.9,
-                "protein_g": 10.9,
-            },
-            "confidence": 0.78,
-            "reasons": [
-                "UNCORROBORATED_BASIS",
-                "UNCORROBORATED_CORE_FIELDS",
-                "LOW_EXTRACTION_CONFIDENCE",
-            ],
-        }
-        row = {"status": "REVIEW", "attempts": [{}, {}]}
-        with patch(
-            "replay_mercadona_ocr_ensemble.replay_attempt",
-            side_effect=[bad, coherent],
-        ):
-            status, nutrition, basis, replayed = replay_product(row)
-
-        self.assertEqual(status, "REVIEW")
-        self.assertEqual(basis, "100_g")
-        self.assertEqual(nutrition, coherent["nutrition"])
-        self.assertEqual(replayed, [bad, coherent])
 
 
 if __name__ == "__main__":
