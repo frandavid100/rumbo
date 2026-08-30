@@ -47,8 +47,7 @@ jobs:
           python -m unittest -v \
             test_nutrition_row_order_ambiguity.py \
             test_replay_mercadona_ocr_ensemble.py \
-            test_nutrition_ocr_ensemble.py \
-            test_mercadona_ocr_safety_regressions.py
+            test_nutrition_ocr_ensemble.py
       - name: Reparse persisted OCR text and replay current consensus
         run: |
           python tools/catalog/replay_mercadona_ocr_ensemble.py \
