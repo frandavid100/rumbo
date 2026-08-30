@@ -40,13 +40,13 @@ jobs:
           path: tools/catalog/mercadona-first-party-final
           github-token: ${{ github.token }}
           run-id: 33046950149
-      - name: Download persisted p9 replay evidence
+      - name: Download current persisted p9 replay evidence
         uses: actions/download-artifact@v4
         with:
           name: mercadona-ocr-replay-2630
           path: tools/catalog/mercadona-ocr-replay-2630
           github-token: ${{ github.token }}
-          run-id: 33256669736
+          run-id: 33308586301
       - name: Install independent OCR engines and visual detector dependencies
         run: |
           sudo apt-get update -qq
@@ -64,7 +64,7 @@ jobs:
             test_mercadona_label_pipeline.py \
             test_mercadona_ocr_safety_regressions.py
           python -m py_compile mercadona_neural_ocr_p9_alternative.py
-      - name: OCR deterministic still-REVIEW alternative-view sample
+      - name: OCR next deterministic still-REVIEW alternative-view sample
         working-directory: tools/catalog
         run: |
           python mercadona_neural_ocr_p9_alternative.py \
@@ -74,6 +74,7 @@ jobs:
             --required-perspective ${{ matrix.perspective }} \
             --shard-index 0 \
             --shard-count 1 \
+            --skip-first 8 \
             --limit 8
       - uses: actions/upload-artifact@v4
         if: always()
@@ -101,7 +102,9 @@ jobs:
           from pathlib import Path
 
           FIELDS = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
-          expected_eligible = {'1': 1047, '2': 1395, '3': 123, '10': 52}
+          expected_eligible = {'1': 1034, '2': 1367, '3': 122, '10': 51}
+          expected_baseline = 2459
+          expected_skip_first = 8
 
           def close(field, a, b):
               a = float(a); b = float(b)
@@ -119,6 +122,8 @@ jobs:
               summaries.append(json.loads(Path(path).read_text(encoding='utf-8')))
 
           observed_eligible = {str(s.get('required_perspective')): int(s.get('eligible_products', -1)) for s in summaries}
+          observed_baselines = {int(s.get('baseline_still_review_products', -1)) for s in summaries}
+          observed_skip_first = {int(s.get('skip_first', -1)) for s in summaries}
           by_perspective = Counter(str(row.get('perspective')) for row in rows)
           statuses = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
           keys = [(str(row.get('product_id') or ''), str(row.get('perspective'))) for row in rows]
@@ -220,9 +225,9 @@ jobs:
 
           summary = {
               'inventory_products': 4280,
-              'baseline_p9_still_review_products': 2500,
-              'pilot': 'official alternative views for products that remained REVIEW in both original p9 OCR and safe replay',
-              'sample_order': 'SHA256_PRODUCT_ID_EAN; first 8 independently per perspective stratum',
+              'baseline_p9_still_review_products': expected_baseline,
+              'pilot': 'official alternative views for products that remain REVIEW in both original p9 OCR and current safe replay',
+              'sample_order': 'SHA256_PRODUCT_ID_EAN; positions 9-16 independently per perspective stratum; positions 1-8 completed previously',
               'perspectives': ['1','2','3','10'],
               'expected_eligible_by_perspective': expected_eligible,
               'observed_eligible_by_perspective': observed_eligible,
@@ -280,6 +285,8 @@ jobs:
           print('P9_ALTERNATIVE_PILOT_SUMMARY=' + json.dumps(summary, ensure_ascii=False, sort_keys=True))
           failures = []
           if observed_eligible != expected_eligible: failures.append(f'eligible census mismatch: {observed_eligible}')
+          if observed_baselines != {expected_baseline}: failures.append(f'baseline count mismatch: {observed_baselines}')
+          if observed_skip_first != {expected_skip_first}: failures.append(f'skip-first mismatch: {observed_skip_first}')
           if len(rows) != 32: failures.append(f'processed {len(rows)} != 32')
           if any(by_perspective.get(p, 0) != 8 for p in expected_eligible): failures.append(f'perspective sample mismatch: {by_perspective}')
           if duplicates: failures.append('duplicate product/perspective keys')
