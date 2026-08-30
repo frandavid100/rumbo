@@ -1,0 +1,56 @@
+{
+  "as_of": "2026-08-30",
+  "scope": "Mercadona p9 still-REVIEW products, official alternative label views",
+  "workflow_run": 33316316280,
+  "workflow": ".github/workflows/catalog-mercadona-neural-ocr-p9-alternative-wave3.yml",
+  "artifact": {
+    "name": "mercadona-neural-ocr-p9-alternative-wave3-merged",
+    "id": 9733996685,
+    "sha256": "b7266adcfe5f699456a0deb69d1f9c5e2985182f8514e129b20fa097091847b6"
+  },
+  "deterministic_window": {
+    "order": "SHA256_PRODUCT_ID_EAN",
+    "positions_per_perspective": "17-32",
+    "skip_first": 16,
+    "limit": 16,
+    "previous_completed": "1-16"
+  },
+  "perspectives": ["1", "2", "3", "10"],
+  "eligible_by_perspective": {
+    "1": 1034,
+    "2": 1367,
+    "3": 122,
+    "10": 51
+  },
+  "baseline_p9_still_review_products": 2459,
+  "processed": 64,
+  "distinct_products_processed": 64,
+  "processed_by_perspective": {
+    "1": 16,
+    "2": 16,
+    "3": 16,
+    "10": 16
+  },
+  "status_counts": {
+    "REVIEW": 64
+  },
+  "raw_alternative_DECLARED": 0,
+  "safe_new_promotion_observations": 0,
+  "safe_new_promotion_products": 0,
+  "safe_new_promotion_product_ids": [],
+  "p9_partial_conflicts": [],
+  "cross_alternative_conflicts": [],
+  "duplicate_product_perspective_keys": [],
+  "provenance_errors": [],
+  "baseline_membership_errors": [],
+  "invalid_declared": [],
+  "product_level_errors": 0,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "result": "NO_NEW_SAFE_PROMOTIONS"
+}
