@@ -1,6 +1,6 @@
 import unittest
 
-from nutrition_label_reader import read_nutrition_label
+from mercadona_nutrition_label_reader import read_nutrition_label
 
 
 class NutritionRowOrderAmbiguityTest(unittest.TestCase):
