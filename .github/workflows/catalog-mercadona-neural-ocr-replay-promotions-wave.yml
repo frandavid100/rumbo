@@ -63,7 +63,7 @@ jobs:
             test_mercadona_label_pipeline.py \
             test_mercadona_ocr_safety_regressions.py
 
-      - name: Select next 16 highest-confidence independently corroborated untrusted replay promotions
+      - name: Select remaining highest-confidence independently corroborated untrusted replay promotions
         working-directory: tools/catalog
         run: |
           python - <<'PY'
@@ -106,8 +106,8 @@ jobs:
 
           replay_rows.sort(key=lambda r: (-r['confidence'], r['product_id']))
           selected = replay_rows[:16]
-          if len(selected) != 16:
-              raise SystemExit(f'Expected 16 eligible high-confidence replay promotions, got {len(selected)}')
+          if not selected:
+              raise SystemExit('No eligible high-confidence replay promotions remain')
 
           wanted = {row['product_id'] for row in selected}
           inventory = [
@@ -123,7 +123,7 @@ jobs:
           Path('mercadona-replay-promotion-wave-selection.json').write_text(
               json.dumps({
                   'kind': 'BOUNDED_HIGH_CONFIDENCE_REPLAY_PROMOTION_E2E_SELECTION',
-                  'selection_count': 16,
+                  'selection_count': len(selected),
                   'trusted_count_before': len(trusted),
                   'selection': selected,
               }, ensure_ascii=False, indent=2, sort_keys=True),
