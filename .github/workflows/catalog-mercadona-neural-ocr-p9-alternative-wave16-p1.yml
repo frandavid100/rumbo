@@ -60,7 +60,7 @@ jobs:
             test_mercadona_ocr_safety_regressions.py \
             test_merge_mercadona_p9_alternative_wave.py
           python -m py_compile mercadona_neural_ocr_p9_alternative.py merge_mercadona_p9_alternative_wave.py
-      - name: OCR deterministic still-REVIEW p1 positions 417-448
+      - name: OCR deterministic still-REVIEW p1 positions 449-480
         working-directory: tools/catalog
         run: |
           python mercadona_neural_ocr_p9_alternative.py \
@@ -70,7 +70,7 @@ jobs:
             --required-perspective 1 \
             --shard-index 0 \
             --shard-count 1 \
-            --skip-first 416 \
+            --skip-first 448 \
             --limit 32
       - uses: actions/upload-artifact@v4
         if: always()
@@ -97,9 +97,9 @@ jobs:
           python tools/catalog/merge_mercadona_p9_alternative_wave.py \
             --input input \
             --out merged \
-            --skip-first 416 \
+            --skip-first 448 \
             --limit 32 \
-            --previous-completed 1-416 \
+            --previous-completed 1-448 \
             --perspectives 1
       - uses: actions/upload-artifact@v4
         if: always()
