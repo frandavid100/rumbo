@@ -75,6 +75,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-first", type=int, required=True)
     parser.add_argument("--limit", type=int, required=True)
     parser.add_argument("--previous-completed", required=True)
+    parser.add_argument(
+        "--perspectives",
+        nargs="+",
+        choices=PERSPECTIVES,
+        default=list(PERSPECTIVES),
+        help="Perspective strata expected in this merge; defaults to all strata.",
+    )
     return parser.parse_args()
 
 
@@ -82,6 +89,11 @@ def main() -> None:
     args = parse_args()
     input_dir = Path(args.input)
     out = Path(args.out)
+    selected_perspectives = tuple(dict.fromkeys(str(p) for p in args.perspectives))
+    expected_eligible = {
+        perspective: EXPECTED_ELIGIBLE[perspective]
+        for perspective in selected_perspectives
+    }
 
     rows = []
     summaries = []
@@ -126,6 +138,7 @@ def main() -> None:
             or row.get("redistribution_allowed") is not False
             or perspective == "9"
             or perspective != str(row.get("required_perspective"))
+            or perspective not in selected_perspectives
         ):
             provenance_errors.append(f"{pid}:p{perspective}")
 
@@ -222,20 +235,20 @@ def main() -> None:
     end = args.skip_first + args.limit
     expected_by_perspective = {
         perspective: expected_sample_count(
-            EXPECTED_ELIGIBLE[perspective], args.skip_first, args.limit
+            expected_eligible[perspective], args.skip_first, args.limit
         )
-        for perspective in PERSPECTIVES
+        for perspective in selected_perspectives
     }
     census_mismatches = eligible_census_mismatches(
-        observed_eligible, EXPECTED_ELIGIBLE, expected_by_perspective
+        observed_eligible, expected_eligible, expected_by_perspective
     )
     summary = {
         "inventory_products": 4280,
         "baseline_p9_still_review_products": EXPECTED_BASELINE,
         "pilot": "official alternative views for products that remain REVIEW in both original p9 OCR and current safe replay",
-        "sample_order": f"SHA256_PRODUCT_ID_EAN; positions {start}-{end} independently per perspective stratum; positions {args.previous_completed} completed previously",
-        "perspectives": list(PERSPECTIVES),
-        "expected_eligible_by_perspective": EXPECTED_ELIGIBLE,
+        "sample_order": f"SHA256_PRODUCT_ID_EAN; positions {start}-{end} independently per selected perspective stratum; positions {args.previous_completed} completed previously",
+        "perspectives": list(selected_perspectives),
+        "expected_eligible_by_perspective": expected_eligible,
         "observed_eligible_by_perspective": observed_eligible,
         "expected_processed_by_perspective": expected_by_perspective,
         "eligible_census_mismatches": census_mismatches,
@@ -313,10 +326,15 @@ def main() -> None:
         failures.append(f"skip-first mismatch: {observed_skip_first}")
     if len(rows) != expected_total:
         failures.append(f"processed {len(rows)} != {expected_total}")
-    if any(by_perspective.get(p, 0) != expected_by_perspective[p] for p in PERSPECTIVES):
+    if any(
+        by_perspective.get(p, 0) != expected_by_perspective[p]
+        for p in selected_perspectives
+    ):
         failures.append(
             f"perspective sample mismatch: observed={by_perspective} expected={expected_by_perspective}"
         )
+    if any(p not in selected_perspectives for p in by_perspective):
+        failures.append("out-of-scope perspective rows")
     if duplicates:
         failures.append("duplicate product/perspective keys")
     if provenance_errors:
