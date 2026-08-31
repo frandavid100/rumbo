@@ -38,6 +38,36 @@ def expected_sample_count(eligible: int, skip_first: int, limit: int) -> int:
     return min(limit, remaining)
 
 
+def eligible_census_mismatches(
+    observed: dict[str, int],
+    expected: dict[str, int],
+    expected_processed: dict[str, int],
+) -> list[str]:
+    """Validate census summaries without requiring exhausted strata to emit files.
+
+    A perspective with work remaining in the current deterministic window must
+    have a summary. Perspectives whose expected processed count is zero may be
+    omitted entirely, which lets later waves stop scheduling exhausted strata.
+    Any summary that is present must still match the frozen eligible census.
+    """
+    errors = []
+    for perspective in sorted(observed):
+        if perspective not in expected:
+            errors.append(f"unexpected perspective p{perspective}")
+            continue
+        if observed[perspective] != expected[perspective]:
+            errors.append(
+                f"p{perspective} observed eligible {observed[perspective]} "
+                f"!= expected {expected[perspective]}"
+            )
+
+    for perspective, count in expected_processed.items():
+        if count > 0 and perspective not in observed:
+            errors.append(f"missing required perspective p{perspective}")
+
+    return errors
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default="input")
@@ -196,6 +226,9 @@ def main() -> None:
         )
         for perspective in PERSPECTIVES
     }
+    census_mismatches = eligible_census_mismatches(
+        observed_eligible, EXPECTED_ELIGIBLE, expected_by_perspective
+    )
     summary = {
         "inventory_products": 4280,
         "baseline_p9_still_review_products": EXPECTED_BASELINE,
@@ -205,6 +238,7 @@ def main() -> None:
         "expected_eligible_by_perspective": EXPECTED_ELIGIBLE,
         "observed_eligible_by_perspective": observed_eligible,
         "expected_processed_by_perspective": expected_by_perspective,
+        "eligible_census_mismatches": census_mismatches,
         "processed": len(rows),
         "distinct_products_processed": len({str(row.get("product_id") or "") for row in rows}),
         "processed_by_perspective": dict(sorted(by_perspective.items())),
@@ -271,8 +305,8 @@ def main() -> None:
 
     expected_total = sum(expected_by_perspective.values())
     failures = []
-    if observed_eligible != EXPECTED_ELIGIBLE:
-        failures.append(f"eligible census mismatch: {observed_eligible}")
+    if census_mismatches:
+        failures.append("eligible census mismatch: " + ", ".join(census_mismatches))
     if observed_baselines != {EXPECTED_BASELINE}:
         failures.append(f"baseline count mismatch: {observed_baselines}")
     if observed_skip_first != {args.skip_first}:
