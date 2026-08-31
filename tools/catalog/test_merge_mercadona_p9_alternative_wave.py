@@ -28,6 +28,23 @@ class EligibleCensusMismatchTests(unittest.TestCase):
             eligible_census_mismatches(observed, self.expected, processed), []
         )
 
+    def test_allows_intentionally_scoped_single_perspective(self):
+        expected = {"1": 1034}
+        processed = {"1": 32}
+        observed = {"1": 1034}
+        self.assertEqual(
+            eligible_census_mismatches(observed, expected, processed), []
+        )
+
+    def test_scoped_merge_rejects_out_of_scope_perspective(self):
+        expected = {"1": 1034}
+        processed = {"1": 32}
+        observed = {"1": 1034, "2": 1367}
+        self.assertEqual(
+            eligible_census_mismatches(observed, expected, processed),
+            ["unexpected perspective p2"],
+        )
+
     def test_requires_every_perspective_with_work_remaining(self):
         processed = {"1": 32, "2": 32, "3": 16, "10": 0}
         observed = {"1": 1034, "2": 1367}
