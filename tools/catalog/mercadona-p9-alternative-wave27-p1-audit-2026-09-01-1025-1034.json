@@ -1,0 +1,57 @@
+{
+  "cut": "mercadona-p9-alternative-wave27-p1",
+  "date": "2026-09-01",
+  "repository_branch": "agent/catalog-phase1",
+  "source_run_id": 33485651403,
+  "source_commit": "22535266417b84fe6548c237bd200aac1f2705da",
+  "workflow_status_at_audit": "completed_success",
+  "scope": {
+    "inventory_products": 4280,
+    "baseline_p9_still_review_products": 2459,
+    "sample_order": "SHA256_PRODUCT_ID_EAN",
+    "perspective": 1,
+    "eligible_products": 1034,
+    "previous_completed": "1-1024",
+    "positions_scanned": "1025-1034",
+    "processed": 10,
+    "distinct_products_processed": 10,
+    "stratum_exhausted": true
+  },
+  "artifacts": {
+    "raw": {
+      "name": "mercadona-neural-ocr-p9-alternative-wave27-p1",
+      "artifact_id": 9792362390,
+      "sha256": "7f57d32010151677987bd0e8695be19da5316bd1f6325e6d9d3b9116e4341a95"
+    },
+    "merged": {
+      "name": "mercadona-neural-ocr-p9-alternative-wave27-p1-merged",
+      "artifact_id": 9792369676,
+      "sha256": "55c41c4ecbee1faadf6f1c7c993c18464ea6ab30072cefbb25572bbb97c6f34c"
+    }
+  },
+  "result": {
+    "status_counts": {
+      "DECLARED": 0,
+      "REVIEW": 10,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "safe_new_promotion_products": 0,
+    "usable_nutrition_rows": 0,
+    "duplicate_product_ids": 0,
+    "provenance_errors": 0,
+    "invalid_declared": 0,
+    "p9_partial_conflicts": 0,
+    "cross_alternative_conflicts": 0
+  },
+  "provenance": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "redistribution_allowed": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  },
+  "decision": "Perspective 1 positions 1025-1034 are complete with no safe promotions and no safety/provenance failures. The deterministic perspective-1 alternative-view stratum is exhausted at 1034/1034 eligible products; do not rerun positions 1-1034. Continue only from another independently verified, non-overlapping perspective stratum."
+}
