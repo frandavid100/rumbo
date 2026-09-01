@@ -109,7 +109,6 @@ jobs:
         with:
           pattern: mercadona-neural-ocr-p9-alternative-wave32-p2-part*
           path: input
-          merge-multiple: true
       - name: Merge and conservatively audit p2 recovery window
         run: |
           python tools/catalog/merge_mercadona_p9_alternative_wave.py \
