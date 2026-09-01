@@ -61,7 +61,7 @@ jobs:
             test_merge_mercadona_p9_alternative_wave.py \
             test_mercadona_neural_ocr_p9_alternative_checkpoint.py
           python -m py_compile mercadona_neural_ocr_p9_alternative.py merge_mercadona_p9_alternative_wave.py
-      - name: OCR deterministic still-REVIEW p2 positions 577-640
+      - name: Retry deterministic still-REVIEW p2 positions 577-640 with transient-safe fetching
         working-directory: tools/catalog
         run: |
           python mercadona_neural_ocr_p9_alternative.py \
@@ -72,7 +72,11 @@ jobs:
             --shard-index 0 \
             --shard-count 1 \
             --skip-first 576 \
-            --limit 64
+            --limit 64 \
+            --delay 1.0 \
+            --download-timeout 20 \
+            --download-attempts 4 \
+            --download-backoff 2.0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
