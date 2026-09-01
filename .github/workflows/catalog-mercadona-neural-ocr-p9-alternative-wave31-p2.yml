@@ -58,9 +58,10 @@ jobs:
             test_nutrition_ocr_ensemble.py \
             test_mercadona_label_pipeline.py \
             test_mercadona_ocr_safety_regressions.py \
-            test_merge_mercadona_p9_alternative_wave.py
+            test_merge_mercadona_p9_alternative_wave.py \
+            test_mercadona_neural_ocr_p9_alternative_checkpoint.py
           python -m py_compile mercadona_neural_ocr_p9_alternative.py merge_mercadona_p9_alternative_wave.py
-      - name: OCR deterministic still-REVIEW p2 positions 513-640
+      - name: OCR deterministic still-REVIEW p2 positions 513-576
         working-directory: tools/catalog
         run: |
           python mercadona_neural_ocr_p9_alternative.py \
@@ -71,19 +72,19 @@ jobs:
             --shard-index 0 \
             --shard-count 1 \
             --skip-first 512 \
-            --limit 128
+            --limit 64
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mercadona-neural-ocr-p9-alternative-wave31-p2
           path: tools/catalog/mercadona-neural-ocr-p9-alternative-wave31-p2/
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
 
   merge:
     runs-on: ubuntu-24.04
     needs: ocr
-    if: always()
+    if: ${{ always() && needs.ocr.result == 'success' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -98,11 +99,10 @@ jobs:
             --input input \
             --out merged \
             --skip-first 512 \
-            --limit 128 \
+            --limit 64 \
             --previous-completed 1-512 \
             --perspectives 2
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: mercadona-neural-ocr-p9-alternative-wave31-p2-merged
           path: merged/
