@@ -1,0 +1,58 @@
+{
+  "cut": "mercadona-p9-alternative-wave29-p2",
+  "date": "2026-09-01",
+  "repository_branch": "agent/catalog-phase1",
+  "source_run_id": 33500804546,
+  "source_commit": "5db16604aadd7b985da79195cfc7f15098d1df82",
+  "workflow_status_at_audit": "completed_success",
+  "scope": {
+    "inventory_products": 4280,
+    "baseline_p9_still_review_products": 2459,
+    "sample_order": "SHA256_PRODUCT_ID_EAN",
+    "perspective": 2,
+    "eligible_products": 1367,
+    "previous_completed": "1-384",
+    "positions_scanned": "385-448",
+    "processed": 64,
+    "distinct_products_processed": 64,
+    "stratum_exhausted": false
+  },
+  "artifacts": {
+    "raw": {
+      "name": "mercadona-neural-ocr-p9-alternative-wave29-p2",
+      "artifact_id": 9798561533,
+      "sha256": "e8d47905f37f5e1072ce2d2971a44f9f2e404ae01fa3bef582570c4cb5fe74d5"
+    },
+    "merged": {
+      "name": "mercadona-neural-ocr-p9-alternative-wave29-p2-merged",
+      "artifact_id": 9798568612,
+      "sha256": "af913187b4b4aeae508a3679e8e16940148953cca2d40dba1681a129e970e51a"
+    }
+  },
+  "result": {
+    "status_counts": {
+      "DECLARED": 0,
+      "REVIEW": 64,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "safe_new_promotion_products": 0,
+    "usable_nutrition_rows": 0,
+    "duplicate_product_ids": 0,
+    "provenance_errors": 0,
+    "invalid_declared": 0,
+    "p9_partial_conflicts": 0,
+    "cross_alternative_conflicts": 0,
+    "eligible_census_mismatches": 0
+  },
+  "provenance": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "redistribution_allowed": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  },
+  "decision": "Perspective 2 positions 385-448 are complete with no safe promotions and no safety/provenance failures. Do not rerun positions 1-448. Continue deterministically at positions 449-512 in the same independently verified perspective-2 stratum; 1367 products are eligible in this stratum."
+}
