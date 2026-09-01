@@ -1,0 +1,58 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "inventory_products": 4280,
+  "cumulative_distinct_products_with_primary_ocr": 2840,
+  "cumulative_safe_complete_declared": 160,
+  "cumulative_review": 2680,
+  "cumulative_complete_macro_coverage_percent": 3.7383177570093458,
+  "alternative_perspective": "2",
+  "eligible_perspective_products": 1367,
+  "completed_deterministic_prefix": 640,
+  "completed_perspective_coverage_percent": 46.81784930504755,
+  "latest_window": {
+    "positions": "577-640",
+    "processed": 64,
+    "distinct_products_processed": 64,
+    "status_counts": {
+      "REVIEW": 64
+    },
+    "safe_new_promotions": 0,
+    "provenance_errors": 0,
+    "baseline_membership_errors": 0,
+    "invalid_declared": 0,
+    "p9_partial_conflicts": 0,
+    "cross_alternative_conflicts": 0,
+    "duplicate_product_perspective_keys": 0,
+    "eligible_census_mismatches": 0,
+    "summary_window_mismatches": 0
+  },
+  "ocr_run": {
+    "run_id": 33547505432,
+    "shard_skips": [576, 592, 608, 624],
+    "shard_limit": 16
+  },
+  "merge_recovery_run": {
+    "run_id": 33553549865,
+    "artifact_id": 9818390488,
+    "artifact_name": "mercadona-neural-ocr-p9-alternative-wave32-p2-merged-recovered",
+    "artifact_sha256": "e2e8792d4993510035da58e449bdfcf23eb904c956f994481724ede753e447a1",
+    "result": "success"
+  },
+  "validation": {
+    "merge_regression_tests": 15,
+    "merge_regression_tests_result": "passed",
+    "merge_fix_commit": "f856bda48239a5d2027c7b89e5c8516d9e30ab6e",
+    "merge_recovery_workflow_commit": "d4fcbbf2fd384178095639be57fadd3ab7f17209"
+  },
+  "notes": [
+    "The wave32 OCR shards were already complete and valid; the original merge failed only because the validator incorrectly required all parallel shard summaries to share one skip_first value.",
+    "The validator now requires shard summaries to tile the requested deterministic window contiguously, rejecting gaps, overlaps, incomplete coverage, and selected/processed disagreement.",
+    "No REVIEW row was promoted and no absent nutrition value was inferred."
+  ]
+}
