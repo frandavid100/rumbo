@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from urllib.error import HTTPError, URLError
 import json
 import os
 from pathlib import Path
+import socket
 import tempfile
 import time
-from typing import Any
+from typing import Any, Callable
 
 from mercadona_label_evidence import LabelImageEvidence
 from mercadona_label_pipeline import download_label_image
@@ -25,6 +27,9 @@ from mercadona_ocr_image_candidates import (
 )
 from nutrition_ocr_ensemble import ENSEMBLE_VERSION
 from nutrition_visual_table_detector import detect_visual_table_regions
+
+
+TRANSIENT_HTTP_CODES = frozenset({408, 425, 429, 500, 502, 503, 504})
 
 
 def _load(path: Path) -> list[dict[str, Any]]:
@@ -99,6 +104,57 @@ def _write_progress(
     tmp.replace(path)
 
 
+def _is_transient_download_error(exc: BaseException) -> bool:
+    if isinstance(exc, HTTPError):
+        return exc.code in TRANSIENT_HTTP_CODES
+    return isinstance(exc, (TimeoutError, socket.timeout, URLError))
+
+
+def _retry_after_seconds(exc: BaseException) -> float | None:
+    if not isinstance(exc, HTTPError) or exc.headers is None:
+        return None
+    value = exc.headers.get("Retry-After")
+    if not value:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, parsed)
+
+
+def _download_with_retry(
+    url: str,
+    target: Path,
+    *,
+    timeout: float,
+    attempts: int = 4,
+    backoff: float = 1.0,
+    downloader: Callable[[str, Path, float], None] = download_label_image,
+    sleeper: Callable[[float], None] = time.sleep,
+) -> None:
+    """Retry only transient image-host failures; permanent HTTP errors still fail fast."""
+    if attempts < 1:
+        raise ValueError("attempts must be >= 1")
+    if backoff < 0:
+        raise ValueError("backoff must be >= 0")
+
+    for attempt in range(attempts):
+        try:
+            downloader(url, target, timeout)
+            return
+        except Exception as exc:
+            final_attempt = attempt + 1 >= attempts
+            if final_attempt or not _is_transient_download_error(exc):
+                raise
+            delay = backoff * (2**attempt)
+            retry_after = _retry_after_seconds(exc)
+            if retry_after is not None:
+                delay = max(delay, retry_after)
+            if delay:
+                sleeper(delay)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--products", required=True)
@@ -110,6 +166,9 @@ def main() -> int:
     ap.add_argument("--skip-first", type=int, default=0)
     ap.add_argument("--limit", type=int, default=0, help="0 means all remaining rows in this shard")
     ap.add_argument("--delay", type=float, default=0.15)
+    ap.add_argument("--download-timeout", type=float, default=20.0)
+    ap.add_argument("--download-attempts", type=int, default=4)
+    ap.add_argument("--download-backoff", type=float, default=1.0)
     args = ap.parse_args()
 
     required_perspective = str(args.required_perspective)
@@ -207,7 +266,13 @@ def main() -> int:
             with tempfile.TemporaryDirectory(prefix="rumbo-mercadona-neural-p9-alt-") as td:
                 base = Path(td)
                 image_path = base / f"{pid}-p{perspective}.jpg"
-                download_label_image(image_url, image_path, timeout=15.0)
+                _download_with_retry(
+                    image_url,
+                    image_path,
+                    timeout=args.download_timeout,
+                    attempts=args.download_attempts,
+                    backoff=args.download_backoff,
+                )
                 regions = detect_visual_table_regions(image_path, base / "regions")
                 item["visual_regions_detected"] = len(regions)
                 if not regions:
@@ -294,6 +359,9 @@ def main() -> int:
         "processed": len(results),
         "status_counts": dict(sorted(status_counts.items())),
         "declared_rate": round(status_counts["DECLARED"] / len(results), 4) if results else 0.0,
+        "download_timeout_seconds": args.download_timeout,
+        "download_attempts": args.download_attempts,
+        "download_backoff_seconds": args.download_backoff,
         "stratum_exhausted": exhausted,
         "redistribution_allowed": False,
         "CLASSIFIED": 0,
