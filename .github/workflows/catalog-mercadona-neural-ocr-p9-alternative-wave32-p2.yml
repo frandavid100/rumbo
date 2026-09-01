@@ -19,6 +19,18 @@ jobs:
   ocr:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: 0
+            skip: 576
+          - part: 1
+            skip: 592
+          - part: 2
+            skip: 608
+          - part: 3
+            skip: 624
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
     steps:
@@ -61,27 +73,27 @@ jobs:
             test_merge_mercadona_p9_alternative_wave.py \
             test_mercadona_neural_ocr_p9_alternative_checkpoint.py
           python -m py_compile mercadona_neural_ocr_p9_alternative.py merge_mercadona_p9_alternative_wave.py
-      - name: Retry deterministic still-REVIEW p2 positions 577-640 with transient-safe fetching
+      - name: Retry deterministic still-REVIEW p2 subwindow with transient-safe fetching
         working-directory: tools/catalog
         run: |
           python mercadona_neural_ocr_p9_alternative.py \
             --products mercadona-first-party-final/products.jsonl \
             --p9-replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
-            --out mercadona-neural-ocr-p9-alternative-wave32-p2 \
+            --out mercadona-neural-ocr-p9-alternative-wave32-p2-part${{ matrix.part }} \
             --required-perspective 2 \
             --shard-index 0 \
             --shard-count 1 \
-            --skip-first 576 \
-            --limit 64 \
-            --delay 1.0 \
-            --download-timeout 20 \
-            --download-attempts 4 \
-            --download-backoff 2.0
+            --skip-first ${{ matrix.skip }} \
+            --limit 16 \
+            --delay 0.5 \
+            --download-timeout 60 \
+            --download-attempts 5 \
+            --download-backoff 3.0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mercadona-neural-ocr-p9-alternative-wave32-p2
-          path: tools/catalog/mercadona-neural-ocr-p9-alternative-wave32-p2/
+          name: mercadona-neural-ocr-p9-alternative-wave32-p2-part${{ matrix.part }}
+          path: tools/catalog/mercadona-neural-ocr-p9-alternative-wave32-p2-part${{ matrix.part }}/
           retention-days: 30
           if-no-files-found: error
 
@@ -95,8 +107,9 @@ jobs:
           ref: agent/catalog-phase1
       - uses: actions/download-artifact@v4
         with:
-          name: mercadona-neural-ocr-p9-alternative-wave32-p2
+          pattern: mercadona-neural-ocr-p9-alternative-wave32-p2-part*
           path: input
+          merge-multiple: true
       - name: Merge and conservatively audit p2 recovery window
         run: |
           python tools/catalog/merge_mercadona_p9_alternative_wave.py \
