@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import json
+import os
 from pathlib import Path
 import tempfile
 import time
@@ -55,6 +56,49 @@ def selection_exit_code(*, processed: int, eligible: int, skip_first: int) -> in
     return 0 if skip_first >= eligible else 2
 
 
+def _append_checkpoint(path: Path, row: dict[str, Any]) -> None:
+    """Durably append one completed OCR row so job cancellation does not lose prior work."""
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _write_progress(
+    path: Path,
+    *,
+    required_perspective: str,
+    eligible: int,
+    selected: int,
+    processed: int,
+    status_counts: Counter[str],
+    skip_first: int,
+    shard_index: int,
+    shard_count: int,
+) -> None:
+    """Persist a small atomic progress manifest alongside the append-only checkpoint."""
+    payload = {
+        "source": "MERCADONA_FIRST_PARTY",
+        "source_record_kind": "label image",
+        "evidence_level": OCR_EVIDENCE_LEVEL,
+        "required_perspective": required_perspective,
+        "eligible_products": eligible,
+        "selected": selected,
+        "processed": processed,
+        "status_counts": dict(sorted(status_counts.items())),
+        "skip_first": skip_first,
+        "shard_index": shard_index,
+        "shard_count": shard_count,
+        "complete": processed == selected,
+        "redistribution_allowed": False,
+        "CLASSIFIED": 0,
+        "MENU_ELIGIBLE": 0,
+    }
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--products", required=True)
@@ -97,8 +141,25 @@ def main() -> int:
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    suffix = f"p{required_perspective}-s{args.shard_index:02d}"
+    results_path = out / f"results-{suffix}.jsonl"
+    progress_path = out / f"progress-{suffix}.json"
+    # Always materialize checkpoint files before expensive OCR. GitHub Actions can then
+    # upload partial evidence even when the runner reaches its wall-clock timeout.
+    results_path.write_text("", encoding="utf-8")
     results: list[dict[str, Any]] = []
     status_counts: Counter[str] = Counter()
+    _write_progress(
+        progress_path,
+        required_perspective=required_perspective,
+        eligible=len(eligible_hits),
+        selected=len(selected),
+        processed=0,
+        status_counts=status_counts,
+        skip_first=args.skip_first,
+        shard_index=args.shard_index,
+        shard_count=args.shard_count,
+    )
 
     for product_index, (row, (image_index, photo), baseline) in enumerate(selected):
         if product_index and args.delay:
@@ -201,12 +262,19 @@ def main() -> int:
 
         status_counts[item["status"]] += 1
         results.append(item)
+        _append_checkpoint(results_path, item)
+        _write_progress(
+            progress_path,
+            required_perspective=required_perspective,
+            eligible=len(eligible_hits),
+            selected=len(selected),
+            processed=len(results),
+            status_counts=status_counts,
+            skip_first=args.skip_first,
+            shard_index=args.shard_index,
+            shard_count=args.shard_count,
+        )
 
-    suffix = f"p{required_perspective}-s{args.shard_index:02d}"
-    (out / f"results-{suffix}.jsonl").write_text(
-        "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in results),
-        encoding="utf-8",
-    )
     exhausted = not results and args.skip_first >= len(eligible_hits)
     summary = {
         "source": "MERCADONA_FIRST_PARTY",
