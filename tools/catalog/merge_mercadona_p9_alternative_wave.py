@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
-import glob
 import json
 from pathlib import Path
 import sqlite3
@@ -36,6 +35,17 @@ def expected_sample_count(eligible: int, skip_first: int, limit: int) -> int:
     """Return the bounded sample size after deterministically skipping a prefix."""
     remaining = max(0, eligible - skip_first)
     return min(limit, remaining)
+
+
+def discover_input_paths(input_dir: Path, pattern: str) -> list[Path]:
+    """Find shard outputs without flattening artifact directories.
+
+    GitHub's download-artifact action can extract multiple artifacts into
+    separate child directories. Keeping those directories avoids same-named
+    results/summary files from racing or overwriting each other during a
+    flattened parallel extraction.
+    """
+    return sorted(path for path in input_dir.rglob(pattern) if path.is_file())
 
 
 def eligible_census_mismatches(
@@ -97,14 +107,14 @@ def main() -> None:
 
     rows = []
     summaries = []
-    for path in sorted(glob.glob(str(input_dir / "results-*.jsonl"))):
+    for path in discover_input_paths(input_dir, "results-*.jsonl"):
         rows.extend(
             json.loads(line)
-            for line in Path(path).read_text(encoding="utf-8").splitlines()
+            for line in path.read_text(encoding="utf-8").splitlines()
             if line.strip()
         )
-    for path in sorted(glob.glob(str(input_dir / "summary-*.json"))):
-        summaries.append(json.loads(Path(path).read_text(encoding="utf-8")))
+    for path in discover_input_paths(input_dir, "summary-*.json"):
+        summaries.append(json.loads(path.read_text(encoding="utf-8")))
 
     observed_eligible = {
         str(s.get("required_perspective")): int(s.get("eligible_products", -1))
