@@ -6,6 +6,7 @@ from merge_mercadona_p9_alternative_wave import (
     discover_input_paths,
     eligible_census_mismatches,
     expected_sample_count,
+    summary_window_mismatches,
 )
 
 
@@ -97,6 +98,75 @@ class EligibleCensusMismatchTests(unittest.TestCase):
         self.assertEqual(
             eligible_census_mismatches(observed, self.expected, processed),
             ["unexpected perspective p4"],
+        )
+
+
+class SummaryWindowMismatchTests(unittest.TestCase):
+    def test_accepts_contiguous_parallel_subwindows(self):
+        summaries = [
+            {
+                "required_perspective": "2",
+                "skip_first": skip,
+                "selected": 16,
+                "processed": 16,
+            }
+            for skip in (576, 592, 608, 624)
+        ]
+        self.assertEqual(
+            summary_window_mismatches(
+                summaries,
+                expected_processed={"2": 64},
+                base_skip_first=576,
+            ),
+            [],
+        )
+
+    def test_rejects_gap_between_parallel_subwindows(self):
+        summaries = [
+            {
+                "required_perspective": "2",
+                "skip_first": 576,
+                "selected": 16,
+                "processed": 16,
+            },
+            {
+                "required_perspective": "2",
+                "skip_first": 608,
+                "selected": 16,
+                "processed": 16,
+            },
+        ]
+        errors = summary_window_mismatches(
+            summaries,
+            expected_processed={"2": 32},
+            base_skip_first=576,
+        )
+        self.assertTrue(any("expected skip_first 592" in error for error in errors))
+
+    def test_rejects_selected_processed_disagreement(self):
+        summaries = [
+            {
+                "required_perspective": "2",
+                "skip_first": 576,
+                "selected": 16,
+                "processed": 15,
+            }
+        ]
+        errors = summary_window_mismatches(
+            summaries,
+            expected_processed={"2": 16},
+            base_skip_first=576,
+        )
+        self.assertTrue(any("selected 16 != processed 15" in error for error in errors))
+
+    def test_allows_missing_summary_for_exhausted_perspective(self):
+        self.assertEqual(
+            summary_window_mismatches(
+                [],
+                expected_processed={"10": 0},
+                base_skip_first=64,
+            ),
+            [],
         )
 
 
