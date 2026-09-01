@@ -78,6 +78,69 @@ def eligible_census_mismatches(
     return errors
 
 
+def summary_window_mismatches(
+    summaries: list[dict],
+    expected_processed: dict[str, int],
+    base_skip_first: int,
+) -> list[str]:
+    """Validate that sharded summaries exactly tile each requested sample window.
+
+    Earlier waves emitted one summary per perspective, so requiring every
+    summary's ``skip_first`` to equal the merge-level prefix was sufficient.
+    Parallel recovery waves instead split one perspective into contiguous
+    subwindows (for example 576, 592, 608, 624 with 16 rows each). This check
+    accepts either shape while still rejecting gaps, overlaps, duplicate shards,
+    incomplete coverage, and selected/processed disagreements.
+    """
+    errors: list[str] = []
+    by_perspective: dict[str, list[dict]] = defaultdict(list)
+    for summary in summaries:
+        perspective = str(summary.get("required_perspective"))
+        if perspective not in expected_processed:
+            errors.append(f"unexpected summary perspective p{perspective}")
+            continue
+        by_perspective[perspective].append(summary)
+
+    for perspective, expected_count in expected_processed.items():
+        segments = sorted(
+            by_perspective.get(perspective, []),
+            key=lambda summary: int(summary.get("skip_first", -1)),
+        )
+        if expected_count == 0:
+            if segments:
+                errors.append(
+                    f"p{perspective} emitted {len(segments)} summary shard(s) for exhausted window"
+                )
+            continue
+
+        cursor = base_skip_first
+        covered = 0
+        for summary in segments:
+            skip_first = int(summary.get("skip_first", -1))
+            selected = int(summary.get("selected", -1))
+            processed = int(summary.get("processed", -1))
+            if selected < 0:
+                errors.append(f"p{perspective} invalid selected count {selected}")
+                continue
+            if processed != selected:
+                errors.append(
+                    f"p{perspective} selected {selected} != processed {processed} at skip_first {skip_first}"
+                )
+            if skip_first != cursor:
+                errors.append(
+                    f"p{perspective} expected skip_first {cursor}, observed {skip_first}"
+                )
+            cursor = skip_first + selected
+            covered += selected
+
+        if covered != expected_count:
+            errors.append(
+                f"p{perspective} summary shards cover {covered} rows != expected {expected_count}"
+            )
+
+    return errors
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default="input")
@@ -123,7 +186,6 @@ def main() -> None:
     observed_baselines = {
         int(s.get("baseline_still_review_products", -1)) for s in summaries
     }
-    observed_skip_first = {int(s.get("skip_first", -1)) for s in summaries}
     by_perspective = Counter(str(row.get("perspective")) for row in rows)
     statuses = Counter(str(row.get("status") or "UNKNOWN") for row in rows)
     keys = [
@@ -252,6 +314,11 @@ def main() -> None:
     census_mismatches = eligible_census_mismatches(
         observed_eligible, expected_eligible, expected_by_perspective
     )
+    window_mismatches = summary_window_mismatches(
+        summaries,
+        expected_processed=expected_by_perspective,
+        base_skip_first=args.skip_first,
+    )
     summary = {
         "inventory_products": 4280,
         "baseline_p9_still_review_products": EXPECTED_BASELINE,
@@ -262,6 +329,7 @@ def main() -> None:
         "observed_eligible_by_perspective": observed_eligible,
         "expected_processed_by_perspective": expected_by_perspective,
         "eligible_census_mismatches": census_mismatches,
+        "summary_window_mismatches": window_mismatches,
         "processed": len(rows),
         "distinct_products_processed": len({str(row.get("product_id") or "") for row in rows}),
         "processed_by_perspective": dict(sorted(by_perspective.items())),
@@ -330,10 +398,10 @@ def main() -> None:
     failures = []
     if census_mismatches:
         failures.append("eligible census mismatch: " + ", ".join(census_mismatches))
+    if window_mismatches:
+        failures.append("summary window mismatch: " + ", ".join(window_mismatches))
     if observed_baselines != {EXPECTED_BASELINE}:
         failures.append(f"baseline count mismatch: {observed_baselines}")
-    if observed_skip_first != {args.skip_first}:
-        failures.append(f"skip-first mismatch: {observed_skip_first}")
     if len(rows) != expected_total:
         failures.append(f"processed {len(rows)} != {expected_total}")
     if any(
