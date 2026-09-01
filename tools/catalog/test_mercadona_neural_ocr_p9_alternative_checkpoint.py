@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 from collections import Counter
+from urllib.error import HTTPError
 import json
 from pathlib import Path
 import tempfile
 import unittest
 
-from mercadona_neural_ocr_p9_alternative import _append_checkpoint, _write_progress
+from mercadona_neural_ocr_p9_alternative import (
+    _append_checkpoint,
+    _download_with_retry,
+    _write_progress,
+)
 
 
 class MercadonaAlternativeCheckpointTest(unittest.TestCase):
@@ -58,6 +63,57 @@ class MercadonaAlternativeCheckpointTest(unittest.TestCase):
             payload = json.loads(path.read_text(encoding="utf-8"))
             self.assertTrue(payload["complete"])
             self.assertEqual(payload["status_counts"], {"REVIEW": 64})
+
+    def test_download_retries_timeout_and_429_before_success(self) -> None:
+        calls: list[int] = []
+        delays: list[float] = []
+
+        def downloader(url: str, path: Path, timeout: float) -> None:
+            calls.append(len(calls) + 1)
+            if len(calls) == 1:
+                raise TimeoutError("read timed out")
+            if len(calls) == 2:
+                raise HTTPError(url, 429, "Too Many Requests", {"Retry-After": "0"}, None)
+            path.write_bytes(b"image")
+
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "image.jpg"
+            _download_with_retry(
+                "https://example.test/image.jpg",
+                target,
+                timeout=20.0,
+                attempts=4,
+                backoff=0.5,
+                downloader=downloader,
+                sleeper=delays.append,
+            )
+            self.assertEqual(target.read_bytes(), b"image")
+
+        self.assertEqual(calls, [1, 2, 3])
+        self.assertEqual(delays, [0.5, 1.0])
+
+    def test_download_does_not_retry_permanent_http_error(self) -> None:
+        calls: list[int] = []
+        delays: list[float] = []
+
+        def downloader(url: str, path: Path, timeout: float) -> None:
+            calls.append(1)
+            raise HTTPError(url, 404, "Not Found", {}, None)
+
+        with tempfile.TemporaryDirectory() as td:
+            with self.assertRaises(HTTPError):
+                _download_with_retry(
+                    "https://example.test/missing.jpg",
+                    Path(td) / "missing.jpg",
+                    timeout=20.0,
+                    attempts=4,
+                    backoff=0.5,
+                    downloader=downloader,
+                    sleeper=delays.append,
+                )
+
+        self.assertEqual(calls, [1])
+        self.assertEqual(delays, [])
 
 
 if __name__ == "__main__":
