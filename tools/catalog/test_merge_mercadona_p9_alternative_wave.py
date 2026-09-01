@@ -1,6 +1,9 @@
+import tempfile
+from pathlib import Path
 import unittest
 
 from merge_mercadona_p9_alternative_wave import (
+    discover_input_paths,
     eligible_census_mismatches,
     expected_sample_count,
 )
@@ -16,6 +19,33 @@ class ExpectedSampleCountTests(unittest.TestCase):
     def test_returns_zero_when_stratum_is_exhausted(self):
         self.assertEqual(expected_sample_count(48, 48, 16), 0)
         self.assertEqual(expected_sample_count(12, 48, 16), 0)
+
+
+class DiscoverInputPathsTests(unittest.TestCase):
+    def test_finds_same_named_shard_outputs_in_separate_artifact_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shard0 = root / "part0" / "results-p2.jsonl"
+            shard1 = root / "part1" / "results-p2.jsonl"
+            shard0.parent.mkdir(parents=True)
+            shard1.parent.mkdir(parents=True)
+            shard0.write_text('{"product_id":"a"}\n', encoding="utf-8")
+            shard1.write_text('{"product_id":"b"}\n', encoding="utf-8")
+
+            self.assertEqual(
+                discover_input_paths(root, "results-*.jsonl"),
+                [shard0, shard1],
+            )
+
+    def test_ignores_directories_matching_pattern(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "results-dir.jsonl").mkdir()
+            result = root / "nested" / "results-p2.jsonl"
+            result.parent.mkdir(parents=True)
+            result.write_text('{}\n', encoding="utf-8")
+
+            self.assertEqual(discover_input_paths(root, "results-*.jsonl"), [result])
 
 
 class EligibleCensusMismatchTests(unittest.TestCase):
