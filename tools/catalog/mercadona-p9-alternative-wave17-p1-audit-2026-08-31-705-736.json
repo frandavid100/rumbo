@@ -1,0 +1,57 @@
+{
+  "cut": "mercadona-p9-alternative-wave17-p1",
+  "date": "2026-08-31",
+  "repository_branch": "agent/catalog-phase1",
+  "source_run_id": 33445682942,
+  "source_commit": "8e01c1735f53edab5d81f27263d9381fb8f6d3f2",
+  "workflow_status_at_audit": "completed_success",
+  "scope": {
+    "inventory_products": 4280,
+    "baseline_p9_still_review_products": 2459,
+    "sample_order": "SHA256_PRODUCT_ID_EAN",
+    "perspective": 1,
+    "eligible_products": 1034,
+    "previous_completed": "1-704",
+    "positions_scanned": "705-736",
+    "processed": 32,
+    "distinct_products_processed": 32,
+    "stratum_exhausted": false
+  },
+  "artifacts": {
+    "raw": {
+      "name": "mercadona-neural-ocr-p9-alternative-wave17-p1",
+      "artifact_id": 9778391975,
+      "sha256": "6d51243b475ae4d579ed14db507e7de2f818b82ea43d8873526f8ff17338c971"
+    },
+    "merged": {
+      "name": "mercadona-neural-ocr-p9-alternative-wave17-p1-merged",
+      "artifact_id": 9778396538,
+      "sha256": "f3944bddcb10c460da0b0d62c91b452e6fab0d6eb0dc6d104df5274cc9386b78"
+    }
+  },
+  "result": {
+    "status_counts": {
+      "DECLARED": 0,
+      "REVIEW": 32,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "safe_new_promotion_products": 0,
+    "usable_nutrition_rows": 0,
+    "duplicate_product_ids": 0,
+    "provenance_errors": 0,
+    "invalid_declared": 0,
+    "p9_partial_conflicts": 0,
+    "cross_alternative_conflicts": 0
+  },
+  "provenance": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "redistribution_allowed": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  },
+  "decision": "Perspective 1 positions 705-736 are complete with no safe promotions and no safety/provenance failures. Continue with the next bounded, non-overlapping perspective-1 window at positions 737-768; do not rerun positions 1-736."
+}
