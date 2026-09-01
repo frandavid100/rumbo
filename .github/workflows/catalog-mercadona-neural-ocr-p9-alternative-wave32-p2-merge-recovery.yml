@@ -1,0 +1,49 @@
+name: Catalog Mercadona neural OCR p9 alternative wave 32 p2 merge recovery
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-p9-alternative-wave32-p2-merge-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  merge:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run merge regression tests
+        working-directory: tools/catalog
+        run: python -m unittest -v test_merge_mercadona_p9_alternative_wave.py
+      - name: Download completed wave32 p2 shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-p9-alternative-wave32-p2-part*
+          path: input
+          merge-multiple: false
+          github-token: ${{ github.token }}
+          run-id: 33547505432
+      - name: Merge and conservatively audit completed p2 recovery window
+        run: |
+          python tools/catalog/merge_mercadona_p9_alternative_wave.py \
+            --input input \
+            --out merged \
+            --skip-first 576 \
+            --limit 64 \
+            --previous-completed 1-576 \
+            --perspectives 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-neural-ocr-p9-alternative-wave32-p2-merged-recovered
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
