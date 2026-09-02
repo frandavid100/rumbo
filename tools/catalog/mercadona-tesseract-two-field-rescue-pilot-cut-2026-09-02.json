@@ -1,0 +1,58 @@
+{
+  "retailer": "MERCADONA",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "cut_date": "2026-09-02",
+  "branch": "agent/catalog-phase1",
+  "workflow_run_id": 33653051463,
+  "artifact": {
+    "id": 9856124857,
+    "name": "mercadona-tesseract-two-field-pilot-merged"
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "selection": {
+    "stratum": "stable original+replay REVIEW + four core macros + explicit 100g/100ml basis + >=2 OCR families + exactly 2 corroborated core fields + no OCR hard conflict + no energy/macro mismatch",
+    "candidate_universe": 86,
+    "sample_order": "SHA256_PRODUCT_ID_EAN",
+    "slice_start_zero_based": 0,
+    "slice_end_exclusive_zero_based": 16,
+    "processed": 16,
+    "remaining": 70
+  },
+  "outcome": {
+    "DECLARED": 1,
+    "REVIEW": 15,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "unsafe_declared": 0,
+    "value_conflicts": 0,
+    "provenance_failures": 0,
+    "inferred_values": 0,
+    "promotion_rate": 0.0625,
+    "safety_assessment": "VALIDATED"
+  },
+  "safe_promotions": [
+    {
+      "product_id": "59133",
+      "name": "Guacamole Hacendado",
+      "perspective": 9,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "redistribution_allowed": false
+    }
+  ],
+  "global_after_pilot": {
+    "total_products": 4280,
+    "ocr_processed_products": 2840,
+    "DECLARED_complete": 185,
+    "REVIEW": 2655,
+    "complete_coverage_pct": 4.3224
+  },
+  "policy": {
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "review_is_usable_nutrition": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
