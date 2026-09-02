@@ -5,6 +5,7 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-p9-review-failure-audit.yml'
+      - 'tools/catalog/audit_mercadona_p9_review_failure_modes.py'
   workflow_dispatch:
 
 permissions:
