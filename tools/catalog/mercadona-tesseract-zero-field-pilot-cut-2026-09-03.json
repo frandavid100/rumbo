@@ -1,0 +1,43 @@
+{
+  "cut_date": "2026-09-03",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33688836337,
+  "artifact": "mercadona-tesseract-zero-field-pilot",
+  "candidate_policy": "stable original+replay REVIEW + 4 core values + explicit 100g/100ml basis + >=2 OCR families + exactly 0 corroborated core fields + no OCR hard conflict + no energy/macro mismatch",
+  "candidate_universe": 3,
+  "processed": 3,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 3,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "safe_promotion_products": 0,
+  "safe_promotion_product_ids": [],
+  "value_conflicts": [],
+  "unsafe_declared": [],
+  "provenance_errors": [],
+  "duplicate_product_ids": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "safety_assessment": "VALIDATED",
+  "global_cumulative": {
+    "universe_total": 4280,
+    "processed": 2840,
+    "declared_complete_core": 205,
+    "review": 2635,
+    "no_visual_region": 0,
+    "errors": 0,
+    "usable_complete_core_percent_of_universe": 4.7897,
+    "usable_core_field_coverage": {
+      "calories": 205,
+      "protein_g": 205,
+      "carbohydrate_g": 205,
+      "fat_g": 205
+    }
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
