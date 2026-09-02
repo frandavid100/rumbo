@@ -1,0 +1,49 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "inventory_products": 4280,
+  "cumulative_distinct_products_with_primary_ocr": 2840,
+  "cumulative_safe_complete_declared": 161,
+  "cumulative_review": 2679,
+  "cumulative_complete_macro_coverage_percent": 3.7616822429906542,
+  "alternative_perspective": "2",
+  "eligible_perspective_products": 1367,
+  "completed_deterministic_prefix": 1152,
+  "completed_perspective_coverage_percent": 84.27212874908558,
+  "latest_window": {
+    "positions": "1089-1152",
+    "processed": 64,
+    "distinct_products_processed": 64,
+    "status_counts": {"REVIEW": 64},
+    "raw_declared": 0,
+    "candidate_promotions_pending_independent_replay": [],
+    "safe_new_promotions_counted_in_cumulative_cut": 0,
+    "no_visual_region": 0,
+    "errors": 0,
+    "unsafe_declared": 0,
+    "source_view_conflicts": 0,
+    "provenance_errors": 0,
+    "duplicate_product_perspective_keys": 0,
+    "evidence_type_ok": 64,
+    "redistribution_false": 64
+  },
+  "ocr_and_merge_run": {
+    "run_id": 33585514166,
+    "artifact_id": 9830165900,
+    "artifact_name": "mercadona-neural-ocr-p9-alternative-wave39-p2-merged",
+    "artifact_sha256": "c76f232c48c28ce3ba56759b155ded9cd1338253e3b43e7b99a785351c81943c",
+    "shard_skips": [1088, 1104, 1120, 1136],
+    "shard_limit": 16,
+    "result": "success"
+  },
+  "notes": [
+    "The deterministic perspective=2 prefix now covers positions 1-1152 of 1367 eligible products.",
+    "Window 1089-1152 produced 64 REVIEW rows and zero raw DECLARED candidates, with no audit, conflict, provenance, or processing failures.",
+    "No REVIEW row was promoted and no absent nutrition value was inferred."
+  ]
+}
