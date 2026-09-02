@@ -1,0 +1,38 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "cut_date": "2026-09-02",
+  "workflow_run_id": 33613875008,
+  "artifact": "mercadona-p9-review-failure-audit",
+  "artifact_digest": "sha256:25d9e4d646fa0bc5161a25730b945ebed4ebf4dc8d542a58aa27a9c73c396952",
+  "replay_rows": 2630,
+  "stable_original_and_replay_review_rows": 2459,
+  "core_field_coverage_counts": {
+    "0": 566,
+    "1": 225,
+    "2": 463,
+    "3": 756,
+    "4": 449
+  },
+  "reason_prefix_counts": {
+    "ENERGY_MACRO_MISMATCH": 161,
+    "INSUFFICIENT_INDEPENDENT_OCR_ENGINES": 124,
+    "LOW_EXTRACTION_CONFIDENCE": 286,
+    "MISSING_100G_100ML_BASIS": 5,
+    "MISSING_CORE": 2008,
+    "OCR_BASIS_CONFLICT": 4,
+    "OCR_FIELD_CONFLICT": 789,
+    "OCR_SAME_ENGINE_CONFLICT": 206,
+    "UNCORROBORATED_BASIS": 158,
+    "UNCORROBORATED_CORE_FIELDS": 447
+  },
+  "priority_near_complete_candidates": 86,
+  "priority_policy": "stable original+replay REVIEW + 4 core values + explicit 100g/100ml basis + >=2 OCR families + exactly 3 corroborated core fields + no OCR hard conflict + no energy/macro mismatch",
+  "secondary_two_field_candidates": 86,
+  "next_safe_experiment": "bounded Tesseract preprocessing rescue on a deterministic subset of the 86 priority near-complete rows; preserve all existing parser, basis, energy/macro and independent-family acceptance gates",
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
