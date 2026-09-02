@@ -1,9 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+from types import SimpleNamespace
+import tempfile
 import unittest
+from unittest.mock import patch
 
-from mercadona_neural_ocr_tesseract_preprocess_rescue import _should_run_preprocess_rescue
+import cv2
+import numpy as np
+
+from mercadona_neural_ocr_tesseract_preprocess_rescue import (
+    MAX_PREPROCESS_SIDE,
+    TESSERACT_TIMEOUT_SECONDS,
+    _bounded_tesseract_runner,
+    _preprocess_variants,
+    _should_run_preprocess_rescue,
+)
 
 
 @dataclass
@@ -71,6 +84,27 @@ class PreprocessRescuePolicyTests(unittest.TestCase):
                 FakeEnsemble(reasons=("ENERGY_MACRO_MISMATCH:12.0",))
             )
         )
+
+    def test_preprocess_variants_never_exceed_runtime_side_cap(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "large.png"
+            image = np.full((2200, 3000), 255, dtype=np.uint8)
+            self.assertTrue(cv2.imwrite(str(source), image))
+            variants = _preprocess_variants(source, root / "variants")
+            self.assertEqual({name for name, _path in variants}, {"clahe", "otsu", "adaptive"})
+            for _name, path in variants:
+                loaded = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+                self.assertIsNotNone(loaded)
+                self.assertLessEqual(max(loaded.shape[:2]), MAX_PREPROCESS_SIDE)
+
+    @patch("mercadona_neural_ocr_tesseract_preprocess_rescue.subprocess.run")
+    def test_tesseract_subprocess_has_hard_timeout(self, run):
+        run.return_value = SimpleNamespace(stdout="ok", stderr="")
+        stdout, stderr = _bounded_tesseract_runner(["tesseract", "x"], "x")
+        self.assertEqual((stdout, stderr), ("ok", ""))
+        self.assertEqual(run.call_args.kwargs["timeout"], TESSERACT_TIMEOUT_SECONDS)
+        self.assertGreater(TESSERACT_TIMEOUT_SECONDS, 0)
 
 
 if __name__ == "__main__":
