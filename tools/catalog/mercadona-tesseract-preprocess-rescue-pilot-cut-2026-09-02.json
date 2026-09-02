@@ -1,0 +1,76 @@
+{
+  "cut_date": "2026-09-02",
+  "scope": "Mercadona p9 near-complete REVIEW candidates; deterministic first 16 of 86",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33628159557,
+  "workflow_artifact": "mercadona-tesseract-preprocess-rescue-pilot-merged",
+  "workflow_artifact_digest": "sha256:9d8778333aa683703a5a1dda902997afba52ab31f90690319f6b1d8e62f2c025",
+  "candidate_universe": 86,
+  "processed": 16,
+  "distinct_products_processed": 16,
+  "status_counts": {
+    "DECLARED": 5,
+    "REVIEW": 11
+  },
+  "safe_promotion_products": 5,
+  "safe_promotion_product_ids": [
+    "13706",
+    "16253",
+    "17327",
+    "20716",
+    "20722"
+  ],
+  "safe_promotions": [
+    {
+      "product_id": "13706",
+      "name": "Pollo asado Hacendado",
+      "basis": "100_g",
+      "nutrition": {"calories": 183.0, "protein_g": 22.0, "carbohydrate_g": 0.8, "fat_g": 10.0},
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "16253",
+      "name": "Snack de lentejas horneado Lentils Hacendado",
+      "basis": "100_g",
+      "nutrition": {"calories": 413.0, "protein_g": 14.0, "carbohydrate_g": 60.0, "fat_g": 12.0},
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "17327",
+      "name": "Salsa Yogur Hacendado",
+      "basis": "100_g",
+      "nutrition": {"calories": 257.0, "protein_g": 0.8, "carbohydrate_g": 8.7, "fat_g": 23.9},
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "20716",
+      "name": "Mantequilla sin sal añadida Hacendado",
+      "basis": "100_g",
+      "nutrition": {"calories": 743.0, "protein_g": 0.5, "carbohydrate_g": 0.8, "fat_g": 82.0},
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "20722",
+      "name": "Mantequilla con sal Hacendado",
+      "basis": "100_g",
+      "nutrition": {"calories": 734.0, "protein_g": 0.5, "carbohydrate_g": 0.8, "fat_g": 81.0},
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    }
+  ],
+  "value_conflicts": [],
+  "unsafe_declared": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "safety_assessment": "VALIDATED"
+}
