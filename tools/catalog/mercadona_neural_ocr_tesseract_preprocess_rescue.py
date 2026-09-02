@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 import tempfile
 
 import cv2
 
 import mercadona_neural_ocr_wave as base
 
-RESCUE_POLICY_VERSION = "1.0.0"
+RESCUE_POLICY_VERSION = "1.1.0"
 CORE_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
+MAX_PREPROCESS_SIDE = 3200
+TESSERACT_TIMEOUT_SECONDS = 90
 
 
 def _hard_conflict(ensemble) -> bool:
@@ -38,17 +41,47 @@ def _should_run_preprocess_rescue(ensemble) -> bool:
     )
 
 
+def _bounded_tesseract_runner(args: list[str], input_path: str) -> tuple[str, str]:
+    """Run a Tesseract observation with a hard per-pass runtime ceiling.
+
+    A timed-out OCR observation is simply absent evidence and is recorded by the
+    caller as an engine error. It can never promote a REVIEW row to DECLARED.
+    """
+    completed = subprocess.run(
+        args,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=TESSERACT_TIMEOUT_SECONDS,
+    )
+    return completed.stdout, completed.stderr
+
+
+def _extract_tesseract(path: Path, *, psm: int):
+    return base.extract_with_tesseract(
+        path,
+        language="spa",
+        psm=psm,
+        runner=_bounded_tesseract_runner,
+    )
+
+
 def _preprocess_variants(image_path: Path, out_dir: Path) -> list[tuple[str, Path]]:
     """Create bounded temporary variants that can recover faint/small table glyphs.
 
     These are correlated Tesseract observations and never count as independent
-    engine families. Files live under the caller's TemporaryDirectory only.
+    engine families. Files live under the caller's TemporaryDirectory only. The
+    long side is capped so thresholding cannot create pathological, multi-minute
+    Tesseract passes on very large official label crops.
     """
     gray = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
     if gray is None:
         raise ValueError(f"cannot decode image: {image_path}")
     out_dir.mkdir(parents=True, exist_ok=True)
-    scaled = cv2.resize(gray, None, fx=1.75, fy=1.75, interpolation=cv2.INTER_CUBIC)
+    height, width = gray.shape[:2]
+    scale = min(1.75, MAX_PREPROCESS_SIDE / float(max(height, width)))
+    scaled = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(scaled)
     blurred = cv2.GaussianBlur(clahe, (3, 3), 0)
@@ -111,9 +144,9 @@ def _extract_region(evidence, region_path: Path, target_kind: str):
     engine_errors: dict[str, str] = {}
     extractor_specs = (
         ("paddleocr", "paddleocr", base.extract_with_paddleocr),
-        ("tesseract-psm4", "tesseract", lambda path: base.extract_with_tesseract(path, language="spa", psm=4)),
-        ("tesseract-psm6", "tesseract", lambda path: base.extract_with_tesseract(path, language="spa", psm=6)),
-        ("tesseract-psm11", "tesseract", lambda path: base.extract_with_tesseract(path, language="spa", psm=11)),
+        ("tesseract-psm4", "tesseract", lambda path: _extract_tesseract(path, psm=4)),
+        ("tesseract-psm6", "tesseract", lambda path: _extract_tesseract(path, psm=6)),
+        ("tesseract-psm11", "tesseract", lambda path: _extract_tesseract(path, psm=11)),
     )
     for strategy, family, extractor in extractor_specs:
         try:
@@ -131,7 +164,7 @@ def _extract_region(evidence, region_path: Path, target_kind: str):
                     for psm in (4, 6, 11):
                         strategy = f"tesseract-{variant_name}-psm{psm}"
                         try:
-                            extracted = base.extract_with_tesseract(variant_path, language="spa", psm=psm)
+                            extracted = _extract_tesseract(variant_path, psm=psm)
                             readings.append((strategy, "tesseract", base._reading(evidence, extracted)))
                         except Exception as exc:
                             engine_errors[strategy] = f"{type(exc).__name__}:{exc}"
@@ -162,6 +195,8 @@ def _rewrite_summary() -> None:
     payload["rescue_policy_version"] = RESCUE_POLICY_VERSION
     payload["preprocess_variants"] = ["clahe", "otsu", "adaptive"]
     payload["preprocess_tesseract_psm"] = [4, 6, 11]
+    payload["preprocess_max_side"] = MAX_PREPROCESS_SIDE
+    payload["tesseract_pass_timeout_seconds"] = TESSERACT_TIMEOUT_SECONDS
     payload["preprocess_variants_are_independent_families"] = False
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
