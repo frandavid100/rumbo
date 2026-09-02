@@ -1,0 +1,227 @@
+name: Catalog Mercadona p9 alternative wave37 product 59151 exact e2e
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-p9-alternative-wave37-59151-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-p9-alternative-wave37-59151-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Download current persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+      - name: Download wave37 merged evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-neural-ocr-p9-alternative-wave37-p2-merged
+          path: evidence/wave37
+          github-token: ${{ github.token }}
+          run-id: 33578669232
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative OCR regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_ocr_image_candidates.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_merge_mercadona_p9_alternative_wave.py \
+            test_mercadona_neural_ocr_p9_alternative_checkpoint.py
+          python -m py_compile mercadona_neural_ocr_p9_alternative.py
+      - name: Isolate product 59151 without changing first-party evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          source = Path('tools/catalog/mercadona-first-party-final/products.jsonl')
+          rows = [
+              json.loads(line)
+              for line in source.read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          selected = [row for row in rows if str(row.get('product_id') or '') == '59151']
+          if len(selected) != 1:
+              raise SystemExit(f'Expected exactly one first-party row for 59151, got {len(selected)}')
+          Path('tools/catalog/mercadona-wave37-p59151-target.jsonl').write_text(
+              json.dumps(selected[0], ensure_ascii=False, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+      - name: Re-run product 59151 end to end from official perspective 2
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_p9_alternative.py \
+            --products mercadona-wave37-p59151-target.jsonl \
+            --p9-replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-wave37-p59151-e2e \
+            --required-perspective 2 \
+            --shard-index 0 \
+            --shard-count 1 \
+            --skip-first 0 \
+            --limit 1
+      - name: Require exact independent reproduction of the candidate promotion
+        run: |
+          python - <<'PY'
+          from decimal import Decimal
+          import json
+          import os
+          from pathlib import Path
+
+          required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+
+          def load_one(path, product_id):
+              matches = []
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  if str(row.get('product_id') or '') == product_id:
+                      matches.append(row)
+              if len(matches) != 1:
+                  raise SystemExit(f'{path}: expected one row for {product_id}, got {len(matches)}')
+              return matches[0]
+
+          baseline = load_one('evidence/wave37/results.jsonl', '59151')
+          observed = load_one(
+              'tools/catalog/mercadona-wave37-p59151-e2e/results-p2-s00.jsonl',
+              '59151',
+          )
+
+          if baseline.get('status') != 'DECLARED' or observed.get('status') != 'DECLARED':
+              raise SystemExit(
+                  f'status mismatch baseline={baseline.get("status")} observed={observed.get("status")}'
+              )
+          if str(baseline.get('perspective')) != '2' or str(observed.get('perspective')) != '2':
+              raise SystemExit('perspective mismatch; expected official perspective=2')
+          if baseline.get('basis') != observed.get('basis'):
+              raise SystemExit(
+                  f'basis mismatch baseline={baseline.get("basis")} observed={observed.get("basis")}'
+              )
+          if baseline.get('image_url') != observed.get('image_url'):
+              raise SystemExit('first-party image URL mismatch')
+
+          def canonical(row):
+              nutrition = row.get('nutrition') or {}
+              result = {}
+              for field in required:
+                  value = nutrition.get(field)
+                  if value is None:
+                      raise SystemExit(f'{row.get("product_id")}: missing {field}')
+                  result[field] = Decimal(str(value))
+              return result
+
+          baseline_values = canonical(baseline)
+          observed_values = canonical(observed)
+          if baseline_values != observed_values:
+              raise SystemExit(
+                  f'nutrition mismatch baseline={baseline_values} observed={observed_values}'
+              )
+
+          provenance_errors = []
+          for label, row in (('baseline', baseline), ('observed', observed)):
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(f'{label}:evidence_level')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY':
+                  provenance_errors.append(f'{label}:source')
+              if row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(f'{label}:source_record_kind')
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(f'{label}:redistribution_allowed')
+          if provenance_errors:
+              raise SystemExit('provenance errors: ' + ', '.join(provenance_errors))
+
+          declared_attempts = [
+              attempt for attempt in (observed.get('attempts') or [])
+              if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'
+          ]
+          if len(declared_attempts) != 1:
+              raise SystemExit(f'expected one DECLARED ensemble attempt, got {len(declared_attempts)}')
+          ensemble = declared_attempts[0].get('ensemble') or {}
+          if int(ensemble.get('independent_engine_families') or 0) < 2:
+              raise SystemExit('independent engine family gate failed')
+          if int(ensemble.get('corroborated_fields') or 0) < 4:
+              raise SystemExit('four-field corroboration gate failed')
+
+          summary = {
+              'kind': 'MERCADONA_P9_ALTERNATIVE_WAVE37_PRODUCT_59151_EXACT_E2E_REPRODUCTION',
+              'date': '2026-09-02',
+              'source_wave_run_id': 33578669232,
+              'e2e_run_id': int(os.environ.get('GITHUB_RUN_ID') or 0),
+              'product_id': '59151',
+              'ean': observed.get('ean'),
+              'name': observed.get('name'),
+              'image_url': observed.get('image_url'),
+              'perspective': 2,
+              'basis': observed.get('basis'),
+              'nutrition': {key: float(value) for key, value in observed_values.items()},
+              'exact_status_match': True,
+              'exact_basis_match': True,
+              'exact_image_url_match': True,
+              'exact_macro_match': True,
+              'independent_engine_families': int(ensemble.get('independent_engine_families') or 0),
+              'corroborated_fields': int(ensemble.get('corroborated_fields') or 0),
+              'provenance_errors': provenance_errors,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'result': 'PRODUCT_59151_REPRODUCED_E2E_VALUE_FOR_VALUE',
+          }
+          out = Path('tools/catalog/mercadona-wave37-p59151-e2e/verification-summary.json')
+          out.write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True),
+              encoding='utf-8',
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-p9-alternative-wave37-p59151-e2e
+          path: tools/catalog/mercadona-wave37-p59151-e2e/
+          retention-days: 30
+          if-no-files-found: error
