@@ -1,0 +1,26 @@
+{
+  "cut_at": "2026-09-02",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow": {
+    "file": ".github/workflows/catalog-mercadona-p9-review-failure-audit.yml",
+    "run_id": 33671529583,
+    "artifact_id": 9862681801,
+    "artifact_name": "mercadona-p9-review-failure-audit",
+    "artifact_digest": "sha256:5c3edbaa042af6673d5e6d3a8d3dbb66a89130b827d3b524fca484df3a1cf391"
+  },
+  "replay_rows": 2630,
+  "stable_original_and_replay_review_rows": 2459,
+  "safe_shape_candidates_by_corroborated_fields": {
+    "3": 86,
+    "2": 86,
+    "1": 54,
+    "0": 3
+  },
+  "shared_safe_shape": "stable original+replay REVIEW + 4 core values + explicit 100g/100ml basis + >=2 OCR families + no OCR hard conflict + no energy/macro mismatch",
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
