@@ -24,13 +24,13 @@ jobs:
       matrix:
         include:
           - part: 0
-            skip: 896
+            skip: 960
           - part: 1
-            skip: 912
+            skip: 976
           - part: 2
-            skip: 928
+            skip: 992
           - part: 3
-            skip: 944
+            skip: 1008
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
     steps:
@@ -115,9 +115,9 @@ jobs:
           python tools/catalog/merge_mercadona_p9_alternative_wave.py \
             --input input \
             --out merged \
-            --skip-first 896 \
+            --skip-first 960 \
             --limit 64 \
-            --previous-completed 1-896 \
+            --previous-completed 1-960 \
             --perspectives 2
       - uses: actions/upload-artifact@v4
         with:
