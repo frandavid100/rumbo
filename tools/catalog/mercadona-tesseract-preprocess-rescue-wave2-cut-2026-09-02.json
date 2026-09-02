@@ -1,0 +1,120 @@
+{
+  "cut_date": "2026-09-02",
+  "scope": "Mercadona p9 near-complete REVIEW candidates; deterministic positions 17-48 of 86, cumulative with validated first-16 pilot",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "source_ocr_workflow_run_id": 33634915517,
+  "merge_repair_workflow_run_id": 33640568945,
+  "workflow_artifact": "mercadona-tesseract-preprocess-rescue-wave2-merged",
+  "workflow_artifact_id": 9850611323,
+  "workflow_artifact_digest": "sha256:44f00beb0c60fdc56cb844b346904ed58c1fc16984d5f81fe330c83d688c9dca",
+  "merge_repair": "recursive_artifact_path_discovery; OCR shards were reused without rerunning image OCR",
+  "candidate_universe": 86,
+  "pilot_processed": 16,
+  "wave2_processed": 32,
+  "wave2_distinct_products_processed": 32,
+  "cumulative_candidate_sample_processed": 48,
+  "cumulative_candidate_sample_remaining": 38,
+  "wave2_status_counts": {
+    "DECLARED": 6,
+    "REVIEW": 26
+  },
+  "wave2_safe_promotion_products": 6,
+  "wave2_safe_promotion_product_ids": [
+    "34208",
+    "61034",
+    "6253",
+    "63597",
+    "64414",
+    "80858"
+  ],
+  "wave2_safe_promotions": [
+    {
+      "product_id": "6253",
+      "ean": "8480000062536",
+      "name": "Fideuá Hacendado",
+      "basis": "100_g",
+      "nutrition": {"calories": 361.0, "protein_g": 13.0, "carbohydrate_g": 72.0, "fat_g": 1.5},
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "64414",
+      "ean": "8480000644138",
+      "name": "Helado de leche merengada Hacendado",
+      "basis": "100_g",
+      "nutrition": {"calories": 212.0, "protein_g": 2.8, "carbohydrate_g": 23.0, "fat_g": 12.0},
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "34208",
+      "ean": "8718781824402",
+      "name": "Cebolla frita crujiente Hacendado",
+      "basis": "100_g",
+      "nutrition": {"calories": 590.0, "protein_g": 6.0, "carbohydrate_g": 40.0, "fat_g": 44.0},
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "63597",
+      "ean": "8480000635976",
+      "name": "Pizzas tomate y queso Hacendado ultracongeladas",
+      "basis": "100_g",
+      "nutrition": {"calories": 251.0, "protein_g": 10.8, "carbohydrate_g": 36.0, "fat_g": 6.4},
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "61034",
+      "ean": "8480000610348",
+      "name": "Parrillada de verduras Hacendado ultracongeladas",
+      "basis": "100_g",
+      "nutrition": {"calories": 55.0, "protein_g": 2.2, "carbohydrate_g": 10.0, "fat_g": 0.0},
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "80858",
+      "ean": "8432089108018",
+      "name": "Hummus de garbanzos Hacendado receta clásica",
+      "basis": "100_g",
+      "nutrition": {"calories": 311.0, "protein_g": 6.0, "carbohydrate_g": 11.1, "fat_g": 25.8},
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    }
+  ],
+  "cumulative_tesseract_safe_promotion_products": 11,
+  "cumulative_tesseract_safe_promotion_product_ids": [
+    "13706",
+    "16253",
+    "17327",
+    "20716",
+    "20722",
+    "34208",
+    "61034",
+    "6253",
+    "63597",
+    "64414",
+    "80858"
+  ],
+  "overall_processed_products": 2840,
+  "overall_declared_complete_products": 172,
+  "overall_review_products": 2668,
+  "mercadona_total_products": 4280,
+  "overall_complete_coverage_pct": 4.018691588785047,
+  "value_conflicts": [],
+  "unsafe_declared": [],
+  "duplicate_product_ids": [],
+  "missing_product_ids": [],
+  "unexpected_product_ids": [],
+  "unexpected_statuses": [],
+  "cumulative_duplicate_promotion_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "safety_assessment": "VALIDATED"
+}
