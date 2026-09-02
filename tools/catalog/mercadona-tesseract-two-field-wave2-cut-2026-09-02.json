@@ -1,0 +1,50 @@
+{
+  "cut_at": "2026-09-02",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "workflow": {
+    "file": ".github/workflows/catalog-mercadona-tesseract-two-field-wave2.yml",
+    "run_id": 33660625909,
+    "artifact_id": 9859267992,
+    "artifact_name": "mercadona-tesseract-two-field-wave2-merged"
+  },
+  "engine": "tesseract",
+  "parser": "mercadona_tesseract_two_field_rescue_v1",
+  "rescue_policy": "two_field_v1",
+  "candidate_universe": 86,
+  "candidate_slice": {
+    "positions_one_based": "17-48",
+    "slice_start_zero_based": 16,
+    "slice_end_exclusive_zero_based": 48,
+    "selected": 32
+  },
+  "wave": {
+    "processed": 32,
+    "declared": 7,
+    "review": 25,
+    "no_visual_region": 0,
+    "errors": 0,
+    "unsafe_declared": 0,
+    "value_conflicts": 0,
+    "provenance_errors": 0,
+    "safety_assessment": "VALIDATED"
+  },
+  "two_field_cumulative": {
+    "processed": 48,
+    "declared": 8,
+    "review": 40,
+    "remaining": 38
+  },
+  "global": {
+    "universe": 4280,
+    "processed": 2840,
+    "declared": 192,
+    "review": 2648,
+    "complete_coverage_pct": 4.485981308411215
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
