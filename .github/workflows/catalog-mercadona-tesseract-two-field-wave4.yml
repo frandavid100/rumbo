@@ -1,0 +1,290 @@
+name: Catalog Mercadona Tesseract two-field rescue wave4
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-tesseract-two-field-wave4.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-tesseract-two-field-wave4-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Download audited two-field REVIEW candidates
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-p9-review-failure-audit
+          path: tools/catalog/mercadona-p9-review-failure-audit
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33613875008
+      - name: Build deterministic final-6 input
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          def key(row):
+              pid = str(row.get('product_id') or '')
+              ean = str(row.get('ean') or '')
+              return hashlib.sha256(f'{pid}\0{ean}'.encode('utf-8')).hexdigest(), pid
+
+          candidate_rows = [json.loads(line) for line in Path('mercadona-p9-review-failure-audit/secondary-two-field.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          candidate_ids = {str(row['product_id']) for row in candidate_rows}
+          products = [json.loads(line) for line in Path('mercadona-first-party-final/products.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          joined = [row for row in products if str(row.get('product_id') or '') in candidate_ids]
+          if len(candidate_rows) != 86 or len(candidate_ids) != 86 or len(joined) != 86:
+              raise SystemExit(f'candidate join mismatch rows={len(candidate_rows)} ids={len(candidate_ids)} products={len(joined)}')
+          joined.sort(key=key)
+          selected = joined[80:86]
+          if len(selected) != 6:
+              raise SystemExit(f'wave4 selection mismatch selected={len(selected)}')
+          Path('two-field-wave4-products.jsonl').write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected), encoding='utf-8')
+          Path('two-field-wave4-selection.json').write_text(json.dumps({
+              'candidate_universe': 86,
+              'candidate_policy': 'stable original+replay REVIEW + 4 core values + explicit 100g/100ml basis + >=2 OCR families + exactly 2 corroborated core fields + no OCR hard conflict + no energy/macro mismatch',
+              'sample_order': 'SHA256_PRODUCT_ID_EAN',
+              'slice_start_zero_based': 80,
+              'slice_end_exclusive_zero_based': 86,
+              'selected': 6,
+              'product_ids': [str(row.get('product_id') or '') for row in selected],
+          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Install OCR engines and preprocessing dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative parser and two-field rescue regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            test_mercadona_neural_ocr_tesseract_preprocess_rescue_two_field.py
+          python -m py_compile mercadona_neural_ocr_tesseract_preprocess_rescue.py mercadona_neural_ocr_tesseract_preprocess_rescue_two_field.py
+      - name: Run deterministic two-field rescue wave4
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_tesseract_preprocess_rescue_two_field.py \
+            --products two-field-wave4-products.jsonl \
+            --out mercadona-tesseract-two-field-wave4 \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 2 \
+            --limit 0 \
+            --delay 0.5
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-tesseract-two-field-wave4-${{ matrix.shard }}
+          path: |
+            tools/catalog/mercadona-tesseract-two-field-wave4/
+            tools/catalog/two-field-wave4-selection.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ always() && needs.ocr.result == 'success' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-tesseract-two-field-wave4-*
+          path: input
+          merge-multiple: true
+      - name: Download audited two-field candidate baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-p9-review-failure-audit
+          path: baseline
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33613875008
+      - name: Download validated cumulative two-field wave3
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-tesseract-two-field-wave3-merged
+          path: prior
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33665520023
+      - name: Merge and enforce conservative promotion contract
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json
+          from pathlib import Path
+
+          FIELDS = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+          ALLOWED_STATUSES = {'DECLARED', 'REVIEW', 'NO_VISUAL_REGION', 'ERROR'}
+
+          def close(field, a, b):
+              a, b = float(a), float(b)
+              tolerance = max(5.0, .04 * max(abs(a), abs(b), 1.0)) if field == 'calories' else max(.6, .10 * max(abs(a), abs(b), 1.0))
+              return abs(a - b) <= tolerance
+
+          result_paths = sorted(glob.glob('input/**/results-*.jsonl', recursive=True))
+          if len(result_paths) != 2:
+              raise SystemExit(f'expected 2 wave4 shard result files, found {len(result_paths)}: {result_paths}')
+          rows = []
+          for path in result_paths:
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+
+          selection_paths = sorted(glob.glob('input/**/two-field-wave4-selection.json', recursive=True))
+          if not selection_paths:
+              raise SystemExit('two-field-wave4-selection.json not found')
+          selections = [json.loads(Path(path).read_text(encoding='utf-8')) for path in selection_paths]
+          selection = selections[0]
+          if any(candidate != selection for candidate in selections[1:]):
+              raise SystemExit('wave4 shard selection manifests disagree')
+          expected_ids = set(selection['product_ids'])
+
+          baseline = {str(row['product_id']): row for row in (json.loads(line) for line in Path('baseline/secondary-two-field.jsonl').read_text(encoding='utf-8').splitlines() if line.strip())}
+          if len(baseline) != 86:
+              raise SystemExit(f'expected 86 two-field baseline candidates, got {len(baseline)}')
+          prior_summary = json.loads(Path('prior/summary.json').read_text(encoding='utf-8'))
+          prior_promotions = json.loads(Path('prior/cumulative-safe-promotions.json').read_text(encoding='utf-8'))
+          prior_selection = json.loads(Path('prior/selection.json').read_text(encoding='utf-8'))
+          if prior_summary.get('safety_assessment') != 'VALIDATED' or prior_summary.get('cumulative_sample_processed') != 80 or len(prior_promotions) != 13 or prior_selection.get('slice_end_exclusive_zero_based') != 80:
+              raise SystemExit('validated two-field wave3 baseline mismatch')
+
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          ids = [str(row.get('product_id') or '') for row in rows]
+          duplicate_ids = sorted(pid for pid, count in Counter(ids).items() if count > 1)
+          provenance_errors, unsafe_declared, value_conflicts, safe_promotions = [], [], [], []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              prior = baseline.get(pid)
+              if prior is None or pid not in expected_ids:
+                  provenance_errors.append(f'{pid}:not_in_wave4_baseline')
+                  continue
+              if (row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image' or row.get('redistribution_allowed') is not False or str(row.get('perspective')) != '9'):
+                  provenance_errors.append(f'{pid}:provenance')
+              if row.get('status') != 'DECLARED':
+                  continue
+              accepted = next((a for a in row.get('attempts') or [] if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              ensemble = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              if int(ensemble.get('independent_engine_families') or 0) < 2 or int(ensemble.get('corroborated_fields') or 0) < 4 or any(nutrition.get(field) is None for field in FIELDS):
+                  unsafe_declared.append(pid)
+                  continue
+              conflicts = []
+              if row.get('basis') != prior.get('basis'):
+                  conflicts.append(f"basis:{prior.get('basis')}!={row.get('basis')}")
+              prior_nutrition = prior.get('nutrition') or {}
+              for field in FIELDS:
+                  if prior_nutrition.get(field) is None or not close(field, nutrition[field], prior_nutrition[field]):
+                      conflicts.append(f"{field}:{prior_nutrition.get(field)}!~{nutrition[field]}")
+              if conflicts:
+                  value_conflicts.append({'product_id': pid, 'conflicts': conflicts})
+                  continue
+              safe_promotions.append({
+                  'product_id': pid,
+                  'ean': row.get('ean'),
+                  'name': row.get('name'),
+                  'basis': row.get('basis'),
+                  'nutrition': nutrition,
+                  'independent_engine_families': ensemble.get('independent_engine_families'),
+                  'corroborated_fields': ensemble.get('corroborated_fields'),
+                  'source': 'MERCADONA_FIRST_PARTY/label image',
+                  'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+                  'redistribution_allowed': False,
+              })
+
+          observed_ids = set(ids)
+          missing_ids = sorted(expected_ids - observed_ids)
+          unexpected_ids = sorted(observed_ids - expected_ids)
+          unexpected_statuses = sorted(set(counts) - ALLOWED_STATUSES)
+          prior_ids = {str(row['product_id']) for row in prior_promotions}
+          overlap_with_prior = sorted(observed_ids & prior_ids)
+          cumulative_promotions = prior_promotions + safe_promotions
+          cumulative_ids = [str(row['product_id']) for row in cumulative_promotions]
+          cumulative_duplicate_ids = sorted(pid for pid, count in Counter(cumulative_ids).items() if count > 1)
+          safety_ok = (len(rows) == 6 and len(observed_ids) == 6 and not duplicate_ids and not missing_ids and not unexpected_ids and not provenance_errors and not unsafe_declared and not value_conflicts and not unexpected_statuses and not overlap_with_prior and not cumulative_duplicate_ids)
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'candidate_universe': len(baseline),
+              'prior_processed': 80,
+              'wave4_expected': 6,
+              'wave4_processed': len(rows),
+              'wave4_distinct_products_processed': len(observed_ids),
+              'cumulative_sample_processed': 80 + len(rows),
+              'remaining_candidates': 86 - (80 + len(rows)),
+              'wave4_status_counts': dict(sorted(counts.items())),
+              'wave4_safe_promotion_products': len(safe_promotions),
+              'wave4_safe_promotion_product_ids': sorted(item['product_id'] for item in safe_promotions),
+              'cumulative_safe_promotion_products': len(cumulative_promotions),
+              'cumulative_safe_promotion_product_ids': sorted(cumulative_ids),
+              'value_conflicts': value_conflicts,
+              'unsafe_declared': unsafe_declared,
+              'duplicate_product_ids': duplicate_ids,
+              'missing_product_ids': missing_ids,
+              'unexpected_product_ids': unexpected_ids,
+              'unexpected_statuses': unexpected_statuses,
+              'overlap_with_prior_promotions': overlap_with_prior,
+              'cumulative_duplicate_promotion_ids': cumulative_duplicate_ids,
+              'provenance_errors': provenance_errors,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'safety_assessment': 'VALIDATED' if safety_ok else 'FAILED',
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in sorted(rows, key=lambda row: str(row.get('product_id') or ''))), encoding='utf-8')
+          Path('merged/safe-promotions.json').write_text(json.dumps(safe_promotions, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          Path('merged/cumulative-safe-promotions.json').write_text(json.dumps(cumulative_promotions, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          Path('merged/selection.json').write_text(json.dumps(selection, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if not safety_ok:
+              raise SystemExit('two-field wave4 safety contract failed')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-tesseract-two-field-wave4-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
