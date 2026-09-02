@@ -73,6 +73,8 @@ def main() -> int:
     reason_counts = Counter()
     target_candidates: list[dict[str, Any]] = []
     lower_priority_candidates: list[dict[str, Any]] = []
+    one_field_candidates: list[dict[str, Any]] = []
+    zero_field_candidates: list[dict[str, Any]] = []
 
     for row in reviews:
         replay = row.get("replay") or {}
@@ -115,9 +117,15 @@ def main() -> int:
             target_candidates.append(payload)
         elif safe_shape and corroborated == 2:
             lower_priority_candidates.append(payload)
+        elif safe_shape and corroborated == 1:
+            one_field_candidates.append(payload)
+        elif safe_shape and corroborated == 0:
+            zero_field_candidates.append(payload)
 
     target_candidates.sort(key=lambda row: str(row["product_id"]))
     lower_priority_candidates.sort(key=lambda row: str(row["product_id"]))
+    one_field_candidates.sort(key=lambda row: str(row["product_id"]))
+    zero_field_candidates.sort(key=lambda row: str(row["product_id"]))
     summary = {
         "source": "MERCADONA_FIRST_PARTY/label image",
         "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
@@ -133,6 +141,9 @@ def main() -> int:
         "priority_near_complete_candidates": len(target_candidates),
         "priority_policy": "stable original+replay REVIEW + 4 core values + explicit 100g/100ml basis + >=2 OCR families + exactly 3 corroborated core fields + no OCR hard conflict + no energy/macro mismatch",
         "secondary_two_field_candidates": len(lower_priority_candidates),
+        "tertiary_one_field_candidates": len(one_field_candidates),
+        "quaternary_zero_field_candidates": len(zero_field_candidates),
+        "shared_safe_shape": "stable original+replay REVIEW + 4 core values + explicit 100g/100ml basis + >=2 OCR families + no OCR hard conflict + no energy/macro mismatch",
         "images_persisted": False,
         "missing_values_inferred": False,
         "CLASSIFIED": 0,
@@ -148,6 +159,14 @@ def main() -> int:
     )
     (out / "secondary-two-field.jsonl").write_text(
         "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in lower_priority_candidates),
+        encoding="utf-8",
+    )
+    (out / "tertiary-one-field.jsonl").write_text(
+        "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in one_field_candidates),
+        encoding="utf-8",
+    )
+    (out / "quaternary-zero-field.jsonl").write_text(
+        "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in zero_field_candidates),
         encoding="utf-8",
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
