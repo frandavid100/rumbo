@@ -1,0 +1,58 @@
+name: Catalog Mercadona p9 alternative perspective inventory
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-p9-alternative-perspective-inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-p9-alternative-perspective-inventory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Download current persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+      - name: Validate inventory script
+        working-directory: tools/catalog
+        run: python -m py_compile mercadona_p9_alternative_inventory.py mercadona_ocr_image_candidates.py
+      - name: Inventory all true non-p9 perspectives still eligible after replay
+        working-directory: tools/catalog
+        run: |
+          python mercadona_p9_alternative_inventory.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --p9-replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-p9-alternative-perspective-inventory.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-p9-alternative-perspective-inventory
+          path: tools/catalog/mercadona-p9-alternative-perspective-inventory.json
+          retention-days: 30
+          if-no-files-found: error
