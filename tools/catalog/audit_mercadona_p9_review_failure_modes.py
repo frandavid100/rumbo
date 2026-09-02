@@ -57,9 +57,16 @@ def main() -> int:
     if len(rows) != EXPECTED_ROWS:
         raise ValueError(f"expected {EXPECTED_ROWS} replay rows, got {len(rows)}")
 
-    reviews = [row for row in rows if (row.get("replay") or {}).get("status") == "REVIEW"]
+    reviews = [
+        row
+        for row in rows
+        if row.get("status") == "REVIEW"
+        and (row.get("replay") or {}).get("status") == "REVIEW"
+    ]
     if len(reviews) != EXPECTED_STILL_REVIEW:
-        raise ValueError(f"expected {EXPECTED_STILL_REVIEW} replay REVIEW rows, got {len(reviews)}")
+        raise ValueError(
+            f"expected {EXPECTED_STILL_REVIEW} original+replay REVIEW rows, got {len(reviews)}"
+        )
 
     field_coverage = Counter()
     corroboration = Counter()
@@ -116,7 +123,7 @@ def main() -> int:
         "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
         "redistribution_allowed": False,
         "replay_rows": len(rows),
-        "still_review_rows": len(reviews),
+        "stable_original_and_replay_review_rows": len(reviews),
         "core_field_coverage_counts": {str(k): v for k, v in sorted(field_coverage.items())},
         "corroboration_by_fields_and_families": {
             f"fields={fields};families={families}": count
@@ -124,7 +131,7 @@ def main() -> int:
         },
         "reason_prefix_counts": dict(sorted(reason_counts.items())),
         "priority_near_complete_candidates": len(target_candidates),
-        "priority_policy": "4 core values + explicit 100g/100ml basis + >=2 OCR families + exactly 3 corroborated core fields + no OCR hard conflict + no energy/macro mismatch",
+        "priority_policy": "stable original+replay REVIEW + 4 core values + explicit 100g/100ml basis + >=2 OCR families + exactly 3 corroborated core fields + no OCR hard conflict + no energy/macro mismatch",
         "secondary_two_field_candidates": len(lower_priority_candidates),
         "images_persisted": False,
         "missing_values_inferred": False,
