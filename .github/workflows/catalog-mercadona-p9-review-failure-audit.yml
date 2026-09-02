@@ -1,0 +1,46 @@
+name: Catalog Mercadona p9 REVIEW failure audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-p9-review-failure-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+      - name: Validate audit script
+        working-directory: tools/catalog
+        run: python -m py_compile audit_mercadona_p9_review_failure_modes.py
+      - name: Audit conservative p9 REVIEW failure modes
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_p9_review_failure_modes.py \
+            --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-p9-review-failure-audit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-p9-review-failure-audit
+          path: tools/catalog/mercadona-p9-review-failure-audit/
+          retention-days: 30
+          if-no-files-found: error
