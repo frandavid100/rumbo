@@ -1,0 +1,55 @@
+{
+  "cut_at": "2026-09-02",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "workflow": {
+    "file": ".github/workflows/catalog-mercadona-tesseract-one-field-pilot.yml",
+    "run_id": 33671683014,
+    "artifact_id": 9863410024,
+    "artifact_name": "mercadona-tesseract-one-field-pilot-merged",
+    "artifact_digest": "sha256:165af1f636a09c863a0bb427a7cf4ac2a13b8a66a19b89f36e62422ac2ecf3d0"
+  },
+  "engine": "tesseract",
+  "parser": "mercadona_tesseract_one_field_rescue_v1",
+  "rescue_policy": "one_field_v1",
+  "candidate_universe": 54,
+  "candidate_slice": {
+    "positions_one_based": "1-16",
+    "slice_start_zero_based": 0,
+    "slice_end_exclusive_zero_based": 16,
+    "selected": 16
+  },
+  "pilot": {
+    "processed": 16,
+    "declared": 2,
+    "review": 14,
+    "no_visual_region": 0,
+    "errors": 0,
+    "unsafe_declared": 0,
+    "value_conflicts": 0,
+    "provenance_errors": 0,
+    "safety_assessment": "VALIDATED",
+    "safe_promotion_product_ids": [
+      "12347",
+      "15112"
+    ]
+  },
+  "one_field_cumulative": {
+    "processed": 16,
+    "declared": 2,
+    "review": 14,
+    "remaining": 38
+  },
+  "global": {
+    "universe": 4280,
+    "processed": 2840,
+    "declared": 200,
+    "review": 2640,
+    "complete_coverage_pct": 4.672897196261682
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
