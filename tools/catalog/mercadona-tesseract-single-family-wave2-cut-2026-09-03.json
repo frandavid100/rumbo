@@ -1,0 +1,126 @@
+{
+  "cut_date": "2026-09-03",
+  "branch": "agent/catalog-phase1",
+  "scope": "Mercadona first-party OCR single-family rescue closure",
+  "source_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "workflow": {
+    "run_id": 33747704673,
+    "artifact_id": 9891586693,
+    "artifact": "mercadona-tesseract-single-family-wave2",
+    "result": "success"
+  },
+  "wave2": {
+    "selected": 42,
+    "processed": 42,
+    "declared": 7,
+    "review": 35,
+    "unsafe_declared": 0,
+    "conflict_value_count": 0,
+    "provenance_error_count": 0,
+    "duplicate_product_ids": [],
+    "safe_promotions": [
+      {
+        "product_id": "62967",
+        "ean": "8480000629676",
+        "name": "Banderillas picantes Hacendado",
+        "basis": "100_g",
+        "kcal": 101.0,
+        "protein_g": 1.6,
+        "carbohydrate_g": 2.5,
+        "fat_g": 9.2
+      },
+      {
+        "product_id": "60680",
+        "ean": "5059319034449",
+        "name": "Cereales Special K Classic Kellogg's",
+        "basis": "100_g",
+        "kcal": 392.0,
+        "protein_g": 14.0,
+        "carbohydrate_g": 75.0,
+        "fat_g": 4.5
+      },
+      {
+        "product_id": "3297",
+        "ean": "8480000032971",
+        "name": "Pechuga de pollo marinada Hacendado",
+        "basis": "100_g",
+        "kcal": 106.0,
+        "protein_g": 19.0,
+        "carbohydrate_g": 1.1,
+        "fat_g": 2.3
+      },
+      {
+        "product_id": "68807",
+        "ean": "8480000075749",
+        "name": "Cerveza dorada Steinburg",
+        "basis": "100_ml",
+        "kcal": 28.0,
+        "protein_g": 0.6,
+        "carbohydrate_g": 2.9,
+        "fat_g": 0.0
+      },
+      {
+        "product_id": "69012",
+        "ean": "8480000075268",
+        "name": "Cerveza especial 1897 Hacendado",
+        "basis": "100_ml",
+        "kcal": 45.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 4.0,
+        "fat_g": 0.0
+      },
+      {
+        "product_id": "62696",
+        "ean": "8480000062695",
+        "name": "Barritas de galleta, caramelo y chocolate con leche Hacendado",
+        "basis": "100_g",
+        "kcal": 477.0,
+        "protein_g": 6.3,
+        "carbohydrate_g": 65.0,
+        "fat_g": 21.0
+      },
+      {
+        "product_id": "31670",
+        "ean": "8480000316705",
+        "name": "Almendras crudas repeladas Hacendado",
+        "basis": "100_g",
+        "kcal": 626.0,
+        "protein_g": 24.8,
+        "carbohydrate_g": 6.5,
+        "fat_g": 54.1
+      }
+    ]
+  },
+  "single_family_front": {
+    "universe": 58,
+    "processed": 58,
+    "declared": 10,
+    "review": 48,
+    "promotion_rate_pct": 17.2414,
+    "status": "closed"
+  },
+  "mercadona_cumulative": {
+    "universe": 4280,
+    "processed": 2943,
+    "declared_complete_usable": 226,
+    "review": 2717,
+    "declared_coverage_pct": 5.2804,
+    "processed_coverage_pct": 68.7617
+  },
+  "safety": {
+    "inferred_values": 0,
+    "persisted_images": 0,
+    "review_promoted_without_full_corroboration": 0
+  },
+  "notes": [
+    "Wave2 promotions require an independent second OCR family corroborating all four core nutrition fields.",
+    "REVIEW rows remain non-usable nutrition and are not promoted.",
+    "No semantic classification is performed in this extraction cut."
+  ]
+}
