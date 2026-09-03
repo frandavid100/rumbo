@@ -1,0 +1,41 @@
+{
+  "cut_date": "2026-09-03",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33707177793,
+  "candidate_universe": 33,
+  "candidate_policy": "stable original+replay REVIEW + exactly 3 fused core values + explicit 100g/100ml basis + >=2 OCR families + exactly 3 corroborated existing core fields + no OCR hard conflict + no energy/macro mismatch + no prior non-Tesseract same-basis observation for the missing field; final promotion still requires a fully corroborated coherent DECLARED tuple",
+  "pilot": {
+    "selected": 16,
+    "processed": 16,
+    "status_counts": {
+      "REVIEW": 16
+    },
+    "safe_promotion_products": 0,
+    "unsafe_declared": 0,
+    "provenance_errors": 0,
+    "duplicate_product_ids": 0,
+    "missing_product_ids": 0,
+    "unexpected_product_ids": 0,
+    "unexpected_statuses": 0,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "safety_assessment": "VALIDATED"
+  },
+  "candidate_missing_core_field_counts": {
+    "calories": 7,
+    "protein_g": 7,
+    "carbohydrate_g": 12,
+    "fat_g": 7
+  },
+  "all_perspective_9": true,
+  "mercadona_total_products": 4280,
+  "ocr_processed_global": 2840,
+  "declared_complete_global": 208,
+  "review_global": 2632,
+  "complete_coverage_pct_global": 4.8598,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "note": "The pilot produced no safe promotion, but all 16 outcomes remained REVIEW under the unchanged conservative contract. The remaining 17 candidates may be processed only under the same contract; REVIEW is never usable nutrition."
+}
