@@ -1,0 +1,125 @@
+{
+  "cut_date": "2026-09-03",
+  "branch": "agent/catalog-phase1",
+  "scope": "Mercadona first-party OCR one-uncorroborated-core rescue pilot",
+  "source_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "workflow": {
+    "run_id": 33755480285,
+    "artifact_id": 9893591970,
+    "artifact": "mercadona-tesseract-one-uncorroborated-core-pilot-merged",
+    "result": "success",
+    "head_sha": "7fd02526914409d09ba3524ef64c470356a7058f"
+  },
+  "pilot": {
+    "candidate_universe": 54,
+    "selected": 16,
+    "processed": 16,
+    "declared": 7,
+    "review": 9,
+    "remaining_candidates": 38,
+    "unsafe_declared": 0,
+    "conflict_value_count": 0,
+    "provenance_error_count": 0,
+    "duplicate_product_ids": [],
+    "missing_product_ids": [],
+    "unexpected_product_ids": [],
+    "safety_assessment": "VALIDATED",
+    "promotion_rate_pct": 43.75,
+    "safe_promotions": [
+      {
+        "product_id": "20716",
+        "ean": "8480000207166",
+        "name": "Mantequilla sin sal añadida Hacendado",
+        "basis": "100_g",
+        "kcal": 743.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 0.8,
+        "fat_g": 82.0
+      },
+      {
+        "product_id": "20722",
+        "ean": "8480000207227",
+        "name": "Mantequilla con sal Hacendado",
+        "basis": "100_g",
+        "kcal": 734.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 0.8,
+        "fat_g": 81.0
+      },
+      {
+        "product_id": "16253",
+        "ean": "8402001049729",
+        "name": "Snack de lentejas horneado Lentils Hacendado",
+        "basis": "100_g",
+        "kcal": 413.0,
+        "protein_g": 14.0,
+        "carbohydrate_g": 60.0,
+        "fat_g": 12.0
+      },
+      {
+        "product_id": "63597",
+        "ean": "8480000635976",
+        "name": "Pizzas tomate y queso Hacendado ultracongeladas",
+        "basis": "100_g",
+        "kcal": 251.0,
+        "protein_g": 10.8,
+        "carbohydrate_g": 36.0,
+        "fat_g": 6.4
+      },
+      {
+        "product_id": "17327",
+        "ean": "8480000173270",
+        "name": "Salsa Yogur Hacendado",
+        "basis": "100_g",
+        "kcal": 257.0,
+        "protein_g": 0.8,
+        "carbohydrate_g": 8.7,
+        "fat_g": 23.9
+      },
+      {
+        "product_id": "13706",
+        "ean": "2105171137062",
+        "name": "Pollo asado Hacendado",
+        "basis": "100_g",
+        "kcal": 183.0,
+        "protein_g": 22.0,
+        "carbohydrate_g": 0.8,
+        "fat_g": 10.0
+      },
+      {
+        "product_id": "6253",
+        "ean": "8480000062536",
+        "name": "Fideuá Hacendado",
+        "basis": "100_g",
+        "kcal": 361.0,
+        "protein_g": 13.0,
+        "carbohydrate_g": 72.0,
+        "fat_g": 1.5
+      }
+    ]
+  },
+  "mercadona_cumulative": {
+    "universe": 4280,
+    "processed": 2943,
+    "declared_complete_usable": 233,
+    "review": 2710,
+    "declared_coverage_pct": 5.4439,
+    "processed_coverage_pct": 68.7617
+  },
+  "safety": {
+    "inferred_values": 0,
+    "persisted_images": 0,
+    "review_promoted_without_full_corroboration": 0
+  },
+  "notes": [
+    "Pilot candidates already had all four core values and a safe explicit basis, with exactly two OCR families and exactly one core field uncorroborated.",
+    "Promotion still requires independent-family corroboration of all four core fields; the acceptance contract is unchanged.",
+    "REVIEW rows remain non-usable nutrition and no semantic classification is performed."
+  ]
+}
