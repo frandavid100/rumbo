@@ -1,0 +1,144 @@
+name: Catalog Mercadona missing-one-core pilot revalidation
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-tesseract-missing-one-core-pilot-revalidate.yml'
+      - 'tools/catalog/merge_mercadona_missing_one_core_results.py'
+      - 'tools/catalog/test_merge_mercadona_missing_one_core_results.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-missing-one-core-pilot-revalidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run missing-one-core merge regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_merge_mercadona_missing_one_core_results.py
+          python -m py_compile merge_mercadona_missing_one_core_results.py
+
+      - name: Download completed pilot shard artifacts without repeating OCR
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-tesseract-missing-one-core-pilot-*
+          path: input
+          merge-multiple: true
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33695074234
+
+      - name: Download persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+
+      - name: Rebuild original strict candidate baseline
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_missing_one_core_candidates.py \
+            --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-missing-one-core-audit
+
+      - name: Revalidate final promotion contract
+        run: |
+          python tools/catalog/merge_mercadona_missing_one_core_results.py \
+            --results-glob 'input/**/results-*.jsonl' \
+            --selection-glob 'input/**/missing-one-core-pilot-selection.json' \
+            --baseline tools/catalog/mercadona-missing-one-core-audit/missing-one-core-supported.jsonl \
+            --out merged \
+            --expected-universe 34 \
+            --expected-selected 16
+          cp tools/catalog/mercadona-missing-one-core-audit/summary.json merged/candidate-universe-summary.json
+
+      - name: Build auditable SQLite staging without image redistribution
+        run: |
+          python - <<'PY'
+          import json, sqlite3
+          from pathlib import Path
+
+          out = Path('merged')
+          conn = sqlite3.connect(out / 'staging.sqlite')
+          conn.execute('''
+            create table ocr_results (
+              product_id text primary key,
+              status text not null,
+              source text not null,
+              evidence_level text not null,
+              redistribution_allowed integer not null,
+              result_json text not null
+            )
+          ''')
+          for line in (out / 'results.jsonl').read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              conn.execute(
+                  'insert into ocr_results values (?, ?, ?, ?, ?, ?)',
+                  (
+                      str(row.get('product_id') or ''),
+                      str(row.get('status') or ''),
+                      str(row.get('source') or ''),
+                      str(row.get('evidence_level') or ''),
+                      1 if row.get('redistribution_allowed') else 0,
+                      json.dumps(row, ensure_ascii=False, sort_keys=True),
+                  ),
+              )
+          conn.execute('''
+            create table safe_promotions (
+              product_id text primary key,
+              ean text,
+              name text,
+              basis text,
+              calories real,
+              protein_g real,
+              carbohydrate_g real,
+              fat_g real,
+              source text not null,
+              evidence_level text not null,
+              redistribution_allowed integer not null,
+              promotion_json text not null
+            )
+          ''')
+          for row in json.loads((out / 'safe-promotions.json').read_text(encoding='utf-8')):
+              n = row['nutrition']
+              conn.execute(
+                  'insert into safe_promotions values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                  (
+                      str(row.get('product_id') or ''), row.get('ean'), row.get('name'), row.get('basis'),
+                      n.get('calories'), n.get('protein_g'), n.get('carbohydrate_g'), n.get('fat_g'),
+                      row['source'], row['evidence_level'], 1 if row['redistribution_allowed'] else 0,
+                      json.dumps(row, ensure_ascii=False, sort_keys=True),
+                  ),
+              )
+          conn.commit()
+          conn.close()
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-tesseract-missing-one-core-pilot-revalidated
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
