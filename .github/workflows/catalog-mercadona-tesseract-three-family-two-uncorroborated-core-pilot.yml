@@ -1,0 +1,342 @@
+name: Catalog Mercadona Tesseract three-family two-uncorroborated-core pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-tesseract-three-family-two-uncorroborated-core-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-tesseract-three-family-two-uncorroborated-core-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Download persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+      - name: Audit and build deterministic pilot input
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_p9_three_family_two_uncorroborated_core_candidates.py \
+            --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-p9-three-family-two-uncorroborated-core-audit
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          def key(row):
+              pid = str(row.get('product_id') or '')
+              ean = str(row.get('ean') or '')
+              return hashlib.sha256(f'{pid}\0{ean}'.encode('utf-8')).hexdigest(), pid
+
+          candidates = [json.loads(line) for line in Path('mercadona-p9-three-family-two-uncorroborated-core-audit/three-family-two-uncorroborated-core-candidates.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(candidates) != 16:
+              raise SystemExit(f'expected 16 audited candidates, got {len(candidates)}')
+          ordered = sorted(candidates, key=key)
+          selected_ids = {str(row['product_id']) for row in ordered}
+          if len(selected_ids) != 16:
+              raise SystemExit('candidate product IDs are not unique')
+
+          products = [json.loads(line) for line in Path('mercadona-first-party-final/products.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          by_id = {str(row.get('product_id') or ''): row for row in products if str(row.get('product_id') or '') in selected_ids}
+          output = [by_id[str(candidate['product_id'])] for candidate in ordered if str(candidate['product_id']) in by_id]
+          if len(output) != 16:
+              raise SystemExit(f'pilot join mismatch selected=16 products={len(output)}')
+
+          Path('three-family-two-uncorroborated-core-pilot-products.jsonl').write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in output), encoding='utf-8')
+          Path('three-family-two-uncorroborated-core-pilot-selection.json').write_text(json.dumps({
+              'candidate_universe': 16,
+              'candidate_policy': 'stable p9 original+replay REVIEW + all 4 core values + explicit 100g/100ml basis + exactly 3 independent OCR families + exactly 2 corroborated core fields + exactly 2 uncorroborated core fields each observed by exactly 1 family + no hard conflict + no energy/macro mismatch',
+              'sample_order': 'SHA256_PRODUCT_ID_EAN',
+              'selected': 16,
+              'product_ids': [str(row['product_id']) for row in ordered],
+              'uncorroborated_core_fields': {str(row['product_id']): row['uncorroborated_core_fields'] for row in ordered},
+              'uncorroborated_source_families': {str(row['product_id']): row['uncorroborated_source_families'] for row in ordered},
+          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Install OCR engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run routing and conservative OCR tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_audit_mercadona_p9_three_family_two_uncorroborated_core_candidates.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_neural_ocr_tesseract_preprocess_rescue.py
+          python -m py_compile \
+            audit_mercadona_p9_three_family_two_uncorroborated_core_candidates.py \
+            mercadona_neural_ocr_tesseract_preprocess_rescue.py
+      - name: Run three-family two-uncorroborated-core rescue pilot
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            --products three-family-two-uncorroborated-core-pilot-products.jsonl \
+            --out mercadona-tesseract-three-family-two-uncorroborated-core-pilot \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 4 \
+            --limit 0 \
+            --delay 0.5
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-tesseract-three-family-two-uncorroborated-core-pilot-${{ matrix.shard }}
+          path: |
+            tools/catalog/mercadona-tesseract-three-family-two-uncorroborated-core-pilot/
+            tools/catalog/three-family-two-uncorroborated-core-pilot-selection.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ always() && needs.ocr.result == 'success' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-tesseract-three-family-two-uncorroborated-core-pilot-*
+          path: input
+          merge-multiple: true
+      - name: Download replay baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: baseline-replay
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+      - name: Rebuild audited baseline
+        run: |
+          python tools/catalog/audit_mercadona_p9_three_family_two_uncorroborated_core_candidates.py \
+            --replay-results baseline-replay/results-replayed.jsonl \
+            --out baseline-audit
+      - name: Merge and enforce unchanged promotion contract
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json, sqlite3
+          from pathlib import Path
+
+          FIELDS = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+          ALLOWED = {'DECLARED', 'REVIEW', 'NO_VISUAL_REGION', 'ERROR'}
+
+          def close(field, a, b):
+              a, b = float(a), float(b)
+              tolerance = max(5.0, .04 * max(abs(a), abs(b), 1.0)) if field == 'calories' else max(.6, .10 * max(abs(a), abs(b), 1.0))
+              return abs(a - b) <= tolerance
+
+          baseline_rows = [json.loads(line) for line in Path('baseline-audit/three-family-two-uncorroborated-core-candidates.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(baseline_rows) != 16:
+              raise SystemExit(f'expected 16 baseline candidates, got {len(baseline_rows)}')
+          baseline = {str(row['product_id']): row for row in baseline_rows}
+          expected_ids = set(baseline)
+          if len(expected_ids) != 16:
+              raise SystemExit('baseline product IDs are not unique')
+
+          manifest_paths = sorted(glob.glob('input/**/three-family-two-uncorroborated-core-pilot-selection.json', recursive=True))
+          if not manifest_paths:
+              raise SystemExit('pilot selection manifest missing')
+          manifests = [json.loads(Path(path).read_text(encoding='utf-8')) for path in manifest_paths]
+          selection = manifests[0]
+          if any(candidate != selection for candidate in manifests[1:]):
+              raise SystemExit('pilot shard selection manifests disagree')
+          if set(selection.get('product_ids') or []) != expected_ids:
+              raise SystemExit('selection mismatch')
+
+          result_paths = sorted(glob.glob('input/**/results-*.jsonl', recursive=True))
+          if len(result_paths) != 4:
+              raise SystemExit(f'expected 4 shard result files, got {len(result_paths)}: {result_paths}')
+          rows = []
+          for path in result_paths:
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+
+          ids = [str(row.get('product_id') or '') for row in rows]
+          observed = set(ids)
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          duplicates = sorted(pid for pid, count in Counter(ids).items() if count > 1)
+          missing = sorted(expected_ids - observed)
+          unexpected = sorted(observed - expected_ids)
+          bad_status = sorted(set(counts) - ALLOWED)
+          provenance, unsafe, conflicts, safe = [], [], [], []
+
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              prior = baseline.get(pid)
+              if prior is None:
+                  provenance.append(f'{pid}:not_in_baseline')
+                  continue
+              if (
+                  row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  or row.get('source') != 'MERCADONA_FIRST_PARTY'
+                  or row.get('source_record_kind') != 'label image'
+                  or row.get('redistribution_allowed') is not False
+                  or str(row.get('perspective')) != '9'
+              ):
+                  provenance.append(f'{pid}:provenance')
+              if row.get('status') != 'DECLARED':
+                  continue
+              accepted = next((attempt for attempt in row.get('attempts') or [] if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              ensemble = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              if int(ensemble.get('independent_engine_families') or 0) < 2 or int(ensemble.get('corroborated_fields') or 0) < 4 or any(nutrition.get(field) is None for field in FIELDS):
+                  unsafe.append(pid)
+                  continue
+              bad = []
+              if row.get('basis') != prior.get('basis'):
+                  bad.append(f"basis:{prior.get('basis')}!={row.get('basis')}")
+              prior_nutrition = prior.get('nutrition') or {}
+              for field in FIELDS:
+                  if prior_nutrition.get(field) is None or not close(field, nutrition[field], prior_nutrition[field]):
+                      bad.append(f"{field}:{prior_nutrition.get(field)}!~{nutrition[field]}")
+              if bad:
+                  conflicts.append({'product_id': pid, 'conflicts': bad})
+                  continue
+              safe.append({
+                  'product_id': pid,
+                  'ean': row.get('ean'),
+                  'name': row.get('name'),
+                  'basis': row.get('basis'),
+                  'nutrition': nutrition,
+                  'independent_engine_families': ensemble.get('independent_engine_families'),
+                  'corroborated_fields': ensemble.get('corroborated_fields'),
+                  'source': 'MERCADONA_FIRST_PARTY/label image',
+                  'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+                  'redistribution_allowed': False,
+              })
+
+          ok = (
+              len(rows) == 16
+              and len(observed) == 16
+              and not duplicates
+              and not missing
+              and not unexpected
+              and not provenance
+              and not unsafe
+              and not conflicts
+              and not bad_status
+          )
+          declared = len(safe)
+          cumulative_declared = 248 + declared
+          cumulative_review = 2695 - declared
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'candidate_universe': 16,
+              'selected': 16,
+              'processed': len(rows),
+              'distinct_products_processed': len(observed),
+              'remaining_candidates': 0,
+              'status_counts': dict(sorted(counts.items())),
+              'safe_promotion_products': declared,
+              'safe_promotion_product_ids': sorted(item['product_id'] for item in safe),
+              'front_after_pilot': {
+                  'universe': 16,
+                  'processed': 16,
+                  'DECLARED': declared,
+                  'REVIEW_or_other': 16 - declared,
+                  'promotion_rate_pct': round(declared * 100 / 16, 4),
+                  'status': 'closed'
+              },
+              'value_conflicts': conflicts,
+              'unsafe_declared': unsafe,
+              'duplicate_product_ids': duplicates,
+              'missing_product_ids': missing,
+              'unexpected_product_ids': unexpected,
+              'unexpected_statuses': bad_status,
+              'provenance_errors': provenance,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'cumulative_after_pilot': {
+                  'catalog_total': 4280,
+                  'processed': 2943,
+                  'DECLARED_complete': cumulative_declared,
+                  'REVIEW': cumulative_review,
+                  'complete_usable_coverage_pct': round(cumulative_declared * 100 / 4280, 4),
+                  'processed_coverage_pct': round(2943 * 100 / 4280, 4),
+              },
+              'safety_assessment': 'VALIDATED' if ok else 'FAILED',
+          }
+          if not ok:
+              print(json.dumps(summary, ensure_ascii=False, indent=2))
+              raise SystemExit('promotion contract validation failed')
+
+          out = Path('merged')
+          out.mkdir()
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (out / 'safe-promotions.json').write_text(json.dumps(safe, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (out / 'selection.json').write_text(json.dumps(selection, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          with (out / 'results.jsonl').open('w', encoding='utf-8') as handle:
+              for row in sorted(rows, key=lambda item: str(item.get('product_id') or '')):
+                  handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n')
+
+          db = sqlite3.connect(out / 'results.sqlite')
+          db.execute('CREATE TABLE results (product_id TEXT PRIMARY KEY, ean TEXT, name TEXT, status TEXT, basis TEXT, calories REAL, protein_g REAL, carbohydrate_g REAL, fat_g REAL, source TEXT NOT NULL, evidence_level TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, payload_json TEXT NOT NULL)')
+          for row in rows:
+              nutrition = row.get('nutrition') or {}
+              db.execute('INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+                  str(row.get('product_id') or ''), row.get('ean'), row.get('name'), row.get('status'), row.get('basis'),
+                  nutrition.get('calories'), nutrition.get('protein_g'), nutrition.get('carbohydrate_g'), nutrition.get('fat_g'),
+                  'MERCADONA_FIRST_PARTY/label image', 'OCR_DERIVED_FROM_MERCADONA_IMAGE', 0,
+                  json.dumps(row, ensure_ascii=False, sort_keys=True),
+              ))
+          db.commit()
+          db.close()
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-tesseract-three-family-two-uncorroborated-core-pilot
+          path: merged/
+          retention-days: 30
