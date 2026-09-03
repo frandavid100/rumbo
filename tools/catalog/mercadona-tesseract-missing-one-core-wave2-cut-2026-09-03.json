@@ -1,0 +1,126 @@
+{
+  "cut_date": "2026-09-03",
+  "scope": "MERCADONA_FIRST_PARTY/label image",
+  "pipeline": "tesseract_preprocess_missing_one_core_wave2",
+  "workflow_run_id": 33703842055,
+  "artifact_id": 9875058651,
+  "artifact_name": "mercadona-tesseract-missing-one-core-wave2-merged",
+  "candidate_universe": 34,
+  "wave": {
+    "selected": 18,
+    "processed": 18,
+    "DECLARED": 2,
+    "REVIEW": 16,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "front_accumulated": {
+    "processed": 34,
+    "DECLARED": 3,
+    "REVIEW": 31,
+    "safe_promotion_rate": 0.08823529411764706
+  },
+  "global_mercadona": {
+    "universe_total": 4280,
+    "ocr_processed": 2840,
+    "DECLARED_complete": 208,
+    "REVIEW": 2632,
+    "complete_coverage_pct": 4.859813084112149,
+    "usable_field_coverage": {
+      "calories": 208,
+      "protein_g": 208,
+      "carbohydrate_g": 208,
+      "fat_g": 208
+    }
+  },
+  "provenance": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false
+  },
+  "safety": {
+    "assessment": "VALIDATED",
+    "unsafe_declared": [],
+    "provenance_errors": [],
+    "duplicate_product_ids": [],
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "prior_missing_field_support_disagreements": [
+      {
+        "product_id": "14641",
+        "field": "carbohydrate_g",
+        "recovered_value": 66.0,
+        "prior_support_values": [48.0]
+      },
+      {
+        "product_id": "35412",
+        "field": "protein_g",
+        "recovered_value": 2.11,
+        "prior_support_values": [50.0]
+      }
+    ],
+    "note": "Prior missing-field observations were targeting evidence only. Final promotions require a fully coherent corroborated tuple; disagreement is preserved for audit and is not used as a nutrition value."
+  },
+  "safe_promotions": [
+    {
+      "product_id": "14641",
+      "ean": "8480000146410",
+      "name": "Galletas Choco leche con chocolatina Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 491.0,
+        "carbohydrate_g": 66.0,
+        "fat_g": 22.0,
+        "protein_g": 5.8
+      },
+      "newly_recovered_field": "carbohydrate_g",
+      "preexisting_independent_support": [
+        {
+          "attempt_index": 0,
+          "basis": "100_g",
+          "engine": "paddleocr",
+          "engine_family": "paddleocr",
+          "status": "REVIEW",
+          "value": 48.0
+        }
+      ],
+      "prior_support_agrees": false,
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false
+    },
+    {
+      "product_id": "35412",
+      "ean": "8402001007750",
+      "name": "Salsa curry Tikka Masala Hacendado picante",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 173.0,
+        "carbohydrate_g": 6.8,
+        "fat_g": 14.8,
+        "protein_g": 2.11
+      },
+      "newly_recovered_field": "protein_g",
+      "preexisting_independent_support": [
+        {
+          "attempt_index": 0,
+          "basis": "100_g",
+          "engine": "paddleocr",
+          "engine_family": "paddleocr",
+          "status": "REVIEW",
+          "value": 50.0
+        }
+      ],
+      "prior_support_agrees": false,
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false
+    }
+  ],
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
