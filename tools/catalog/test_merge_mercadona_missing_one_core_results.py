@@ -115,8 +115,8 @@ class MissingOneCoreMergeTests(unittest.TestCase):
 
     def test_changed_preexisting_field_is_not_promoted(self):
         row = self._declared()
-        row["nutrition"]["carbohydrate_g"] = 8.0
-        row["attempts"][0]["ensemble"]["nutrition"]["carbohydrate_g"] = 8.0
+        row["nutrition"]["carbohydrate_g"] = 5.0
+        row["attempts"][0]["ensemble"]["nutrition"]["carbohydrate_g"] = 5.0
         summary, promotions = self._run(row)
         self.assertEqual(summary["safety_assessment"], "VALIDATED")
         self.assertEqual(summary["safe_promotion_products"], 0)
