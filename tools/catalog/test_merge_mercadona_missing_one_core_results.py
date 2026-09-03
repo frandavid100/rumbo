@@ -123,14 +123,14 @@ class MissingOneCoreMergeTests(unittest.TestCase):
         self.assertEqual(len(summary["rejected_declared"]), 1)
         self.assertEqual(promotions, [])
 
-    def test_provenance_error_fails_contract(self):
+    def test_provenance_error_fails_contract_and_cannot_promote(self):
         row = self._declared()
         row["redistribution_allowed"] = True
         summary, promotions = self._run(row)
         self.assertEqual(summary["safety_assessment"], "FAILED")
         self.assertEqual(len(summary["provenance_errors"]), 1)
-        self.assertEqual(summary["safe_promotion_products"], 1)
-        self.assertEqual(len(promotions), 1)
+        self.assertEqual(summary["safe_promotion_products"], 0)
+        self.assertEqual(promotions, [])
 
 
 if __name__ == "__main__":
