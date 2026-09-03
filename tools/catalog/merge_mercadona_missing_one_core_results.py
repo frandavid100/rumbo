@@ -122,14 +122,16 @@ def merge(
         if prior is None:
             provenance_errors.append(f"{pid}:not_in_baseline")
             continue
-        if (
+        provenance_bad = (
             row.get("evidence_level") != "OCR_DERIVED_FROM_MERCADONA_IMAGE"
             or row.get("source") != "MERCADONA_FIRST_PARTY"
             or row.get("source_record_kind") != "label image"
             or row.get("redistribution_allowed") is not False
             or str(row.get("perspective")) != "9"
-        ):
+        )
+        if provenance_bad:
             provenance_errors.append(f"{pid}:provenance")
+            continue
 
         if row.get("status") != "DECLARED":
             continue
