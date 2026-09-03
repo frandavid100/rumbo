@@ -1,0 +1,69 @@
+{
+  "date": "2026-09-03",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "original_ocr_workflow_run_id": 33695074234,
+  "revalidation_workflow_run_id": 33703659548,
+  "artifact": {
+    "name": "mercadona-tesseract-missing-one-core-pilot-revalidated",
+    "artifact_id": 9874415843,
+    "sha256": "deed1326b1aac029353adcdef7b2fecf4f16132f1510c6bd1caadea5d50a24d6"
+  },
+  "candidate_policy": "stable original+replay REVIEW + exactly 3 fused core values + explicit 100g/100ml basis + >=2 OCR families + no OCR hard conflict + no energy/macro mismatch; missing field had prior non-Tesseract same-basis observation for targeting only; final promotion requires a new DECLARED tuple with >=2 independent OCR families, all 4 core fields corroborated, strict energy coherence, matching basis, and agreement with all 3 pre-existing fused fields",
+  "candidate_universe": 34,
+  "pilot_selected": 16,
+  "pilot_processed": 16,
+  "remaining_candidates": 18,
+  "pilot_status_counts": {
+    "DECLARED": 1,
+    "REVIEW": 15
+  },
+  "pilot_safe_promotion_products": 1,
+  "pilot_safe_promotion_product_ids": [
+    "23225"
+  ],
+  "pilot_safe_promotions": [
+    {
+      "product_id": "23225",
+      "ean": "8480000232250",
+      "name": "Crema de calabaza y zanahoria Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 48.0,
+        "protein_g": 0.9,
+        "carbohydrate_g": 4.2,
+        "fat_g": 2.89
+      },
+      "newly_recovered_field": "fat_g",
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    }
+  ],
+  "audit_note": {
+    "prior_missing_field_support_disagreements": 1,
+    "detail": "Product 23225 had a prior PaddleOCR-only fat observation of 24.0 g. That old observation is incompatible with the declared 48 kcal tuple and was therefore retained only as targeting evidence. The reprocessed label yielded fat 2.89 g with 3 OCR families and all 4 core fields corroborated; the complete tuple passes the strict energy/macronutrient coherence check.",
+    "missing_values_inferred": false
+  },
+  "safety": {
+    "rejected_declared": 0,
+    "unsafe_declared": 0,
+    "duplicate_product_ids": 0,
+    "missing_product_ids": 0,
+    "unexpected_product_ids": 0,
+    "unexpected_statuses": 0,
+    "provenance_errors": 0,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "assessment": "VALIDATED"
+  },
+  "global_mercadona_after_pilot": {
+    "universe_total": 4280,
+    "ocr_processed": 2840,
+    "declared_complete": 206,
+    "review": 2634,
+    "declared_complete_coverage_percent": 4.813084112149533,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
