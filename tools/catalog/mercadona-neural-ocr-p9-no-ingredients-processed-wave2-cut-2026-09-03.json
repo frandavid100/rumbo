@@ -1,0 +1,80 @@
+{
+  "cut_date": "2026-09-03",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33726934786,
+  "workflow_artifact_id": 9883620641,
+  "candidate_universe": 89,
+  "candidate_policy": "perspective=9 official image + no structured ingredients + processed/packaged Mercadona top-level category; obvious birthday-candle and ice cases deferred. This is OCR routing only and never semantic classification.",
+  "wave2": {
+    "selected": 32,
+    "processed": 32,
+    "status_counts": {
+      "DECLARED": 2,
+      "REVIEW": 30,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "declared_rate": 0.0625,
+    "unsafe_declared": 0,
+    "provenance_errors": 0,
+    "duplicate_product_ids": 0,
+    "pilot_overlap_product_ids": 0,
+    "error_product_ids": 0,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "safety_assessment": "VALIDATED"
+  },
+  "declared_products": [
+    {
+      "product_id": "7878",
+      "name": "Chocolate negro 70% cacao Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 572.0,
+        "protein_g": 8.5,
+        "carbohydrate_g": 39.8,
+        "fat_g": 42.0
+      },
+      "independent_engine_families_minimum": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "58278",
+      "name": "Chufa de Valencia D.O Tiger",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 388.0,
+        "protein_g": 9.8,
+        "carbohydrate_g": 75.3,
+        "fat_g": 5.2
+      },
+      "independent_engine_families_minimum": 2,
+      "corroborated_fields": 4
+    }
+  ],
+  "front_progress": {
+    "refined_pilot_processed": 16,
+    "wave2_processed": 32,
+    "processed_in_refined_89_product_universe": 48,
+    "remaining_in_refined_89_product_universe": 41
+  },
+  "mercadona_total_products": 4280,
+  "global_before_wave2": {
+    "ocr_processed": 2870,
+    "declared_complete": 213,
+    "review": 2657,
+    "complete_coverage_pct": 4.9766
+  },
+  "global_after_wave2": {
+    "ocr_processed": 2902,
+    "declared_complete": 215,
+    "review": 2687,
+    "complete_coverage_pct": 5.0234,
+    "processed_pct": 67.8037
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "note": "REVIEW remains unusable nutrition. No absent macro is inferred. Structured API ingredients/allergens are never confused with OCR-derived nutrition. Wave2 contributes 32 globally new product IDs and crosses 5% complete Mercadona nutrition coverage."
+}
