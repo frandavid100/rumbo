@@ -1,0 +1,63 @@
+{
+  "cut_date": "2026-09-03",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33737808339,
+  "workflow_artifact_id": 9886834888,
+  "candidate_universe": 89,
+  "candidate_policy": "perspective=9 official image + no structured ingredients + processed/packaged Mercadona top-level category; obvious birthday-candle and ice cases deferred. This is OCR routing only and never semantic classification.",
+  "wave4": {
+    "selected": 9,
+    "processed": 9,
+    "status_counts": {
+      "DECLARED": 0,
+      "REVIEW": 9,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "declared_rate": 0.0,
+    "unsafe_declared": 0,
+    "provenance_errors": 0,
+    "duplicate_product_ids": 0,
+    "prior_overlap_product_ids": 0,
+    "error_product_ids": 0,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "safety_assessment": "VALIDATED"
+  },
+  "refined_front_final": {
+    "candidate_universe": 89,
+    "processed": 89,
+    "status_counts": {
+      "DECLARED": 8,
+      "REVIEW": 81,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "declared_rate": 0.0899,
+    "globally_new_product_ids": 87,
+    "globally_new_declared_complete": 7,
+    "globally_new_review": 80,
+    "known_overlap_with_prior_broad_pilot": 2,
+    "remaining": 0,
+    "safety_assessment": "CLOSED_VALIDATED"
+  },
+  "mercadona_total_products": 4280,
+  "global_before_wave4": {
+    "ocr_processed": 2934,
+    "declared_complete": 216,
+    "review": 2718,
+    "complete_coverage_pct": 5.0467
+  },
+  "global_after_wave4": {
+    "ocr_processed": 2943,
+    "declared_complete": 216,
+    "review": 2727,
+    "complete_coverage_pct": 5.0467,
+    "processed_pct": 68.7617
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "note": "REVIEW remains unusable nutrition. No absent macro is inferred. Structured API ingredients/allergens are never confused with OCR-derived nutrition. Wave4 closes the refined 89-product processed/packaged no-ingredients perspective=9 cohort with 9 REVIEW and no new DECLARED values; all safety and provenance checks remain clean."
+}
