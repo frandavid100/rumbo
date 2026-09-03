@@ -1,0 +1,67 @@
+{
+  "cut_date": "2026-09-03",
+  "branch": "agent/catalog-phase1",
+  "scope": "Mercadona first-party OCR three-family one-uncorroborated-core rescue pilot",
+  "source_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "workflow": {
+    "run_id": 33765691763,
+    "artifact_id": 9898026069,
+    "artifact": "mercadona-tesseract-three-family-one-uncorroborated-core-pilot-merged",
+    "result": "success",
+    "head_sha": "da78217c8a7119f36dc9555b05fefca246af3a35"
+  },
+  "pilot": {
+    "candidate_universe": 27,
+    "selected": 16,
+    "processed": 16,
+    "declared": 1,
+    "review": 15,
+    "remaining_candidates": 11,
+    "unsafe_declared": 0,
+    "conflict_value_count": 0,
+    "provenance_error_count": 0,
+    "duplicate_product_ids": [],
+    "missing_product_ids": [],
+    "unexpected_product_ids": [],
+    "safety_assessment": "VALIDATED",
+    "promotion_rate_pct": 6.25,
+    "safe_promotions": [
+      {
+        "product_id": "64414",
+        "ean": "8480000644138",
+        "name": "Helado de leche merengada Hacendado",
+        "basis": "100_g",
+        "kcal": 212.0,
+        "protein_g": 2.8,
+        "carbohydrate_g": 23.0,
+        "fat_g": 12.0,
+        "independent_engine_families": 2,
+        "corroborated_fields": 4
+      }
+    ]
+  },
+  "mercadona_cumulative": {
+    "universe": 4280,
+    "processed": 2943,
+    "declared_complete_usable": 247,
+    "review": 2696,
+    "declared_coverage_pct": 5.771,
+    "processed_coverage_pct": 68.7617
+  },
+  "safety": {
+    "inferred_values": 0,
+    "persisted_images": 0,
+    "review_promoted_without_full_corroboration": 0
+  },
+  "notes": [
+    "Pilot selection is deterministic: first 16 rows after SHA256_PRODUCT_ID_EAN ordering of the audited 27-product stratum.",
+    "Promotion required independent-family corroboration of all four core fields; the acceptance contract was unchanged.",
+    "The remaining 11 candidates stay REVIEW until independently corroborated; no semantic classification was performed."
+  ]
+}
