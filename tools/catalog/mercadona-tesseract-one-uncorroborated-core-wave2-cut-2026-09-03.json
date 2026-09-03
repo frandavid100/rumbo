@@ -1,0 +1,59 @@
+{
+  "cut_date": "2026-09-03",
+  "branch": "agent/catalog-phase1",
+  "scope": "Mercadona first-party OCR one-uncorroborated-core rescue wave2 / closed front",
+  "source_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "workflow": {
+    "run_id": 33760186766,
+    "artifact_id": 9896114899,
+    "artifact": "mercadona-tesseract-one-uncorroborated-core-wave2-merged",
+    "result": "success",
+    "head_sha": "37d7d8fc265dceafcb0a58d491bd399dad5bb840"
+  },
+  "wave2": {
+    "candidate_universe": 54,
+    "excluded_pilot": 16,
+    "selected": 38,
+    "processed": 38,
+    "declared": 13,
+    "review": 25,
+    "remaining_candidates": 0,
+    "unsafe_declared": 0,
+    "conflict_value_count": 0,
+    "provenance_error_count": 0,
+    "duplicate_product_ids": [],
+    "missing_product_ids": [],
+    "unexpected_product_ids": [],
+    "safety_assessment": "VALIDATED",
+    "promotion_rate_pct": 34.2105,
+    "safe_promotions": [
+      {"product_id":"61034","ean":"8480000610348","name":"Parrillada de verduras Hacendado ultracongeladas","basis":"100_g","kcal":55.0,"protein_g":2.2,"carbohydrate_g":10.0,"fat_g":0.0,"independent_engine_families":3,"corroborated_fields":4},
+      {"product_id":"18402","ean":"8480000184023","name":"Filetes de anchoa en aceite de oliva Hacendado","basis":"100_g","kcal":280.0,"protein_g":26.0,"carbohydrate_g":0.5,"fat_g":20.0,"independent_engine_families":3,"corroborated_fields":4},
+      {"product_id":"13406","ean":"8402001043550","name":"Mayonesa Hacendado","basis":"100_g","kcal":599.0,"protein_g":0.6,"carbohydrate_g":2.4,"fat_g":65.0,"independent_engine_families":2,"corroborated_fields":4},
+      {"product_id":"29106","ean":"8402001018138","name":"Harina de trigo grande Hacendado","basis":"100_g","kcal":350.0,"protein_g":10.0,"carbohydrate_g":73.0,"fat_g":1.3,"independent_engine_families":3,"corroborated_fields":4},
+      {"product_id":"52441","ean":"8402001012068","name":"Yogur griego natural Hacendado con azúcar de caña","basis":"100_g","kcal":150.0,"protein_g":3.7,"carbohydrate_g":11.3,"fat_g":10.0,"independent_engine_families":2,"corroborated_fields":4},
+      {"product_id":"70711","ean":"8480000707116","name":"Tarta helada sabor nata y chocolate Hacendado","basis":"100_g","kcal":251.0,"protein_g":3.2,"carbohydrate_g":25.5,"fat_g":14.9,"independent_engine_families":2,"corroborated_fields":4},
+      {"product_id":"67635","ean":"8480000676351","name":"Flan de huevo +Proteínas 10 g 0% MG 0% azúcares añadidos","basis":"100_g","kcal":62.0,"protein_g":10.0,"carbohydrate_g":5.9,"fat_g":0.2,"independent_engine_families":2,"corroborated_fields":4},
+      {"product_id":"8937","ean":"8436569263471","name":"Escalopín de vacuno añojo para plancha","basis":"100_g","kcal":156.0,"protein_g":22.0,"carbohydrate_g":0.6,"fat_g":7.5,"independent_engine_families":3,"corroborated_fields":4},
+      {"product_id":"80858","ean":"8432089108018","name":"Hummus de garbanzos Hacendado receta clásica","basis":"100_g","kcal":311.0,"protein_g":6.0,"carbohydrate_g":11.1,"fat_g":25.8,"independent_engine_families":2,"corroborated_fields":4},
+      {"product_id":"34208","ean":"8718781824402","name":"Cebolla frita crujiente Hacendado","basis":"100_g","kcal":590.0,"protein_g":6.0,"carbohydrate_g":40.0,"fat_g":44.0,"independent_engine_families":2,"corroborated_fields":4},
+      {"product_id":"12020","ean":"8480000120205","name":"Cacahuetes Chocoiris Hacendado bañados de chocolate con leche coloreados","basis":"100_g","kcal":533.0,"protein_g":8.9,"carbohydrate_g":55.0,"fat_g":30.0,"independent_engine_families":2,"corroborated_fields":4},
+      {"product_id":"21491","ean":"8402001043185","name":"Mix mini barritas de chocolate Hacendado","basis":"100_g","kcal":481.0,"protein_g":5.3,"carbohydrate_g":60.0,"fat_g":24.0,"independent_engine_families":2,"corroborated_fields":4},
+      {"product_id":"16280","ean":"8402001048616","name":"Longaniza de pavo Imperial extra Hacendado","basis":"100_g","kcal":307.0,"protein_g":31.0,"carbohydrate_g":5.2,"fat_g":18.0,"independent_engine_families":3,"corroborated_fields":4}
+    ]
+  },
+  "closed_front": {"universe":54,"processed":54,"DECLARED":20,"REVIEW":34,"promotion_rate_pct":37.037,"status":"closed"},
+  "mercadona_cumulative": {"universe":4280,"processed":2943,"declared_complete_usable":246,"review":2697,"declared_coverage_pct":5.7477,"processed_coverage_pct":68.7617},
+  "safety": {"inferred_values":0,"persisted_images":0,"review_promoted_without_full_corroboration":0},
+  "notes": [
+    "The 54-product stratum is fully closed after the 16-product pilot and 38-product wave2.",
+    "Promotion required independent-family corroboration of all four core fields; the acceptance contract was unchanged.",
+    "REVIEW rows remain non-usable nutrition and no semantic classification was performed."
+  ]
+}
