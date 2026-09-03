@@ -1,0 +1,279 @@
+name: Catalog Mercadona Tesseract missing-one-core no-support wave2
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-tesseract-missing-one-core-no-support-wave2.yml'
+      - 'tools/catalog/audit_mercadona_missing_one_core_no_support_candidates.py'
+      - 'tools/catalog/test_audit_mercadona_missing_one_core_no_support_candidates.py'
+      - 'tools/catalog/test_merge_mercadona_missing_one_core_no_support_results.py'
+      - 'tools/catalog/mercadona_neural_ocr_tesseract_preprocess_rescue_missing_one_core.py'
+      - 'tools/catalog/merge_mercadona_missing_one_core_results.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-tesseract-missing-one-core-no-support-wave2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Download persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+
+      - name: Install OCR engines and preprocessing dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run conservative regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            test_mercadona_neural_ocr_tesseract_preprocess_rescue_missing_one_core.py \
+            test_audit_mercadona_missing_one_core_no_support_candidates.py \
+            test_merge_mercadona_missing_one_core_results.py \
+            test_merge_mercadona_missing_one_core_no_support_results.py
+          python -m py_compile \
+            audit_mercadona_missing_one_core_no_support_candidates.py \
+            mercadona_neural_ocr_tesseract_preprocess_rescue_missing_one_core.py \
+            merge_mercadona_missing_one_core_results.py
+
+      - name: Audit high-confidence missing-one-core candidates without prior support
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_missing_one_core_no_support_candidates.py \
+            --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-missing-one-core-no-support-audit
+
+      - name: Build deterministic remaining 17-product wave input
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          def key(row):
+              pid = str(row.get('product_id') or '')
+              ean = str(row.get('ean') or '')
+              return hashlib.sha256(f'{pid}\0{ean}'.encode('utf-8')).hexdigest(), pid
+
+          candidate_rows = [
+              json.loads(line)
+              for line in Path('mercadona-missing-one-core-no-support-audit/missing-one-core-no-support.jsonl').read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          candidate_ids = {str(row['product_id']) for row in candidate_rows}
+          products = [
+              json.loads(line)
+              for line in Path('mercadona-first-party-final/products.jsonl').read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          joined = [row for row in products if str(row.get('product_id') or '') in candidate_ids]
+          if len(candidate_rows) != 33 or len(candidate_ids) != 33 or len(joined) != 33:
+              raise SystemExit(f'candidate join mismatch rows={len(candidate_rows)} ids={len(candidate_ids)} products={len(joined)}')
+          joined.sort(key=key)
+          pilot = joined[:16]
+          selected = joined[16:]
+          pilot_ids = {str(row.get('product_id') or '') for row in pilot}
+          selected_ids = {str(row.get('product_id') or '') for row in selected}
+          if len(pilot) != 16 or len(selected) != 17 or pilot_ids & selected_ids or len(pilot_ids | selected_ids) != 33:
+              raise SystemExit('remaining-wave partition mismatch')
+          Path('missing-one-core-no-support-wave2-products.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          Path('missing-one-core-no-support-wave2-selection.json').write_text(
+              json.dumps({
+                  'candidate_universe': 33,
+                  'candidate_policy': 'stable original+replay REVIEW + exactly 3 fused core values + explicit 100g/100ml basis + >=2 OCR families + exactly 3 corroborated existing core fields + no OCR hard conflict + no energy/macro mismatch + no prior non-Tesseract same-basis observation for missing field; final promotion independently requires a fully corroborated coherent DECLARED tuple',
+                  'sample_order': 'SHA256_PRODUCT_ID_EAN',
+                  'previously_processed': 16,
+                  'offset': 16,
+                  'selected': 17,
+                  'product_ids': [str(row.get('product_id') or '') for row in selected],
+                  'excluded_pilot_product_ids': [str(row.get('product_id') or '') for row in pilot],
+              }, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Run remaining no-support missing-one-core rescue wave
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_tesseract_preprocess_rescue_missing_one_core.py \
+            --products missing-one-core-no-support-wave2-products.jsonl \
+            --out mercadona-tesseract-missing-one-core-no-support-wave2 \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 6 \
+            --limit 3 \
+            --delay 0.5
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-tesseract-missing-one-core-no-support-wave2-${{ matrix.shard }}
+          path: |
+            tools/catalog/mercadona-tesseract-missing-one-core-no-support-wave2/
+            tools/catalog/missing-one-core-no-support-wave2-selection.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ always() && needs.ocr.result == 'success' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-tesseract-missing-one-core-no-support-wave2-*
+          path: input
+          merge-multiple: true
+
+      - name: Download persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+
+      - name: Rebuild no-support candidate baseline
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_missing_one_core_no_support_candidates.py \
+            --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-missing-one-core-no-support-audit
+
+      - name: Enforce unchanged conservative final promotion contract
+        run: |
+          python tools/catalog/merge_mercadona_missing_one_core_results.py \
+            --results-glob 'input/**/results-*.jsonl' \
+            --selection-glob 'input/**/missing-one-core-no-support-wave2-selection.json' \
+            --baseline tools/catalog/mercadona-missing-one-core-no-support-audit/missing-one-core-no-support.jsonl \
+            --out merged \
+            --expected-universe 33 \
+            --expected-selected 17
+          cp tools/catalog/mercadona-missing-one-core-no-support-audit/summary.json merged/candidate-universe-summary.json
+
+      - name: Build auditable SQLite staging without image redistribution
+        run: |
+          python - <<'PY'
+          import json, sqlite3
+          from pathlib import Path
+
+          out = Path('merged')
+          conn = sqlite3.connect(out / 'staging.sqlite')
+          conn.execute('''
+            create table ocr_results (
+              product_id text primary key,
+              status text not null,
+              source text not null,
+              evidence_level text not null,
+              redistribution_allowed integer not null,
+              result_json text not null
+            )
+          ''')
+          for line in (out / 'results.jsonl').read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              conn.execute(
+                  'insert into ocr_results values (?, ?, ?, ?, ?, ?)',
+                  (
+                      str(row.get('product_id') or ''), str(row.get('status') or ''),
+                      str(row.get('source') or ''), str(row.get('evidence_level') or ''),
+                      1 if row.get('redistribution_allowed') else 0,
+                      json.dumps(row, ensure_ascii=False, sort_keys=True),
+                  ),
+              )
+          conn.execute('''
+            create table safe_promotions (
+              product_id text primary key,
+              ean text,
+              name text,
+              basis text,
+              calories real,
+              protein_g real,
+              carbohydrate_g real,
+              fat_g real,
+              source text not null,
+              evidence_level text not null,
+              redistribution_allowed integer not null,
+              promotion_json text not null
+            )
+          ''')
+          for row in json.loads((out / 'safe-promotions.json').read_text(encoding='utf-8')):
+              n = row['nutrition']
+              conn.execute(
+                  'insert into safe_promotions values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                  (
+                      str(row.get('product_id') or ''), row.get('ean'), row.get('name'), row.get('basis'),
+                      n.get('calories'), n.get('protein_g'), n.get('carbohydrate_g'), n.get('fat_g'),
+                      row['source'], row['evidence_level'], 1 if row['redistribution_allowed'] else 0,
+                      json.dumps(row, ensure_ascii=False, sort_keys=True),
+                  ),
+              )
+          conn.commit()
+          conn.close()
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-tesseract-missing-one-core-no-support-wave2-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
