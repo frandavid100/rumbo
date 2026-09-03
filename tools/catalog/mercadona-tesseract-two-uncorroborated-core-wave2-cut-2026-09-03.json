@@ -1,0 +1,51 @@
+{
+  "cut_date": "2026-09-03",
+  "branch": "agent/catalog-phase1",
+  "scope": "Mercadona first-party OCR two-uncorroborated-core rescue wave2 / closed front",
+  "source_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "workflow": {
+    "run_id": 33795698207,
+    "artifact_id": 9910263483,
+    "artifact": "mercadona-tesseract-two-uncorroborated-core-wave2",
+    "result": "success",
+    "head_sha": "3e853c0e710f71ed08123f57b7d231f27a1c2853"
+  },
+  "wave2": {
+    "candidate_universe": 62,
+    "excluded_pilot": 16,
+    "selected": 46,
+    "processed": 46,
+    "declared": 5,
+    "review": 41,
+    "remaining_candidates": 0,
+    "unsafe_declared": 0,
+    "conflict_value_count": 0,
+    "provenance_error_count": 0,
+    "duplicate_product_ids": [],
+    "missing_product_ids": [],
+    "unexpected_product_ids": [],
+    "safety_assessment": "VALIDATED",
+    "promotion_rate_pct": 10.8696,
+    "safe_promotions": [
+      {"ean":"8480000461407","name":"Picos rústicos Hacendado","basis":"100_g","kcal":363.0,"protein_g":10.5,"carbohydrate_g":73.0,"fat_g":2.5,"independent_engine_families":3,"corroborated_fields":4},
+      {"ean":"8437004051585","name":"Croissant clásico Proceli sin gluten","basis":"100_g","kcal":417.0,"protein_g":4.5,"carbohydrate_g":47.5,"fat_g":23.2,"independent_engine_families":3,"corroborated_fields":4},
+      {"ean":"236192","name":"Pollo enrollado relleno de jamón serrano, bacon, queso y ciruelas listo para hornear","basis":"100_g","kcal":192.0,"protein_g":17.8,"carbohydrate_g":1.1,"fat_g":13.0,"independent_engine_families":3,"corroborated_fields":4},
+      {"ean":"8480000341204","name":"Galletas de cacao rellenas con crema de chocolate Hacendado","basis":"100_g","kcal":457.0,"protein_g":3.6,"carbohydrate_g":69.0,"fat_g":18.0,"independent_engine_families":3,"corroborated_fields":4},
+      {"ean":"8480000340177","name":"Galletas María sin gluten y sin lactosa Hacendado","basis":"100_g","kcal":445.8,"protein_g":7.7,"carbohydrate_g":75.7,"fat_g":12.5,"independent_engine_families":3,"corroborated_fields":4}
+    ]
+  },
+  "closed_front": {"universe":62,"processed":62,"DECLARED":7,"REVIEW":55,"promotion_rate_pct":11.2903,"status":"closed"},
+  "mercadona_cumulative": {"universe":4280,"processed":2943,"declared_complete_usable":255,"review":2688,"declared_coverage_pct":5.9579,"processed_coverage_pct":68.7617},
+  "safety": {"inferred_values":0,"persisted_images":0,"review_promoted_without_full_corroboration":0},
+  "notes": [
+    "The 62-product stratum is fully closed after the 16-product pilot and 46-product wave2.",
+    "Promotion required independent-family corroboration of all four core fields; the acceptance contract was unchanged.",
+    "REVIEW rows remain non-usable nutrition and no semantic classification was performed."
+  ]
+}
