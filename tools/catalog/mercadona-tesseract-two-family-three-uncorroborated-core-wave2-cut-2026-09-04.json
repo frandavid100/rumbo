@@ -1,0 +1,161 @@
+{
+  "cut_type": "mercadona_tesseract_two_family_three_uncorroborated_core_wave2",
+  "generated_at": "2026-09-04T01:25:45Z",
+  "catalog_total": 4280,
+  "processed_baseline": 2943,
+  "baseline_declared": 257,
+  "baseline_review": 2686,
+  "candidate_universe": 41,
+  "selection_rule": {
+    "perspective": "9",
+    "requires_original_status": "REVIEW",
+    "requires_replay_status": "REVIEW",
+    "requires_all_four_core_observed": true,
+    "requires_safe_basis": [
+      "100_g",
+      "100_ml"
+    ],
+    "requires_independent_engine_families_exact": 2,
+    "requires_corroborated_core_fields_exact": 1,
+    "requires_uncorroborated_core_fields_exact": 3,
+    "requires_each_uncorroborated_core_field_single_family": true,
+    "exclude_hard_ocr_conflict": true,
+    "exclude_energy_macro_mismatch": true
+  },
+  "wave2": {
+    "workflow_run_id": 33820187150,
+    "artifact": "mercadona-two-family-three-uncorroborated-core-wave2-merged",
+    "selected": 25,
+    "declared": 4,
+    "review": 21,
+    "status_counts": {
+      "DECLARED": 4,
+      "REVIEW": 21
+    },
+    "unsafe_declared": 0,
+    "value_conflict_count": 0,
+    "provenance_issue_count": 0,
+    "duplicate_result_count": 0,
+    "missing_result_count": 0,
+    "inferred_value_count": 0,
+    "contains_full_image_field": 0,
+    "contradictory_decision_count": 0,
+    "observed_all_four_core": 25,
+    "corroborated_all_four_core": 4,
+    "three_family_rows": 23,
+    "error": 0,
+    "extra_frontier_attempt_candidates": 21,
+    "extra_frontier_status_counts": {
+      "DECLARED": 4,
+      "REVIEW": 17
+    }
+  },
+  "wave2_rate": {
+    "declared_fraction": 0.16,
+    "review_fraction": 0.84,
+    "error_fraction": 0.0
+  },
+  "frontier_total": {
+    "selected": 41,
+    "declared": 6,
+    "review": 35,
+    "declared_fraction": 0.14634146341463414,
+    "review_fraction": 0.8536585365853658
+  },
+  "promotions": [
+    {
+      "product_id": "23531",
+      "ean": "8410721057573",
+      "name": "Zamburiñas en salsa de vieira Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 157.0,
+        "protein_g": 13.0,
+        "carbohydrate_g": 3.7,
+        "fat_g": 10.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false,
+      "CLASSIFIED": 0,
+      "MENU_ELIGIBLE": 0
+    },
+    {
+      "product_id": "64248",
+      "ean": "8480000642486",
+      "name": "Helado bombón negro sabor nata Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 314.0,
+        "protein_g": 3.6,
+        "carbohydrate_g": 29.0,
+        "fat_g": 20.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false,
+      "CLASSIFIED": 0,
+      "MENU_ELIGIBLE": 0
+    },
+    {
+      "product_id": "51012",
+      "ean": "8413556010324",
+      "name": "Requesón mezcla Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 139.0,
+        "protein_g": 9.9,
+        "carbohydrate_g": 2.2,
+        "fat_g": 10.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false,
+      "CLASSIFIED": 0,
+      "MENU_ELIGIBLE": 0
+    },
+    {
+      "product_id": "13234",
+      "ean": "8402001002748",
+      "name": "Surtido sushi Bento mix",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 175.0,
+        "protein_g": 4.9,
+        "carbohydrate_g": 24.0,
+        "fat_g": 6.5
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false,
+      "CLASSIFIED": 0,
+      "MENU_ELIGIBLE": 0
+    }
+  ],
+  "accumulated": {
+    "declared": 261,
+    "review": 2682,
+    "processed": 2943,
+    "full_nutrition_catalog_fraction": 0.060981308411214956
+  },
+  "provenance_policy": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "persist_original_images": false,
+    "infer_missing_values": false,
+    "review_is_usable_nutrition": false
+  },
+  "semantic_state": {
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
