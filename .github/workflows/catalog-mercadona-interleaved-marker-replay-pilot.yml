@@ -197,7 +197,7 @@ jobs:
               'source': 'MERCADONA_FIRST_PARTY/label image',
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
               'redistribution_allowed': False,
-              'replay_policy_version': '1.0.0',
+              'replay_policy_version': '1.1.0',
               'input_pilot_run': 33835522371,
               'processed': len(rows),
               'status_counts': dict(sorted(counts.items())),
