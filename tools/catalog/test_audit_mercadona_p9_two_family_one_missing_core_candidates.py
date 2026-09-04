@@ -112,6 +112,20 @@ class CandidatePayloadTests(unittest.TestCase):
         self.assertIsNone(candidate_payload(row(reasons=["OCR_BASIS_CONFLICT"])))
         self.assertIsNone(candidate_payload(row(reasons=["ENERGY_MACRO_MISMATCH:declared=100"])))
 
+    def test_conflict_in_original_attempt_is_excluded(self):
+        candidate_row = row()
+        original = dict(candidate_row["replay"]["attempt_ensembles"][0])
+        original["reasons"] = ["OCR_FIELD_CONFLICT:fat_g"]
+        candidate_row["attempts"] = [{"ensemble": original}]
+        self.assertIsNone(candidate_payload(candidate_row))
+
+    def test_values_conflict_in_original_attempt_is_excluded(self):
+        candidate_row = row()
+        original = dict(candidate_row["replay"]["attempt_ensembles"][0])
+        original["values_conflict"] = True
+        candidate_row["attempts"] = [{"ensemble": original}]
+        self.assertIsNone(candidate_payload(candidate_row))
+
     def test_all_observed_fields_must_be_corroborated(self):
         candidate_row = row()
         ensemble = candidate_row["replay"]["attempt_ensembles"][0]
