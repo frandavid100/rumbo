@@ -1,6 +1,7 @@
 import unittest
 
 from mercadona_nutrition_interleaved_marker_replay import (
+    strict_target_value_with_unit,
     strip_interleaved_packaging_marker_lines,
 )
 from nutrition_label_reader import read_nutrition_label
@@ -44,6 +45,31 @@ SAL
             "carbohydrate_g": 15.0,
             "protein_g": 11.0,
         })
+
+    def test_explicit_unit_guard_accepts_immediate_target_value(self):
+        observed = """INFORMACIÓN NUTRICIONAL por 100 g
+Proteínas
+11g
+Sal 1.3g
+"""
+        self.assertEqual(
+            strict_target_value_with_unit(observed, missing_core_field="protein_g"),
+            11.0,
+        )
+
+    def test_explicit_unit_guard_rejects_ocr_garbage_before_later_number(self):
+        # Real pilot shape: Tesseract linearised the protein row as `3d / 119`.
+        # The generic row parser can see the leading 3, but the replay must not
+        # let that correlated OCR artefact veto two independent exact `11 g` reads.
+        observed = """INFORMACIÓN NUTRICIONAL por 100 g
+Proteínas
+3d
+119
+Sal 1.3g
+"""
+        self.assertIsNone(
+            strict_target_value_with_unit(observed, missing_core_field="protein_g")
+        )
 
     def test_does_not_remove_marker_after_target_core_row(self):
         observed = """INFORMACIÓN NUTRICIONAL por 100 g
