@@ -1,0 +1,67 @@
+{
+  "cut_type": "mercadona_tesseract_two_family_four_uncorroborated_core_pilot",
+  "generated_at": "2026-09-04T03:58:00Z",
+  "catalog_total": 4280,
+  "processed_baseline": 2943,
+  "baseline_declared": 261,
+  "baseline_review": 2682,
+  "candidate_universe": 3,
+  "selection_rule": {
+    "perspective": "9",
+    "requires_original_status": "REVIEW",
+    "requires_replay_status": "REVIEW",
+    "requires_all_four_core_observed": true,
+    "requires_safe_basis": ["100_g", "100_ml"],
+    "requires_independent_engine_families_exact": 2,
+    "requires_corroborated_core_fields_exact": 0,
+    "requires_uncorroborated_core_fields_exact": 4,
+    "requires_each_uncorroborated_core_field_single_family": true,
+    "exclude_hard_ocr_conflict": true,
+    "exclude_energy_macro_mismatch": true
+  },
+  "pilot": {
+    "workflow_run_id": 33833783184,
+    "artifact": "mercadona-four-uncorroborated-pilot",
+    "selected": 3,
+    "processed": 3,
+    "declared": 0,
+    "review": 3,
+    "status_counts": {"REVIEW": 3},
+    "unsafe_declared": 0,
+    "value_conflict_count": 0,
+    "provenance_issue_count": 0,
+    "duplicate_result_count": 0,
+    "missing_result_count": 0,
+    "inferred_value_count": 0,
+    "persisted_image_count": 0,
+    "network_failures": 0,
+    "ocr_failures": 0,
+    "safety_assessment": "VALIDATED",
+    "frontier_status": "closed"
+  },
+  "frontier_total": {
+    "selected": 3,
+    "declared": 0,
+    "review": 3,
+    "declared_fraction": 0.0,
+    "review_fraction": 1.0
+  },
+  "accumulated": {
+    "declared": 261,
+    "review": 2682,
+    "processed": 2943,
+    "full_nutrition_catalog_fraction": 0.060981308411214956
+  },
+  "provenance_policy": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "persist_original_images": false,
+    "infer_missing_values": false,
+    "review_is_usable_nutrition": false
+  },
+  "semantic_state": {
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  }
+}
