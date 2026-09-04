@@ -1,0 +1,93 @@
+{
+  "cut": "mercadona-two-family-three-missing-core-closed-2026-09-04",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "routing_policy_version": "1.0.1",
+  "routing_fix_commit": "eae8c46084d6bc3675d65cf9d1de293f380ef14c",
+  "routing_tests_commit": "a248cc73f6d1ad098239097b07e5d2e4227ee57e",
+  "corrected_routing_cut_commit": "517d2c067556bec7dfdcb30d6005da13d5f4ddc9",
+  "source_replay_run": 33331091953,
+  "source_replay_artifact_id": 9737662377,
+  "replay_rows": 2630,
+  "stable_original_and_replay_review_rows": 2459,
+  "old_candidate_universe": 29,
+  "corrected_candidate_universe": 25,
+  "routing_correction": "reject hard OCR conflicts, values_conflict, and energy/macro mismatch found in any original or replay attempt ensemble; the previous audit only enforced this across replay ensembles",
+  "invalidated_old_candidate_ids": [
+    "11621",
+    "11810",
+    "52157",
+    "58297"
+  ],
+  "invalidated_old_candidates": [
+    {
+      "product_id": "11621",
+      "reason": "original attempt contains OCR_SAME_ENGINE_CONFLICT:fat_g:tesseract and OCR_FIELD_CONFLICT:carbohydrate_g"
+    },
+    {
+      "product_id": "11810",
+      "reason": "original attempt contains same-engine OCR conflicts in fat/carbohydrate evidence"
+    },
+    {
+      "product_id": "52157",
+      "reason": "original attempt contains OCR_FIELD_CONFLICT:protein_g"
+    },
+    {
+      "product_id": "58297",
+      "reason": "original attempt contains OCR_FIELD_CONFLICT:carbohydrate_g"
+    }
+  ],
+  "prior_pilot": {
+    "run": 33865581294,
+    "artifact_id": 9934190444,
+    "selected": 16,
+    "still_eligible_after_routing_fix": 14,
+    "now_invalid_selected_ids": [
+      "11810",
+      "58297"
+    ],
+    "safe_promotions": 0
+  },
+  "corrected_reroute": {
+    "workflow": ".github/workflows/catalog-mercadona-tesseract-two-family-three-missing-core-reroute.yml",
+    "workflow_commit": "4fa6a713c6a543d413dc1ead512dba20a6ecef88",
+    "run": 33870225255,
+    "artifact_id": 9935948370,
+    "selected": 11,
+    "processed": 11,
+    "distinct_products_processed": 11,
+    "status_counts": {
+      "REVIEW": 11
+    },
+    "safe_promotions": 0,
+    "unsafe_declared": 0,
+    "value_conflicts": 0,
+    "provenance_errors": 0,
+    "duplicates": 0,
+    "persisted_images": 0,
+    "missing_values_inferred": false,
+    "safety_assessment": "VALIDATED"
+  },
+  "stratum_closure": {
+    "corrected_candidates": 25,
+    "processed": 25,
+    "DECLARED": 0,
+    "REVIEW": 25,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "closed": true
+  },
+  "cumulative_after_closure": {
+    "catalog_total": 4280,
+    "processed": 2943,
+    "DECLARED_complete": 265,
+    "REVIEW": 2678,
+    "complete_usable_coverage_pct": 6.1916,
+    "processed_coverage_pct": 68.7617
+  },
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
