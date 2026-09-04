@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 import unicodedata
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 CORE_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -162,10 +162,15 @@ def _line_value_before(lines: list[str], index: int) -> float | None:
     value = _value_token(lines[index - 1], require_unit=True)
     if value is None:
         return None
-    # Two consecutive numeric rows immediately before a label are a strong sign
-    # of parallel columns (`0.1 g`, `0.3 g`, `Grasas`). Reject rather than choose.
+    # Two consecutive numeric rows immediately before a label normally signal
+    # parallel columns (`0.1 g`, `0.3 g`, `Grasas`). There is one safe observed
+    # exception: OCR can place a subordinate saturated/sugar row value, then the
+    # next main-row value, then the next main label. Permit the closest value only
+    # when the older numeric is explicitly anchored by that subordinate row label.
     if index >= 2 and _value_token(lines[index - 2], require_unit=True) is not None:
-        return None
+        anchor = _fold(lines[index - 3]) if index >= 3 else ""
+        if not re.search(r"\b(?:saturad|azucar)", anchor, flags=re.I):
+            return None
     return value
 
 
