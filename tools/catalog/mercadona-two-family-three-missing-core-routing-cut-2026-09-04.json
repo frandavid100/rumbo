@@ -1,0 +1,45 @@
+{
+  "cut": "mercadona-two-family-three-missing-core-routing-2026-09-04",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "source_replay_run": 33331091953,
+  "source_replay_artifact_id": 9737662377,
+  "replay_rows": 2630,
+  "stable_original_and_replay_review_rows": 2459,
+  "candidate_universe": 29,
+  "candidate_policy": "stable p9 original+replay REVIEW + exactly 1 of 4 core values observed and independently corroborated + exactly 3 core values missing + explicit 100g/100ml basis + exactly 2 independent OCR families + no OCR hard conflict, no values_conflict in any attempt ensemble, and no energy/macro mismatch; routing only",
+  "basis_counts": {
+    "100_g": 18,
+    "100_ml": 11
+  },
+  "observed_core_counts": {
+    "calories": 27,
+    "fat_g": 2
+  },
+  "missing_core_triplet_counts": {
+    "protein_g+carbohydrate_g+fat_g": 27,
+    "calories+protein_g+carbohydrate_g": 2
+  },
+  "candidate_product_ids": [
+    "11168", "11621", "11810", "13917", "15726", "16352", "16415", "17572", "17704", "18509",
+    "19958", "20846", "21700", "21731", "21736", "22139", "23155", "27187", "28069", "52157",
+    "52614", "58297", "67090", "82130", "82150", "86046", "86190", "9210", "9398"
+  ],
+  "continuity_replay_precheck": {
+    "parser": "mercadona_ocr_continuity_rescue/1.0.2-equivalent",
+    "safe_promotions": 0,
+    "note": "Existing persisted OCR text does not independently corroborate all four core values for any of these 29 candidates under the current continuity contract; fresh bounded OCR remains justified."
+  },
+  "pilot": {
+    "workflow": ".github/workflows/catalog-mercadona-tesseract-two-family-three-missing-core-pilot.yml",
+    "run": 33865581294,
+    "selected": 16,
+    "remaining_after_pilot": 13,
+    "acceptance": "DECLARED only when all four core fields are independently corroborated by >=2 OCR families, explicit basis is stable, the pre-existing corroborated value still matches baseline, and no hard/value/energy conflict exists"
+  },
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
