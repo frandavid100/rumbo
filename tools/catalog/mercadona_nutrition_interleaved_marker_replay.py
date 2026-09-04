@@ -8,10 +8,10 @@ import re
 import unicodedata
 from typing import Any
 
-from nutrition_label_reader import read_nutrition_label
+from nutrition_label_reader import LabelReadResult, read_nutrition_label
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
-REPLAY_POLICY_VERSION = "1.0.0"
+REPLAY_POLICY_VERSION = "1.1.0"
 CORE_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 MAX_TARGET_ROW_DISTANCE_LINES = 8
 
@@ -33,6 +33,10 @@ _TARGET_PATTERNS = {
     "carbohydrate_g": re.compile(r"^(?:hidratos? de carbono|carbohidratos?)\b", re.I),
     "protein_g": re.compile(r"^proteinas?\b", re.I),
 }
+_STRICT_VALUE_WITH_UNIT = re.compile(
+    r"^([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(g|9|q|yg|y)\s*$",
+    re.I,
+)
 
 
 def _fold(text: str) -> str:
@@ -91,6 +95,93 @@ def strip_interleaved_packaging_marker_lines(
         return text, ()
     cleaned = "".join(line for index, line in enumerate(lines) if index not in remove)
     return cleaned, tuple(remove[index] for index in sorted(remove))
+
+
+def strict_target_value_with_unit(
+    text: str,
+    *,
+    missing_core_field: str,
+) -> float | None:
+    """Return the missing macro only when its immediate cell has a gram unit.
+
+    The interleaved-marker replay is a rescue path, so it is stricter than the
+    generic parser. It accepts only a value on the same line as the target label
+    or on the immediately following line, with an explicit gram-like OCR unit.
+    It never skips an intervening glyph/prose line and never turns inequalities
+    into exact values. This rejects the real Tesseract artefact ``Proteinas / 3d
+    / 119`` while accepting independent ``Proteinas / 11 g`` observations.
+    """
+    target = _TARGET_PATTERNS.get(missing_core_field)
+    if target is None:
+        return None
+    lines = [_fold(line).strip() for line in (text or "").splitlines()]
+    for index, line in enumerate(lines):
+        match = target.match(line)
+        if not match:
+            continue
+        candidates: list[str] = []
+        same_line = line[match.end():].strip()
+        if same_line:
+            candidates.append(same_line)
+        elif index + 1 < len(lines):
+            candidates.append(lines[index + 1])
+        for candidate in candidates:
+            value_match = _STRICT_VALUE_WITH_UNIT.match(candidate)
+            if not value_match or value_match.group(1) in ("<", ">"):
+                continue
+            raw_number = value_match.group(2)
+            unit = value_match.group(3).lower()
+            value = float(raw_number)
+            # A terminal `9` is an observed OCR rendering of the printed g glyph:
+            # `119` => `11 g`, `279` => `27 g`. Only apply this repair when the
+            # strict regex itself consumed that final 9 as the unit token.
+            if unit == "9" and candidate.replace(" ", "").endswith("9"):
+                value = float(raw_number)
+            if 0 <= value <= 100:
+                return value
+    return None
+
+
+def _guard_replayed_target(
+    parsed: LabelReadResult,
+    cleaned_text: str,
+    *,
+    missing_core_field: str,
+    marker_removed: bool,
+) -> tuple[LabelReadResult, float | None, bool]:
+    if not marker_removed or missing_core_field not in _TARGET_PATTERNS:
+        return parsed, None, True
+    strict_value = strict_target_value_with_unit(
+        cleaned_text,
+        missing_core_field=missing_core_field,
+    )
+    parsed_value = (parsed.nutrition or {}).get(missing_core_field)
+    valid = (
+        strict_value is not None
+        and isinstance(parsed_value, (int, float))
+        and abs(float(parsed_value) - strict_value) <= 1e-9
+    )
+    if valid or parsed_value is None:
+        return parsed, strict_value, valid
+
+    nutrition = dict(parsed.nutrition or {})
+    nutrition.pop(missing_core_field, None)
+    reasons = list(parsed.reasons)
+    guard_reason = f"INTERLEAVED_TARGET_REQUIRES_EXPLICIT_UNIT:{missing_core_field}"
+    if guard_reason not in reasons:
+        reasons.append(guard_reason)
+    missing_reason = f"MISSING_CORE:{missing_core_field}"
+    if not any(str(reason).startswith("MISSING_CORE:") for reason in reasons):
+        reasons.append(missing_reason)
+    guarded = LabelReadResult(
+        status="REVIEW",
+        basis=parsed.basis,
+        nutrition=nutrition or None,
+        confidence=min(parsed.confidence, .60),
+        reasons=tuple(reasons),
+        normalized_text=parsed.normalized_text,
+    )
+    return guarded, strict_value, False
 
 
 def _family(strategy: str) -> str:
@@ -158,6 +249,12 @@ def replay_row(row: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
             )
             confidence = float(engine.get("confidence") or 0.0)
             parsed = read_nutrition_label(cleaned, extraction_confidence=confidence)
+            parsed, strict_value, unit_guard_passed = _guard_replayed_target(
+                parsed,
+                cleaned,
+                missing_core_field=missing,
+                marker_removed=bool(removed),
+            )
             family = _family(strategy)
             readings.append(ParsedOCRReading(
                 strategy=f"{strategy}:{target_kind}",
@@ -173,6 +270,8 @@ def replay_row(row: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
                 "nutrition": parsed.nutrition,
                 "reasons": list(parsed.reasons),
                 "removed_interleaved_markers": list(removed),
+                "strict_target_value_with_unit": strict_value,
+                "strict_target_unit_guard_passed": unit_guard_passed,
                 "normalized_ocr_text": parsed.normalized_text,
             }
 
