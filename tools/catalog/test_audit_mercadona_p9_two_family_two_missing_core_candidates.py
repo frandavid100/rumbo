@@ -103,6 +103,28 @@ class CandidatePayloadTests(unittest.TestCase):
         self.assertIsNone(candidate_payload(row(reasons=["ENERGY_MACRO_MISMATCH:declared=100"])))
         self.assertIsNone(candidate_payload(row(values_conflict=True)))
 
+    def test_conflict_in_non_selected_attempt_is_excluded(self):
+        candidate_row = row()
+        conflict = dict(candidate_row["replay"]["attempt_ensembles"][0])
+        conflict["confidence"] = 0.1
+        conflict["values_conflict"] = True
+        candidate_row["replay"]["attempt_ensembles"].append(conflict)
+        self.assertIsNone(candidate_payload(candidate_row))
+
+    def test_conflict_in_original_attempt_is_excluded(self):
+        candidate_row = row()
+        original = dict(candidate_row["replay"]["attempt_ensembles"][0])
+        original["reasons"] = ["OCR_SAME_ENGINE_CONFLICT:protein_g:paddleocr"]
+        candidate_row["attempts"] = [{"ensemble": original}]
+        self.assertIsNone(candidate_payload(candidate_row))
+
+    def test_values_conflict_in_original_attempt_is_excluded(self):
+        candidate_row = row()
+        original = dict(candidate_row["replay"]["attempt_ensembles"][0])
+        original["values_conflict"] = True
+        candidate_row["attempts"] = [{"ensemble": original}]
+        self.assertIsNone(candidate_payload(candidate_row))
+
     def test_all_observed_fields_must_be_corroborated(self):
         candidate_row = row()
         ensemble = candidate_row["replay"]["attempt_ensembles"][0]
@@ -121,14 +143,6 @@ class CandidatePayloadTests(unittest.TestCase):
         ensemble["fields"].append(
             {"name": "fat_g", "value": None, "corroborated": False, "engine_families": []}
         )
-        self.assertIsNone(candidate_payload(candidate_row))
-
-    def test_conflict_in_non_selected_attempt_is_excluded(self):
-        candidate_row = row()
-        conflict = dict(candidate_row["replay"]["attempt_ensembles"][0])
-        conflict["confidence"] = 0.1
-        conflict["values_conflict"] = True
-        candidate_row["replay"]["attempt_ensembles"].append(conflict)
         self.assertIsNone(candidate_payload(candidate_row))
 
 
