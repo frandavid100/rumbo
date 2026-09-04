@@ -1,0 +1,90 @@
+{
+  "cut_date": "2026-09-04",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33817259379,
+  "workflow_head_sha": "ed02c734880503a2b86cab0c1695269ec0eb3778",
+  "artifact_id": 9917312806,
+  "artifact_name": "mercadona-tesseract-two-family-three-uncorroborated-core-pilot-merged",
+  "candidate_universe": 41,
+  "candidate_policy": "stable p9 original+replay REVIEW + all 4 core values + explicit 100g/100ml basis + exactly 2 independent OCR families + exactly 1 corroborated core field + exactly 3 uncorroborated core fields each observed by exactly 1 family + no hard conflict + no energy/macro mismatch",
+  "sample_order": "SHA256_PRODUCT_ID_EAN",
+  "selected": 16,
+  "processed": 16,
+  "distinct_products_processed": 16,
+  "remaining_candidates": 25,
+  "status_counts": {
+    "DECLARED": 2,
+    "REVIEW": 14
+  },
+  "safe_promotion_products": 2,
+  "safe_promotions": [
+    {
+      "product_id": "15112",
+      "ean": "8402001041655",
+      "name": "Chorizo de bellota ibérico cortado a máquina",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 548.7,
+        "protein_g": 26.5,
+        "carbohydrate_g": 1.1,
+        "fat_g": 48.7
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "redistribution_allowed": false,
+      "CLASSIFIED": 0,
+      "MENU_ELIGIBLE": 0
+    },
+    {
+      "product_id": "12347",
+      "ean": "8480000123473",
+      "name": "Cacahuetes Hacendado chocolate con leche",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 554.0,
+        "protein_g": 15.0,
+        "carbohydrate_g": 42.0,
+        "fat_g": 35.4
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "redistribution_allowed": false,
+      "CLASSIFIED": 0,
+      "MENU_ELIGIBLE": 0
+    }
+  ],
+  "front_after_pilot": {
+    "universe": 41,
+    "processed": 16,
+    "DECLARED": 2,
+    "REVIEW_or_other": 14,
+    "remaining": 25,
+    "promotion_rate_pct": 12.5,
+    "status": "pilot_validated"
+  },
+  "value_conflicts": [],
+  "unsafe_declared": [],
+  "duplicate_product_ids": [],
+  "missing_product_ids": [],
+  "unexpected_product_ids": [],
+  "unexpected_statuses": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "cumulative_after_pilot": {
+    "catalog_total": 4280,
+    "processed": 2943,
+    "DECLARED_complete": 257,
+    "REVIEW": 2686,
+    "complete_usable_coverage_pct": 6.0047,
+    "processed_coverage_pct": 68.7617
+  }
+}
