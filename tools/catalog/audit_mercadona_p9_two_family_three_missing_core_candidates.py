@@ -9,8 +9,8 @@ from typing import Any
 CORE_FIELDS = ("calories", "protein_g", "carbohydrate_g", "fat_g")
 EXPECTED_ROWS = 2630
 EXPECTED_STILL_REVIEW = 2459
-EXPECTED_CANDIDATES = 29
-AUDIT_POLICY_VERSION = "1.0.0"
+EXPECTED_CANDIDATES = 25
+AUDIT_POLICY_VERSION = "1.0.1"
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -44,10 +44,27 @@ def has_energy_mismatch(ensemble: dict[str, Any]) -> bool:
     return any(str(reason).startswith("ENERGY_MACRO_MISMATCH") for reason in (ensemble.get("reasons") or []))
 
 
-def any_attempt_values_conflict(row: dict[str, Any]) -> bool:
-    return any(
-        bool(ensemble.get("values_conflict"))
+def all_attempt_ensembles(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return original and replay ensembles so routing cannot hide prior conflicts."""
+    originals = [
+        attempt.get("ensemble") or {}
+        for attempt in (row.get("attempts") or [])
+        if attempt.get("ensemble")
+    ]
+    replays = [
+        ensemble
         for ensemble in ((row.get("replay") or {}).get("attempt_ensembles") or [])
+        if ensemble
+    ]
+    return originals + replays
+
+
+def any_attempt_disqualifying_conflict(row: dict[str, Any]) -> bool:
+    return any(
+        is_hard_conflict(ensemble)
+        or has_energy_mismatch(ensemble)
+        or bool(ensemble.get("values_conflict"))
+        for ensemble in all_attempt_ensembles(row)
     )
 
 
@@ -73,7 +90,7 @@ def candidate_payload(row: dict[str, Any]) -> dict[str, Any] | None:
         return None
     if families != 2 or corroborated != 1:
         return None
-    if is_hard_conflict(ensemble) or has_energy_mismatch(ensemble) or any_attempt_values_conflict(row):
+    if any_attempt_disqualifying_conflict(row):
         return None
 
     field_rows = {
@@ -150,16 +167,16 @@ def main() -> int:
         "candidate_policy": (
             "stable p9 original+replay REVIEW + exactly 1 of 4 core values observed and independently "
             "corroborated + exactly 3 core values missing + explicit 100g/100ml basis + exactly 2 "
-            "independent OCR families + no OCR hard conflict, no values_conflict in any attempt "
-            "ensemble, and no energy/macro mismatch; routing only"
+            "independent OCR families + no OCR hard conflict, values_conflict, or energy/macro mismatch "
+            "in any original or replay attempt ensemble; routing only"
         ),
         "observed_core_counts": dict(sorted(observed_counts.items())),
         "missing_core_triplet_counts": dict(sorted(missing_counts.items())),
         "basis_counts": dict(sorted(basis_counts.items())),
         "next_safe_experiment": (
-            "bounded deterministic 16-product Tesseract CLAHE/OTSU/adaptive pilot; acceptance remains "
-            "unchanged and requires all four core fields independently corroborated while the single "
-            "pre-existing value must still match replay evidence"
+            "process only corrected-universe products not already covered by the first pilot; acceptance "
+            "remains unchanged and requires all four core fields independently corroborated while the "
+            "single pre-existing value must still match replay evidence"
         ),
         "images_persisted": False,
         "missing_values_inferred": False,
