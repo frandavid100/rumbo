@@ -51,12 +51,40 @@ class CandidatePayloadTest(unittest.TestCase):
         row["replay"]["attempt_ensembles"][0]["fields"][0]["corroborated"] = False
         self.assertIsNone(candidate_payload(row))
 
-    def test_rejects_values_conflict_in_any_attempt(self) -> None:
+    def test_rejects_values_conflict_in_any_replay_attempt(self) -> None:
         row = safe_row()
         conflict = copy.deepcopy(row["replay"]["attempt_ensembles"][0])
         conflict["values_conflict"] = True
         conflict["confidence"] = 0.1
         row["replay"]["attempt_ensembles"].append(conflict)
+        self.assertIsNone(candidate_payload(row))
+
+    def test_rejects_hard_conflict_in_original_attempt(self) -> None:
+        row = safe_row()
+        conflict = copy.deepcopy(row["replay"]["attempt_ensembles"][0])
+        conflict["reasons"] = ["OCR_FIELD_CONFLICT:carbohydrate_g"]
+        row["attempts"] = [{"ensemble": conflict}]
+        self.assertIsNone(candidate_payload(row))
+
+    def test_rejects_same_engine_conflict_in_original_attempt(self) -> None:
+        row = safe_row()
+        conflict = copy.deepcopy(row["replay"]["attempt_ensembles"][0])
+        conflict["reasons"] = ["OCR_SAME_ENGINE_CONFLICT:fat_g:tesseract"]
+        row["attempts"] = [{"ensemble": conflict}]
+        self.assertIsNone(candidate_payload(row))
+
+    def test_rejects_energy_mismatch_in_original_attempt(self) -> None:
+        row = safe_row()
+        conflict = copy.deepcopy(row["replay"]["attempt_ensembles"][0])
+        conflict["reasons"] = ["ENERGY_MACRO_MISMATCH:999.0"]
+        row["attempts"] = [{"ensemble": conflict}]
+        self.assertIsNone(candidate_payload(row))
+
+    def test_rejects_values_conflict_in_original_attempt(self) -> None:
+        row = safe_row()
+        conflict = copy.deepcopy(row["replay"]["attempt_ensembles"][0])
+        conflict["values_conflict"] = True
+        row["attempts"] = [{"ensemble": conflict}]
         self.assertIsNone(candidate_payload(row))
 
     def test_rejects_two_observed_core_fields(self) -> None:
