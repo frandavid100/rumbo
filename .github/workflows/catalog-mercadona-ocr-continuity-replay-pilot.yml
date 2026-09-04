@@ -1,0 +1,80 @@
+name: Catalog Mercadona OCR continuity replay pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ocr-continuity-replay-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-ocr-continuity-replay-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - name: Download latest two-missing-core pilot evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-tesseract-two-family-two-missing-core-pilot
+          path: tools/catalog/mercadona-two-missing-pilot
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33855949504
+      - name: Run continuity rescue regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_mercadona_ocr_continuity_rescue.py
+          python -m py_compile mercadona_ocr_continuity_rescue.py
+      - name: Replay existing OCR text with conservative continuity parser
+        working-directory: tools/catalog
+        run: |
+          python mercadona_ocr_continuity_rescue.py \
+            --results mercadona-two-missing-pilot/mercadona-tesseract-two-family-two-missing-core-pilot-audited/results-audited.jsonl \
+            --baseline mercadona-two-missing-pilot/mercadona-p9-two-family-two-missing-core-audit/two-family-two-missing-core-candidates.jsonl \
+            --out mercadona-ocr-continuity-replay-pilot
+      - name: Audit invariants
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          summary = json.loads(Path('mercadona-ocr-continuity-replay-pilot/summary.json').read_text(encoding='utf-8'))
+          promotions = json.loads(Path('mercadona-ocr-continuity-replay-pilot/safe-promotions.json').read_text(encoding='utf-8'))
+          if summary.get('processed') != 16:
+              raise SystemExit(f"expected 16 processed rows, got {summary.get('processed')}")
+          if summary.get('safe_promotion_products') != len(promotions):
+              raise SystemExit('promotion count mismatch')
+          for row in promotions:
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  raise SystemExit(f"bad evidence level: {row.get('product_id')}")
+              if row.get('source') != 'MERCADONA_FIRST_PARTY/label image':
+                  raise SystemExit(f"bad source: {row.get('product_id')}")
+              if row.get('redistribution_allowed') is not False:
+                  raise SystemExit(f"bad redistribution flag: {row.get('product_id')}")
+              if row.get('CLASSIFIED') != 0 or row.get('MENU_ELIGIBLE') != 0:
+                  raise SystemExit(f"semantic flags changed: {row.get('product_id')}")
+              if set(row.get('nutrition') or {}) != {'calories','fat_g','carbohydrate_g','protein_g'}:
+                  raise SystemExit(f"incomplete promotion: {row.get('product_id')}")
+              for families in (row.get('families_by_field') or {}).values():
+                  if set(families) != {'paddleocr','tesseract'}:
+                      raise SystemExit(f"field lacks independent-family corroboration: {row.get('product_id')}")
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+      - name: Upload auditable replay cut
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-ocr-continuity-replay-pilot
+          path: tools/catalog/mercadona-ocr-continuity-replay-pilot
+          if-no-files-found: error
+          retention-days: 30
