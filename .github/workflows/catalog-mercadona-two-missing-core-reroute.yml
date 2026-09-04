@@ -1,0 +1,77 @@
+name: Catalog Mercadona two-missing-core reroute
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-two-missing-core-reroute.yml'
+      - 'tools/catalog/audit_mercadona_p9_two_family_two_missing_core_candidates.py'
+      - 'tools/catalog/test_audit_mercadona_p9_two_family_two_missing_core_candidates.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-two-missing-core-reroute-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+      - name: Test hardened routing
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_audit_mercadona_p9_two_family_two_missing_core_candidates.py
+          python -m py_compile audit_mercadona_p9_two_family_two_missing_core_candidates.py
+      - name: Reroute corrected universe
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_p9_two_family_two_missing_core_candidates.py \
+            --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-p9-two-family-two-missing-core-reroute
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          out = Path('mercadona-p9-two-family-two-missing-core-reroute')
+          rows = [json.loads(line) for line in (out / 'two-family-two-missing-core-candidates.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(rows) != 18:
+              raise SystemExit(f'expected 18 hardened candidates, got {len(rows)}')
+          summary_path = out / 'reroute-verification.json'
+          summary_path.write_text(json.dumps({
+              'candidate_universe': len(rows),
+              'product_ids': sorted(str(row.get('product_id') or '') for row in rows),
+              'audit_policy_version': '1.0.1',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Upload hardened reroute audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-two-missing-core-reroute
+          path: tools/catalog/mercadona-p9-two-family-two-missing-core-reroute/
+          if-no-files-found: error
+          retention-days: 30
