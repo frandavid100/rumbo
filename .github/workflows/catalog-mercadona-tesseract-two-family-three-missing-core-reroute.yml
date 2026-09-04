@@ -1,0 +1,426 @@
+name: Catalog Mercadona Tesseract corrected three-missing reroute
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-tesseract-two-family-three-missing-core-reroute.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-tesseract-corrected-three-missing-reroute-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reroute:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Download persisted p9 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-ocr-replay-2630
+          path: tools/catalog/mercadona-ocr-replay-2630
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33331091953
+
+      - name: Download first three-missing pilot audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-tesseract-two-family-three-missing-core-pilot
+          path: tools/catalog/mercadona-three-missing-prior-pilot
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33865581294
+
+      - name: Test corrected routing before any fresh OCR
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_audit_mercadona_p9_two_family_three_missing_core_candidates.py
+          python -m py_compile audit_mercadona_p9_two_family_three_missing_core_candidates.py
+
+      - name: Re-audit strict candidate universe and build only unprocessed valid remainder
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_p9_two_family_three_missing_core_candidates.py \
+            --replay-results mercadona-ocr-replay-2630/results-replayed.jsonl \
+            --out mercadona-p9-two-family-three-missing-core-corrected-audit
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          audit_dir = Path('mercadona-p9-two-family-three-missing-core-corrected-audit')
+          candidates = [
+              json.loads(line)
+              for line in (audit_dir / 'two-family-three-missing-core-candidates.jsonl').read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          if len(candidates) != 25:
+              raise SystemExit(f'expected corrected candidate universe 25, got {len(candidates)}')
+          corrected_ids = {str(row['product_id']) for row in candidates}
+
+          prior = json.loads(Path('mercadona-three-missing-prior-pilot/two-family-three-missing-core-pilot-selection.json').read_text(encoding='utf-8'))
+          prior_ids = {str(pid) for pid in (prior.get('product_ids') or [])}
+          if len(prior_ids) != 16:
+              raise SystemExit(f'expected 16 prior pilot IDs, got {len(prior_ids)}')
+
+          old_cut = json.loads(Path('mercadona-two-family-three-missing-core-routing-cut-2026-09-04.json').read_text(encoding='utf-8'))
+          old_ids = {str(pid) for pid in (old_cut.get('candidate_product_ids') or [])}
+          if len(old_ids) != 29:
+              raise SystemExit(f'expected old routing universe 29, got {len(old_ids)}')
+
+          invalidated = sorted(old_ids - corrected_ids)
+          if invalidated != ['11621', '11810', '52157', '58297']:
+              raise SystemExit(f'unexpected invalidated old candidates: {invalidated}')
+          prior_still_valid = sorted(prior_ids & corrected_ids)
+          prior_now_invalid = sorted(prior_ids - corrected_ids)
+          if len(prior_still_valid) != 14 or prior_now_invalid != ['11810', '58297']:
+              raise SystemExit(
+                  f'prior pilot reconciliation mismatch valid={len(prior_still_valid)} invalid={prior_now_invalid}'
+              )
+
+          remaining = [row for row in candidates if str(row['product_id']) not in prior_ids]
+          remaining_ids = [str(row['product_id']) for row in remaining]
+          if len(remaining) != 11 or len(set(remaining_ids)) != 11:
+              raise SystemExit(f'expected 11 corrected unprocessed candidates, got {len(remaining)}')
+
+          products = [
+              json.loads(line)
+              for line in Path('mercadona-first-party-final/products.jsonl').read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          remaining_set = set(remaining_ids)
+          by_id = {
+              str(row.get('product_id') or ''): row
+              for row in products
+              if str(row.get('product_id') or '') in remaining_set
+          }
+          output = [by_id[str(candidate['product_id'])] for candidate in remaining if str(candidate['product_id']) in by_id]
+          if len(output) != 11:
+              raise SystemExit(f'reroute product join mismatch expected=11 got={len(output)}')
+
+          Path('three-missing-corrected-reroute-products.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in output),
+              encoding='utf-8',
+          )
+          selection = {
+              'routing_policy_version': '1.0.1',
+              'old_candidate_universe': 29,
+              'corrected_candidate_universe': 25,
+              'invalidated_old_candidate_ids': invalidated,
+              'invalidated_reason': 'hard/value/energy conflict in at least one original attempt ensemble',
+              'prior_pilot_total': 16,
+              'prior_pilot_still_eligible': len(prior_still_valid),
+              'prior_pilot_still_eligible_ids': prior_still_valid,
+              'prior_pilot_now_invalid_ids': prior_now_invalid,
+              'fresh_reroute_products': 11,
+              'fresh_reroute_product_ids': remaining_ids,
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('three-missing-corrected-reroute-selection.json').write_text(
+              json.dumps(selection, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(selection, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Install OCR engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run conservative OCR regression suite
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_audit_mercadona_p9_two_family_three_missing_core_candidates.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_neural_ocr_tesseract_preprocess_rescue.py
+          python -m py_compile mercadona_neural_ocr_tesseract_preprocess_rescue.py
+
+      - name: Run fresh OCR only for corrected unprocessed remainder
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            --products three-missing-corrected-reroute-products.jsonl \
+            --out mercadona-tesseract-two-family-three-missing-core-corrected-reroute \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 \
+            --delay 0.5
+
+      - name: Audit reroute results and build JSONL plus SQLite staging
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import json, sqlite3
+          from pathlib import Path
+
+          FIELDS = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+          ALLOWED = {'DECLARED', 'REVIEW', 'NO_VISUAL_REGION', 'ERROR'}
+
+          def close(field, a, b):
+              a, b = float(a), float(b)
+              tolerance = max(5.0, .04 * max(abs(a), abs(b), 1.0)) if field == 'calories' else max(.6, .10 * max(abs(a), abs(b), 1.0))
+              return abs(a - b) <= tolerance
+
+          def hard_reason(reason):
+              reason = str(reason)
+              return (
+                  reason.startswith('OCR_FIELD_CONFLICT')
+                  or reason.startswith('OCR_SAME_ENGINE_CONFLICT')
+                  or reason == 'OCR_BASIS_CONFLICT'
+                  or reason.startswith('ENERGY_MACRO_MISMATCH')
+              )
+
+          def any_fresh_conflict(row):
+              for attempt in row.get('attempts') or []:
+                  ensemble = attempt.get('ensemble') or {}
+                  if bool(ensemble.get('values_conflict')):
+                      return True
+                  if any(hard_reason(reason) for reason in (ensemble.get('reasons') or [])):
+                      return True
+              return False
+
+          baseline_rows = [
+              json.loads(line)
+              for line in Path('mercadona-p9-two-family-three-missing-core-corrected-audit/two-family-three-missing-core-candidates.jsonl').read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          if len(baseline_rows) != 25:
+              raise SystemExit(f'expected 25 corrected baseline candidates, got {len(baseline_rows)}')
+          all_baseline = {str(row['product_id']): row for row in baseline_rows}
+          selection = json.loads(Path('three-missing-corrected-reroute-selection.json').read_text(encoding='utf-8'))
+          expected_ids = set(selection.get('fresh_reroute_product_ids') or [])
+          baseline = {pid: all_baseline[pid] for pid in expected_ids}
+          if len(baseline) != 11:
+              raise SystemExit('reroute selection does not map to 11 corrected baseline rows')
+
+          result_path = Path('mercadona-tesseract-two-family-three-missing-core-corrected-reroute/results-00.jsonl')
+          rows = [json.loads(line) for line in result_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          ids = [str(row.get('product_id') or '') for row in rows]
+          observed = set(ids)
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          duplicates = sorted(pid for pid, count in Counter(ids).items() if count > 1)
+          missing = sorted(expected_ids - observed)
+          unexpected = sorted(observed - expected_ids)
+          bad_status = sorted(set(counts) - ALLOWED)
+          provenance, unsafe, conflicts, safe = [], [], [], []
+
+          image_suffixes = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tif', '.tiff'}
+          persisted_images = sorted(
+              str(path)
+              for path in Path('mercadona-tesseract-two-family-three-missing-core-corrected-reroute').rglob('*')
+              if path.is_file() and path.suffix.lower() in image_suffixes
+          )
+
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              prior = baseline.get(pid)
+              if prior is None:
+                  provenance.append(f'{pid}:not_in_baseline')
+                  continue
+              if (
+                  row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  or row.get('source') != 'MERCADONA_FIRST_PARTY'
+                  or row.get('source_record_kind') != 'label image'
+                  or row.get('redistribution_allowed') is not False
+                  or str(row.get('perspective')) != '9'
+              ):
+                  provenance.append(f'{pid}:provenance')
+              if row.get('status') != 'DECLARED':
+                  continue
+              if any_fresh_conflict(row):
+                  unsafe.append(f'{pid}:fresh_attempt_conflict')
+                  continue
+
+              accepted = next((attempt for attempt in row.get('attempts') or [] if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              ensemble = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              reasons = [str(reason) for reason in (ensemble.get('reasons') or [])]
+              field_rows = {
+                  str(field.get('name')): field
+                  for field in (ensemble.get('fields') or [])
+                  if field.get('name') in FIELDS
+              }
+              missing_fields = set(prior.get('missing_core_fields') or [])
+              if (
+                  int(ensemble.get('independent_engine_families') or 0) < 2
+                  or int(ensemble.get('corroborated_fields') or 0) < 4
+                  or any(nutrition.get(field) is None for field in FIELDS)
+                  or set(field_rows) != set(FIELDS)
+                  or any(not bool(field_rows[field].get('corroborated')) for field in FIELDS)
+                  or any(len(field_rows[field].get('engine_families') or []) < 2 for field in FIELDS)
+                  or len(missing_fields) != 3
+                  or any(hard_reason(reason) for reason in reasons)
+              ):
+                  unsafe.append(f'{pid}:declared_contract')
+                  continue
+
+              bad = []
+              if row.get('basis') != prior.get('basis'):
+                  bad.append(f"basis:{prior.get('basis')}!={row.get('basis')}")
+              prior_nutrition = prior.get('nutrition') or {}
+              for field in FIELDS:
+                  prior_value = prior_nutrition.get(field)
+                  if field in missing_fields:
+                      if prior_value is not None:
+                          bad.append(f'{field}:expected_prior_missing')
+                      continue
+                  if prior_value is None or not close(field, nutrition[field], prior_value):
+                      bad.append(f"{field}:{prior_value}!~{nutrition[field]}")
+              if bad:
+                  conflicts.append({'product_id': pid, 'conflicts': bad})
+                  continue
+
+              safe.append({
+                  'product_id': pid,
+                  'ean': row.get('ean'),
+                  'name': row.get('name'),
+                  'basis': row.get('basis'),
+                  'nutrition': {field: nutrition[field] for field in FIELDS},
+                  'recovered_core_fields': sorted(missing_fields),
+                  'independent_engine_families': ensemble.get('independent_engine_families'),
+                  'corroborated_fields': ensemble.get('corroborated_fields'),
+                  'source': 'MERCADONA_FIRST_PARTY/label image',
+                  'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+                  'redistribution_allowed': False,
+                  'CLASSIFIED': 0,
+                  'MENU_ELIGIBLE': 0,
+              })
+
+          ok = (
+              len(rows) == 11 and len(observed) == 11 and not duplicates and not missing and not unexpected
+              and not provenance and not unsafe and not conflicts and not bad_status and not persisted_images
+          )
+          declared = len(safe)
+          cumulative_declared = 265 + declared
+          cumulative_review = 2678 - declared
+          out = Path('mercadona-tesseract-two-family-three-missing-core-corrected-reroute-audited')
+          out.mkdir(parents=True, exist_ok=True)
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'old_candidate_universe': 29,
+              'corrected_candidate_universe': 25,
+              'invalidated_old_candidate_ids': selection['invalidated_old_candidate_ids'],
+              'prior_pilot_still_eligible_processed': selection['prior_pilot_still_eligible'],
+              'fresh_reroute_selected': 11,
+              'fresh_reroute_processed': len(rows),
+              'distinct_products_processed': len(observed),
+              'status_counts': dict(sorted(counts.items())),
+              'safe_promotion_products': declared,
+              'safe_promotion_product_ids': sorted(item['product_id'] for item in safe),
+              'value_conflicts': conflicts,
+              'unsafe_declared': unsafe,
+              'duplicate_product_ids': duplicates,
+              'missing_product_ids': missing,
+              'unexpected_product_ids': unexpected,
+              'unexpected_statuses': bad_status,
+              'provenance_errors': provenance,
+              'persisted_images': persisted_images,
+              'images_persisted': bool(persisted_images),
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'cumulative_after_reroute': {
+                  'catalog_total': 4280,
+                  'processed': 2943,
+                  'DECLARED_complete': cumulative_declared,
+                  'REVIEW': cumulative_review,
+                  'complete_usable_coverage_pct': round(100.0 * cumulative_declared / 4280, 4),
+                  'processed_coverage_pct': round(100.0 * 2943 / 4280, 4),
+              },
+              'safety_assessment': 'VALIDATED' if ok else 'FAILED',
+          }
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (out / 'safe-promotions.json').write_text(json.dumps(safe, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (out / 'results-audited.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+
+          db = sqlite3.connect(out / 'staging.sqlite')
+          db.execute('''CREATE TABLE promotions (
+              product_id TEXT PRIMARY KEY,
+              ean TEXT,
+              name TEXT,
+              basis TEXT,
+              calories REAL,
+              protein_g REAL,
+              carbohydrate_g REAL,
+              fat_g REAL,
+              evidence_level TEXT NOT NULL,
+              source TEXT NOT NULL,
+              source_record_kind TEXT NOT NULL,
+              redistribution_allowed INTEGER NOT NULL,
+              classified INTEGER NOT NULL,
+              menu_eligible INTEGER NOT NULL
+          )''')
+          for item in safe:
+              n = item['nutrition']
+              db.execute(
+                  'INSERT INTO promotions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                  (
+                      item['product_id'], item.get('ean'), item.get('name'), item.get('basis'),
+                      n['calories'], n['protein_g'], n['carbohydrate_g'], n['fat_g'],
+                      item['evidence_level'], 'MERCADONA_FIRST_PARTY', 'label image', 0, 0, 0,
+                  ),
+              )
+          db.commit()
+          db.close()
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if not ok:
+              raise SystemExit('corrected reroute audit failed')
+          PY
+
+      - name: Upload corrected reroute audit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-tesseract-two-family-three-missing-core-corrected-reroute
+          path: |
+            tools/catalog/mercadona-p9-two-family-three-missing-core-corrected-audit/summary.json
+            tools/catalog/mercadona-p9-two-family-three-missing-core-corrected-audit/two-family-three-missing-core-candidates.jsonl
+            tools/catalog/three-missing-corrected-reroute-selection.json
+            tools/catalog/mercadona-tesseract-two-family-three-missing-core-corrected-reroute-audited/results-audited.jsonl
+            tools/catalog/mercadona-tesseract-two-family-three-missing-core-corrected-reroute-audited/safe-promotions.json
+            tools/catalog/mercadona-tesseract-two-family-three-missing-core-corrected-reroute-audited/summary.json
+            tools/catalog/mercadona-tesseract-two-family-three-missing-core-corrected-reroute-audited/staging.sqlite
+          if-no-files-found: error
+          retention-days: 30
