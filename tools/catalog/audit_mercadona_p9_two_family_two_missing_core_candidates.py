@@ -10,7 +10,7 @@ CORE_FIELDS = ("calories", "protein_g", "carbohydrate_g", "fat_g")
 EXPECTED_ROWS = 2630
 EXPECTED_STILL_REVIEW = 2459
 EXPECTED_CANDIDATES = 18
-AUDIT_POLICY_VERSION = "1.0.0"
+AUDIT_POLICY_VERSION = "1.0.1"
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -44,10 +44,27 @@ def has_energy_mismatch(ensemble: dict[str, Any]) -> bool:
     return any(str(reason).startswith("ENERGY_MACRO_MISMATCH") for reason in (ensemble.get("reasons") or []))
 
 
-def any_attempt_values_conflict(row: dict[str, Any]) -> bool:
-    return any(
-        bool(ensemble.get("values_conflict"))
+def all_attempt_ensembles(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return original and replay ensembles so routing cannot hide prior conflicts."""
+    originals = [
+        attempt.get("ensemble") or {}
+        for attempt in (row.get("attempts") or [])
+        if attempt.get("ensemble")
+    ]
+    replays = [
+        ensemble
         for ensemble in ((row.get("replay") or {}).get("attempt_ensembles") or [])
+        if ensemble
+    ]
+    return originals + replays
+
+
+def any_attempt_disqualifying_conflict(row: dict[str, Any]) -> bool:
+    return any(
+        is_hard_conflict(ensemble)
+        or has_energy_mismatch(ensemble)
+        or bool(ensemble.get("values_conflict"))
+        for ensemble in all_attempt_ensembles(row)
     )
 
 
@@ -73,7 +90,7 @@ def candidate_payload(row: dict[str, Any]) -> dict[str, Any] | None:
         return None
     if families != 2 or corroborated != 2:
         return None
-    if is_hard_conflict(ensemble) or has_energy_mismatch(ensemble) or any_attempt_values_conflict(row):
+    if any_attempt_disqualifying_conflict(row):
         return None
 
     field_rows = {
@@ -148,15 +165,15 @@ def main() -> int:
         "candidate_policy": (
             "stable p9 original+replay REVIEW + exactly 2 of 4 core values observed and each "
             "independently corroborated + exactly 2 core values missing + explicit 100g/100ml basis "
-            "+ exactly 2 independent OCR families + no OCR hard conflict, no values_conflict in any "
-            "attempt ensemble, and no energy/macro mismatch; routing only"
+            "+ exactly 2 independent OCR families + no OCR hard conflict, values_conflict, or "
+            "energy/macro mismatch in any original or replay attempt ensemble; routing only"
         ),
         "missing_core_pair_counts": dict(sorted(missing_pair_counts.items())),
         "basis_counts": dict(sorted(basis_counts.items())),
         "next_safe_experiment": (
-            "bounded deterministic 16-product Tesseract CLAHE/OTSU/adaptive pilot; acceptance "
-            "unchanged and requires all four core fields independently corroborated, with both "
-            "pre-existing values still matching replay evidence"
+            "reroute the corrected universe before any further OCR; acceptance remains unchanged and "
+            "requires all four core fields independently corroborated, with both pre-existing values "
+            "still matching replay evidence"
         ),
         "images_persisted": False,
         "missing_values_inferred": False,
