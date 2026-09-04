@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 import unicodedata
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 CORE_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -100,11 +100,14 @@ def _basis(text: str) -> str | None:
 
 def _explicit_parallel_columns(text: str) -> bool:
     folded = _fold(text)
-    # Reject an observed two-column layout such as `100 ml / 250 ml` before
-    # considering value-before-label rows; taking the closest value would select
-    # the serving column rather than the per-100 column.
-    units = re.findall(r"\b(?:100|\d{2,4})\s*(?:g|9|q|y|m(?:l|i|1))\b", folded[:800])
-    if any(token.startswith("100") for token in units) and len(set(units)) >= 2:
+    # Reject only explicit adjacent column headings such as `100 ml\n250 ml`.
+    # Ordinary macro rows like `12 g` must not be mistaken for a second column.
+    if re.search(
+        r"\b100\s*(?:g|9|q|y|m(?:l|i|1))\b\s*[\n|/]+\s*"
+        r"\d{2,4}\s*(?:g|9|q|y|m(?:l|i|1))\b",
+        folded,
+        flags=re.I,
+    ):
         return True
     return len(re.findall(r"\bpor\s+100\s*(?:g|9|q|y|m(?:l|i|1))\b", folded)) > 1
 
@@ -131,14 +134,15 @@ def _value_token(fragment: str, *, require_unit: bool = True) -> float | None:
 
 def _line_value_after(lines: list[str], index: int) -> float | None:
     label_line = lines[index]
-    # Same-line value after a row label. The caller provides only exact labels.
+    # Same-line value after an exact nutrient row label. A unit is not mandatory
+    # here because OCR often merges/drops the printed g; row identity is explicit.
     colon = re.split(r"\b(?:grasas?|giasas|lipidos?|grasa\s+total|hidratos?\s+de\s+carbono|carbohidratos?|proteinas?)\b", _fold(label_line), maxsplit=1)
     if len(colon) == 2:
         tail = colon[1]
         # Stop at subordinate rows so saturated/sugar values cannot be borrowed.
         tail = re.split(r"\b(?:de\s+las\s+cuales|de\s+los\s+cuales|saturad|azucar|sal)\b", tail, maxsplit=1)[0]
         candidates = re.findall(r"[<>]?\s*\d{1,4}(?:\.\d{1,2})?\s*(?:g|9|q|y)?", tail)
-        parsed = [v for token in candidates if (v := _value_token(token, require_unit=True)) is not None]
+        parsed = [v for token in candidates if (v := _value_token(token, require_unit=False)) is not None]
         if len(parsed) == 1:
             return parsed[0]
         if len(parsed) > 1:
@@ -200,7 +204,7 @@ def _macro_inline(text: str, field: str) -> float | None:
         "protein_g": r"proteinas?",
     }
     pattern = re.compile(
-        rf"(?:^|[\n;|]|\s-\s)\s*{labels[field]}\s*(?:/\s*lipidos?)?\s*[:._-]*\s*"
+        rf"(?:^|[\n;|]|\s-\s*)\s*{labels[field]}\s*(?:/\s*lipidos?)?\s*[:._-]*\s*"
         r"([<>]?)\s*(\d{1,4}(?:\.\d{1,2})?)\s*(g|9|q|y)?",
         flags=re.I,
     )
@@ -210,8 +214,6 @@ def _macro_inline(text: str, field: str) -> float | None:
             continue
         raw = match.group(2)
         unit = match.group(3)
-        if unit is None and not (raw.endswith("9") and "." not in raw and len(raw) >= 3):
-            continue
         value = _repair_numeric_token(raw, has_unit=unit is not None)
         if value is not None:
             values.append(value)
