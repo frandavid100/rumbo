@@ -1,0 +1,211 @@
+name: Catalog Mercadona neural OCR p9 no-ingredients baby-food pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-p9-no-ingredients-baby-food-pilot.yml'
+      - 'tools/catalog/audit_mercadona_p9_no_ingredients_baby_food_candidates.py'
+      - 'tools/catalog/test_audit_mercadona_p9_no_ingredients_baby_food_candidates.py'
+      - 'tools/catalog/mercadona_neural_ocr_wave.py'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/nutrition_visual_table_detector.py'
+      - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - 'tools/catalog/label_neural_extractor.py'
+      - 'tools/catalog/label_easyocr_extractor.py'
+      - 'tools/catalog/label_text_extractor.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-p9-no-ingredients-baby-food-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run conservative routing and parser regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_audit_mercadona_p9_no_ingredients_baby_food_candidates.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+          python -m py_compile \
+            audit_mercadona_p9_no_ingredients_baby_food_candidates.py \
+            mercadona_neural_ocr_wave.py
+
+      - name: Audit p9 no-ingredients baby-food cohort
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_p9_no_ingredients_baby_food_candidates.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-p9-no-ingredients-baby-food-audit
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          summary = json.loads(Path('mercadona-p9-no-ingredients-baby-food-audit/summary.json').read_text())
+          if summary.get('candidate_universe') != 1 or summary.get('candidate_product_ids') != ['60400']:
+              raise SystemExit(f'unexpected routing drift: {summary}')
+          PY
+
+      - name: OCR bounded one-product pilot
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-p9-no-ingredients-baby-food-audit/candidates.jsonl \
+            --out mercadona-neural-ocr-p9-no-ingredients-baby-food-pilot \
+            --eligibility-mode p9-no-ingredients-all \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 1 \
+            --delay 0.5
+
+      - name: Validate provenance, conflicts, and unchanged DECLARED contract
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import json, sqlite3
+          from pathlib import Path
+
+          src = Path('mercadona-neural-ocr-p9-no-ingredients-baby-food-pilot/results-00.jsonl')
+          rows = [json.loads(line) for line in src.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(rows) != 1 or str(rows[0].get('product_id') or '') != '60400':
+              raise SystemExit(f'unexpected processed rows: {[row.get("product_id") for row in rows]}')
+
+          def disqualifying_attempt(attempt):
+              ensemble = (attempt or {}).get('ensemble') or {}
+              reasons = [str(reason) for reason in (ensemble.get('reasons') or [])]
+              return (
+                  bool(ensemble.get('values_conflict'))
+                  or any(reason.startswith('OCR_FIELD_CONFLICT') for reason in reasons)
+                  or any(reason.startswith('OCR_SAME_ENGINE_CONFLICT') for reason in reasons)
+                  or any(reason.startswith('ENERGY_MACRO_MISMATCH') for reason in reasons)
+              )
+
+          invalid_declared = []
+          provenance_errors = []
+          disqualifying_attempts = []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(pid)
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(pid)
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(pid)
+
+              bad_attempts = [i for i, attempt in enumerate(row.get('attempts') or []) if disqualifying_attempt(attempt)]
+              if bad_attempts:
+                  disqualifying_attempts.append({'product_id': pid, 'attempt_indexes': bad_attempts})
+
+              if row.get('status') != 'DECLARED':
+                  continue
+              accepted = next(
+                  (attempt for attempt in (row.get('attempts') or []) if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'),
+                  None,
+              )
+              ensemble = (accepted or {}).get('ensemble') or {}
+              if (
+                  bad_attempts
+                  or int(ensemble.get('independent_engine_families') or 0) < 2
+                  or int(ensemble.get('corroborated_fields') or 0) < 4
+                  or ensemble.get('basis') not in {'100_g', '100_ml'}
+              ):
+                  invalid_declared.append(pid)
+
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'routing_policy': 'p9 + no structured ingredients + Bebé/Alimentación infantil + brand + legal denomination + substantive allergens',
+              'candidate_universe': 1,
+              'processed': len(rows),
+              'distinct_products_processed': len({str(row.get('product_id') or '') for row in rows}),
+              'status_counts': dict(sorted(counts.items())),
+              'unsafe_declared': invalid_declared,
+              'disqualifying_attempts': disqualifying_attempts,
+              'provenance_errors': sorted(set(provenance_errors)),
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'safety_assessment': 'VALIDATED' if not invalid_declared and not provenance_errors else 'FAILED',
+          }
+
+          out = Path('mercadona-neural-ocr-p9-no-ingredients-baby-food-validated')
+          out.mkdir(exist_ok=True)
+          (out / 'results.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          db = sqlite3.connect(out / 'staging.sqlite')
+          db.execute('CREATE TABLE ocr_results (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, payload_json TEXT NOT NULL)')
+          for row in rows:
+              db.execute(
+                  'INSERT INTO ocr_results VALUES (?, ?, ?, ?, ?, ?)',
+                  (
+                      str(row.get('product_id') or ''),
+                      str(row.get('status') or 'UNKNOWN'),
+                      str(row.get('evidence_level') or ''),
+                      'MERCADONA_FIRST_PARTY/label image',
+                      0,
+                      json.dumps(row, ensure_ascii=False, sort_keys=True),
+                  ),
+              )
+          db.commit()
+          db.close()
+
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if summary['safety_assessment'] != 'VALIDATED':
+              raise SystemExit('pilot safety checks failed; do not promote nutrition')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-p9-no-ingredients-baby-food-pilot
+          path: |
+            tools/catalog/mercadona-neural-ocr-p9-no-ingredients-baby-food-validated/
+            tools/catalog/mercadona-p9-no-ingredients-baby-food-audit/summary.json
+          retention-days: 30
+          if-no-files-found: warn
