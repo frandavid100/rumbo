@@ -21,6 +21,15 @@ from nutrition_visual_table_detector import VisualTableRegion, detect_visual_tab
 MAX_REGIONS_PER_PRODUCT = 2
 OCR_ENGINES = ("paddleocr", "tesseract", "easyocr")
 OCR_STRATEGIES = ("paddleocr", "tesseract-psm4", "tesseract-psm6", "tesseract-psm11", "easyocr")
+CORE_NUTRITION_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
+EASYOCR_RESCUE_BLOCKING_PREFIXES = (
+    "OCR_FIELD_CONFLICT",
+    "OCR_SAME_ENGINE_CONFLICT",
+    "OCR_BASIS_CONFLICT",
+    "ENERGY_MACRO_MISMATCH",
+    "MULTIPLE_NUTRITION_COLUMNS",
+    "IMPOSSIBLE_",
+)
 ELIGIBILITY_MODES = (
     "priority",
     "p9-no-ingredients-food-signal",
@@ -176,6 +185,60 @@ def _as_parsed_readings(readings, target_kind: str):
     )
 
 
+def _rescue_parsed_readings(readings, target_kind: str):
+    """Normalize production and unit-test reading shapes for rescue routing only."""
+    out = []
+    for strategy, family, reading in readings:
+        parsed = getattr(reading, "parsed", reading)
+        extraction = getattr(reading, "extraction", None)
+        confidence = getattr(extraction, "confidence", getattr(parsed, "confidence", 0.0))
+        out.append(ParsedOCRReading(
+            strategy=f"{strategy}:{target_kind}",
+            result=parsed,
+            extraction_confidence=confidence,
+            engine_family=family,
+        ))
+    return tuple(out)
+
+
+def _should_run_easyocr_rescue(readings, target_kind: str) -> bool:
+    """Route a third OCR family for a clean complementary partial baseline.
+
+    Paddle and Tesseract can each miss a different row while their union already
+    contains a coherent complete per-100 tuple. Previously EasyOCR was skipped
+    unless one individual engine was parser-DECLARED, so these candidates could
+    never obtain independent corroboration. This predicate changes only routing:
+    the final ensemble still requires the ordinary four-field corroboration gate.
+    """
+    parsed_readings = _rescue_parsed_readings(readings, target_kind)
+    if not parsed_readings:
+        return False
+    ensemble = fuse_ocr_readings(parsed_readings)
+    if ensemble.declared_usable or ensemble.basis not in {"100_g", "100_ml"}:
+        return False
+    if not ensemble.nutrition or any(field not in ensemble.nutrition for field in CORE_NUTRITION_FIELDS):
+        return False
+    if ensemble.independent_engine_families < 2:
+        return False
+    # Keep this expansion narrow: at least half of the complete tuple must already
+    # be independently corroborated before paying for a third family.
+    if not (2 <= ensemble.corroborated_fields < len(CORE_NUTRITION_FIELDS)):
+        return False
+    if "UNCORROBORATED_CORE_FIELDS" not in ensemble.reasons:
+        return False
+
+    reasons = [str(reason) for reason in ensemble.reasons]
+    for reading in parsed_readings:
+        reasons.extend(str(reason) for reason in reading.result.reasons)
+    if any(
+        reason.startswith(prefix)
+        for reason in reasons
+        for prefix in EASYOCR_RESCUE_BLOCKING_PREFIXES
+    ):
+        return False
+    return True
+
+
 def _extract_region(evidence: LabelImageEvidence, region_path: Path, target_kind: str):
     # PSM 4, 6 and 11 are intentionally all used because nutrition tables
     # linearise differently as a single column, compact block or sparse text.
@@ -200,10 +263,13 @@ def _extract_region(evidence: LabelImageEvidence, region_path: Path, target_kind
     ensemble = fuse_ocr_readings(_as_parsed_readings(readings, target_kind))
 
     # EasyOCR is deliberately a bounded rescue, not a compulsory third vote.
-    # It cannot make an unsafe parse valid by itself, so only pay its CPU/model
-    # cost when another independent engine already has a parser-DECLARED reading
-    # that lacks safe corroboration from the Paddle/Tesseract baseline.
-    if not ensemble.declared_usable and any(reading.parsed.status == "DECLARED" for _s, _f, reading in readings):
+    # It cannot make an unsafe parse valid by itself. Run it either when an
+    # independent engine already has a parser-DECLARED reading that lacks safe
+    # corroboration, or when Paddle+Tesseract form a clean complementary partial
+    # tuple that meets _should_run_easyocr_rescue's stricter routing contract.
+    baseline_declared = any(reading.parsed.status == "DECLARED" for _s, _f, reading in readings)
+    complementary_partial = _should_run_easyocr_rescue(readings, target_kind)
+    if not ensemble.declared_usable and (baseline_declared or complementary_partial):
         try:
             extracted = extract_with_easyocr(region_path)
             reading = _reading(evidence, extracted)
@@ -360,7 +426,7 @@ def main() -> int:
         "evidence_level": OCR_EVIDENCE_LEVEL,
         "mode": "PADDLEOCR_TESSERACT_WITH_CONDITIONAL_EASYOCR_CORROBORATION",
         "eligibility_mode": args.eligibility_mode,
-        "fallback_policy": "FULL_BACK_IMAGE_ONLY_WHEN_NO_VISUAL_REGION; EASYOCR_ONLY_WHEN_BASELINE_HAS_DECLARED_UNCORROBORATED_READING",
+        "fallback_policy": "FULL_BACK_IMAGE_ONLY_WHEN_NO_VISUAL_REGION; EASYOCR_FOR_DECLARED_OR_CLEAN_COMPLEMENTARY_PARTIAL_BASELINE",
         "sample_order": "SHA256_PRODUCT_ID_EAN",
         "ocr_engines": list(OCR_ENGINES),
         "ocr_strategies": list(OCR_STRATEGIES),
