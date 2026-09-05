@@ -1,0 +1,160 @@
+name: Catalog Mercadona OCR multicolumn regression
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ocr-multicolumn-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-ocr-multicolumn-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run parser safety regressions first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_nutrition_label_reader.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Select observed ambiguous product
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          product_id = '58342'
+          source = Path('mercadona-first-party-final/products.jsonl')
+          match = None
+          for line in source.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              if str(row.get('product_id') or row.get('id') or '') == product_id:
+                  match = row
+                  break
+          if match is None:
+              raise SystemExit(f'first-party product {product_id} not found')
+
+          Path('mercadona-multicolumn-regression-candidate.jsonl').write_text(
+              json.dumps(match, ensure_ascii=False, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          mode = 'priority' if match.get('ingredients') else 'p9-no-ingredients-all'
+          Path('mercadona-multicolumn-regression-mode.txt').write_text(mode + '\n', encoding='utf-8')
+          print(json.dumps({
+              'product_id': product_id,
+              'name': match.get('name'),
+              'eligibility_mode': mode,
+              'has_perspective_9': any(
+                  isinstance(photo, dict) and str(photo.get('perspective')) == '9' and photo.get('zoom')
+                  for photo in (match.get('photos') or [])
+              ),
+          }, ensure_ascii=False))
+          PY
+
+      - name: Replay one-product OCR sample
+        working-directory: tools/catalog
+        run: |
+          MODE="$(cat mercadona-multicolumn-regression-mode.txt)"
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-multicolumn-regression-candidate.jsonl \
+            --out mercadona-multicolumn-regression \
+            --eligibility-mode "$MODE" \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 \
+            --delay 0.5
+
+      - name: Enforce conservative replay contract
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          rows = [
+              json.loads(line)
+              for line in Path('mercadona-multicolumn-regression/results-00.jsonl').read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          if len(rows) != 1:
+              raise SystemExit(f'expected one replay row, got {len(rows)}')
+          row = rows[0]
+          if str(row.get('product_id') or '') != '58342':
+              raise SystemExit(f'unexpected product: {row.get("product_id")}')
+          if row.get('status') == 'DECLARED':
+              raise SystemExit('ambiguous multicolumn regression product was unsafely promoted')
+          if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+              raise SystemExit('unexpected evidence level')
+          if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+              raise SystemExit('unexpected provenance')
+          if row.get('redistribution_allowed') is not False:
+              raise SystemExit('redistribution contract changed')
+
+          summary = {
+              'product_id': '58342',
+              'status': row.get('status'),
+              'safe_non_declared': row.get('status') != 'DECLARED',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('mercadona-multicolumn-regression-cut.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-multicolumn-regression
+          path: |
+            tools/catalog/mercadona-multicolumn-regression/
+            tools/catalog/mercadona-multicolumn-regression-cut.json
+          retention-days: 30
+          if-no-files-found: warn
