@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from nutrition_label_reader import (
     LabelReadResult,
     _number_immediately_before,
@@ -7,7 +9,7 @@ from nutrition_label_reader import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.1"
+READER_VERSION = "1.0.2"
 
 
 _FAT_PATTERNS = (
@@ -25,6 +27,20 @@ _MACRO_PATTERNS = {
     "carbohydrate_g": _CARB_PATTERNS,
     "protein_g": _PROTEIN_PATTERNS,
 }
+_BARE_QUANTITY_LINE_RE = re.compile(
+    r"^\s*(\d{1,3}(?:\.\d{1,2})?)\s*(g|ml)\s*$",
+    flags=re.I,
+)
+_ENERGY_LABEL_LINE_RE = re.compile(
+    r"^\s*(?:valor\s+energ[eé]tico|energ[ií]a)\b",
+    flags=re.I,
+)
+_MACRO_LABEL_LINE_RE = re.compile(
+    r"^\s*(?:grasas?|l[ií]pidos?|grasa\s+total|hidratos?\s+de\s+carbono|carbohidratos?|prote[ií]nas?)\b",
+    flags=re.I,
+)
+_KCAL_TOKEN_RE = re.compile(r"\b\d{1,4}(?:\.\d{1,2})?\s*kcal\b", flags=re.I)
+_KJ_TOKEN_RE = re.compile(r"\b\d{1,5}(?:\.\d{1,2})?\s*k\s*j\b", flags=re.I)
 
 
 def _energy_residual(nutrition: dict[str, float]) -> float:
@@ -34,6 +50,63 @@ def _energy_residual(nutrition: dict[str, float]) -> float:
         + 4 * nutrition["protein_g"]
     )
     return abs(estimated - nutrition["calories"])
+
+
+def _bare_multicolumn_ambiguity(result: LabelReadResult) -> bool:
+    """Detect a narrow linearised two-column nutrition-table layout.
+
+    PP-OCR can emit visual column headings such as `100 g | 26 g` as separate
+    bare lines and then emit each row's two cells one after another. A normal
+    label->next-number parser can consequently expose the serving value as a
+    partial per-100-g observation. REVIEW partials are ensemble evidence, so the
+    ambiguous tuple must be suppressed rather than allowed to corroborate a
+    second OCR engine.
+
+    Keep this deliberately narrow: require a bare 100 g/ml heading plus a
+    different bare quantity of the same unit immediately before the energy row,
+    and require duplicated explicit energy-unit observations before the first
+    macro row. This avoids treating an unrelated package weight as a second
+    nutrition column.
+    """
+    block = _nutrition_block(result.normalized_text)
+    lines = block.splitlines()
+    energy_index = next(
+        (index for index, line in enumerate(lines) if _ENERGY_LABEL_LINE_RE.search(line)),
+        None,
+    )
+    if energy_index is None:
+        return False
+
+    headings: list[tuple[float, str]] = []
+    for line in lines[max(0, energy_index - 7):energy_index]:
+        match = _BARE_QUANTITY_LINE_RE.fullmatch(line)
+        if not match:
+            continue
+        headings.append((float(match.group(1)), match.group(2).lower()))
+
+    ambiguous_units = {
+        unit
+        for value, unit in headings
+        if abs(value - 100.0) <= 0.01
+        and any(other_unit == unit and abs(other_value - 100.0) > 0.01
+                for other_value, other_unit in headings)
+    }
+    if not ambiguous_units:
+        return False
+
+    macro_index = next(
+        (
+            index
+            for index in range(energy_index + 1, min(len(lines), energy_index + 12))
+            if _MACRO_LABEL_LINE_RE.search(lines[index])
+        ),
+        min(len(lines), energy_index + 12),
+    )
+    energy_window = "\n".join(lines[energy_index:macro_index])
+    return (
+        len(_KCAL_TOKEN_RE.findall(energy_window)) >= 2
+        or len(_KJ_TOKEN_RE.findall(energy_window)) >= 2
+    )
 
 
 def _row_order_ambiguity(result: LabelReadResult) -> str | None:
@@ -78,6 +151,21 @@ def _row_order_ambiguity(result: LabelReadResult) -> str | None:
 
 def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> LabelReadResult:
     result = _read_nutrition_label(text, extraction_confidence=extraction_confidence)
+    if _bare_multicolumn_ambiguity(result):
+        reasons = result.reasons
+        if "MULTIPLE_NUTRITION_COLUMNS" not in reasons:
+            reasons = tuple(reasons) + ("MULTIPLE_NUTRITION_COLUMNS",)
+        # As with row-order ambiguity below, do not leave a partial tuple that
+        # another OCR engine could accidentally corroborate.
+        return LabelReadResult(
+            status="REVIEW",
+            basis=result.basis,
+            nutrition=None,
+            confidence=min(result.confidence, 0.65),
+            reasons=tuple(reasons),
+            normalized_text=result.normalized_text,
+        )
+
     ambiguity = _row_order_ambiguity(result)
     if ambiguity is None:
         return result
