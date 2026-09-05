@@ -124,7 +124,7 @@ jobs:
           from pathlib import Path
 
           rows = []
-          for path in sorted(glob.glob('input/results-*.jsonl')):
+          for path in sorted(glob.glob('input/**/results-*.jsonl', recursive=True)):
               for line in Path(path).read_text(encoding='utf-8').splitlines():
                   if line.strip():
                       rows.append(json.loads(line))
