@@ -1,0 +1,54 @@
+{
+  "cut_date": "2026-09-05",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33947277948,
+  "workflow_artifact": "mercadona-neural-ocr-p9-bodega-no-alcohol-pilot-merged",
+  "workflow_artifact_id": 9963794509,
+  "input_first_party_run_id": 33046950149,
+  "routing_policy": "perspective=9 + no structured ingredients + Mercadona first-party category path Bodega > Cerveza sin alcohol",
+  "candidate_universe": 5,
+  "candidate_product_ids": [
+    "11620",
+    "21737",
+    "52920",
+    "60581",
+    "9776"
+  ],
+  "processed": 5,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 5,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "unsafe_declared": [],
+  "disqualifying_attempts": [
+    {
+      "product_id": "21737",
+      "attempt_indexes": [1]
+    }
+  ],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "safety_assessment": "VALIDATED",
+  "cumulative": {
+    "catalog_products": 4280,
+    "processed": 2960,
+    "processed_pct": 69.1589,
+    "DECLARED": 266,
+    "DECLARED_pct_catalog": 6.2150,
+    "REVIEW": 2694
+  },
+  "notes": [
+    "No REVIEW row is promoted to usable nutrition.",
+    "All OCR macro evidence remains image-derived and non-redistributable.",
+    "CLASSIFIED and MENU_ELIGIBLE remain zero.",
+    "The San Miguel 0,0 label exposes a parser regression candidate: PP-OCRv6 observes an explicit per-100-ml basis immediately before the Spanish nutrition heading, while nutrition-block clipping currently drops that basis. This cut records the pilot unchanged; parser changes require regression tests and a bounded replay before any promotion."
+  ],
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
