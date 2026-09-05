@@ -302,6 +302,69 @@ Sal 1.9 g
         self.assertEqual(r.status, "REVIEW", r)
         self.assertTrue(any(x.startswith("ENERGY_MACRO_MISMATCH") for x in r.reasons))
 
+    def test_interleaved_manufacturer_text_inside_nutrition_table_does_not_truncate_core_rows(self):
+        # Real PP-OCRv6 output for Mercadona product 2796. Reading order places
+        # manufacturer/address text between nutrient rows. `Fabricado por:` is
+        # therefore not a safe end-of-table marker when explicit core rows follow.
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valores medios
+Valor energético 625 kJ /149 kcal
+Grasas
+7.3 g
+de las cuales saturadas
+1.7 g
+Fabricado por:
+Hidratos de carbono
+0g
+AEROPIC. S.A.
+de los cuales azúcares
+0g
+Partida de Butsènit s/n
+Proteínas
+21g
+25194 Lleida. España
+Sal
+0.16g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition, {
+            "calories": 149.0, "fat_g": 7.3,
+            "carbohydrate_g": 0.0, "protein_g": 21.0,
+        })
+
+    def test_value_before_fat_label_blocks_saturated_value_from_becoming_total_fat(self):
+        # Real PP-OCRv6 output for Mercadona product 86395. The visual table was
+        # linearised as total-fat value -> `Grasas` -> saturate value -> row label.
+        # The 3.20 value must never enter ensemble evidence as total fat.
+        observed = """LOMO DUROC
+ORIGEN: ESPAÑA
+100 g
+Velor
+635kJ
+Energético
+182kcal
+8.9g
+Grasas
+3.20
+- Baturadas
+Hidratos de carbono
+0g
+- azúcares
+0g
+18g
+Proteinas
+Sal
+0.15g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertEqual((r.nutrition or {}).get("fat_g"), 8.9)
+        self.assertNotEqual((r.nutrition or {}).get("fat_g"), 3.2)
+        self.assertEqual((r.nutrition or {}).get("carbohydrate_g"), 0.0)
+        self.assertIn("MISSING_CORE:protein_g", r.reasons)
+
     def test_front_pack_is_not_nutrition(self):
         r = read_nutrition_label("Hacendado Galletas tostadas. Peso neto 800 g. Conservar en lugar fresco.")
         self.assertEqual(r.status, "NOT_NUTRITION_LABEL")
