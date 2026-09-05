@@ -2,7 +2,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mercadona_neural_ocr_wave import _fuse_declared_only_readings, _ocr_targets
+from mercadona_neural_ocr_wave import (
+    _fuse_declared_only_readings,
+    _ocr_targets,
+    _should_run_easyocr_rescue,
+)
 from nutrition_label_reader import read_nutrition_label
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
@@ -211,6 +215,83 @@ Sal 0.3 g
         ))
         self.assertEqual(fused.status, "REVIEW")
         self.assertIn("OCR_BASIS_CONFLICT", fused.reasons)
+
+    def test_easyocr_rescue_routes_clean_complementary_partial_tuple(self):
+        # Product 13240 exposed a systematic routing hole: Paddle and Tesseract
+        # together recover a coherent complete 100 g tuple, with two fields already
+        # corroborated, but neither individual reading is parser-DECLARED. EasyOCR
+        # may be used as a third independent observation without relaxing acceptance.
+        paddle = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 753 kJ / 180 kcal
+Grasas 12 g
+Proteínas 1.7 g
+Sal 0.7 g
+""", extraction_confidence=.98)
+        tesseract = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 753 kJ / 180 kcal
+Hidratos de carbono 6.3 g
+Proteínas 1.7 g
+Sal 0.7 g
+""", extraction_confidence=.94)
+        readings = (
+            ("paddleocr", "paddleocr", paddle),
+            ("tesseract-psm6", "tesseract", tesseract),
+        )
+        self.assertTrue(_should_run_easyocr_rescue(readings, "visual_region"))
+
+    def test_easyocr_rescue_rejects_cross_engine_field_conflict(self):
+        paddle = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 954 kJ / 228 kcal
+Grasas 13 g
+Hidratos de carbono 14 g
+Proteínas 12 g
+""", extraction_confidence=.98)
+        tesseract = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 954 kJ / 228 kcal
+Grasas 13 g
+Hidratos de carbono 89 g
+Proteínas 12 g
+""", extraction_confidence=.94)
+        readings = (
+            ("paddleocr", "paddleocr", paddle),
+            ("tesseract-psm6", "tesseract", tesseract),
+        )
+        self.assertFalse(_should_run_easyocr_rescue(readings, "visual_region"))
+
+    def test_easyocr_rescue_requires_complete_union_and_explicit_basis(self):
+        incomplete_a = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 753 kJ / 180 kcal
+Grasas 12 g
+Proteínas 1.7 g
+""", extraction_confidence=.98)
+        incomplete_b = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 753 kJ / 180 kcal
+Proteínas 1.7 g
+Sal 0.7 g
+""", extraction_confidence=.94)
+        incomplete = (
+            ("paddleocr", "paddleocr", incomplete_a),
+            ("tesseract-psm6", "tesseract", incomplete_b),
+        )
+        self.assertFalse(_should_run_easyocr_rescue(incomplete, "visual_region"))
+
+        no_basis_a = read_nutrition_label("""Información nutricional
+Valor energético 753 kJ / 180 kcal
+Grasas 12 g
+Hidratos de carbono 6.3 g
+Proteínas 1.7 g
+""", extraction_confidence=.98)
+        no_basis_b = read_nutrition_label("""Información nutricional
+Valor energético 753 kJ / 180 kcal
+Grasas 12 g
+Hidratos de carbono 6.3 g
+Proteínas 1.7 g
+""", extraction_confidence=.94)
+        no_basis = (
+            ("paddleocr", "paddleocr", no_basis_a),
+            ("tesseract-psm6", "tesseract", no_basis_b),
+        )
+        self.assertFalse(_should_run_easyocr_rescue(no_basis, "visual_region"))
 
 
 if __name__ == "__main__":
