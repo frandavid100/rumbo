@@ -1,0 +1,72 @@
+{
+  "cut_date": "2026-09-05",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow": ".github/workflows/catalog-mercadona-neural-ocr-p9-no-ingredients-raw-meat-pilot.yml",
+  "workflow_run_id": 33984587444,
+  "workflow_head_sha": "4cc23825ff81a648b3cfa09ad530700247b92907",
+  "merged_artifact": {
+    "id": 9974864973,
+    "name": "mercadona-neural-ocr-p9-no-ingredients-raw-meat-pilot-merged",
+    "digest": "sha256:0607780082eda63e6984ce22641912aef89c73ee7a02541b14c05f8fcdfe8533"
+  },
+  "routing_policy_version": "1.0.0",
+  "routing_policy": "perspective=9 official image + no structured ingredients + existing first-party food-routing signal + top-level Carne; subtract the exact deterministic 32-item food-signal tranche and later closed/known processed Carne rows. First eight stable-hash rows are the bounded pilot. Routing only; no semantic classification.",
+  "candidate_universe": 26,
+  "pilot_size": 8,
+  "pilot_products": [
+    {"product_id": "2796", "name": "Codornices"},
+    {"product_id": "4915", "name": "Presa de cerdo ibérico"},
+    {"product_id": "13046", "name": "Secreto de cerdo"},
+    {"product_id": "3680", "name": "Cuartos traseros familiar de pollo"},
+    {"product_id": "86395", "name": "Filetes lomo de cerdo corte fino"},
+    {"product_id": "3682", "name": "Pechugas enteras familiar de pollo"},
+    {"product_id": "2861", "name": "Filetes hígado de vacuno"},
+    {"product_id": "2779", "name": "Medio pollo troceado"}
+  ],
+  "processed": 8,
+  "distinct_products_processed": 8,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 8,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "unsafe_declared": [],
+  "disqualifying_attempts": [
+    {"product_id": "2796", "attempt_indexes": [0], "reason_family": "OCR_FIELD_CONFLICT"},
+    {"product_id": "2861", "attempt_indexes": [0], "reason_family": "OCR_FIELD_CONFLICT"},
+    {"product_id": "3682", "attempt_indexes": [0], "reason_family": "OCR_SAME_ENGINE_CONFLICT"}
+  ],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "safety_assessment": "VALIDATED",
+  "scale_decision": "HOLD_FOR_TARGETED_PARSER_REGRESSION_REPLAY",
+  "parser_observations": [
+    {
+      "product_id": "2796",
+      "observation": "PP-OCRv6 reads a visibly complete 100 g table (149 kcal; 7.3 g fat; 0 g carbohydrate; 21 g protein), but current row parsing loses carbohydrate/protein after interleaved manufacturer/address text; the ensemble remains REVIEW because fat also conflicts with Tesseract."
+    },
+    {
+      "product_id": "86395",
+      "observation": "PP-OCRv6 linearises a gram value before the Grasas row label and a saturated-fat value after it; the current partial parser exposes 3.2 g as fat. It is not usable or corroborated, but this layout needs a targeted safety regression before scaling the remaining raw-meat cohort."
+    },
+    {
+      "product_id": "2779",
+      "observation": "A complete tuple is observed (158 kcal, 8.7 g fat, 0 g carbohydrate, 20 g protein) with three engine families, but only three core fields are corroborated and extraction confidence is low; it correctly remains REVIEW."
+    }
+  ],
+  "cumulative_after_pilot": {
+    "catalog_products": 4280,
+    "processed": 3010,
+    "processed_pct": 70.3271,
+    "DECLARED": 267,
+    "DECLARED_pct_catalog": 6.2383,
+    "REVIEW": 2743
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
