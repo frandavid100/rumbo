@@ -1,0 +1,68 @@
+{
+  "cut_date": "2026-09-05",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "reader_version": "1.4.6",
+  "mercadona_wrapper_version": "1.0.3",
+  "pilot_workflow_run_id": 33966651913,
+  "pilot_workflow_head_sha": "6d62696441e6b5699c9964a0d9086e2ebc2afb9b",
+  "pilot_merged_artifact_id": 9969833683,
+  "pilot_merged_artifact_name": "mercadona-neural-ocr-p9-no-ingredients-packaged-signal-pilot-merged",
+  "post_pilot_regression_run_id": 33967598590,
+  "post_pilot_regression_commit": "3f813f1f13b97da3d6a1468738d61b2ad1576402",
+  "post_pilot_regression_cut": "tools/catalog/mercadona-multicolumn-regression-cut-2026-09-05.json",
+  "routing_policy": "perspective=9 official image + no structured ingredients + Mercadona top-level grocery/food category + at least one first-party food-routing signal, then exclude Bodega, Carne, Fruta y verdura, and Marisco y pescado; routing only, not semantic classification",
+  "candidate_universe": 95,
+  "prior_food_signal_processed": 32,
+  "packaged_label_friendly_remaining": 10,
+  "selected": 10,
+  "processed": 10,
+  "distinct_products_processed": 10,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 10,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate_pct": 0.0,
+  "systematic_safety_review": {
+    "guard": "MULTIPLE_NUTRITION_COLUMNS",
+    "affected_product_ids": [
+      "86328",
+      "10414"
+    ],
+    "live_replayed_product_ids": [
+      "86328"
+    ],
+    "live_replay_status": "VALIDATED",
+    "stored_ppocr_text_rechecked_with_current_guard_product_ids": [
+      "10414"
+    ],
+    "post_guard_net_status_change": "none; both products remain REVIEW and no usable nutrition depends on their pre-fix partial observations",
+    "unsafe_declared": 0
+  },
+  "unsafe_declared": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "safety_assessment": "VALIDATED_POST_REGRESSION",
+  "cumulative": {
+    "catalog_products": 4280,
+    "processed": 3002,
+    "processed_pct": 70.1402,
+    "DECLARED": 267,
+    "DECLARED_pct_catalog": 6.2383,
+    "REVIEW": 2735
+  },
+  "notes": [
+    "The packaged-signal pilot processed 10 new candidates and promoted none; all 10 remain REVIEW under the conservative contract.",
+    "Post-run safety review found two PP-OCR observations matching the now-blocked two-column layout. Product 86328 was live-replayed after the guard and remained REVIEW with guarded nutrition=null. Stored PP-OCR text for product 10414 deterministically matches the same current guard and the product was already REVIEW, so no DECLARED record depends on that pre-fix partial evidence.",
+    "Product 29130 shows a promising value-before-label pattern but remains REVIEW; no rescue is accepted without a dedicated regression test and independent OCR-family corroboration.",
+    "No image bytes are persisted; only first-party URLs, normalized OCR evidence, parsed values, engine/parser metadata, timestamps and provenance may persist."
+  ]
+}
