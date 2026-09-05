@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.5"
+READER_VERSION = "1.4.6"
 
 
 @dataclass(frozen=True)
@@ -78,6 +78,19 @@ def _nutrition_block(text: str) -> str:
     if not starts:
         return text
     start = min(starts)
+
+    # Multilingual beverage labels can put the explicit `per 100 ml` basis on
+    # the line immediately before the Spanish nutrition heading. Starting the
+    # block at the heading would discard that structural evidence. Preserve only
+    # that single preceding line, and only when it independently contains a
+    # recognised per-100 basis; ingredient prose farther above remains excluded.
+    line_start = text.rfind("\n", 0, start)
+    if line_start >= 0:
+        previous_line_start = text.rfind("\n", 0, line_start)
+        previous_line = text[previous_line_start + 1:line_start]
+        if _basis(previous_line) is not None:
+            start = previous_line_start + 1
+
     tail = text[start:]
     folded_tail = _fold(tail)
     # Common packaging sections after the table. Stop conservatively only when
@@ -293,16 +306,21 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     if basis is None:
         reasons.append("MISSING_100G_100ML_BASIS")
 
+    # Consume only well-known translations that are printed inline after the
+    # Spanish row label. This keeps _number_after's prose guard intact while
+    # supporting bilingual/multilingual tables such as `Grasas / Fat 0 g`.
     fat_patterns = (
-        r"(?:^|\n)\s*grasas?(?:\s*/\s*lipidos?)?\b",
+        r"(?:^|\n)\s*grasas?(?:\s*/\s*(?:lipidos?|fat|graisses?))?\b",
         r"(?:^|\n)\s*lipidos?\b",
         r"(?:^|\n)\s*grasa total\b",
     )
     carb_patterns = (
-        r"(?:^|\n)\s*hidratos? de carbono\b",
+        r"(?:^|\n)\s*hidratos? de carbono(?:\s*/\s*(?:carbohydrates?|glucides?))?\b",
         r"(?:^|\n)\s*carbohidratos?\b",
     )
-    protein_patterns = (r"(?:^|\n)\s*proteinas?\b",)
+    protein_patterns = (
+        r"(?:^|\n)\s*proteinas?(?:\s*/\s*(?:protein|proteines?))?\b",
+    )
 
     calories = _energy_kcal(block)
     fat = _number_after(fat_patterns, block)

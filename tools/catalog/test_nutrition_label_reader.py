@@ -45,6 +45,51 @@ class NutritionLabelReaderTest(unittest.TestCase):
         self.assertEqual(r.basis, "100_ml")
         self.assertEqual(r.nutrition["carbohydrate_g"], 10.4)
 
+    def test_basis_immediately_before_nutrition_heading_is_preserved(self):
+        observed = """Texto de envase e ingredientes antes de la tabla.
+Per/pr.100ml:Energia/
+Información nutricional/Déclaration nutritionnelle
+Valor energético/Energie
+102 kJ/24 kcal
+Grasas 0 g
+Hidratos de carbono 5.6 g
+Proteínas 0.3 g
+Sal 0.01 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.96)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.basis, "100_ml")
+        self.assertEqual(r.nutrition, {
+            "calories": 24.0, "fat_g": 0.0,
+            "carbohydrate_g": 5.6, "protein_g": 0.3,
+        })
+
+    def test_known_inline_nutrient_translations_are_consumed_not_treated_as_prose(self):
+        observed = """INFORMACIÓN NUTRICIONAL/NUTRITION DECLARATION
+Por/Per 100 ml
+Valor energético /Energy
+111 kJ/26 kcal
+Grasas / Fat
+0 g
+De las cuales saturadas / of which saturates
+0 g
+Hidratos de carbono/Carbohydrate
+6.2 g
+De los cuales azúcares / of which sugars
+3.4 g
+Proteínas / Protein
+0.3 g
+Sal / Salt
+0 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.96)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.basis, "100_ml")
+        self.assertEqual(r.nutrition, {
+            "calories": 26.0, "fat_g": 0.0,
+            "carbohydrate_g": 6.2, "protein_g": 0.3,
+        })
+
     def test_nutrition_heading_prevents_ingredient_percentages_from_becoming_macros(self):
         observed = """BATIDO SABOR CHOCOLATE UHT.
 INGREDIENTES
