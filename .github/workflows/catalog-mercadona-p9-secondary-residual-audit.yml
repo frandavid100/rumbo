@@ -1,0 +1,54 @@
+name: Catalog Mercadona p9 secondary residual audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-p9-secondary-residual-audit.yml'
+      - 'tools/catalog/audit_mercadona_p9_no_ingredients_secondary_processed_residuals.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-p9-secondary-residual-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Audit residual secondary cohort only
+        working-directory: tools/catalog
+        run: |
+          python -m py_compile audit_mercadona_p9_no_ingredients_secondary_processed_residuals.py
+          python audit_mercadona_p9_no_ingredients_secondary_processed_residuals.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-p9-secondary-residual-audit
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-p9-secondary-residual-audit
+          path: tools/catalog/mercadona-p9-secondary-residual-audit/
+          retention-days: 30
+          if-no-files-found: warn
