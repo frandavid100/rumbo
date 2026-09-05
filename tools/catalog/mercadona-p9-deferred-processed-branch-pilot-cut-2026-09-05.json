@@ -1,0 +1,71 @@
+{
+  "cut_date": "2026-09-05",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow": ".github/workflows/catalog-mercadona-neural-ocr-p9-deferred-processed-branch-pilot.yml",
+  "run_id": 33937606086,
+  "source_commit": "cfd491ead11c45f527d0dbb2c4d624cfea3410f6",
+  "artifact": {
+    "name": "mercadona-neural-ocr-p9-deferred-processed-branch-pilot-merged",
+    "id": 9960795323,
+    "digest": "sha256:1073025f7729f1aff2d817bce03d91e6795817bfc150acddfddef669449e485b"
+  },
+  "routing_policy": "p9 + no structured ingredients + previously deferred fresh top-level department + explicit processed first-party level-1 subbranch",
+  "candidate_universe": 4,
+  "candidate_products": [
+    {
+      "product_id": "15178",
+      "name": "Filetes de pechuga de pollo adobada",
+      "top_level_category": "Carne",
+      "processed_subbranch": "Empanados y elaborados",
+      "status": "REVIEW"
+    },
+    {
+      "product_id": "16266",
+      "name": "Solomillos de pollo adobados",
+      "top_level_category": "Carne",
+      "processed_subbranch": "Empanados y elaborados",
+      "status": "REVIEW"
+    },
+    {
+      "product_id": "26989",
+      "name": "Migas de bacalao al estilo inglés Hacendado",
+      "top_level_category": "Marisco y pescado",
+      "processed_subbranch": "Salazones y ahumados",
+      "status": "REVIEW"
+    },
+    {
+      "product_id": "26995",
+      "name": "Migas de bacalao desaladas Hacendado",
+      "top_level_category": "Marisco y pescado",
+      "processed_subbranch": "Salazones y ahumados",
+      "status": "REVIEW"
+    }
+  ],
+  "processed": 4,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 4,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "safety_assessment": "VALIDATED",
+  "unsafe_declared": [],
+  "disqualifying_attempts": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "cumulative": {
+    "inventory_products": 4280,
+    "processed": 2955,
+    "DECLARED": 266,
+    "REVIEW": 2689,
+    "usable_complete_nutrition_products": 266,
+    "usable_complete_nutrition_coverage_pct": 6.214953271028038,
+    "ocr_processed_coverage_pct": 69.04205607476635
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
