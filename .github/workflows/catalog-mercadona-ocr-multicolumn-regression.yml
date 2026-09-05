@@ -61,7 +61,9 @@ jobs:
           import json
           from pathlib import Path
 
-          product_id = '58342'
+          # Current first-party product whose PP-OCR visual-region read exhibits
+          # the observed `100 g / 26 g` linearised two-column table.
+          product_id = '86328'
           source = Path('mercadona-first-party-final/products.jsonl')
           match = None
           for line in source.read_text(encoding='utf-8').splitlines():
@@ -119,7 +121,7 @@ jobs:
           if len(rows) != 1:
               raise SystemExit(f'expected one replay row, got {len(rows)}')
           row = rows[0]
-          if str(row.get('product_id') or '') != '58342':
+          if str(row.get('product_id') or '') != '86328':
               raise SystemExit(f'unexpected product: {row.get("product_id")}')
           if row.get('status') == 'DECLARED':
               raise SystemExit('ambiguous multicolumn regression product was unsafely promoted')
@@ -130,10 +132,21 @@ jobs:
           if row.get('redistribution_allowed') is not False:
               raise SystemExit('redistribution contract changed')
 
+          guarded_engines = []
+          for attempt in row.get('attempts') or []:
+              for engine, reading in (attempt.get('engines') or {}).items():
+                  reasons = reading.get('reasons') or []
+                  if 'MULTIPLE_NUTRITION_COLUMNS' in reasons and reading.get('nutrition') is None:
+                      guarded_engines.append(engine)
+          if not guarded_engines:
+              raise SystemExit('live OCR replay did not exercise the multicolumn suppression guard')
+
           summary = {
-              'product_id': '58342',
+              'product_id': '86328',
+              'product_name': row.get('name'),
               'status': row.get('status'),
               'safe_non_declared': row.get('status') != 'DECLARED',
+              'multicolumn_guarded_engines': sorted(set(guarded_engines)),
               'source': 'MERCADONA_FIRST_PARTY/label image',
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
               'redistribution_allowed': False,
