@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from mercadona_neural_ocr_wave import (
     _fuse_declared_only_readings,
@@ -9,6 +10,10 @@ from mercadona_neural_ocr_wave import (
 )
 from nutrition_label_reader import read_nutrition_label
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
+
+
+def _observed_reading(parsed, confidence):
+    return SimpleNamespace(parsed=parsed, extraction=SimpleNamespace(confidence=confidence))
 
 
 class MercadonaOCRSafetyRegressionsTest(unittest.TestCase):
@@ -234,8 +239,8 @@ Proteínas 7.9 g
 Sal 0.7 g
 """, extraction_confidence=.94)
         readings = (
-            ("paddleocr", "paddleocr", paddle),
-            ("tesseract-psm6", "tesseract", tesseract),
+            ("paddleocr", "paddleocr", _observed_reading(paddle, .98)),
+            ("tesseract-psm6", "tesseract", _observed_reading(tesseract, .94)),
         )
         self.assertTrue(_should_run_easyocr_rescue(readings, "visual_region"))
 
@@ -253,8 +258,8 @@ Hidratos de carbono 89 g
 Proteínas 12 g
 """, extraction_confidence=.94)
         readings = (
-            ("paddleocr", "paddleocr", paddle),
-            ("tesseract-psm6", "tesseract", tesseract),
+            ("paddleocr", "paddleocr", _observed_reading(paddle, .98)),
+            ("tesseract-psm6", "tesseract", _observed_reading(tesseract, .94)),
         )
         self.assertFalse(_should_run_easyocr_rescue(readings, "visual_region"))
 
@@ -270,8 +275,8 @@ Proteínas 1.7 g
 Sal 0.7 g
 """, extraction_confidence=.94)
         incomplete = (
-            ("paddleocr", "paddleocr", incomplete_a),
-            ("tesseract-psm6", "tesseract", incomplete_b),
+            ("paddleocr", "paddleocr", _observed_reading(incomplete_a, .98)),
+            ("tesseract-psm6", "tesseract", _observed_reading(incomplete_b, .94)),
         )
         self.assertFalse(_should_run_easyocr_rescue(incomplete, "visual_region"))
 
@@ -288,8 +293,8 @@ Hidratos de carbono 6.3 g
 Proteínas 1.7 g
 """, extraction_confidence=.94)
         no_basis = (
-            ("paddleocr", "paddleocr", no_basis_a),
-            ("tesseract-psm6", "tesseract", no_basis_b),
+            ("paddleocr", "paddleocr", _observed_reading(no_basis_a, .98)),
+            ("tesseract-psm6", "tesseract", _observed_reading(no_basis_b, .94)),
         )
         self.assertFalse(_should_run_easyocr_rescue(no_basis, "visual_region"))
 
