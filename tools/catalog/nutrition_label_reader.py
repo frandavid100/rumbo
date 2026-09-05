@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.6"
+READER_VERSION = "1.4.7"
 
 
 @dataclass(frozen=True)
@@ -98,11 +98,26 @@ def _nutrition_block(text: str) -> str:
     ends = []
     for pattern in (
         r"\npreparacion\b", r"\nconservacion\b", r"\ncondiciones de conservacion\b",
-        r"\nmodo de empleo\b", r"\nfabricado por\b", r"\nconsumir preferentemente\b",
+        r"\nmodo de empleo\b", r"\nconsumir preferentemente\b",
     ):
         m = re.search(pattern, folded_tail, flags=re.I)
         if m and m.start() > 80:
             ends.append(m.start())
+
+    # Whole-package OCR can interleave a manufacturer/address column in the
+    # middle of the nutrition table. `Fabricado por:` is therefore an end marker
+    # only when no explicit core nutrient row follows shortly afterwards.
+    for m in re.finditer(r"\nfabricado por\b", folded_tail, flags=re.I):
+        if m.start() <= 80:
+            continue
+        after = folded_tail[m.end():m.end() + 260]
+        if re.search(
+            r"(?:^|\n)\s*(?:grasas?|lipidos?|hidratos? de carbono|carbohidratos?|proteinas?)\b",
+            after,
+            flags=re.I,
+        ):
+            continue
+        ends.append(m.start())
     return tail[:min(ends)] if ends else tail
 
 
@@ -190,6 +205,33 @@ def _number_immediately_before(label_patterns: tuple[str, ...], text: str) -> fl
             if value is not None:
                 return value
     return None
+
+
+def _fat_value(label_patterns: tuple[str, ...], text: str) -> float | None:
+    """Avoid treating a saturated-fat cell as total fat after OCR row reversal.
+
+    A real Mercadona label was linearised as `8.9g / Grasas / 3.20 /
+    - Baturadas`. The generic row reader correctly sees 3.20 after `Grasas`, but
+    that cell belongs to the saturated-fat subrow. Reinterpret the row only when
+    an explicit gram value is immediately before `Grasas` *and* the value after
+    `Grasas` is immediately followed by a saturate-like row label. Otherwise
+    keep the ordinary row-oriented behaviour unchanged.
+    """
+    ordinary = _number_after(label_patterns, text)
+    folded = _strip_ocr_unit_parentheses(_fold(text))
+    for label in label_patterns:
+        for label_match in re.finditer(label, folded, flags=re.I):
+            before = _number_immediately_before((label,), text)
+            if before is None:
+                continue
+            tail = folded[label_match.end():label_match.end() + 90]
+            if re.match(
+                r"\s*[<>]?\s*\d{1,3}(?:\.\d{1,2})?\s*(?:g|9|q|yg|y)?\s*\n\s*[-–—]?\s*(?:saturad|baturad)",
+                tail,
+                flags=re.I,
+            ):
+                return before
+    return ordinary
 
 
 def _interleaved_carbohydrate(text: str) -> float | None:
@@ -323,7 +365,7 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     )
 
     calories = _energy_kcal(block)
-    fat = _number_after(fat_patterns, block)
+    fat = _fat_value(fat_patterns, block)
     carbs = _interleaved_carbohydrate(block)
     if carbs is None:
         carbs = _number_after(carb_patterns, block)
