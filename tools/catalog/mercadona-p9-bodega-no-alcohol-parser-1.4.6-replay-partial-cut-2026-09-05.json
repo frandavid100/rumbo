@@ -1,0 +1,68 @@
+{
+  "cut_date": "2026-09-05",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "parser_version": "1.4.6",
+  "workflow_run_id": 33950058926,
+  "workflow_head_sha": "b0fb4288559da431230d6cd17ea8bfc97e04913a",
+  "workflow_status_at_cut": "merge_pending",
+  "routing_policy": "perspective=9 + no structured ingredients + Mercadona first-party category path Bodega > Cerveza sin alcohol",
+  "candidate_universe": 5,
+  "candidate_product_ids": ["11620", "21737", "52920", "60581", "9776"],
+  "shards_completed": 5,
+  "processed": 5,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 5,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "shard_artifacts": [
+    {"shard": 0, "artifact_id": 9964601123},
+    {"shard": 1, "artifact_id": 9964602755},
+    {"shard": 2, "artifact_id": 9964582316},
+    {"shard": 3, "artifact_id": 9964582389},
+    {"shard": 4, "artifact_id": 9964587117}
+  ],
+  "bounded_replay_observations": [
+    {
+      "product_id": "11620",
+      "name": "Cerveza sin gluten 0,0% sin alcohol tostada Mahou",
+      "final_status": "REVIEW",
+      "parser_1_4_6_effect": "PaddleOCR now parses the complete coherent per-100-ml tuple (26 kcal, 0 g fat, 6.2 g carbohydrate, 0.3 g protein); EasyOCR corroborates only energy/carbohydrate and Tesseract does not safely corroborate the full tuple, so no promotion occurs."
+    },
+    {
+      "product_id": "60581",
+      "name": "Cerveza 0,0% sin alcohol San Miguel",
+      "final_status": "REVIEW",
+      "parser_1_4_6_effect": "The explicit per-100-ml basis immediately before the Spanish nutrition heading is preserved and PaddleOCR safely recovers 24 kcal and 0 g fat; carbohydrate/protein remain incomplete, so no promotion occurs."
+    },
+    {
+      "product_id": "21737",
+      "name": "Cerveza 0,0% sin alcohol tostada Falke",
+      "final_status": "REVIEW",
+      "parser_1_4_6_effect": "Parallel/contradictory OCR evidence remains rejected; no safety relaxation."
+    }
+  ],
+  "unsafe_declared": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "cumulative": {
+    "catalog_products": 4280,
+    "processed": 2960,
+    "processed_pct": 69.1589,
+    "DECLARED": 266,
+    "DECLARED_pct_catalog": 6.2150,
+    "REVIEW": 2694
+  },
+  "notes": [
+    "All five shard jobs completed successfully, including the conservative routing/parser regression suite.",
+    "This is a partial cut because the workflow merge job was still queued when persisted; the official merged safety assessment must supersede this cut when available.",
+    "No REVIEW result is converted to usable nutrition."
+  ]
+}
