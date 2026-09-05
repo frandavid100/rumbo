@@ -1,0 +1,35 @@
+{
+  "audit_date": "2026-09-05",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 33967598590,
+  "validated_commit": "3f813f1f13b97da3d6a1468738d61b2ad1576402",
+  "parser_wrapper_version": "1.0.3",
+  "regression": {
+    "product_id": "86328",
+    "product_name": "Tortillas de maíz Hacendado",
+    "status": "REVIEW",
+    "safe_non_declared": true,
+    "systematic_failure": "OCR linearisation of a multi-column nutrition table (100 g plus serving column) could expose a serving-column partial as ensemble evidence",
+    "guard": "MULTIPLE_NUTRITION_COLUMNS",
+    "guarded_engines": [
+      "paddleocr"
+    ],
+    "guarded_engine_nutrition": null,
+    "live_replay": "VALIDATED"
+  },
+  "safety": {
+    "unsafe_declared": 0,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  },
+  "notes": [
+    "The live PP-OCRv6 replay reproduced the ambiguous two-column layout and was routed to REVIEW with nutrition=null for the guarded PaddleOCR reading.",
+    "The ensemble remained REVIEW and did not promote the product.",
+    "This replay is a safety regression of an already processed product and does not increase cumulative OCR coverage."
+  ]
+}
