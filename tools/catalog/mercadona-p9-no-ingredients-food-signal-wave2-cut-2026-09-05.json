@@ -1,0 +1,48 @@
+{
+  "cut_date": "2026-09-05",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "reader_version": "1.4.6",
+  "workflow_run_id": 33965441509,
+  "workflow_head_sha": "22140bd09ff9ab1faac018c15262644bff332e8f",
+  "workflow_status": "completed",
+  "workflow_conclusion": "success",
+  "merged_artifact_id": 9969419714,
+  "merged_artifact_name": "mercadona-neural-ocr-p9-no-ingredients-food-signal-wave2-merged",
+  "routing_policy": "perspective=9 official image + no structured ingredients + Mercadona top-level grocery/food category + at least one first-party food-routing signal (legal name or allergens); routing only, not semantic classification",
+  "candidate_universe": 95,
+  "prior_pilot_processed": 16,
+  "selected": 16,
+  "processed": 16,
+  "distinct_products_processed": 16,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 16,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate_pct": 0.0,
+  "unsafe_declared": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "safety_assessment": "VALIDATED",
+  "cumulative": {
+    "catalog_products": 4280,
+    "processed": 2992,
+    "processed_pct": 69.9065,
+    "DECLARED": 267,
+    "DECLARED_pct_catalog": 6.2383,
+    "REVIEW": 2725
+  },
+  "notes": [
+    "The merged artifact validates all 16 wave2 products under the unchanged conservative DECLARED contract.",
+    "All 16 products remain REVIEW; no REVIEW result is converted to usable nutrition and no value is inferred.",
+    "The tranche is dominated by raw fresh produce/meat and alcohol; a narrower next routing tranche will prioritize remaining packaged-label-friendly first-party categories without performing semantic classification.",
+    "No image bytes are persisted; only first-party URLs, normalized OCR evidence, parsed values, engine/parser metadata, timestamps and provenance may persist."
+  ]
+}
