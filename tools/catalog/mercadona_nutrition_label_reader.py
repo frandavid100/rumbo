@@ -9,7 +9,7 @@ from nutrition_label_reader import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.3"
+READER_VERSION = "1.0.4"
 
 
 _FAT_PATTERNS = (
@@ -107,6 +107,65 @@ def _bare_multicolumn_ambiguity(result: LabelReadResult) -> bool:
     return False
 
 
+def _complete_value_before_label_rescue(result: LabelReadResult) -> LabelReadResult | None:
+    """Recover one fully evidenced single-column value-before-label layout.
+
+    PP-OCR can linearise a single visual nutrition table by reading the numeric
+    column immediately before each macro label. The generic sequential parser can
+    then bind the following row (observed: salt) to the previous macro. Accept the
+    reversed layout only when all three macro rows independently expose an exact
+    standalone gram value immediately before their labels, the basis is explicit,
+    and replacing the parsed macros yields a near-exact energy tuple that is
+    materially better than the already-plausible sequential tuple.
+
+    This is intentionally all-or-nothing. A lone preceding value can be a sugar,
+    saturate or fibre row, so partial reversed observations are never promoted.
+    """
+    if result.status != "DECLARED" or result.nutrition is None:
+        return None
+    if result.basis not in {"100_g", "100_ml"}:
+        return None
+
+    required = ("calories", "fat_g", "carbohydrate_g", "protein_g")
+    if any(result.nutrition.get(key) is None for key in required):
+        return None
+    current = {key: float(result.nutrition[key]) for key in required}
+    block = _nutrition_block(result.normalized_text)
+    preceding = {
+        key: _number_immediately_before(patterns, block)
+        for key, patterns in _MACRO_PATTERNS.items()
+    }
+    if any(value is None for value in preceding.values()):
+        return None
+
+    rescued = dict(current)
+    for key, value in preceding.items():
+        rescued[key] = float(value)
+    if all(abs(rescued[key] - current[key]) <= 0.05 for key in _MACRO_PATTERNS):
+        return None
+    if any(rescued[key] < 0 or rescued[key] > 100 for key in _MACRO_PATTERNS):
+        return None
+
+    current_residual = _energy_residual(current)
+    rescued_residual = _energy_residual(rescued)
+    near_exact = rescued_residual <= max(6.0, rescued["calories"] * 0.03)
+    material_improvement = (
+        current_residual - rescued_residual
+        >= max(6.0, rescued["calories"] * 0.02)
+    )
+    if not (near_exact and material_improvement):
+        return None
+
+    return LabelReadResult(
+        status="DECLARED",
+        basis=result.basis,
+        nutrition=rescued,
+        confidence=result.confidence,
+        reasons=tuple(result.reasons) + ("VALUE_BEFORE_LABEL_RESCUED",),
+        normalized_text=result.normalized_text,
+    )
+
+
 def _row_order_ambiguity(result: LabelReadResult) -> str | None:
     """Detect a narrow observed PP-OCR value-before-label failure.
 
@@ -163,6 +222,10 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
             reasons=tuple(reasons),
             normalized_text=result.normalized_text,
         )
+
+    rescued = _complete_value_before_label_rescue(result)
+    if rescued is not None:
+        return rescued
 
     ambiguity = _row_order_ambiguity(result)
     if ambiguity is None:
