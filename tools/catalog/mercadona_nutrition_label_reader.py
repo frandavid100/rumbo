@@ -9,7 +9,7 @@ from nutrition_label_reader import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.2"
+READER_VERSION = "1.0.3"
 
 
 _FAT_PATTERNS = (
@@ -31,12 +31,12 @@ _BARE_QUANTITY_LINE_RE = re.compile(
     r"^\s*(\d{1,3}(?:\.\d{1,2})?)\s*(g|ml)\s*$",
     flags=re.I,
 )
-_ENERGY_LABEL_LINE_RE = re.compile(
-    r"^\s*(?:valor\s+energ[eé]tico|energ[ií]a)\b",
-    flags=re.I,
-)
 _MACRO_LABEL_LINE_RE = re.compile(
     r"^\s*(?:grasas?|l[ií]pidos?|grasa\s+total|hidratos?\s+de\s+carbono|carbohidratos?|prote[ií]nas?)\b",
+    flags=re.I,
+)
+_ENERGY_CUE_RE = re.compile(
+    r"\b(?:valor|energ[eé]tico|energ[ií]a|energia)\b",
     flags=re.I,
 )
 _KCAL_TOKEN_RE = re.compile(r"\b\d{1,4}(?:\.\d{1,2})?\s*kcal\b", flags=re.I)
@@ -56,57 +56,55 @@ def _bare_multicolumn_ambiguity(result: LabelReadResult) -> bool:
     """Detect a narrow linearised two-column nutrition-table layout.
 
     PP-OCR can emit visual column headings such as `100 g | 26 g` as separate
-    bare lines and then emit each row's two cells one after another. A normal
-    label->next-number parser can consequently expose the serving value as a
-    partial per-100-g observation. REVIEW partials are ensemble evidence, so the
-    ambiguous tuple must be suppressed rather than allowed to corroborate a
+    bare lines and then emit each row's two cells one after another. It can also
+    split the energy label around those cells (`Valor ... Energético/Energia`).
+    A normal label->next-number parser can consequently expose the serving value
+    as a partial per-100-g observation. REVIEW partials are ensemble evidence, so
+    the ambiguous tuple must be suppressed rather than allowed to corroborate a
     second OCR engine.
 
     Keep this deliberately narrow: require a bare 100 g/ml heading plus a
-    different bare quantity of the same unit immediately before the energy row,
-    and require duplicated explicit energy-unit observations before the first
-    macro row. This avoids treating an unrelated package weight as a second
-    nutrition column.
+    different bare quantity of the same unit within the next few lines, then
+    require an energy cue and duplicated explicit kJ or kcal observations before
+    the first macro row. This avoids treating an unrelated package weight as a
+    second nutrition column.
     """
     block = _nutrition_block(result.normalized_text)
     lines = block.splitlines()
-    energy_index = next(
-        (index for index, line in enumerate(lines) if _ENERGY_LABEL_LINE_RE.search(line)),
-        None,
-    )
-    if energy_index is None:
-        return False
-
-    headings: list[tuple[float, str]] = []
-    for line in lines[max(0, energy_index - 7):energy_index]:
+    headings: list[tuple[int, float, str]] = []
+    for index, line in enumerate(lines):
         match = _BARE_QUANTITY_LINE_RE.fullmatch(line)
-        if not match:
+        if match:
+            headings.append((index, float(match.group(1)), match.group(2).lower()))
+
+    for index, value, unit in headings:
+        if abs(value - 100.0) > 0.01:
             continue
-        headings.append((float(match.group(1)), match.group(2).lower()))
+        serving_indexes = [
+            other_index
+            for other_index, other_value, other_unit in headings
+            if other_unit == unit
+            and 0 < other_index - index <= 4
+            and abs(other_value - 100.0) > 0.01
+        ]
+        if not serving_indexes:
+            continue
 
-    ambiguous_units = {
-        unit
-        for value, unit in headings
-        if abs(value - 100.0) <= 0.01
-        and any(other_unit == unit and abs(other_value - 100.0) > 0.01
-                for other_value, other_unit in headings)
-    }
-    if not ambiguous_units:
-        return False
-
-    macro_index = next(
-        (
-            index
-            for index in range(energy_index + 1, min(len(lines), energy_index + 12))
-            if _MACRO_LABEL_LINE_RE.search(lines[index])
-        ),
-        min(len(lines), energy_index + 12),
-    )
-    energy_window = "\n".join(lines[energy_index:macro_index])
-    return (
-        len(_KCAL_TOKEN_RE.findall(energy_window)) >= 2
-        or len(_KJ_TOKEN_RE.findall(energy_window)) >= 2
-    )
+        last_heading = max(serving_indexes)
+        end = min(len(lines), last_heading + 14)
+        for probe in range(last_heading + 1, end):
+            if _MACRO_LABEL_LINE_RE.search(lines[probe]):
+                end = probe
+                break
+        energy_window = "\n".join(lines[last_heading + 1:end])
+        if not _ENERGY_CUE_RE.search(energy_window):
+            continue
+        if (
+            len(_KCAL_TOKEN_RE.findall(energy_window)) >= 2
+            or len(_KJ_TOKEN_RE.findall(energy_window)) >= 2
+        ):
+            return True
+    return False
 
 
 def _row_order_ambiguity(result: LabelReadResult) -> str | None:
