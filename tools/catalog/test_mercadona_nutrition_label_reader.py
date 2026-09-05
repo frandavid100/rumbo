@@ -104,6 +104,75 @@ Sal
             "protein_g": 4.3,
         })
 
+    def test_complete_single_column_value_before_label_layout_is_rescued(self):
+        # Observed PP-OCR layout for Mercadona product 29130 (Harina de arroz).
+        # All three core macro values are explicit standalone gram rows immediately
+        # before their labels. The sequential parse binds salt (0.01 g) to protein,
+        # while the complete reversed tuple is 354 kcal / 1.2 / 79 / 7 and is
+        # near-exactly energy coherent. This is direct OCR evidence, not inference.
+        observed = """100 g
+1500 kJ
+Valor
+354 kcal
+Energético
+1.2 g
+Grasas
+de las cuales:
+0.2g
+-Saturadas
+79 g
+Hidratos de Carbono
+de los cuales:
+0.5g
+-Azúcares
+1g
+Fibra alimentaria
+7g
+Proteínas
+0.01g
+Sal
+500
+g
+Peso Neto:
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "DECLARED", result)
+        self.assertEqual(result.basis, "100_g")
+        self.assertEqual(result.nutrition, {
+            "calories": 354.0,
+            "fat_g": 1.2,
+            "carbohydrate_g": 79.0,
+            "protein_g": 7.0,
+        })
+        self.assertIn("VALUE_BEFORE_LABEL_RESCUED", result.reasons)
+
+    def test_value_before_label_layout_is_not_rescued_without_energy_coherence(self):
+        observed = """100 g
+1500 kJ
+Valor
+354 kcal
+Energético
+1.2 g
+Grasas
+de las cuales:
+0.2g
+-Saturadas
+40 g
+Hidratos de Carbono
+de los cuales:
+0.5g
+-Azúcares
+1g
+Fibra alimentaria
+7g
+Proteínas
+0.01g
+Sal
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertNotEqual(result.status, "DECLARED", result)
+        self.assertNotIn("VALUE_BEFORE_LABEL_RESCUED", result.reasons)
+
 
 if __name__ == "__main__":
     unittest.main()
