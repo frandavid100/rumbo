@@ -66,7 +66,7 @@ jobs:
             test_mercadona_ocr_safety_regressions.py
           python - <<'PY'
           from nutrition_label_reader import READER_VERSION
-          assert READER_VERSION == '1.4.5', READER_VERSION
+          assert READER_VERSION == '1.4.6', READER_VERSION
           PY
 
       - name: Select exactly the four isolated typo-recovery candidates
@@ -189,7 +189,7 @@ jobs:
           counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
           summary = {
               'mode': 'END_TO_END_VALIDATION_OF_ISOLATED_OCR_TYPO_RECOVERIES',
-              'reader_version': '1.4.5',
+              'reader_version': '1.4.6',
               'processed': len(rows),
               'status_counts': dict(sorted(counts.items())),
               'reproduced_ids': sorted(reproduced),
