@@ -222,15 +222,15 @@ Sal 0.3 g
         # corroborated, but neither individual reading is parser-DECLARED. EasyOCR
         # may be used as a third independent observation without relaxing acceptance.
         paddle = read_nutrition_label("""Información nutricional por 100 g
-Valor energético 753 kJ / 180 kcal
+Valor energético 699 kJ / 167 kcal
 Grasas 12 g
-Proteínas 1.7 g
+Proteínas 7.9 g
 Sal 0.7 g
 """, extraction_confidence=.98)
         tesseract = read_nutrition_label("""Información nutricional por 100 g
-Valor energético 753 kJ / 180 kcal
-Hidratos de carbono 6.3 g
-Proteínas 1.7 g
+Valor energético 699 kJ / 167 kcal
+Hidratos de carbono 6.39 g
+Proteínas 7.9 g
 Sal 0.7 g
 """, extraction_confidence=.94)
         readings = (
