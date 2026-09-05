@@ -1,0 +1,54 @@
+{
+  "cut_date": "2026-09-05",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow": ".github/workflows/catalog-mercadona-neural-ocr-p9-secondary-raw-frozen-meat-pilot.yml",
+  "run_id": 33935115959,
+  "source_commit": "cc073710ecad75e5fb702767b25d24e784b6abae",
+  "artifact": {
+    "name": "mercadona-neural-ocr-p9-secondary-raw-frozen-meat-pilot-merged",
+    "id": 9959976155
+  },
+  "routing_policy": "p9 + no structured ingredients + exact residual unbranded frozen-meat cohort after closed secondary fronts",
+  "candidate_universe": 3,
+  "candidate_products": [
+    {
+      "product_id": "30006",
+      "name": "Pechugas de pollo enteras congeladas"
+    },
+    {
+      "product_id": "4073",
+      "name": "Pierna de lechal entera congelada"
+    },
+    {
+      "product_id": "4334",
+      "name": "Chuletas cordero de lechal congeladas"
+    }
+  ],
+  "processed": 3,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 3,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "safety_assessment": "VALIDATED",
+  "unsafe_declared": [],
+  "disqualifying_attempts": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "cumulative": {
+    "inventory_products": 4280,
+    "processed": 2951,
+    "DECLARED": 266,
+    "REVIEW": 2685,
+    "usable_complete_nutrition_products": 266,
+    "usable_complete_nutrition_coverage_pct": 6.214953271028038,
+    "ocr_processed_coverage_pct": 68.94859813084112
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
