@@ -58,10 +58,20 @@ class ReplayMercadonaOCRTest(unittest.TestCase):
         self.assertEqual(result["status"], "DECLARED")
         self.assertEqual(result["nutrition"]["protein_g"], 0.01)
 
-    def test_reparse_from_persisted_text_applies_current_safety_guard(self):
+    def test_reparse_from_persisted_text_repairs_complete_value_before_label_binding(self):
+        # Reparse the persisted OCR text with the current reader rather than
+        # trusting the historical parser result. Two independent OCR families
+        # expose the same complete single-column value-before-label layout, so
+        # the corrected direct OCR tuple can be corroborated normally.
         result = replay_attempt(self._attempt(), reparse_label_text=True)
-        self.assertEqual(result["status"], "REVIEW")
-        self.assertIn("MISSING_CORE:calories,fat_g,carbohydrate_g,protein_g", result["reasons"])
+        self.assertEqual(result["status"], "DECLARED", result)
+        self.assertEqual(result["basis"], "100_g")
+        self.assertEqual(result["nutrition"], {
+            "calories": 354.0,
+            "fat_g": 1.2,
+            "carbohydrate_g": 79.0,
+            "protein_g": 7.0,
+        })
 
     def test_later_coherent_complete_review_replaces_only_incoherent_fallback(self):
         # Observed at product 21594: the first crop produced a complete but
