@@ -59,6 +59,9 @@ jobs:
       - name: Probar lector de etiquetas nutricionales
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_label_reader.py
+      - name: Probar wrapper conservador Mercadona
+        working-directory: tools/catalog
+        run: python -m unittest -v test_mercadona_nutrition_label_reader.py
       - name: Probar tablas nutricionales multicolumna
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_multicolumn_reader.py
