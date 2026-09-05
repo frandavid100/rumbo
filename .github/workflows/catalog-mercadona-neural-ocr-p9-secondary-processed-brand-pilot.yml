@@ -7,6 +7,7 @@ on:
       - '.github/workflows/catalog-mercadona-neural-ocr-p9-secondary-processed-brand-pilot.yml'
       - 'tools/catalog/audit_mercadona_p9_no_ingredients_secondary_processed_brand_candidates.py'
       - 'tools/catalog/test_audit_mercadona_p9_no_ingredients_secondary_processed_brand_candidates.py'
+      - 'tools/catalog/test_mercadona_ocr_safety_regressions.py'
       - 'tools/catalog/mercadona_neural_ocr_wave.py'
       - 'tools/catalog/nutrition_label_reader.py'
       - 'tools/catalog/nutrition_ocr_ensemble.py'
