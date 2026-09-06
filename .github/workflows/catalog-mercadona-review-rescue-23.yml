@@ -1,0 +1,210 @@
+name: Catalog Mercadona REVIEW rescue revalidation
+
+# Bounded live OCR revalidation of the 23 canonical REVIEW products that were
+# historically DECLARED but whose latest state has no explicit field conflict,
+# energy/macro incoherence or ambiguous-table blocker. This does not inherit old
+# nutrition: every result is a fresh first-party label-image observation.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-review-rescue-23.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-review-rescue-23-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Select exact non-contradictory REVIEW backlog
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          target = {
+              '1393', '15101', '19988', '3497', '4106', '4152', '4488', '4491',
+              '4570', '4640', '4711', '4740', '4903', '4905', '5184', '5673',
+              '5815', '6047', '6244', '6256', '6258', '6302', '69757',
+          }
+          src = Path('mercadona-first-party-final/products.jsonl')
+          rows = [json.loads(line) for line in src.read_text(encoding='utf-8').splitlines() if line.strip()]
+          selected = [row for row in rows if str(row.get('product_id') or '') in target]
+          found = {str(row.get('product_id') or '') for row in selected}
+          if found != target:
+              raise SystemExit(f'target mismatch: missing={sorted(target-found)} extra={sorted(found-target)}')
+
+          def has_p9(row):
+              return any(
+                  isinstance(photo, dict)
+                  and str(photo.get('perspective')) == '9'
+                  and photo.get('zoom')
+                  for photo in (row.get('photos') or [])
+              )
+
+          not_priority = [
+              str(row.get('product_id'))
+              for row in selected
+              if not row.get('ingredients') or not has_p9(row)
+          ]
+          if not_priority:
+              raise SystemExit('historical priority eligibility changed: ' + ','.join(sorted(not_priority)))
+
+          Path('review-rescue-products.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          print(json.dumps({'selected': len(selected), 'product_ids': sorted(found)}, ensure_ascii=False))
+          PY
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative OCR regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+      - name: Re-run live OCR on bounded REVIEW backlog
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products review-rescue-products.jsonl \
+            --out mercadona-review-rescue \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 4 \
+            --limit 0 \
+            --eligibility-mode priority
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-review-rescue-23-${{ matrix.shard }}
+          path: tools/catalog/mercadona-review-rescue/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-review-rescue-23-*
+          path: input
+          merge-multiple: true
+      - name: Merge and safety-check revalidation results
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json
+          from pathlib import Path
+
+          target = {
+              '1393', '15101', '19988', '3497', '4106', '4152', '4488', '4491',
+              '4570', '4640', '4711', '4740', '4903', '4905', '5184', '5673',
+              '5815', '6047', '6244', '6256', '6258', '6302', '69757',
+          }
+          rows = []
+          for path in sorted(glob.glob('input/results-*.jsonl')):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      rows.append(json.loads(line))
+
+          ids = [str(row.get('product_id') or '') for row in rows]
+          duplicates = sorted(pid for pid, n in Counter(ids).items() if n > 1)
+          missing = sorted(target - set(ids))
+          extra = sorted(set(ids) - target)
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          declared = [row for row in rows if row.get('status') == 'DECLARED']
+          invalid_declared = []
+          for row in declared:
+              accepted = next(
+                  (a for a in (row.get('attempts') or []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'),
+                  None,
+              )
+              ensemble = (accepted or {}).get('ensemble') or {}
+              if ensemble.get('independent_engine_families', 0) < 2 or ensemble.get('corroborated_fields', 0) < 4:
+                  invalid_declared.append(row.get('product_id'))
+
+          provenance_errors = [
+              row.get('product_id') for row in rows
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+              or row.get('source') != 'MERCADONA_FIRST_PARTY'
+              or row.get('source_record_kind') != 'label image'
+              or row.get('redistribution_allowed') is not False
+          ]
+          summary = {
+              'inventory_products': 4280,
+              'target_products': len(target),
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared_candidates': len(declared),
+              'declared_candidate_product_ids': sorted(str(row.get('product_id')) for row in declared),
+              'invalid_declared_product_ids': sorted(str(x) for x in invalid_declared),
+              'duplicates': duplicates,
+              'missing': missing,
+              'extra': extra,
+              'provenance_errors': sorted(str(x) for x in provenance_errors),
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'historical_nutrition_inherited': False,
+              'review_auto_promoted': False,
+              'classified': 0,
+              'menu_eligible': 0,
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+          fatal = duplicates or missing or extra or invalid_declared or provenance_errors or len(rows) != len(target)
+          if fatal:
+              raise SystemExit('Safety/coverage validation failed')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-review-rescue-23-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
