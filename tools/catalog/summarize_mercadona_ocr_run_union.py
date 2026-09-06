@@ -10,6 +10,19 @@ from typing import Any, Iterable
 VALID = {"DECLARED", "REVIEW", "NO_VISUAL_REGION", "ERROR"}
 EVIDENCE = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
 NUTRITION_FIELDS = ("calories", "protein_g", "carbohydrate_g", "fat_g")
+REASON_FAMILY_ORDER = (
+    "EXPLICIT_FIELD_CONFLICT",
+    "ENERGY_MACRO_INCOHERENCE",
+    "AMBIGUOUS_TABLE",
+    "NO_VISUAL_REGION",
+    "INSUFFICIENT_CORROBORATION",
+    "INCOMPLETE_EXTRACTION",
+    "ERROR",
+    "OTHER_REVIEW",
+    "NONE",
+)
+EXPLICIT_CONTRADICTION_FAMILIES = {"EXPLICIT_FIELD_CONFLICT", "ENERGY_MACRO_INCOHERENCE"}
+SAFETY_BLOCKING_FAMILIES = EXPLICIT_CONTRADICTION_FAMILIES | {"AMBIGUOUS_TABLE"}
 
 
 def load_run_names(tsv: Path) -> dict[str, set[str]]:
@@ -56,6 +69,170 @@ def is_canonical_status_row(row: dict[str, Any]) -> bool:
     promoted here and replay wrappers cannot demote newer live DECLARED evidence.
     """
     return not isinstance(row.get("replay"), dict)
+
+
+def _diagnostic_values(row: dict[str, Any]) -> list[str]:
+    """Extract compact machine diagnostics without inspecting arbitrary OCR text."""
+    values: list[str] = []
+
+    def add(value: Any) -> None:
+        if isinstance(value, str) and value.strip():
+            values.append(value.strip())
+        elif isinstance(value, (list, tuple, set)):
+            for item in value:
+                add(item)
+        elif isinstance(value, dict):
+            # Conflict maps often carry field names as keys and values as details.
+            for key, item in value.items():
+                add(str(key))
+                if isinstance(item, (str, list, tuple, set, dict)):
+                    add(item)
+
+    for key in ("nutrition_issue", "review_reason", "review_reasons", "rejection_reason", "reason", "reasons"):
+        add(row.get(key))
+
+    attempts = row.get("attempts")
+    if isinstance(attempts, list):
+        for attempt in attempts:
+            if not isinstance(attempt, dict):
+                continue
+            for key in ("nutrition_issue", "review_reason", "review_reasons", "rejection_reason", "reason", "reasons"):
+                add(attempt.get(key))
+            ensemble = attempt.get("ensemble")
+            if isinstance(ensemble, dict):
+                for key in (
+                    "nutrition_issue",
+                    "review_reason",
+                    "review_reasons",
+                    "rejection_reason",
+                    "reason",
+                    "reasons",
+                    "conflict",
+                    "conflicts",
+                    "field_conflicts",
+                ):
+                    add(ensemble.get(key))
+    return values
+
+
+def _attempt_has_ocr_signal(row: dict[str, Any]) -> bool:
+    attempts = row.get("attempts")
+    if not isinstance(attempts, list):
+        return False
+    for attempt in attempts:
+        if not isinstance(attempt, dict):
+            continue
+        count = attempt.get("ocr_count")
+        if isinstance(count, int) and not isinstance(count, bool) and count > 0:
+            return True
+        text = attempt.get("ocr_full_text")
+        if isinstance(text, str) and text.strip():
+            return True
+    return False
+
+
+def classify_review_reason_families(row: dict[str, Any]) -> list[str]:
+    """Classify why a strict live row is non-usable, without changing its status.
+
+    This deliberately treats ``visual_regions_detected == 0`` as NO_VISUAL_REGION
+    only when no OCR fallback signal exists. Some successful/partially successful
+    runs use full-image OCR after region detection misses, so zero detected regions
+    alone is not sufficient evidence that the label was unreadable.
+    """
+    status = str(row.get("status") or "")
+    if status == "DECLARED":
+        return ["NONE"]
+    if status == "ERROR":
+        return ["ERROR"]
+
+    diagnostics = "\n".join(_diagnostic_values(row)).upper()
+    families: set[str] = set()
+
+    if "OCR_FIELD_CONFLICT" in diagnostics or "FIELD_CONFLICT" in diagnostics:
+        families.add("EXPLICIT_FIELD_CONFLICT")
+    if "INCOHER" in diagnostics or "ENERGY_MACRO" in diagnostics or "MACRO_ENERGY" in diagnostics:
+        families.add("ENERGY_MACRO_INCOHERENCE")
+    if "AMBIGU" in diagnostics or "MULTI_COLUMN" in diagnostics or "MULTIPLE_COLUMN" in diagnostics:
+        families.add("AMBIGUOUS_TABLE")
+
+    no_region_signal = status == "NO_VISUAL_REGION" or "NO_VISUAL_REGION" in diagnostics
+    if no_region_signal and not _attempt_has_ocr_signal(row):
+        families.add("NO_VISUAL_REGION")
+
+    if "CORROBOR" in diagnostics or "INDEPENDENT_SUPPORT" in diagnostics:
+        families.add("INSUFFICIENT_CORROBORATION")
+    if any(token in diagnostics for token in ("MISSING", "INCOMPLETE", "NO_NUTRITION", "NO_TABLE", "NO_MACRO")):
+        families.add("INCOMPLETE_EXTRACTION")
+
+    # If a NO_VISUAL_REGION diagnostic coexists with successful full-image OCR,
+    # retain any more specific parser reason and otherwise report OTHER_REVIEW.
+    if not families and status in {"REVIEW", "NO_VISUAL_REGION"}:
+        families.add("OTHER_REVIEW")
+
+    return [family for family in REASON_FAMILY_ORDER if family in families]
+
+
+def summarize_declared_to_review_transitions(
+    history: dict[str, list[tuple[int, str, list[str]]]],
+) -> dict[str, Any]:
+    """Audit live products that were once DECLARED but are REVIEW in their latest run.
+
+    This is diagnostic only. It intentionally does not retain or resurrect older
+    nutrition. The output makes it possible to distinguish positive contradictory
+    evidence from later extraction/corroboration failures before any canonical
+    evidence-retention policy is considered.
+    """
+    historical_declared_ids: list[str] = []
+    transition_ids: list[str] = []
+    reason_ids: dict[str, list[str]] = defaultdict(list)
+    explicit_ids: list[str] = []
+    safety_blocking_ids: list[str] = []
+    non_contradictory_ids: list[str] = []
+
+    for product_id, events in sorted(history.items()):
+        if not events:
+            continue
+        declared_runs = {run_id for run_id, status, _ in events if status == "DECLARED"}
+        if not declared_runs:
+            continue
+        historical_declared_ids.append(product_id)
+        latest_run = max(run_id for run_id, _, _ in events)
+        latest_events = [(status, families) for run_id, status, families in events if run_id == latest_run]
+        latest_statuses = {status for status, _ in latest_events}
+        if latest_statuses != {"REVIEW"} or max(declared_runs) >= latest_run:
+            continue
+
+        transition_ids.append(product_id)
+        families = {
+            family
+            for _, event_families in latest_events
+            for family in event_families
+            if family != "NONE"
+        } or {"OTHER_REVIEW"}
+        for family in sorted(families):
+            reason_ids[family].append(product_id)
+
+        if families & EXPLICIT_CONTRADICTION_FAMILIES:
+            explicit_ids.append(product_id)
+        if families & SAFETY_BLOCKING_FAMILIES:
+            safety_blocking_ids.append(product_id)
+        else:
+            non_contradictory_ids.append(product_id)
+
+    return {
+        "historical_declared_products": len(historical_declared_ids),
+        "historical_declared_product_ids": historical_declared_ids,
+        "latest_review_after_historical_declared": len(transition_ids),
+        "latest_review_after_historical_declared_product_ids": transition_ids,
+        "reason_family_counts": {family: len(ids) for family, ids in sorted(reason_ids.items())},
+        "reason_family_product_ids": {family: sorted(ids) for family, ids in sorted(reason_ids.items())},
+        "explicit_contradiction_products": len(explicit_ids),
+        "explicit_contradiction_product_ids": sorted(explicit_ids),
+        "safety_blocking_products": len(safety_blocking_ids),
+        "safety_blocking_product_ids": sorted(safety_blocking_ids),
+        "non_contradictory_review_products": len(non_contradictory_ids),
+        "non_contradictory_review_product_ids": sorted(non_contradictory_ids),
+    }
 
 
 def reconcile_latest_observations(
@@ -151,6 +328,7 @@ def main() -> int:
     by_run_status: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     files_by_run: dict[str, set[str]] = defaultdict(set)
     observations: list[tuple[int, str, str, Any]] = []
+    live_history: dict[str, list[tuple[int, str, list[str]]]] = defaultdict(list)
     canonical_excluded_rows: Counter[str] = Counter()
     canonical_excluded_runs: set[int] = set()
     for path in sorted(Path(args.root).rglob("*.jsonl")):
@@ -181,6 +359,7 @@ def main() -> int:
             files_by_run[run_id].add(str(rel))
             if is_canonical_status_row(row):
                 observations.append((int(run_id), product_id, status, row.get("nutrition")))
+                live_history[product_id].append((int(run_id), status, classify_review_reason_families(row)))
             else:
                 canonical_excluded_rows["DIAGNOSTIC_REPLAY_WRAPPER"] += 1
                 canonical_excluded_runs.add(int(run_id))
@@ -228,6 +407,7 @@ def main() -> int:
         for product_id, item in sorted(usable.items())
     ]
     coverage_without_canonical_state = sorted(seen - set(latest))
+    transition_audit = summarize_declared_to_review_transitions(live_history)
 
     result = {
         "policy": (
@@ -236,8 +416,10 @@ def main() -> int:
             "replay promotions are never applied canonically. Among live OCR observations, the latest persisted run "
             "wins for status accounting; a product is usable only when its latest live run contains only DECLARED "
             "strict OCR observations and every such observation has the same complete calories/protein/carbohydrate/fat "
-            "payload. Older DECLARED nutrition is never inherited by a later live non-DECLARED status. No semantic "
-            "classification or missing-value inference occurs here."
+            "payload. Older DECLARED nutrition is never inherited by a later live non-DECLARED status. The transition "
+            "audit is diagnostic only and separates later positive conflicts/incoherence from extraction or independent-"
+            "corroboration misses; it never promotes or resurrects nutrition. No semantic classification or missing-value "
+            "inference occurs here."
         ),
         "evidence_level": EVIDENCE,
         "runs_with_strict_ocr_rows": len(rows),
@@ -256,6 +438,7 @@ def main() -> int:
         "latest_usable_complete_product_ids": sorted(usable),
         "latest_usable_field_counts": {field: len(usable) for field in NUTRITION_FIELDS},
         "latest_usable_products": usable_products,
+        "declared_to_review_transition_audit": transition_audit,
         "runs": rows,
     }
     Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -268,6 +451,9 @@ def main() -> int:
         "latest_status_counts": dict(sorted(latest_status_counts.items())),
         "latest_nutrition_issue_counts": dict(sorted(nutrition_issue_counts.items())),
         "latest_usable_complete": len(usable),
+        "historical_declared_products": transition_audit["historical_declared_products"],
+        "latest_review_after_historical_declared": transition_audit["latest_review_after_historical_declared"],
+        "latest_review_after_historical_declared_reason_family_counts": transition_audit["reason_family_counts"],
     }, indent=2))
     return 0
 
