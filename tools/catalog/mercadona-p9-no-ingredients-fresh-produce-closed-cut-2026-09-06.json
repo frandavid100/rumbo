@@ -1,0 +1,86 @@
+{
+  "cut_date": "2026-09-06",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 34008356489,
+  "workflow_head_sha": "c191cc258007eae5fed7548426c279ccb3708451",
+  "workflow_status": "completed",
+  "workflow_conclusion": "success",
+  "merged_artifact_id": 9981744870,
+  "merged_artifact_name": "mercadona-neural-ocr-p9-no-ingredients-fresh-produce-merged",
+  "routing_policy": "remaining p9/no-ingredients food-signal rows in top-level Fruta y verdura after the exact deterministic initial 32-item food-signal tranche; OCR routing only, no semantic classification",
+  "candidate_universe": 15,
+  "candidate_product_ids": [
+    "3269",
+    "3277",
+    "3485",
+    "3527",
+    "68131",
+    "69098",
+    "69117",
+    "69121",
+    "69448",
+    "69484",
+    "69581",
+    "69591",
+    "69971",
+    "69976",
+    "69990"
+  ],
+  "processed": 15,
+  "distinct_products_processed": 15,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 15,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "unsafe_declared": [],
+  "duplicate_product_ids": [],
+  "provenance_errors": [],
+  "disqualifying_attempts": [
+    {
+      "product_id": "69591",
+      "attempt_indexes": [0],
+      "reason_summary": "OCR_FIELD_CONFLICT on fat_g and carbohydrate_g; product remains REVIEW with nutrition=null"
+    }
+  ],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "safety_assessment": "VALIDATED",
+  "cumulative": {
+    "catalog_products": 4280,
+    "processed": 3043,
+    "processed_pct": 71.0981,
+    "DECLARED": 267,
+    "DECLARED_pct_catalog": 6.2383,
+    "REVIEW": 2776,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "food_signal_accounting": {
+    "candidate_universe": 95,
+    "processed_or_already_accounted_non_alcohol": 88,
+    "remaining_deferred_alcohol": 7,
+    "remaining_deferred_alcohol_product_ids": [
+      "28631",
+      "86707",
+      "28724",
+      "28397",
+      "86232",
+      "28630",
+      "28848"
+    ],
+    "note": "After this cut, the p9/no-ingredients food-signal universe is exhausted outside the deliberately deferred alcoholic Bodega residual."
+  },
+  "notes": [
+    "All 15 residual fresh-produce rows were processed with PP-OCRv6 plus Tesseract and conditional EasyOCR under the unchanged conservative ensemble contract.",
+    "No result was promoted to usable nutrition; all 15 remain REVIEW and no value is inferred.",
+    "Product 69591 produced conflicting OCR field observations and therefore remained REVIEW with nutrition=null; this is an isolated protected conflict, not evidence of a parser promotion bug.",
+    "No image bytes are persisted; the merged artifact contains audit JSONL plus SQLite staging and normalized evidence/provenance only."
+  ]
+}
