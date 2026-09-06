@@ -120,13 +120,21 @@ jobs:
 
       - name: Audit exact current residual universe
         working-directory: tools/catalog
+        shell: bash
         run: |
-          # 3081 was an arithmetic cumulative that counted products reprocessed in later
-          # bounded fronts more than once. The artifact-derived strict distinct union is 2928.
+          set -euo pipefail
+          # The expected distinct count must come from the artifact union reconstructed in this
+          # very run. Hard-coding a previous baseline makes the audit fail as soon as a genuinely
+          # new OCR product is persisted and risks reintroducing arithmetic coverage accounting.
+          expected_processed=$(jq -r '.final_distinct_union' mercadona-current-ocr-residual-audit/run-union-summary.json)
+          if ! [[ "$expected_processed" =~ ^[0-9]+$ ]]; then
+            echo "Invalid final_distinct_union: $expected_processed" >&2
+            exit 1
+          fi
           python audit_mercadona_current_ocr_residual.py \
             --products mercadona-first-party-final/products.jsonl \
             --ocr-artifacts /tmp/mercadona-ocr-artifacts \
-            --expected-processed 2928 \
+            --expected-processed "$expected_processed" \
             --out mercadona-current-ocr-residual-audit
 
       - uses: actions/upload-artifact@v4
