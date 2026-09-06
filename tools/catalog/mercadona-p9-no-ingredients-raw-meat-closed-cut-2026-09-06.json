@@ -1,0 +1,78 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "front": "p9/no-ingredients/raw-meat",
+  "candidate_universe": 26,
+  "closure_status": "CLOSED_VALIDATED",
+  "segments": [
+    {
+      "name": "pilot",
+      "size": 8,
+      "status_counts": {
+        "REVIEW": 8
+      },
+      "cut": "tools/catalog/mercadona-p9-no-ingredients-raw-meat-pilot-cut-2026-09-05.json"
+    },
+    {
+      "name": "wave2",
+      "size": 9,
+      "status_counts": {
+        "REVIEW": 9
+      },
+      "workflow_run_id": 33998696921,
+      "cut": "tools/catalog/mercadona-p9-no-ingredients-raw-meat-wave2-cut-2026-09-06.json"
+    },
+    {
+      "name": "wave3-final",
+      "size": 9,
+      "workflow_run_id": 34001256817,
+      "artifact_id": 9979666003,
+      "wave_offset": 17,
+      "wave_product_ids": [
+        "13330",
+        "2786",
+        "2789",
+        "2797",
+        "2811",
+        "2851",
+        "2856",
+        "3724",
+        "8994"
+      ],
+      "status_counts": {
+        "REVIEW": 9
+      },
+      "unsafe_declared": [],
+      "duplicate_product_ids": [],
+      "provenance_errors": [],
+      "images_persisted": false,
+      "missing_values_inferred": false,
+      "safety_assessment": "VALIDATED"
+    }
+  ],
+  "front_totals": {
+    "processed": 26,
+    "DECLARED": 0,
+    "REVIEW": 26,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "cumulative_after_closure": {
+    "universe_total": 4280,
+    "processed": 3028,
+    "processed_pct": 70.7477,
+    "DECLARED": 267,
+    "REVIEW": 2761,
+    "usable_complete_pct": 6.2383
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "notes": [
+    "All 26 products in this routing front have now been processed.",
+    "No REVIEW row was promoted to usable nutrition.",
+    "No missing value was inferred.",
+    "No image bytes were persisted or redistributed.",
+    "OCR routing remains extraction-only and does not imply semantic classification or menu eligibility."
+  ]
+}
