@@ -5,9 +5,28 @@
   "redistribution_allowed": false,
   "inventory_products": 4280,
   "previous_arithmetic_processed_claim": 3081,
+  "previous_arithmetic_DECLARED_claim": 271,
+  "previous_arithmetic_REVIEW_claim": 2810,
   "corrected_distinct_processed": 2928,
   "corrected_processed_pct": 68.4112,
   "overcounted_product_occurrences": 153,
+  "canonical_latest_status_counts": {
+    "DECLARED": 139,
+    "REVIEW": 2789,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "MULTIPLE_STATUSES_LATEST_RUN": 0
+  },
+  "canonical_latest_usable_complete": 139,
+  "canonical_latest_usable_complete_pct_inventory": 3.2477,
+  "canonical_latest_usable_field_counts": {
+    "calories": 139,
+    "protein_g": 139,
+    "carbohydrate_g": 139,
+    "fat_g": 139
+  },
+  "canonical_latest_nutrition_issue_counts": {},
+  "canonical_status_policy": "Latest persisted strict OCR run wins for status accounting. A product is usable only when its latest run contains only DECLARED observations and every strict DECLARED observation in that run carries the same complete calories/protein/carbohydrate/fat payload. Older DECLARED nutrition is never inherited by a later REVIEW, ERROR or NO_VISUAL_REGION state.",
   "residual_total": 1352,
   "p9_residual_total": 1306,
   "residual_profiles": {
@@ -29,12 +48,14 @@
     "Mascotas": 79,
     "Panadería y pastelería": 11
   },
-  "audit_workflow_run": 34027933321,
-  "audit_workflow_head_sha": "971367931031db8ca3217b187ccac0b029b30aac",
+  "distinct_audit_workflow_run": 34027933321,
+  "distinct_audit_workflow_head_sha": "971367931031db8ca3217b187ccac0b029b30aac",
+  "canonical_reconciliation_workflow_run": 34028348397,
+  "canonical_reconciliation_workflow_head_sha": "f06ad75fd70084562665edada34eeba94aeb98e9",
   "audit_artifact": "mercadona-current-ocr-residual-audit",
   "artifact_reconstruction": {
     "successful_mercadona_ocr_runs_discovered": 197,
-    "ocr_artifacts_downloaded": 259,
+    "ocr_artifacts_downloaded": 260,
     "runs_with_strict_ocr_rows": 179,
     "strict_distinct_product_ids": 2928,
     "non_strict_valid_status_product_ids": 0,
@@ -44,7 +65,7 @@
     "single_status_DECLARED": 119,
     "single_status_REVIEW": 2675,
     "multiple_historical_statuses": 134,
-    "note": "This is a history diagnostic, not a canonical current usable-nutrition split. Products with multiple historical statuses require latest-output/status reconciliation before a corrected DECLARED/REVIEW coverage claim is published."
+    "note": "Historical status multiplicity is retained only as a diagnostic. Canonical current coverage uses the conservative latest-run policy above."
   },
   "verified_overlap_examples_after_union_reached_2928": [
     {"run": 33961377853, "front": "p9/no-ingredients/food-signal pilot", "processed_in_run": 16, "new_distinct_products": 0},
@@ -57,13 +78,13 @@
     {"run": 34016745007, "front": "p9/no-ingredients/category-packaged pilot", "processed_in_run": 8, "new_distinct_products": 0},
     {"run": 34017425358, "front": "p9/no-ingredients/category-packaged remaining", "processed_in_run": 30, "new_distinct_products": 0}
   ],
-  "correction_reason": "The previous cumulative processed figure was maintained arithmetically by adding bounded-front row counts. Several later fronts reprocessed product IDs already present in earlier broad OCR artifacts, so those counts were not distinct coverage. The corrected figure is reconstructed from the exact distinct product-id union across persisted successful OCR artifacts.",
-  "safety_assessment": "VALIDATED_ACCOUNTING_CORRECTION",
+  "correction_reason": "The previous cumulative processed and status figures were maintained arithmetically by adding bounded-front row counts. Several later fronts reprocessed product IDs already present in earlier broad OCR artifacts, so those counts were not distinct coverage. The corrected processed figure is the exact distinct product-id union across persisted successful OCR artifacts, and the corrected usable split is reconciled from each product's latest strict persisted OCR state.",
+  "safety_assessment": "VALIDATED_ACCOUNTING_AND_CANONICAL_STATUS_CORRECTION",
   "images_downloaded_by_audit": false,
   "images_persisted": false,
   "missing_values_inferred": false,
   "structured_api_macros_claimed": false,
   "CLASSIFIED": 0,
   "MENU_ELIGIBLE": 0,
-  "next_action": "Reconcile a canonical current DECLARED/REVIEW split from the latest strict OCR output per product, then route the exact residual p9 food-category universe instead of arithmetic front totals."
+  "next_action": "Route only truly unprocessed p9 food-category products from the exact residual census; do not add bounded-front row counts arithmetically to coverage again."
 }
