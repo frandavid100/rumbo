@@ -1,0 +1,303 @@
+name: Catalog Mercadona neural OCR p9 no-ingredients raw-meat wave3
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-p9-no-ingredients-raw-meat-wave3.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-p9-no-ingredients-raw-meat-wave3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        shard: [0, 1, 2]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run routing and conservative parser regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_audit_mercadona_p9_no_ingredients_raw_meat_candidates.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+          python -m py_compile \
+            audit_mercadona_p9_no_ingredients_raw_meat_candidates.py \
+            mercadona_neural_ocr_wave.py
+
+      - name: Audit raw-meat universe and select deterministic final wave
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_p9_no_ingredients_raw_meat_candidates.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-p9-no-ingredients-raw-meat-audit
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from audit_mercadona_p9_no_ingredients_raw_meat_candidates import candidate_payload
+
+          audit_dir = Path('mercadona-p9-no-ingredients-raw-meat-audit')
+          summary = json.loads((audit_dir / 'summary.json').read_text(encoding='utf-8'))
+          all_ids = [str(value) for value in summary.get('candidate_product_ids') or []]
+          pilot_ids = set(str(value) for value in summary.get('pilot_product_ids') or [])
+          wanted = all_ids[17:26]
+          if summary.get('candidate_universe') != 26 or len(all_ids) != 26:
+              raise SystemExit(f"unexpected raw-meat universe: {summary.get('candidate_universe')} / {len(all_ids)}")
+          if len(wanted) != 9 or pilot_ids.intersection(wanted):
+              raise SystemExit(f'unexpected final-wave selection: {wanted}')
+
+          source = Path('mercadona-first-party-final/products.jsonl')
+          rows = [json.loads(line) for line in source.read_text(encoding='utf-8').splitlines() if line.strip()]
+          by_id = {str(row.get('product_id') or ''): row for row in rows}
+          missing = [pid for pid in wanted if pid not in by_id]
+          if missing:
+              raise SystemExit(f'missing final-wave ids: {missing}')
+          selected = [candidate_payload(by_id[pid]) for pid in wanted]
+          Path('mercadona-raw-meat-wave3-products.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          Path('mercadona-raw-meat-wave3-selection.json').write_text(
+              json.dumps({
+                  'candidate_universe': 26,
+                  'wave_offset': 17,
+                  'wave_size': 9,
+                  'product_ids': wanted,
+                  'pilot_product_ids': sorted(pilot_ids),
+              }, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print('wave3', wanted)
+          PY
+
+      - name: OCR raw-meat final wave shard
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-raw-meat-wave3-products.jsonl \
+            --out mercadona-neural-ocr-p9-no-ingredients-raw-meat-wave3 \
+            --eligibility-mode p9-no-ingredients-all \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 3 \
+            --limit 0 \
+            --delay 0.5
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-p9-no-ingredients-raw-meat-wave3-${{ matrix.shard }}
+          path: |
+            tools/catalog/mercadona-neural-ocr-p9-no-ingredients-raw-meat-wave3/
+            tools/catalog/mercadona-raw-meat-wave3-selection.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ always() && needs.ocr.result == 'success' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-p9-no-ingredients-raw-meat-wave3-*
+          path: input
+          merge-multiple: true
+
+      - name: Merge, persist staging, and enforce hardened contract
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          rows = []
+          for path in sorted(glob.glob('input/**/results-*.jsonl', recursive=True)):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      rows.append(json.loads(line))
+
+          selection_paths = sorted(glob.glob('input/**/mercadona-raw-meat-wave3-selection.json', recursive=True))
+          if not selection_paths:
+              raise SystemExit('missing final-wave selection manifest')
+          selections = [json.loads(Path(path).read_text(encoding='utf-8')) for path in selection_paths]
+          expected_ids = set(str(value) for value in selections[0].get('product_ids') or [])
+          if len(expected_ids) != 9 or any(set(str(value) for value in s.get('product_ids') or []) != expected_ids for s in selections):
+              raise SystemExit('final-wave selection manifests disagree')
+
+          ids = [str(row.get('product_id') or '') for row in rows]
+          duplicate_ids = sorted(pid for pid, count in Counter(ids).items() if pid and count > 1)
+          provenance_errors = []
+          invalid_declared = []
+          disqualifying_attempts = []
+
+          def disqualifying_attempt(attempt):
+              ensemble = (attempt or {}).get('ensemble') or {}
+              reasons = [str(reason) for reason in (ensemble.get('reasons') or [])]
+              return (
+                  bool(ensemble.get('values_conflict'))
+                  or any(reason.startswith('OCR_FIELD_CONFLICT') for reason in reasons)
+                  or any(reason.startswith('OCR_SAME_ENGINE_CONFLICT') for reason in reasons)
+                  or any(reason.startswith('ENERGY_MACRO_MISMATCH') for reason in reasons)
+              )
+
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(f'{pid}:evidence_level')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(f'{pid}:source')
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(f'{pid}:redistribution')
+
+              bad_attempts = [i for i, attempt in enumerate(row.get('attempts') or []) if disqualifying_attempt(attempt)]
+              if bad_attempts:
+                  disqualifying_attempts.append({'product_id': pid, 'attempt_indexes': bad_attempts})
+
+              if row.get('status') != 'DECLARED':
+                  continue
+              accepted = next(
+                  (attempt for attempt in (row.get('attempts') or []) if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'),
+                  None,
+              )
+              ensemble = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+              if (
+                  bad_attempts
+                  or int(ensemble.get('independent_engine_families') or 0) < 2
+                  or int(ensemble.get('corroborated_fields') or 0) < 4
+                  or ensemble.get('basis') not in {'100_g', '100_ml'}
+                  or any(nutrition.get(field) is None for field in required)
+              ):
+                  invalid_declared.append(pid)
+
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          prior_processed = 3019
+          prior_declared = 267
+          prior_review = 2752
+          cumulative_processed = prior_processed + len(set(ids))
+          cumulative_declared = prior_declared + counts.get('DECLARED', 0)
+          cumulative_review = prior_review + counts.get('REVIEW', 0)
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'routing_policy': 'raw-meat candidate stable-hash positions 17..25 after validated pilot and wave 2; OCR routing only, no semantic classification',
+              'candidate_universe': 26,
+              'wave_offset': 17,
+              'wave_size': 9,
+              'wave_product_ids': sorted(expected_ids),
+              'processed': len(rows),
+              'distinct_products_processed': len(set(ids)),
+              'status_counts': dict(sorted(counts.items())),
+              'unsafe_declared': sorted(set(invalid_declared)),
+              'disqualifying_attempts': disqualifying_attempts,
+              'duplicate_product_ids': duplicate_ids,
+              'provenance_errors': sorted(set(provenance_errors)),
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'cumulative_baseline': {
+                  'processed': prior_processed,
+                  'DECLARED': prior_declared,
+                  'REVIEW': prior_review,
+              },
+              'cumulative_after_wave': {
+                  'universe_total': 4280,
+                  'processed': cumulative_processed,
+                  'processed_pct': round(cumulative_processed * 100 / 4280, 4),
+                  'DECLARED': cumulative_declared,
+                  'REVIEW': cumulative_review,
+                  'usable_complete_pct': round(cumulative_declared * 100 / 4280, 4),
+              },
+          }
+          summary['safety_assessment'] = 'VALIDATED' if (
+              len(rows) == 9
+              and set(ids) == expected_ids
+              and len(set(ids)) == 9
+              and not invalid_declared
+              and not duplicate_ids
+              and not provenance_errors
+          ) else 'FAILED'
+
+          out = Path('merged')
+          out.mkdir(exist_ok=True)
+          (out / 'results.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          db = sqlite3.connect(out / 'staging.sqlite')
+          db.execute('CREATE TABLE ocr_results (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, payload_json TEXT NOT NULL)')
+          for row in rows:
+              db.execute(
+                  'INSERT INTO ocr_results VALUES (?, ?, ?, ?, ?, ?)',
+                  (
+                      str(row.get('product_id') or ''),
+                      str(row.get('status') or 'UNKNOWN'),
+                      str(row.get('evidence_level') or ''),
+                      'MERCADONA_FIRST_PARTY/label image',
+                      0,
+                      json.dumps(row, ensure_ascii=False, sort_keys=True),
+                  ),
+              )
+          db.commit()
+          db.close()
+
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if summary['safety_assessment'] != 'VALIDATED':
+              raise SystemExit('raw-meat final wave safety/coverage checks failed; do not promote nutrition')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-p9-no-ingredients-raw-meat-wave3-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: warn
