@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from audit_mercadona_current_ocr_residual import audit, p9_photo, residual_profile
+from audit_mercadona_current_ocr_residual import (
+    OCR_EVIDENCE,
+    audit,
+    collect_processed,
+    p9_photo,
+    residual_profile,
+)
 
 
 def row(product_id: str, *, p9: bool, ingredients=None, legal_name=None, allergens=None, packaging=None, unit_size=None):
@@ -32,6 +41,48 @@ class ResidualProfileTests(unittest.TestCase):
         value = row("1", p9=True)
         value["photos"][0]["zoom"] = None
         self.assertIsNone(p9_photo(value))
+
+    def test_collect_processed_deduplicates_artifact_families_and_keeps_status_history_diagnostic(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            first = root / "run-a" / "unpacked" / "first.jsonl"
+            second = root / "run-b" / "unpacked" / "second.jsonl"
+            first.parent.mkdir(parents=True)
+            second.parent.mkdir(parents=True)
+            first.write_text(
+                "\n".join(
+                    json.dumps(item)
+                    for item in (
+                        {"product_id": "100", "status": "REVIEW", "evidence_level": OCR_EVIDENCE},
+                        {"product_id": "200", "status": "ERROR", "evidence_level": OCR_EVIDENCE},
+                        {"product_id": "ignored", "status": "REVIEW", "evidence_level": "OTHER"},
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            second.write_text(
+                "\n".join(
+                    json.dumps(item)
+                    for item in (
+                        {"product_id": "100", "status": "DECLARED", "evidence_level": OCR_EVIDENCE},
+                        {"product_id": "200", "status": "REVIEW", "evidence_level": OCR_EVIDENCE},
+                        {"product_id": "300", "status": "ERROR", "evidence_level": OCR_EVIDENCE},
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            processed, sources, statuses = collect_processed(root)
+
+        self.assertEqual(processed, {"100", "200", "300"})
+        self.assertEqual(len(sources["100"]), 2)
+        self.assertEqual(len(sources["200"]), 2)
+        self.assertEqual(len(sources["300"]), 1)
+        self.assertEqual(statuses["MULTIPLE_HISTORICAL_STATUSES"], 2)
+        self.assertEqual(statuses["ERROR"], 1)
+        self.assertNotIn("ignored", processed)
 
     def test_audit_rejects_wrong_processed_union_before_routing(self):
         products = [row(str(i), p9=False) for i in range(4280)]
