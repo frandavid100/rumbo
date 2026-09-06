@@ -120,10 +120,12 @@ jobs:
       - name: Audit exact current residual universe
         working-directory: tools/catalog
         run: |
+          # 3081 was an arithmetic cumulative that counted products reprocessed in later
+          # bounded fronts more than once. The artifact-derived strict distinct union is 2928.
           python audit_mercadona_current_ocr_residual.py \
             --products mercadona-first-party-final/products.jsonl \
             --ocr-artifacts /tmp/mercadona-ocr-artifacts \
-            --expected-processed 3081 \
+            --expected-processed 2928 \
             --out mercadona-current-ocr-residual-audit
 
       - uses: actions/upload-artifact@v4
