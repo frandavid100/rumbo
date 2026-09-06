@@ -1,0 +1,35 @@
+{
+  "purpose": "Bounded Mercadona OCR pilot for packaged human-food residuals without perspective=9",
+  "products": [
+    {
+      "product_id": "19740",
+      "perspective": 3,
+      "reason": "packaged human food; non-p9 residual; perspective 3 explicitly present"
+    },
+    {
+      "product_id": "17944",
+      "perspective": 1,
+      "reason": "packaged human food; only first-party photo available"
+    },
+    {
+      "product_id": "16861",
+      "perspective": 2,
+      "reason": "packaged human food; only first-party photo available"
+    },
+    {
+      "product_id": "10459",
+      "perspective": 2,
+      "reason": "packaged human food; only first-party photo available"
+    },
+    {
+      "product_id": "17713",
+      "perspective": 10,
+      "reason": "packaged human food; only first-party photo available"
+    }
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
