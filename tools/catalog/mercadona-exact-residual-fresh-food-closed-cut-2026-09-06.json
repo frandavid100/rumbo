@@ -1,0 +1,64 @@
+{
+  "cut": "mercadona-exact-residual-fresh-food-closed-2026-09-06",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 34035615412,
+  "workflow_head_sha": "fa8f8fc23775dcd1917dbebd17f86767aef56780",
+  "merged_artifact_id": 9990219748,
+  "merged_artifact_name": "mercadona-neural-ocr-exact-residual-fresh-food-merged",
+  "routing_state": "EXACT_CURRENT_P9_RESIDUAL_FRESH_FOOD_NO_STRUCTURED_SIGNAL",
+  "baseline": {
+    "inventory_total": 4280,
+    "artifact_reconstructed_distinct_processed": 2928,
+    "residual_before_wave": 1352
+  },
+  "wave": {
+    "candidate_universe": 8,
+    "candidate_product_ids": [
+      "17564",
+      "68462",
+      "69287",
+      "69495",
+      "81416",
+      "81422",
+      "87196",
+      "87254"
+    ],
+    "processed": 8,
+    "distinct_products_processed": 8,
+    "status_counts": {
+      "REVIEW": 8
+    },
+    "declared_products": [],
+    "unsafe_declared": [],
+    "duplicate_product_ids": [],
+    "provenance_errors": [],
+    "error_count": 0,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false,
+    "safety_assessment": "VALIDATED"
+  },
+  "notable_review": {
+    "product_id": "17564",
+    "name": "Taquitos de pollo",
+    "basis": "100_g",
+    "observed_partial_values": {
+      "calories": 143.0,
+      "protein_g": 18.0
+    },
+    "blocking_reasons": [
+      "OCR_FIELD_CONFLICT:fat_g",
+      "MISSING_CORE:fat_g,carbohydrate_g"
+    ],
+    "nutrition_usable": false
+  },
+  "distinct_coverage_after_wave": {
+    "processed": 2936,
+    "processed_pct": 68.5981,
+    "residual": 1344
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
