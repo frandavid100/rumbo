@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections import defaultdict
+import math
+from collections import Counter, defaultdict
 from pathlib import Path
+from typing import Any, Iterable
 
 VALID = {"DECLARED", "REVIEW", "NO_VISUAL_REGION", "ERROR"}
 EVIDENCE = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+NUTRITION_FIELDS = ("calories", "protein_g", "carbohydrate_g", "fat_g")
 
 
 def load_run_names(tsv: Path) -> dict[str, set[str]]:
@@ -20,6 +23,107 @@ def load_run_names(tsv: Path) -> dict[str, set[str]]:
     return out
 
 
+def complete_nutrition(value: Any) -> dict[str, float] | None:
+    if not isinstance(value, dict):
+        return None
+    out: dict[str, float] = {}
+    for field in NUTRITION_FIELDS:
+        item = value.get(field)
+        if isinstance(item, bool) or not isinstance(item, (int, float)):
+            return None
+        item = float(item)
+        if not math.isfinite(item):
+            return None
+        out[field] = item
+    return out
+
+
+def nutrition_key(value: dict[str, float]) -> tuple[float, ...]:
+    return tuple(value[field] for field in NUTRITION_FIELDS)
+
+
+def reconcile_latest_observations(
+    observations: Iterable[tuple[int, str, str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Return one conservative latest persisted OCR state per product.
+
+    A later OCR run supersedes an older run for status accounting. Within the same
+    latest run, however, any status disagreement is treated as non-usable. A latest
+    DECLARED product is usable only when every strict DECLARED observation in that
+    run carries a complete four-field nutrition payload and all complete payloads
+    agree exactly. Older DECLARED nutrition is never inherited by a later REVIEW,
+    ERROR or NO_VISUAL_REGION observation.
+    """
+    grouped: dict[str, dict[int, list[tuple[str, Any]]]] = defaultdict(lambda: defaultdict(list))
+    for run_id, product_id, status, nutrition in observations:
+        if status not in VALID:
+            continue
+        grouped[str(product_id)][int(run_id)].append((status, nutrition))
+
+    result: dict[str, dict[str, Any]] = {}
+    for product_id, by_run in grouped.items():
+        latest_run = max(by_run)
+        values = by_run[latest_run]
+        statuses = {status for status, _ in values}
+        if len(statuses) != 1:
+            result[product_id] = {
+                "latest_run_id": latest_run,
+                "status": "MULTIPLE_STATUSES_LATEST_RUN",
+                "latest_run_statuses": sorted(statuses),
+                "usable_complete": False,
+                "nutrition": None,
+                "nutrition_issue": "MULTIPLE_STATUSES_LATEST_RUN",
+            }
+            continue
+
+        status = next(iter(statuses))
+        if status != "DECLARED":
+            result[product_id] = {
+                "latest_run_id": latest_run,
+                "status": status,
+                "latest_run_statuses": [status],
+                "usable_complete": False,
+                "nutrition": None,
+                "nutrition_issue": None,
+            }
+            continue
+
+        normalized = [complete_nutrition(nutrition) for _, nutrition in values]
+        if any(item is None for item in normalized):
+            result[product_id] = {
+                "latest_run_id": latest_run,
+                "status": "DECLARED",
+                "latest_run_statuses": ["DECLARED"],
+                "usable_complete": False,
+                "nutrition": None,
+                "nutrition_issue": "INCOMPLETE_DECLARED_NUTRITION_LATEST_RUN",
+            }
+            continue
+
+        complete_values = [item for item in normalized if item is not None]
+        unique = {nutrition_key(item) for item in complete_values}
+        if len(unique) != 1:
+            result[product_id] = {
+                "latest_run_id": latest_run,
+                "status": "DECLARED",
+                "latest_run_statuses": ["DECLARED"],
+                "usable_complete": False,
+                "nutrition": None,
+                "nutrition_issue": "CONFLICTING_COMPLETE_NUTRITION_LATEST_RUN",
+            }
+            continue
+
+        result[product_id] = {
+            "latest_run_id": latest_run,
+            "status": "DECLARED",
+            "latest_run_statuses": ["DECLARED"],
+            "usable_complete": True,
+            "nutrition": complete_values[0],
+            "nutrition_issue": None,
+        }
+    return result
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True)
@@ -30,6 +134,7 @@ def main() -> int:
     by_run: dict[str, set[str]] = defaultdict(set)
     by_run_status: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     files_by_run: dict[str, set[str]] = defaultdict(set)
+    observations: list[tuple[int, str, str, Any]] = []
     for path in sorted(Path(args.root).rglob("*.jsonl")):
         rel = path.relative_to(args.root)
         first = rel.parts[0] if rel.parts else ""
@@ -56,6 +161,7 @@ def main() -> int:
             by_run[run_id].add(product_id)
             by_run_status[run_id][status].add(product_id)
             files_by_run[run_id].add(str(rel))
+            observations.append((int(run_id), product_id, status, row.get("nutrition")))
 
     names = load_run_names(Path(args.artifacts_tsv))
     seen: set[str] = set()
@@ -78,14 +184,58 @@ def main() -> int:
         })
         seen |= ids
 
+    latest = reconcile_latest_observations(observations)
+    latest_status_counts = Counter(item["status"] for item in latest.values())
+    nutrition_issue_counts = Counter(
+        item["nutrition_issue"] for item in latest.values() if item.get("nutrition_issue")
+    )
+    usable = {
+        product_id: item
+        for product_id, item in latest.items()
+        if item.get("usable_complete") is True and isinstance(item.get("nutrition"), dict)
+    }
+    latest_status_product_ids: dict[str, list[str]] = defaultdict(list)
+    for product_id, item in latest.items():
+        latest_status_product_ids[str(item["status"])].append(product_id)
+    usable_products = [
+        {
+            "product_id": product_id,
+            "latest_run_id": item["latest_run_id"],
+            "nutrition": item["nutrition"],
+        }
+        for product_id, item in sorted(usable.items())
+    ]
+
     result = {
-        "policy": "Chronological strict-provenance union diagnostic only; product IDs are never promoted or classified here.",
+        "policy": (
+            "Chronological strict-provenance distinct union. Latest persisted run wins for status accounting; "
+            "a product is usable only when its latest run contains only DECLARED strict OCR observations and "
+            "every such observation has the same complete calories/protein/carbohydrate/fat payload. Older "
+            "DECLARED nutrition is never inherited by a later non-DECLARED status. No semantic classification "
+            "or missing-value inference occurs here."
+        ),
+        "evidence_level": EVIDENCE,
         "runs_with_strict_ocr_rows": len(rows),
         "final_distinct_union": len(seen),
+        "latest_status_counts": dict(sorted(latest_status_counts.items())),
+        "latest_status_product_ids": {
+            status: sorted(product_ids) for status, product_ids in sorted(latest_status_product_ids.items())
+        },
+        "latest_nutrition_issue_counts": dict(sorted(nutrition_issue_counts.items())),
+        "latest_usable_complete": len(usable),
+        "latest_usable_complete_product_ids": sorted(usable),
+        "latest_usable_field_counts": {field: len(usable) for field in NUTRITION_FIELDS},
+        "latest_usable_products": usable_products,
         "runs": rows,
     }
     Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"runs_with_strict_ocr_rows": len(rows), "final_distinct_union": len(seen)}, indent=2))
+    print(json.dumps({
+        "runs_with_strict_ocr_rows": len(rows),
+        "final_distinct_union": len(seen),
+        "latest_status_counts": dict(sorted(latest_status_counts.items())),
+        "latest_nutrition_issue_counts": dict(sorted(nutrition_issue_counts.items())),
+        "latest_usable_complete": len(usable),
+    }, indent=2))
     return 0
 
 
