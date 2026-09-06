@@ -1,0 +1,118 @@
+name: Catalog Mercadona current OCR residual audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-ocr-residual-audit.yml'
+      - 'tools/catalog/audit_mercadona_current_ocr_residual.py'
+      - 'tools/catalog/test_audit_mercadona_current_ocr_residual.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-ocr-residual-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Run residual census unit tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_audit_mercadona_current_ocr_residual.py
+          python -m py_compile audit_mercadona_current_ocr_residual.py
+
+      - name: Reconstruct successful Mercadona OCR artifact union
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mercadona-ocr-artifacts tools/catalog/mercadona-current-ocr-residual-audit
+
+          # Enumerate successful Mercadona OCR workflows since the first-party cut. This is
+          # intentionally derived from Actions rather than hand-maintained run IDs so the census
+          # cannot silently omit a completed bounded front. Only persisted OCR artifacts are read;
+          # no product image is downloaded here.
+          gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/runs?branch=agent%2Fcatalog-phase1&created=%3E%3D2026-08-27T00%3A00%3A00Z&per_page=100' \
+            --jq '.workflow_runs[] | select(.conclusion == "success") | select((.name | ascii_downcase | contains("mercadona")) and (.name | ascii_downcase | contains("ocr"))) | [.id, .name, .path] | @tsv' \
+            | sort -u > /tmp/mercadona-ocr-runs.tsv
+
+          run_count=$(wc -l < /tmp/mercadona-ocr-runs.tsv | tr -d ' ')
+          if [[ "$run_count" -lt 1 ]]; then
+            echo 'No successful Mercadona OCR runs discovered' >&2
+            exit 1
+          fi
+          echo "Discovered $run_count successful Mercadona OCR workflow runs"
+
+          downloaded=0
+          while IFS=$'\t' read -r run_id run_name run_path; do
+            [[ -n "$run_id" ]] || continue
+            artifact_json=$(gh api -H 'Accept: application/vnd.github+json' "/repos/frandavid100/rumbo/actions/runs/${run_id}/artifacts?per_page=100")
+            mapfile -t merged < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | select(.name | ascii_downcase | contains("ocr")) | select(.name | endswith("-merged")) | [.id, .name] | @tsv' <<<"$artifact_json")
+            if (( ${#merged[@]} > 0 )); then
+              selected=("${merged[@]}")
+            else
+              mapfile -t selected < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | select(.name | ascii_downcase | contains("ocr")) | [.id, .name] | @tsv' <<<"$artifact_json")
+            fi
+
+            for item in "${selected[@]}"; do
+              IFS=$'\t' read -r artifact_id artifact_name <<<"$item"
+              [[ -n "$artifact_id" ]] || continue
+              dest="/tmp/mercadona-ocr-artifacts/${run_id}-${artifact_id}"
+              mkdir -p "$dest"
+              gh api -H 'Accept: application/vnd.github+json' "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" > "$dest/artifact.zip"
+              unzip -q "$dest/artifact.zip" -d "$dest/unpacked"
+              rm "$dest/artifact.zip"
+              printf '%s\t%s\t%s\t%s\n' "$run_id" "$run_name" "$artifact_id" "$artifact_name" >> tools/catalog/mercadona-current-ocr-residual-audit/artifacts.tsv
+              downloaded=$((downloaded + 1))
+            done
+          done < /tmp/mercadona-ocr-runs.tsv
+
+          if (( downloaded < 1 )); then
+            echo 'No non-expired Mercadona OCR artifacts downloaded' >&2
+            exit 1
+          fi
+          echo "Downloaded $downloaded OCR artifacts"
+
+      - name: Audit exact current residual universe
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_current_ocr_residual.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --ocr-artifacts /tmp/mercadona-ocr-artifacts \
+            --expected-processed 3081 \
+            --out mercadona-current-ocr-residual-audit
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/mercadona-current-ocr-residual-audit/
+          retention-days: 30
+          if-no-files-found: warn
