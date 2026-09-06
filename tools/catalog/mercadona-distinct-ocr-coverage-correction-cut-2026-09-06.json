@@ -1,0 +1,69 @@
+{
+  "cut_date": "2026-09-06",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "inventory_products": 4280,
+  "previous_arithmetic_processed_claim": 3081,
+  "corrected_distinct_processed": 2928,
+  "corrected_processed_pct": 68.4112,
+  "overcounted_product_occurrences": 153,
+  "residual_total": 1352,
+  "p9_residual_total": 1306,
+  "residual_profiles": {
+    "NO_P9": 46,
+    "P9_NO_INGREDIENTS_OTHER": 246,
+    "P9_NO_INGREDIENTS_PACKAGED_SIGNAL": 1060
+  },
+  "p9_residual_top_level_categories": {
+    "Bebé": 47,
+    "Bodega": 11,
+    "Carne": 1,
+    "Cuidado del cabello": 179,
+    "Cuidado facial y corporal": 461,
+    "Fitoterapia y parafarmacia": 36,
+    "Fruta y verdura": 3,
+    "Limpieza y hogar": 315,
+    "Maquillaje": 159,
+    "Marisco y pescado": 4,
+    "Mascotas": 79,
+    "Panadería y pastelería": 11
+  },
+  "audit_workflow_run": 34027933321,
+  "audit_workflow_head_sha": "971367931031db8ca3217b187ccac0b029b30aac",
+  "audit_artifact": "mercadona-current-ocr-residual-audit",
+  "artifact_reconstruction": {
+    "successful_mercadona_ocr_runs_discovered": 197,
+    "ocr_artifacts_downloaded": 259,
+    "runs_with_strict_ocr_rows": 179,
+    "strict_distinct_product_ids": 2928,
+    "non_strict_valid_status_product_ids": 0,
+    "ocr_rows_with_exact_evidence_marker": 50947
+  },
+  "historical_status_diagnostic": {
+    "single_status_DECLARED": 119,
+    "single_status_REVIEW": 2675,
+    "multiple_historical_statuses": 134,
+    "note": "This is a history diagnostic, not a canonical current usable-nutrition split. Products with multiple historical statuses require latest-output/status reconciliation before a corrected DECLARED/REVIEW coverage claim is published."
+  },
+  "verified_overlap_examples_after_union_reached_2928": [
+    {"run": 33961377853, "front": "p9/no-ingredients/food-signal pilot", "processed_in_run": 16, "new_distinct_products": 0},
+    {"run": 33965441509, "front": "p9/no-ingredients/food-signal wave2", "processed_in_run": 16, "new_distinct_products": 0},
+    {"run": 33966651913, "front": "p9/no-ingredients/packaged-signal pilot", "processed_in_run": 10, "new_distinct_products": 0},
+    {"run": 33984587444, "front": "p9/no-ingredients/raw-meat pilot", "processed_in_run": 8, "new_distinct_products": 0},
+    {"run": 33998696921, "front": "p9/no-ingredients/raw-meat wave2", "processed_in_run": 9, "new_distinct_products": 0},
+    {"run": 34001256817, "front": "p9/no-ingredients/raw-meat wave3", "processed_in_run": 9, "new_distinct_products": 0},
+    {"run": 34008356489, "front": "p9/no-ingredients/fresh-produce", "processed_in_run": 15, "new_distinct_products": 0},
+    {"run": 34016745007, "front": "p9/no-ingredients/category-packaged pilot", "processed_in_run": 8, "new_distinct_products": 0},
+    {"run": 34017425358, "front": "p9/no-ingredients/category-packaged remaining", "processed_in_run": 30, "new_distinct_products": 0}
+  ],
+  "correction_reason": "The previous cumulative processed figure was maintained arithmetically by adding bounded-front row counts. Several later fronts reprocessed product IDs already present in earlier broad OCR artifacts, so those counts were not distinct coverage. The corrected figure is reconstructed from the exact distinct product-id union across persisted successful OCR artifacts.",
+  "safety_assessment": "VALIDATED_ACCOUNTING_CORRECTION",
+  "images_downloaded_by_audit": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "next_action": "Reconcile a canonical current DECLARED/REVIEW split from the latest strict OCR output per product, then route the exact residual p9 food-category universe instead of arithmetic front totals."
+}
