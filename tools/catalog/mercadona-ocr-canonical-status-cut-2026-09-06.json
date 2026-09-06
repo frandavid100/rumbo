@@ -1,0 +1,60 @@
+{
+  "cut_date": "2026-09-06",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "inventory_products": 4280,
+  "audit_workflow_run_id": 34048657520,
+  "audit_artifact_id": 9993938341,
+  "audit_artifact_name": "mercadona-current-ocr-residual-audit",
+  "processed_distinct_union": 2941,
+  "processed_pct": 68.715,
+  "residual_total": 1339,
+  "canonical_policy": {
+    "state": "RESOLVED_CONSERVATIVE_LATEST_LIVE",
+    "rule": "Diagnostic replay wrappers remain in processed-id coverage but are excluded from canonical current status. Among live OCR observations, the latest persisted run wins. A product is usable only when its latest live state is DECLARED and every strict OCR observation in that state agrees on the same complete calories/protein/carbohydrate/fat payload. Older DECLARED nutrition is never inherited through a later REVIEW or other non-DECLARED state.",
+    "review_promoted_to_usable": 0,
+    "historical_declared_resurrected": 0
+  },
+  "canonical_current_status": {
+    "DECLARED": 168,
+    "REVIEW": 2773,
+    "ERROR": 0,
+    "NO_VISUAL_REGION_as_separate_canonical_state": 0
+  },
+  "canonical_usable_complete": 168,
+  "canonical_usable_complete_pct_inventory": 3.9252,
+  "canonical_usable_field_counts": {
+    "calories": 168,
+    "protein_g": 168,
+    "carbohydrate_g": 168,
+    "fat_g": 168
+  },
+  "transition_audit": {
+    "historical_declared_products": 196,
+    "latest_review_after_historical_declared": 28,
+    "explicit_contradiction_products": 5,
+    "non_contradictory_review_products": 23,
+    "reason_family_counts": {
+      "ENERGY_MACRO_INCOHERENCE": 2,
+      "EXPLICIT_FIELD_CONFLICT": 3,
+      "INCOMPLETE_EXTRACTION": 25,
+      "INSUFFICIENT_CORROBORATION": 4
+    },
+    "policy": "All 28 later REVIEW products remain unusable. The 5 explicit contradictions are safety-blocking; the other 23 are also not promoted because REVIEW is never usable."
+  },
+  "diagnostic_replay_rows_excluded_from_canonical_status": 36820,
+  "diagnostic_replay_runs_excluded_from_canonical_status": 14,
+  "coverage_without_canonical_state": 0,
+  "images_downloaded_by_this_audit": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "notes": [
+    "This cut supersedes earlier arithmetic counts that treated historical or diagnostic DECLARED observations as if they were current canonical usable nutrition.",
+    "Processed-id coverage and canonical nutrition usability are deliberately separate metrics.",
+    "No REVIEW row is converted into usable nutrition by this reconciliation."
+  ]
+}
