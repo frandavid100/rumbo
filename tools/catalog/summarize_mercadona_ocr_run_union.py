@@ -42,17 +42,33 @@ def nutrition_key(value: dict[str, float]) -> tuple[float, ...]:
     return tuple(value[field] for field in NUTRITION_FIELDS)
 
 
+def is_canonical_status_row(row: dict[str, Any]) -> bool:
+    """Return whether a persisted OCR row may update canonical current status.
+
+    Replay artifacts wrap an older live OCR row and attach a ``replay`` diagnostic
+    containing the parser/ensemble result under test. Their top-level ``status``
+    and ``nutrition`` deliberately remain the source cut's historical values.
+    Treating such wrappers as a newer live observation can therefore roll a later
+    targeted OCR result backwards merely because a parser regression workflow ran.
+
+    Replays remain part of the auditable processed-id union, but never update the
+    canonical state. In particular, replay REVIEW->DECLARED candidates are not
+    promoted here and replay wrappers cannot demote newer live DECLARED evidence.
+    """
+    return not isinstance(row.get("replay"), dict)
+
+
 def reconcile_latest_observations(
     observations: Iterable[tuple[int, str, str, Any]],
 ) -> dict[str, dict[str, Any]]:
-    """Return one conservative latest persisted OCR state per product.
+    """Return one conservative latest persisted live OCR state per product.
 
-    A later OCR run supersedes an older run for status accounting. Within the same
-    latest run, however, any status disagreement is treated as non-usable. A latest
-    DECLARED product is usable only when every strict DECLARED observation in that
-    run carries a complete four-field nutrition payload and all complete payloads
-    agree exactly. Older DECLARED nutrition is never inherited by a later REVIEW,
-    ERROR or NO_VISUAL_REGION observation.
+    A later live OCR run supersedes an older live run for status accounting.
+    Within the same latest run, however, any status disagreement is treated as
+    non-usable. A latest DECLARED product is usable only when every strict
+    DECLARED observation in that run carries a complete four-field nutrition
+    payload and all complete payloads agree exactly. Older DECLARED nutrition is
+    never inherited by a later REVIEW, ERROR or NO_VISUAL_REGION observation.
     """
     grouped: dict[str, dict[int, list[tuple[str, Any]]]] = defaultdict(lambda: defaultdict(list))
     for run_id, product_id, status, nutrition in observations:
@@ -135,6 +151,8 @@ def main() -> int:
     by_run_status: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     files_by_run: dict[str, set[str]] = defaultdict(set)
     observations: list[tuple[int, str, str, Any]] = []
+    canonical_excluded_rows: Counter[str] = Counter()
+    canonical_excluded_runs: set[int] = set()
     for path in sorted(Path(args.root).rglob("*.jsonl")):
         rel = path.relative_to(args.root)
         first = rel.parts[0] if rel.parts else ""
@@ -161,7 +179,11 @@ def main() -> int:
             by_run[run_id].add(product_id)
             by_run_status[run_id][status].add(product_id)
             files_by_run[run_id].add(str(rel))
-            observations.append((int(run_id), product_id, status, row.get("nutrition")))
+            if is_canonical_status_row(row):
+                observations.append((int(run_id), product_id, status, row.get("nutrition")))
+            else:
+                canonical_excluded_rows["DIAGNOSTIC_REPLAY_WRAPPER"] += 1
+                canonical_excluded_runs.add(int(run_id))
 
     names = load_run_names(Path(args.artifacts_tsv))
     seen: set[str] = set()
@@ -205,18 +227,26 @@ def main() -> int:
         }
         for product_id, item in sorted(usable.items())
     ]
+    coverage_without_canonical_state = sorted(seen - set(latest))
 
     result = {
         "policy": (
-            "Chronological strict-provenance distinct union. Latest persisted run wins for status accounting; "
-            "a product is usable only when its latest run contains only DECLARED strict OCR observations and "
-            "every such observation has the same complete calories/protein/carbohydrate/fat payload. Older "
-            "DECLARED nutrition is never inherited by a later non-DECLARED status. No semantic classification "
-            "or missing-value inference occurs here."
+            "Chronological strict-provenance distinct union. Diagnostic replay wrappers remain in processed-id "
+            "coverage but are excluded from canonical current status because their top-level state is historical; "
+            "replay promotions are never applied canonically. Among live OCR observations, the latest persisted run "
+            "wins for status accounting; a product is usable only when its latest live run contains only DECLARED "
+            "strict OCR observations and every such observation has the same complete calories/protein/carbohydrate/fat "
+            "payload. Older DECLARED nutrition is never inherited by a later live non-DECLARED status. No semantic "
+            "classification or missing-value inference occurs here."
         ),
         "evidence_level": EVIDENCE,
         "runs_with_strict_ocr_rows": len(rows),
         "final_distinct_union": len(seen),
+        "canonical_status_products": len(latest),
+        "canonical_excluded_row_counts": dict(sorted(canonical_excluded_rows.items())),
+        "canonical_excluded_run_ids": sorted(canonical_excluded_runs),
+        "coverage_without_canonical_state": len(coverage_without_canonical_state),
+        "coverage_without_canonical_state_product_ids": coverage_without_canonical_state,
         "latest_status_counts": dict(sorted(latest_status_counts.items())),
         "latest_status_product_ids": {
             status: sorted(product_ids) for status, product_ids in sorted(latest_status_product_ids.items())
@@ -232,6 +262,9 @@ def main() -> int:
     print(json.dumps({
         "runs_with_strict_ocr_rows": len(rows),
         "final_distinct_union": len(seen),
+        "canonical_status_products": len(latest),
+        "canonical_excluded_row_counts": dict(sorted(canonical_excluded_rows.items())),
+        "coverage_without_canonical_state": len(coverage_without_canonical_state),
         "latest_status_counts": dict(sorted(latest_status_counts.items())),
         "latest_nutrition_issue_counts": dict(sorted(nutrition_issue_counts.items())),
         "latest_usable_complete": len(usable),
