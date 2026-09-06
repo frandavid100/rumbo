@@ -1,0 +1,82 @@
+{
+  "cut": "mercadona-alternate-photo-ocr-pilot-2026-09-06",
+  "workflow_run_id": 34041492105,
+  "artifact_id": 9991870793,
+  "artifact_name": "mercadona-alternate-photo-ocr-pilot",
+  "inventory_products": 4280,
+  "selection_products": 5,
+  "processed": 5,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 5,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "usable_complete_nutrition": 0,
+  "unsafe_promotions": 0,
+  "provenance_errors": 0,
+  "duplicate_rows": 0,
+  "persisted_image_bytes": 0,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "photo_selection_policy": "EXPLICIT_NON_P9_FIRST_PARTY_PHOTO",
+  "redistribution_allowed": false,
+  "engine": "mercadona_remote_first_party_neural_ocr_ensemble/alternate-perspectives-v1",
+  "products": [
+    {
+      "product_id": "19740",
+      "name": "Escamas de sal marina natural Polasal",
+      "perspective": 3,
+      "status": "REVIEW",
+      "candidate_nutrition": null,
+      "reason": "MISSING_CORE:calories,fat_g,carbohydrate_g,protein_g"
+    },
+    {
+      "product_id": "17713",
+      "name": "Berlina con cobertura blanca y trozos de galleta rellena de crema de galleta",
+      "perspective": 10,
+      "status": "REVIEW",
+      "candidate_nutrition": null,
+      "reason": "MISSING_CORE:calories,fat_g,carbohydrate_g,protein_g"
+    },
+    {
+      "product_id": "17944",
+      "name": "Panceta de cerdo pieza",
+      "perspective": 1,
+      "status": "REVIEW",
+      "candidate_nutrition": {
+        "calories": 305.0,
+        "fat_g": 26.5
+      },
+      "reason": "MISSING_CORE:carbohydrate_g,protein_g",
+      "corroborated_fields": 0
+    },
+    {
+      "product_id": "16861",
+      "name": "Galantina con pistacho y trufa Hacendado finas lonchas",
+      "perspective": 2,
+      "status": "REVIEW",
+      "candidate_nutrition": {
+        "calories": 179.0
+      },
+      "reason": "MISSING_CORE:fat_g,carbohydrate_g,protein_g",
+      "corroborated_fields": 0
+    },
+    {
+      "product_id": "10459",
+      "name": "Masa filo",
+      "perspective": 2,
+      "status": "REVIEW",
+      "candidate_nutrition": {
+        "calories": 294.0,
+        "fat_g": 7.0,
+        "carbohydrate_g": 64.0
+      },
+      "reason": "OCR_FIELD_CONFLICT:protein_g; MISSING_CORE:protein_g",
+      "corroborated_fields": 2
+    }
+  ],
+  "conclusion": "Bounded non-p9 alternate-photo OCR is provenance-safe and conservative on this packaged-food sample, but yielded 0/5 complete usable nutrition. Do not promote REVIEW or infer missing fields. Reconcile these product IDs against the exact artifact union before changing cumulative coverage.",
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
