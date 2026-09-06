@@ -7,6 +7,7 @@ on:
       - '.github/workflows/catalog-mercadona-current-ocr-residual-audit.yml'
       - 'tools/catalog/audit_mercadona_current_ocr_residual.py'
       - 'tools/catalog/diagnose_mercadona_ocr_union.py'
+      - 'tools/catalog/summarize_mercadona_ocr_run_union.py'
       - 'tools/catalog/test_audit_mercadona_current_ocr_residual.py'
   workflow_dispatch:
 
@@ -46,7 +47,7 @@ jobs:
         working-directory: tools/catalog
         run: |
           python -m unittest -v test_audit_mercadona_current_ocr_residual.py
-          python -m py_compile audit_mercadona_current_ocr_residual.py diagnose_mercadona_ocr_union.py
+          python -m py_compile audit_mercadona_current_ocr_residual.py diagnose_mercadona_ocr_union.py summarize_mercadona_ocr_run_union.py
 
       - name: Reconstruct successful Mercadona OCR artifact union
         shell: bash
@@ -107,6 +108,14 @@ jobs:
           python diagnose_mercadona_ocr_union.py \
             --root /tmp/mercadona-ocr-artifacts \
             --out mercadona-current-ocr-residual-audit/reconstruction-diagnostics.json
+
+      - name: Summarize chronological OCR union contributions
+        working-directory: tools/catalog
+        run: |
+          python summarize_mercadona_ocr_run_union.py \
+            --root /tmp/mercadona-ocr-artifacts \
+            --artifacts-tsv mercadona-current-ocr-residual-audit/artifacts.tsv \
+            --out mercadona-current-ocr-residual-audit/run-union-summary.json
 
       - name: Audit exact current residual universe
         working-directory: tools/catalog
