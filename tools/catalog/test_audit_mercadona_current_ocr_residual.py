@@ -38,7 +38,7 @@ class ResidualProfileTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "expected 3 distinct processed"):
             audit(products, {"0", "1"}, expected_processed=3)
 
-    def test_audit_routes_only_unprocessed_p9(self):
+    def test_audit_routes_only_unprocessed_p9_and_materializes_no_p9_residual(self):
         products = [row(str(i), p9=False) for i in range(4280)]
         products[7] = row("7", p9=True, ingredients=[{"text": "x"}])
         products[8] = row("8", p9=True, packaging="bag", unit_size=100)
@@ -46,6 +46,11 @@ class ResidualProfileTests(unittest.TestCase):
         self.assertEqual([item["product_id"] for item in residual_rows], ["8"])
         self.assertEqual(summary["p9_residual_total"], 1)
         self.assertEqual(summary["residual_profiles"]["P9_NO_INGREDIENTS_PACKAGED_SIGNAL"], 1)
+        self.assertEqual(summary["no_p9_residual_total"], 4278)
+        self.assertEqual(len(summary["no_p9_residual_product_ids"]), 4278)
+        self.assertEqual(len(summary["_no_p9_rows"]), 4278)
+        self.assertEqual(summary["_no_p9_rows"][0]["source"], "MERCADONA_FIRST_PARTY/label image candidate")
+        self.assertFalse(summary["_no_p9_rows"][0]["redistribution_allowed"])
         self.assertEqual(summary["CLASSIFIED"], 0)
         self.assertEqual(summary["MENU_ELIGIBLE"], 0)
 
