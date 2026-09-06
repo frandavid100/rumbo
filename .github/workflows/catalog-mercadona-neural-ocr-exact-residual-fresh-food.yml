@@ -1,0 +1,270 @@
+name: Catalog Mercadona neural OCR exact residual fresh food
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-exact-residual-fresh-food.yml'
+      - 'tools/catalog/audit_mercadona_exact_residual_fresh_food_candidates.py'
+      - 'tools/catalog/test_audit_mercadona_exact_residual_fresh_food_candidates.py'
+      - 'tools/catalog/mercadona_neural_ocr_wave.py'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-exact-residual-fresh-food-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Download exact current OCR residual audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/mercadona-current-ocr-residual-audit
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 34028348397
+
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run routing and conservative parser regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_audit_mercadona_exact_residual_fresh_food_candidates.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+          python -m py_compile \
+            audit_mercadona_exact_residual_fresh_food_candidates.py \
+            mercadona_neural_ocr_wave.py
+
+      - name: Materialize exact current fresh-food residual
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_exact_residual_fresh_food_candidates.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --residual-p9 mercadona-current-ocr-residual-audit/residual-p9.jsonl \
+            --out mercadona-exact-residual-fresh-food-audit
+
+      - name: OCR exact fresh-food residual shard
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-exact-residual-fresh-food-audit/candidates.jsonl \
+            --out mercadona-neural-ocr-exact-residual-fresh-food \
+            --eligibility-mode p9-no-ingredients-all \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 2 \
+            --limit 0 \
+            --delay 0.5
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-exact-residual-fresh-food-${{ matrix.shard }}
+          path: |
+            tools/catalog/mercadona-neural-ocr-exact-residual-fresh-food/
+            tools/catalog/mercadona-exact-residual-fresh-food-audit/summary.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ always() && needs.ocr.result == 'success' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-exact-residual-fresh-food-*
+          path: input
+          merge-multiple: true
+
+      - name: Merge, persist staging, and enforce conservative contract
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          expected_ids = {'17564', '81416', '81422', '87196', '87254', '68462', '69287', '69495'}
+          rows = []
+          for path in sorted(glob.glob('input/**/results-*.jsonl', recursive=True)):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      rows.append(json.loads(line))
+
+          audit_paths = sorted(glob.glob('input/**/summary.json', recursive=True))
+          audit_summaries = []
+          for path in audit_paths:
+              value = json.loads(Path(path).read_text(encoding='utf-8'))
+              if value.get('audit_policy_version') == '1.0.0' and value.get('candidate_universe') == 8:
+                  audit_summaries.append(value)
+          if not audit_summaries:
+              raise SystemExit('missing exact fresh-food routing summary')
+          if any(set(str(value) for value in s.get('candidate_product_ids') or []) != expected_ids for s in audit_summaries):
+              raise SystemExit('exact fresh-food routing summaries disagree')
+
+          ids = [str(row.get('product_id') or '') for row in rows]
+          duplicate_ids = sorted(pid for pid, count in Counter(ids).items() if pid and count > 1)
+          provenance_errors = []
+          invalid_declared = []
+          disqualifying_attempts = []
+
+          def disqualifying_attempt(attempt):
+              ensemble = (attempt or {}).get('ensemble') or {}
+              reasons = [str(reason) for reason in (ensemble.get('reasons') or [])]
+              return (
+                  bool(ensemble.get('values_conflict'))
+                  or any(reason.startswith('OCR_FIELD_CONFLICT') for reason in reasons)
+                  or any(reason.startswith('OCR_SAME_ENGINE_CONFLICT') for reason in reasons)
+                  or any(reason.startswith('ENERGY_MACRO_MISMATCH') for reason in reasons)
+                  or any(reason.startswith('MULTIPLE_NUTRITION_COLUMNS') for reason in reasons)
+              )
+
+          declared_products = []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(f'{pid}:evidence_level')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(f'{pid}:source')
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(f'{pid}:redistribution')
+
+              bad_attempts = [i for i, attempt in enumerate(row.get('attempts') or []) if disqualifying_attempt(attempt)]
+              if bad_attempts:
+                  disqualifying_attempts.append({'product_id': pid, 'attempt_indexes': bad_attempts})
+
+              if row.get('status') != 'DECLARED':
+                  continue
+              accepted = next((attempt for attempt in (row.get('attempts') or []) if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              ensemble = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+              if (
+                  bad_attempts
+                  or int(ensemble.get('independent_engine_families') or 0) < 2
+                  or int(ensemble.get('corroborated_fields') or 0) < 4
+                  or ensemble.get('basis') not in {'100_g', '100_ml'}
+                  or any(nutrition.get(field) is None for field in required)
+              ):
+                  invalid_declared.append(pid)
+              else:
+                  declared_products.append({
+                      'product_id': pid,
+                      'ean': row.get('ean'),
+                      'name': row.get('name'),
+                      'basis': row.get('basis'),
+                      'nutrition': nutrition,
+                      'independent_engine_families': int(ensemble.get('independent_engine_families') or 0),
+                      'corroborated_fields': int(ensemble.get('corroborated_fields') or 0),
+                  })
+
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          safety_assessment = 'VALIDATED' if (
+              len(rows) == 8
+              and set(ids) == expected_ids
+              and len(set(ids)) == 8
+              and not invalid_declared
+              and not duplicate_ids
+              and not provenance_errors
+              and counts.get('ERROR', 0) == 0
+          ) else 'FAILED'
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'routing_policy': 'exact artifact-derived current perspective=9 residual restricted to fresh-food top-level categories and no structured ingredients/legal/allergen signal; routing only, no semantic classification',
+              'candidate_universe': 8,
+              'candidate_product_ids': sorted(expected_ids),
+              'processed': len(rows),
+              'distinct_products_processed': len(set(ids)),
+              'status_counts': dict(sorted(counts.items())),
+              'declared_products': declared_products,
+              'unsafe_declared': sorted(set(invalid_declared)),
+              'disqualifying_attempts': disqualifying_attempts,
+              'duplicate_product_ids': duplicate_ids,
+              'provenance_errors': sorted(set(provenance_errors)),
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'structured_api_macros_claimed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'current_residual_audit_baseline': {
+                  'inventory_total': 4280,
+                  'artifact_reconstructed_distinct_processed': 2928,
+                  'residual_before_wave': 1352,
+              },
+              'safety_assessment': safety_assessment,
+          }
+
+          out = Path('merged')
+          out.mkdir(exist_ok=True)
+          (out / 'results.jsonl').write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows), encoding='utf-8')
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          db = sqlite3.connect(out / 'staging.sqlite')
+          db.execute('CREATE TABLE ocr_results (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, payload_json TEXT NOT NULL)')
+          for row in rows:
+              db.execute('INSERT INTO ocr_results VALUES (?, ?, ?, ?, ?, ?)', (
+                  str(row.get('product_id') or ''), str(row.get('status') or 'UNKNOWN'), str(row.get('evidence_level') or ''),
+                  'MERCADONA_FIRST_PARTY/label image', 0, json.dumps(row, ensure_ascii=False, sort_keys=True)))
+          db.commit()
+          db.close()
+
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if safety_assessment != 'VALIDATED':
+              raise SystemExit('exact fresh-food safety/coverage checks failed; do not promote nutrition')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-exact-residual-fresh-food-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: warn
