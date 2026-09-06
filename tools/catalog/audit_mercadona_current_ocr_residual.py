@@ -10,6 +10,37 @@ EXPECTED_PRODUCTS = 4280
 VALID_OCR_STATUSES = frozenset({"DECLARED", "REVIEW", "NO_VISUAL_REGION", "ERROR"})
 OCR_EVIDENCE = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
 
+# Operational OCR routing only. These are Mercadona first-party top-level grocery
+# sections where a nutrition label can be relevant to Rumbo. They do not assign
+# CLASSIFIED/MENU_ELIGIBLE or any nutritional/culinary semantic role.
+CORE_GROCERY_CATEGORIES = frozenset(
+    {
+        "Aceite, especias y salsas",
+        "Agua y refrescos",
+        "Aperitivos",
+        "Arroz, legumbres y pasta",
+        "Azúcar, caramelos y chocolate",
+        "Cacao, café e infusiones",
+        "Carne",
+        "Cereales y galletas",
+        "Charcutería y quesos",
+        "Congelados",
+        "Conservas, caldos y cremas",
+        "Fruta y verdura",
+        "Huevos, leche y mantequilla",
+        "Marisco y pescado",
+        "Panadería y pastelería",
+        "Pizzas y platos preparados",
+        "Postres y yogures",
+        "Zumos",
+    }
+)
+DEFERRED_TOP_LEVEL_CATEGORIES = frozenset({"Bodega"})
+EXPLICIT_NON_FOOD_SUBCATEGORIES = frozenset({"Velas y decoración", "Velas"})
+ACTIONABLE_SCOPE_PROFILES = frozenset(
+    {"ACTIONABLE_P9_FIRST_PARTY_FOOD_SIGNAL", "ACTIONABLE_P9_CORE_GROCERY_CATEGORY"}
+)
+
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -29,12 +60,18 @@ def p9_photo(row: dict[str, Any]) -> dict[str, Any] | None:
     )
 
 
-def top_level_category(row: dict[str, Any]) -> str:
+def category_path_names(row: dict[str, Any]) -> list[str]:
     path = row.get("category_path") if isinstance(row.get("category_path"), list) else []
-    if path and isinstance(path[0], dict) and path[0].get("name"):
-        return str(path[0]["name"])
-    names = row.get("category_names") if isinstance(row.get("category_names"), list) else []
-    return str(names[0]) if names else "UNKNOWN"
+    names = [str(item.get("name")) for item in path if isinstance(item, dict) and item.get("name")]
+    if names:
+        return names
+    fallback = row.get("category_names") if isinstance(row.get("category_names"), list) else []
+    return [str(value) for value in fallback if value]
+
+
+def top_level_category(row: dict[str, Any]) -> str:
+    names = category_path_names(row)
+    return names[0] if names else "UNKNOWN"
 
 
 def has_food_signal(row: dict[str, Any]) -> bool:
@@ -43,6 +80,35 @@ def has_food_signal(row: dict[str, Any]) -> bool:
 
 def has_packaged_signal(row: dict[str, Any]) -> bool:
     return bool(row.get("packaging")) and row.get("unit_size") is not None
+
+
+def has_explicit_non_food_subcategory(row: dict[str, Any]) -> bool:
+    return bool(set(category_path_names(row)[1:]) & EXPLICIT_NON_FOOD_SUBCATEGORIES)
+
+
+def ocr_scope_profile(row: dict[str, Any]) -> str:
+    """Route residuals for OCR work without assigning semantic catalog status.
+
+    The goal is to distinguish genuinely actionable nutrition-label image work from
+    residuals that merely have packaging metadata. The latter was a systematic
+    false-positive source in the residual census because packaging is also present
+    on cosmetics, cleaning products and other non-food products.
+    """
+    category = top_level_category(row)
+    has_p9 = p9_photo(row) is not None
+    first_party_food_signal = bool(row.get("ingredients")) or has_food_signal(row)
+
+    if category in DEFERRED_TOP_LEVEL_CATEGORIES:
+        return "DEFERRED_BODEGA"
+    if has_explicit_non_food_subcategory(row):
+        return "OUT_OF_SCOPE_NON_FOOD_SUBCATEGORY"
+    if has_p9 and first_party_food_signal:
+        return "ACTIONABLE_P9_FIRST_PARTY_FOOD_SIGNAL"
+    if has_p9 and category in CORE_GROCERY_CATEGORIES:
+        return "ACTIONABLE_P9_CORE_GROCERY_CATEGORY"
+    if not has_p9 and (first_party_food_signal or category in CORE_GROCERY_CATEGORIES):
+        return "BLOCKED_NO_P9_FOOD_ROUTE"
+    return "OUT_OF_SCOPE_NON_FOOD_OR_MIXED"
 
 
 def iter_ocr_rows(root: Path) -> Iterable[tuple[Path, dict[str, Any]]]:
@@ -106,6 +172,7 @@ def no_p9_payload(row: dict[str, Any]) -> dict[str, Any]:
         "name": row.get("name"),
         "brand": row.get("brand"),
         "top_level_category": top_level_category(row),
+        "ocr_scope_profile": ocr_scope_profile(row),
         "has_structured_ingredients": bool(row.get("ingredients")),
         "has_food_signal": has_food_signal(row),
         "has_packaged_signal": has_packaged_signal(row),
@@ -137,8 +204,17 @@ def audit(
 
     residual = [row for row in products if str(row.get("product_id") or "") not in processed_ids]
     profile_counts = Counter(residual_profile(row) for row in residual)
+    scope_counts = Counter(ocr_scope_profile(row) for row in residual)
     p9_residual = [row for row in residual if p9_photo(row) is not None]
     no_p9_residual = [row for row in residual if p9_photo(row) is None]
+    actionable_p9 = [row for row in residual if ocr_scope_profile(row) in ACTIONABLE_SCOPE_PROFILES]
+    blocked_no_p9 = [row for row in residual if ocr_scope_profile(row) == "BLOCKED_NO_P9_FOOD_ROUTE"]
+    deferred_bodega = [row for row in residual if ocr_scope_profile(row) == "DEFERRED_BODEGA"]
+    out_of_scope = [
+        row
+        for row in residual
+        if ocr_scope_profile(row) in {"OUT_OF_SCOPE_NON_FOOD_SUBCATEGORY", "OUT_OF_SCOPE_NON_FOOD_OR_MIXED"}
+    ]
     p9_category_counts = Counter(top_level_category(row) for row in p9_residual)
     no_p9_category_counts = Counter(top_level_category(row) for row in no_p9_residual)
     p9_profile_category_counts: dict[str, Counter[str]] = defaultdict(Counter)
@@ -159,6 +235,7 @@ def audit(
                 "brand": row.get("brand"),
                 "top_level_category": top_level_category(row),
                 "profile": residual_profile(row),
+                "ocr_scope_profile": ocr_scope_profile(row),
                 "has_structured_ingredients": bool(row.get("ingredients")),
                 "has_food_signal": has_food_signal(row),
                 "has_packaged_signal": has_packaged_signal(row),
@@ -181,7 +258,7 @@ def audit(
     ]
 
     summary = {
-        "audit_policy_version": "1.1.0",
+        "audit_policy_version": "1.2.0",
         "source": "MERCADONA_FIRST_PARTY/label image",
         "evidence_level": OCR_EVIDENCE,
         "redistribution_allowed": False,
@@ -190,6 +267,14 @@ def audit(
         "processed_pct": round(len(processed_ids) * 100 / len(products), 4),
         "residual_total": len(residual),
         "residual_profiles": dict(sorted(profile_counts.items())),
+        "ocr_scope_profile_counts": dict(sorted(scope_counts.items())),
+        "ocr_actionable_p9_total": len(actionable_p9),
+        "ocr_actionable_p9_product_ids": sorted(str(row.get("product_id") or "") for row in actionable_p9),
+        "ocr_blocked_no_p9_food_route_total": len(blocked_no_p9),
+        "ocr_blocked_no_p9_food_route_product_ids": sorted(str(row.get("product_id") or "") for row in blocked_no_p9),
+        "ocr_deferred_bodega_total": len(deferred_bodega),
+        "ocr_deferred_bodega_product_ids": sorted(str(row.get("product_id") or "") for row in deferred_bodega),
+        "ocr_out_of_scope_total": len(out_of_scope),
         "p9_residual_total": len(p9_residual),
         "p9_residual_top_level_categories": dict(sorted(p9_category_counts.items())),
         "p9_residual_profile_categories": {
@@ -202,9 +287,12 @@ def audit(
         "no_p9_residual_product_ids": [row["product_id"] for row in no_p9_rows],
         "policy": (
             "Exact residual census after reconstructing the distinct product-id union from persisted successful OCR artifacts. "
-            "Perspective=9 routing profiles and the separate no-p9 census use only first-party metadata. No OCR is run, no image "
-            "is downloaded, no semantic classification is assigned, and no nutrition is promoted. The no-p9 JSONL persists only "
-            "first-party photo URLs/metadata so alternate-perspective label candidates can be audited without retaining image bytes."
+            "Perspective=9 routing profiles and the separate no-p9 census use only first-party metadata. Operational OCR scope "
+            "additionally prevents generic packaging metadata on cosmetics/cleaning products from being treated as a nutrition-label "
+            "candidate; it uses Mercadona first-party category paths plus direct first-party food signals only and does not assign "
+            "CLASSIFIED, MENU_ELIGIBLE, culinary roles or nutritional semantics. Bodega remains explicitly deferred. No OCR is run, "
+            "no image is downloaded, and no nutrition is promoted. The no-p9 JSONL persists only first-party photo URLs/metadata so "
+            "alternate-perspective label candidates can be audited without retaining image bytes."
         ),
         "images_downloaded": False,
         "images_persisted": False,
