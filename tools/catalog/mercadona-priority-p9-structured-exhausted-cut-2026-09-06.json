@@ -1,0 +1,39 @@
+{
+  "cut_date": "2026-09-06",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "inventory_products": 4280,
+  "audit_workflow_run_id": 34045402350,
+  "audit_artifact_id": 9993005353,
+  "audit_artifact_name": "mercadona-current-ocr-residual-audit",
+  "processed_distinct_union": 2941,
+  "processed_pct": 68.715,
+  "residual_total": 1339,
+  "residual_p9": 1298,
+  "residual_no_p9": 41,
+  "priority_universe": {
+    "definition": "Products with structured ingredients and a perspective=9 first-party image, the explicitly prioritized Mercadona OCR front.",
+    "remaining_candidates": 0,
+    "status": "EXHAUSTED"
+  },
+  "residual_profiles": {
+    "NO_P9": 41,
+    "P9_NO_INGREDIENTS_OTHER": 245,
+    "P9_NO_INGREDIENTS_PACKAGED_SIGNAL": 1053
+  },
+  "canonical_nutrition_status": {
+    "state": "RECONCILIATION_PENDING",
+    "reason": "The exact processed-id union is stable, but strict latest-live status accounting currently demotes historical DECLARED observations after later REVIEW observations. Transition diagnostics are being audited before any evidence-retention policy is changed.",
+    "unsafe_promotions_applied": 0
+  },
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "notes": [
+    "This cut deliberately separates coverage accounting from canonical nutrition-state reconciliation.",
+    "No REVIEW row is converted into usable nutrition by this cut.",
+    "No structured Mercadona API ingredients/allergens are treated as OCR macro evidence."
+  ]
+}
