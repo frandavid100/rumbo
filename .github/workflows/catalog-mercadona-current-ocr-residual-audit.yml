@@ -9,6 +9,7 @@ on:
       - 'tools/catalog/diagnose_mercadona_ocr_union.py'
       - 'tools/catalog/summarize_mercadona_ocr_run_union.py'
       - 'tools/catalog/test_audit_mercadona_current_ocr_residual.py'
+      - 'tools/catalog/test_summarize_mercadona_ocr_run_union.py'
   workflow_dispatch:
 
 permissions:
@@ -46,7 +47,7 @@ jobs:
       - name: Run residual census unit tests
         working-directory: tools/catalog
         run: |
-          python -m unittest -v test_audit_mercadona_current_ocr_residual.py
+          python -m unittest -v test_audit_mercadona_current_ocr_residual.py test_summarize_mercadona_ocr_run_union.py
           python -m py_compile audit_mercadona_current_ocr_residual.py diagnose_mercadona_ocr_union.py summarize_mercadona_ocr_run_union.py
 
       - name: Reconstruct successful Mercadona OCR artifact union
