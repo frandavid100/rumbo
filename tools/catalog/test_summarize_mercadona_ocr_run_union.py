@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from summarize_mercadona_ocr_run_union import reconcile_latest_observations
+from summarize_mercadona_ocr_run_union import is_canonical_status_row, reconcile_latest_observations
 
 
 N1 = {"calories": 100.0, "protein_g": 5.0, "carbohydrate_g": 10.0, "fat_g": 4.0}
@@ -54,6 +54,24 @@ class LatestObservationReconciliationTests(unittest.TestCase):
         self.assertEqual(result["A"]["status"], "DECLARED")
         self.assertFalse(result["A"]["usable_complete"])
         self.assertEqual(result["A"]["nutrition_issue"], "INCOMPLETE_DECLARED_NUTRITION_LATEST_RUN")
+
+    def test_diagnostic_replay_wrapper_never_updates_canonical_status(self):
+        live_row = {
+            "product_id": "A",
+            "status": "REVIEW",
+            "nutrition": None,
+            "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+        }
+        replay_wrapper = {
+            **live_row,
+            "replay": {
+                "prior_status": "REVIEW",
+                "status": "DECLARED",
+                "nutrition": N1,
+            },
+        }
+        self.assertTrue(is_canonical_status_row(live_row))
+        self.assertFalse(is_canonical_status_row(replay_wrapper))
 
 
 if __name__ == "__main__":
