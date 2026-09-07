@@ -87,6 +87,31 @@ class LatestObservationReconciliationTests(unittest.TestCase):
         self.assertTrue(is_canonical_status_row(live_row))
         self.assertFalse(is_canonical_status_row(replay_wrapper))
 
+    def test_materialized_canonical_summary_never_updates_live_status(self):
+        raw_live_row = {
+            "product_id": "A",
+            "status": "DECLARED",
+            "nutrition": N1,
+            "source": "MERCADONA_FIRST_PARTY",
+            "source_record_kind": "label image",
+            "image_url": "https://prod-mercadona.imgix.net/label.jpg",
+            "redistribution_allowed": False,
+            "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+        }
+        materialized_summary_row = {
+            "product_id": "A",
+            "status": "DECLARED",
+            "nutrition": N1,
+            "source": "MERCADONA_FIRST_PARTY/label image",
+            "source_record_kind": "label image",
+            "redistribution_allowed": False,
+            "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+            "canonical_status_source": "run-union-summary/latest-live reconciliation",
+            "schema_version": "1.0.1",
+        }
+        self.assertTrue(is_canonical_status_row(raw_live_row))
+        self.assertFalse(is_canonical_status_row(materialized_summary_row))
+
 
 class ReviewTransitionDiagnosticTests(unittest.TestCase):
     def test_reason_classifier_reads_nested_ensemble_conflicts_without_promoting_anything(self):
