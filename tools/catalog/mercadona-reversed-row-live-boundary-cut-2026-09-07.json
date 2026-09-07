@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0.0",
+  "created_at": "2026-09-07",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow": {
+    "name": "Catalog Mercadona reversed-row live boundary",
+    "run_id": 34115899050,
+    "artifact_id": 10016490056,
+    "artifact_name": "mercadona-reversed-row-live-boundary-audit",
+    "head_sha": "427dbf4f7308991f2326f0f1cf31e221c605e2d2",
+    "conclusion": "success"
+  },
+  "sample": {
+    "product_ids": ["2851", "29130"],
+    "processed": 2,
+    "declared": 1,
+    "review": 1,
+    "error": 0,
+    "declared_rate": 0.5
+  },
+  "products": [
+    {
+      "product_id": "2851",
+      "name": "Manos de cerdo",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 170.0,
+        "protein_g": 20.54,
+        "carbohydrate_g": 0.0,
+        "fat_g": 9.82
+      }
+    },
+    {
+      "product_id": "29130",
+      "name": "Harina de arroz Hacendado",
+      "status": "REVIEW",
+      "nutrition": null
+    }
+  ],
+  "validation": {
+    "safety_assessment": "VALIDATED",
+    "tests_passed": 17,
+    "unsafe_declared": 0,
+    "provenance_errors": 0,
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "structured_api_macros_claimed": false,
+    "classified": 0,
+    "menu_eligible": 0
+  },
+  "canonicalization": {
+    "policy": "LATEST_RAW_LIVE_OCR_WINS",
+    "canonical_counts_not_arithmetically_modified_by_this_cut": true,
+    "note": "The exact live boundary result is persisted as evidence. Canonical counts must be recomputed from the complete successful Mercadona artifact union so prior product status and diagnostic wrappers cannot be double-counted."
+  }
+}
