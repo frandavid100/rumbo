@@ -1,0 +1,92 @@
+{
+  "cut_date": "2026-09-07",
+  "purpose": "Auditable Mercadona first-party low/zero-calorie OCR cohort after the exact EasyOCR zero-unit-glyph parser rescue.",
+  "source_universe_products": 4280,
+  "workflow": {
+    "run_id": 34096565461,
+    "head_sha": "305f492b96f0159ba52aee6bfaeb695accb52752",
+    "artifact_name": "mercadona-zero-calorie-cohort",
+    "artifact_id": 10009352060,
+    "artifact_sha256": "61e1c73c290757e1dcc74e76754c4c42fe7510556a3828ca6807a4d4607afe2e",
+    "tests_passed": 57
+  },
+  "parser": {
+    "reader_version": "1.4.8",
+    "runtime_experiment_commit": "305f492b96f0159ba52aee6bfaeb695accb52752",
+    "persisted_source_commit": "33287e348cf11f768b92f86584aee21afac93950",
+    "change": "Treat exact EasyOCR 09 output as 0 only when it is the complete value cell immediately following a recognized nutrient row, while accepting observed leading table-border glyphs. Bare 9 and ordinary values remain unchanged."
+  },
+  "cohort": {
+    "product_ids": ["26997", "27449", "27559", "9887"],
+    "processed": 4,
+    "status_counts": {
+      "DECLARED": 3,
+      "REVIEW": 1
+    },
+    "declared_rate": 0.75
+  },
+  "products": [
+    {
+      "product_id": "26997",
+      "name": "Refresco Coca-Cola zero azúcar zero cafeína",
+      "status": "DECLARED",
+      "basis": "100_ml",
+      "nutrition": {
+        "calories": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.0,
+        "protein_g": 0.0
+      }
+    },
+    {
+      "product_id": "27449",
+      "name": "Refresco Coca-Cola zero azúcar",
+      "status": "DECLARED",
+      "basis": "100_ml",
+      "nutrition": {
+        "calories": 2.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.0,
+        "protein_g": 0.0
+      }
+    },
+    {
+      "product_id": "27559",
+      "name": "Refresco Coca-Cola zero azúcar zero cafeína",
+      "status": "DECLARED",
+      "basis": "100_ml",
+      "nutrition": {
+        "calories": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 0.0,
+        "protein_g": 0.0
+      }
+    },
+    {
+      "product_id": "9887",
+      "name": "Refresco Coca-Cola zero azúcar",
+      "status": "REVIEW",
+      "basis": null,
+      "nutrition": null
+    }
+  ],
+  "provenance_contract": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "perspective": "9",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "REVIEW_promoted_without_new_live_OCR": 0,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  },
+  "coverage_accounting": {
+    "unique_products_processed_before_reconciliation": 2969,
+    "unique_products_processed_rate_before_reconciliation": 0.693692,
+    "canonical_DECLARED_before_reconciliation": 225,
+    "canonical_REVIEW_before_reconciliation": 2744,
+    "canonical_full_nutrition_rate_before_reconciliation": 0.052570,
+    "note": "The cohort contains products already present in historical OCR evidence. Do not derive canonical totals by arithmetic addition. Recompute using latest raw live OCR wins; this cut deliberately leaves the canonical totals unchanged until that reconciliation is materialized."
+  }
+}
