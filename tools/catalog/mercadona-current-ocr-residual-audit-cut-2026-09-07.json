@@ -1,0 +1,92 @@
+{
+  "cut_date": "2026-09-07",
+  "branch": "agent/catalog-phase1",
+  "scope": "Mercadona first-party current canonical OCR residual and REVIEW failure-mode audit",
+  "audit_workflow": {
+    "run_id": 34104348594,
+    "artifact_id": 10011900593,
+    "artifact": "mercadona-current-ocr-residual-audit",
+    "result": "success"
+  },
+  "source_contract": {
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  },
+  "canonical": {
+    "universe": 4280,
+    "processed": 2969,
+    "processed_coverage_pct": 69.3692,
+    "DECLARED_complete_usable": 229,
+    "REVIEW": 2740,
+    "complete_usable_coverage_pct": 5.3505,
+    "usable_field_counts": {
+      "calories": 229,
+      "protein_g": 229,
+      "carbohydrate_g": 229,
+      "fat_g": 229
+    }
+  },
+  "unprocessed_residual": {
+    "total": 1311,
+    "actionable_p9": 0,
+    "blocked_no_p9_food_route": 0,
+    "deferred_bodega": 11,
+    "out_of_scope": 1300
+  },
+  "current_review_failure_modes": {
+    "latest_review_products": 2740,
+    "core_field_coverage_counts": {
+      "0": 2018,
+      "1": 105,
+      "2": 144,
+      "3": 231,
+      "4": 242
+    },
+    "corroborated_field_counts": {
+      "0": 2271,
+      "1": 146,
+      "2": 157,
+      "3": 166
+    },
+    "independent_engine_family_counts": {
+      "0": 2014,
+      "1": 231,
+      "2": 274,
+      "3": 221
+    },
+    "near_safe_complete_review": 173,
+    "near_safe_complete_by_corroborated_fields": {
+      "0": 1,
+      "1": 30,
+      "2": 50,
+      "3": 92
+    },
+    "near_safe_complete_by_engine_families": {
+      "2": 70,
+      "3": 103
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 39,
+    "usable_products_created_by_audit": 0,
+    "REVIEW_promoted_by_audit": 0
+  },
+  "canonical_reconciliation_policy": {
+    "status_rule": "LATEST_RAW_LIVE_OCR_WINS",
+    "diagnostic_replay_wrappers_excluded_from_status_materialization": true,
+    "derived_canonical_materializations_excluded_from_status_materialization": true,
+    "review_never_made_usable_without_new_fully_corroborated_live_ocr": true
+  },
+  "next_bounded_regression": {
+    "workflow": ".github/workflows/catalog-mercadona-zero-macro-undercorroborated-regression.yml",
+    "workflow_run_id": 34106643554,
+    "cohort_size": 13,
+    "selection": "Current near-safe REVIEW products with exactly three corroborated core fields, at least one zero-valued diagnostic core macro, and latest raw-live OCR predating parser v1.4.8.",
+    "purpose": "Test whether the integrated EasyOCR 0 g -> 09 repair supplies the missing independent corroboration without relaxing the promotion contract."
+  }
+}
