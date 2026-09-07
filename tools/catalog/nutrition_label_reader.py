@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.8"
+READER_VERSION = "1.4.9"
 
 
 @dataclass(frozen=True)
@@ -238,6 +238,19 @@ def _fat_value(label_patterns: tuple[str, ...], text: str) -> float | None:
             if before is None:
                 continue
             tail = folded[label_match.end():label_match.end() + 90]
+            # EasyOCR can linearise a printed total-fat `0 g` cell as the
+            # standalone token `09` immediately *before* `Grasas`, while the
+            # saturated-fat subrow remains immediately after the label. Accept
+            # that reversed value only under this exact three-row structure.
+            # This deliberately does not rewrite arbitrary `09` tokens.
+            if re.match(
+                r"\s*de\s*las\s+cuales\s*:?\s*\n"
+                r"\s*(?:[<>]?\s*\d{1,3}(?:\.\d{1,2})?\s*(?:g|q|yg|y)|0\s*9)\s*\n"
+                r"\s*[-–—]?\s*(?:saturad|baturad)",
+                tail,
+                flags=re.I,
+            ):
+                return before
             if re.match(
                 r"\s*[<>]?\s*\d{1,3}(?:\.\d{1,2})?\s*(?:g|9|q|yg|y)?\s*\n\s*[-–—]?\s*(?:saturad|baturad)",
                 tail,
