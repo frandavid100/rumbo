@@ -5,6 +5,7 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-current-ocr-residual-audit.yml'
+      - 'tools/catalog/mercadona-*-cut-*.json'
       - 'tools/catalog/audit_mercadona_current_ocr_residual.py'
       - 'tools/catalog/audit_mercadona_current_review_failure_modes.py'
       - 'tools/catalog/diagnose_mercadona_ocr_union.py'
