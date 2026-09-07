@@ -58,32 +58,34 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/mercadona-ocr-artifacts tools/catalog/mercadona-current-ocr-residual-audit
 
-          # Enumerate successful Mercadona OCR workflows since the first-party cut. This is
-          # intentionally derived from Actions rather than hand-maintained run IDs so the census
-          # cannot silently omit a completed bounded front. Only persisted OCR artifacts are read;
-          # no product image is downloaded here.
+          # Enumerate every successful Mercadona workflow since the first-party cut, then retain
+          # only persisted artifacts whose name is Mercadona-scoped. Some bounded OCR residual
+          # workflows were intentionally named by route (for example final no-p9 food) rather
+          # than containing the literal string "OCR". Filtering workflow/artifact names on OCR
+          # silently omitted those valid strict-evidence rows, so evidence_level below is the
+          # authoritative gate instead. No product image is downloaded here.
           gh api --paginate \
             -H 'Accept: application/vnd.github+json' \
             '/repos/frandavid100/rumbo/actions/runs?branch=agent%2Fcatalog-phase1&created=%3E%3D2026-08-27T00%3A00%3A00Z&per_page=100' \
-            --jq '.workflow_runs[] | select(.conclusion == "success") | select((.name | ascii_downcase | contains("mercadona")) and (.name | ascii_downcase | contains("ocr"))) | [.id, .name, .path] | @tsv' \
+            --jq '.workflow_runs[] | select(.conclusion == "success") | select(.name | ascii_downcase | contains("mercadona")) | [.id, .name, .path] | @tsv' \
             | sort -u > /tmp/mercadona-ocr-runs.tsv
 
           run_count=$(wc -l < /tmp/mercadona-ocr-runs.tsv | tr -d ' ')
           if [[ "$run_count" -lt 1 ]]; then
-            echo 'No successful Mercadona OCR runs discovered' >&2
+            echo 'No successful Mercadona runs discovered' >&2
             exit 1
           fi
-          echo "Discovered $run_count successful Mercadona OCR workflow runs"
+          echo "Discovered $run_count successful Mercadona workflow runs"
 
           downloaded=0
           while IFS=$'\t' read -r run_id run_name run_path; do
             [[ -n "$run_id" ]] || continue
             artifact_json=$(gh api -H 'Accept: application/vnd.github+json' "/repos/frandavid100/rumbo/actions/runs/${run_id}/artifacts?per_page=100")
-            mapfile -t merged < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | select(.name | ascii_downcase | contains("ocr")) | select(.name | endswith("-merged")) | [.id, .name] | @tsv' <<<"$artifact_json")
+            mapfile -t merged < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | select(.name | endswith("-merged")) | [.id, .name] | @tsv' <<<"$artifact_json")
             if (( ${#merged[@]} > 0 )); then
               selected=("${merged[@]}")
             else
-              mapfile -t selected < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | select(.name | ascii_downcase | contains("ocr")) | [.id, .name] | @tsv' <<<"$artifact_json")
+              mapfile -t selected < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | [.id, .name] | @tsv' <<<"$artifact_json")
             fi
 
             for item in "${selected[@]}"; do
@@ -100,10 +102,10 @@ jobs:
           done < /tmp/mercadona-ocr-runs.tsv
 
           if (( downloaded < 1 )); then
-            echo 'No non-expired Mercadona OCR artifacts downloaded' >&2
+            echo 'No non-expired Mercadona artifacts downloaded' >&2
             exit 1
           fi
-          echo "Downloaded $downloaded OCR artifacts"
+          echo "Downloaded $downloaded Mercadona artifacts for strict-evidence census"
 
       - name: Diagnose provenance/schema variants before strict census
         working-directory: tools/catalog
