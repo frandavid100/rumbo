@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install regression dependencies
+        run: python -m pip install --disable-pip-version-check opencv-python-headless numpy Pillow
       - name: Apply exact parser patch
         run: python tools/catalog/apply_single_reversed_macro_review_fix.py
       - name: Run focused and safety regressions
