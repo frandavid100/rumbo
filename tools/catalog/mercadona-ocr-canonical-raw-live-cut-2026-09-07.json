@@ -1,0 +1,66 @@
+{
+  "cut_date": "2026-09-07",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 34073528500,
+  "artifact_id": 10001370953,
+  "artifact_name": "mercadona-current-ocr-residual-audit",
+  "head_sha": "1b3ea54de6d5a697e54810b61447e004566b0aed",
+  "audit_policy_version": "1.2.0",
+  "canonical_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "coverage": {
+    "inventory_products": 4280,
+    "processed_distinct_union": 2969,
+    "processed_pct": 69.3692,
+    "residual_total": 1311,
+    "actionable_p9_remaining": 0,
+    "blocked_no_p9_food_route_remaining": 0,
+    "deferred_bodega_remaining": 11,
+    "out_of_scope_non_food_or_mixed_remaining": 1300
+  },
+  "canonical_current_status": {
+    "DECLARED": 225,
+    "REVIEW": 2744,
+    "ERROR": 0,
+    "usable_complete": 225,
+    "usable_complete_pct_inventory": 5.257,
+    "usable_field_counts": {
+      "calories": 225,
+      "protein_g": 225,
+      "carbohydrate_g": 225,
+      "fat_g": 225
+    }
+  },
+  "historical_transition_audit": {
+    "historical_declared_products": 258,
+    "latest_review_after_historical_declared": 33,
+    "explicit_contradiction_products": 14,
+    "safety_blocking_products": 14,
+    "non_contradictory_review_products": 19
+  },
+  "derived_rows_excluded_from_live_state": {
+    "DERIVED_CANONICAL_MATERIALIZATION": 5938,
+    "DIAGNOSTIC_REPLAY_WRAPPER": 37909
+  },
+  "strict_raw_provenance": {
+    "source": "MERCADONA_FIRST_PARTY",
+    "source_record_kind": "label image",
+    "image_url_required": true,
+    "redistribution_allowed": false
+  },
+  "correction": {
+    "previous_stale_usable_complete": 169,
+    "current_usable_complete": 225,
+    "delta": 56,
+    "reason": "Prior canonical audit materializations carried exact OCR evidence metadata and were incorrectly eligible to replace newer raw/live status during chronological reconciliation. They are derived rows, not OCR observations. The reconciler now excludes both prior canonical materializations and diagnostic replay wrappers from live-state replacement while retaining them in processed-union evidence."
+  },
+  "historical_nutrition_inherited": false,
+  "review_auto_promoted": false,
+  "images_downloaded_by_audit": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0
+}
