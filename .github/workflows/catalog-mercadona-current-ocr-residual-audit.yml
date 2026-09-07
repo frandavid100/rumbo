@@ -61,21 +61,45 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/mercadona-ocr-artifacts tools/catalog/mercadona-current-ocr-residual-audit
 
-          # Enumerate every successful Mercadona workflow since the first-party cut, then retain
-          # only persisted artifacts whose name is Mercadona-scoped. Some bounded OCR residual
-          # workflows were intentionally named by route (for example final no-p9 food) rather
-          # than containing the literal string "OCR". Filtering workflow/artifact names on OCR
-          # silently omitted those valid strict-evidence rows, so evidence_level below is the
-          # authoritative gate instead. No product image is downloaded here.
+          # Enumerate Mercadona workflow definitions first and paginate runs per workflow. The
+          # repository-wide Actions endpoint can silently expose only a bounded recent horizon
+          # once the branch has accumulated >1,000 runs; filtering Mercadona only after that
+          # pagination dropped older still-valid OCR evidence. Per-workflow pagination preserves
+          # the complete first-party OCR history since the cut while keeping the same run-name
+          # scope. No product image is downloaded here.
           gh api --paginate \
             -H 'Accept: application/vnd.github+json' \
-            '/repos/frandavid100/rumbo/actions/runs?branch=agent%2Fcatalog-phase1&created=%3E%3D2026-08-27T00%3A00%3A00Z&per_page=100' \
-            --jq '.workflow_runs[] | select(.conclusion == "success") | select(.name | ascii_downcase | contains("mercadona")) | [.id, .name, .path] | @tsv' \
-            | sort -u > /tmp/mercadona-ocr-runs.tsv
+            '/repos/frandavid100/rumbo/actions/workflows?per_page=100' \
+            --jq '.workflows[] | select(.name | ascii_downcase | contains("mercadona")) | [.id, .name, .path] | @tsv' \
+            | sort -u > /tmp/mercadona-workflows.tsv
+
+          workflow_count=$(wc -l < /tmp/mercadona-workflows.tsv | tr -d ' ')
+          if [[ "$workflow_count" -lt 1 ]]; then
+            echo 'No Mercadona workflows discovered' >&2
+            exit 1
+          fi
+          echo "Discovered $workflow_count Mercadona workflow definitions"
+
+          : > /tmp/mercadona-ocr-runs.tsv
+          while IFS=$'\t' read -r workflow_id workflow_name workflow_path; do
+            [[ -n "$workflow_id" ]] || continue
+            gh api --paginate \
+              -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/workflows/${workflow_id}/runs?branch=agent%2Fcatalog-phase1&created=%3E%3D2026-08-27T00%3A00%3A00Z&per_page=100" \
+              --jq '.workflow_runs[] | select(.conclusion == "success") | [.id, .name, .path] | @tsv' \
+              >> /tmp/mercadona-ocr-runs.tsv
+          done < /tmp/mercadona-workflows.tsv
+          sort -u -o /tmp/mercadona-ocr-runs.tsv /tmp/mercadona-ocr-runs.tsv
 
           run_count=$(wc -l < /tmp/mercadona-ocr-runs.tsv | tr -d ' ')
           if [[ "$run_count" -lt 1 ]]; then
             echo 'No successful Mercadona runs discovered' >&2
+            exit 1
+          fi
+          # Regression anchor: this first neural PP-OCRv6 pilot is older than the recent
+          # repository-wide Actions horizon and must remain discoverable while the run exists.
+          if ! grep -q $'^33048440695\t' /tmp/mercadona-ocr-runs.tsv; then
+            echo 'Historical Mercadona OCR anchor run 33048440695 was not discovered' >&2
             exit 1
           fi
           echo "Discovered $run_count successful Mercadona workflow runs"
