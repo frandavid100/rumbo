@@ -96,10 +96,15 @@ jobs:
             echo 'No successful Mercadona runs discovered' >&2
             exit 1
           fi
-          # Regression anchor: this first neural PP-OCRv6 pilot is older than the recent
-          # repository-wide Actions horizon and must remain discoverable while the run exists.
+          # Regression anchors: the first neural PP-OCRv6 pilot is older than the recent
+          # repository-wide Actions horizon, while the rescued exact 79-product near-safe
+          # cohort is the newest raw-live evidence this reconciliation must consume.
           if ! grep -q $'^33048440695\t' /tmp/mercadona-ocr-runs.tsv; then
             echo 'Historical Mercadona OCR anchor run 33048440695 was not discovered' >&2
+            exit 1
+          fi
+          if ! grep -q $'^34139973333\t' /tmp/mercadona-ocr-runs.tsv; then
+            echo 'Rescued Mercadona near-safe anchor run 34139973333 was not discovered' >&2
             exit 1
           fi
           echo "Discovered $run_count successful Mercadona workflow runs"
