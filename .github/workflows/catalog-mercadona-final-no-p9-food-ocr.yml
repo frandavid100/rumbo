@@ -1,0 +1,191 @@
+name: Catalog Mercadona final no-p9 food OCR
+
+# Final bounded food-route residual. Product 3529 has duplicate perspective values,
+# so selection is pinned to an explicit first-party image index and perspective.
+# The wrapper fails closed if that baseline changes. Images are temporary only.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/mercadona_neural_ocr_explicit_photo_wave.py'
+      - 'tools/catalog/test_mercadona_neural_ocr_explicit_photo_wave.py'
+      - 'tools/catalog/mercadona-no-p9-food-final-selection-2026-09-07.json'
+      - '.github/workflows/catalog-mercadona-final-no-p9-food-ocr.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-final-no-p9-food-ocr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run explicit-index and conservative OCR regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_neural_ocr_explicit_photo_wave.py \
+            test_mercadona_neural_ocr_alternate_photo_wave.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+      - name: OCR final exact no-p9 food residual
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_explicit_photo_wave.py \
+            --selection mercadona-no-p9-food-final-selection-2026-09-07.json \
+            --products mercadona-first-party-final/products.jsonl \
+            --out mercadona-final-no-p9-food-ocr \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 \
+            --eligibility-mode p9-no-ingredients-all
+      - name: Validate and stage final residual
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import json, sqlite3
+          from pathlib import Path
+
+          selection = json.loads(Path('mercadona-no-p9-food-final-selection-2026-09-07.json').read_text(encoding='utf-8'))
+          expected = {str(row['product_id']) for row in selection['products']}
+          expected_meta = {str(row['product_id']): row for row in selection['products']}
+          rows = []
+          out = Path('mercadona-final-no-p9-food-ocr')
+          for path in sorted(out.glob('results-*.jsonl')):
+              rows.extend(json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip())
+
+          ids = [str(row.get('product_id') or '') for row in rows]
+          duplicates = sorted(pid for pid, n in Counter(ids).items() if n > 1)
+          missing = sorted(expected - set(ids))
+          extra = sorted(set(ids) - expected)
+          invalid_declared = []
+          provenance_errors = []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              wanted = expected_meta.get(pid) or {}
+              photo = row.get('photo_selection') or {}
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(f'{pid}:evidence')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(f'{pid}:source')
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(f'{pid}:redistribution')
+              if photo.get('policy') != 'EXPLICIT_FIRST_PARTY_PHOTO_INDEX':
+                  provenance_errors.append(f'{pid}:selection_policy')
+              if int(photo.get('actual_image_index', -1)) != int(wanted.get('image_index', -2)):
+                  provenance_errors.append(f'{pid}:image_index')
+              if str(photo.get('actual_perspective')) != str(wanted.get('perspective')):
+                  provenance_errors.append(f'{pid}:perspective')
+              if row.get('status') == 'DECLARED':
+                  accepted = next(
+                      (a for a in (row.get('attempts') or []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'),
+                      None,
+                  )
+                  ensemble = (accepted or {}).get('ensemble') or {}
+                  if ensemble.get('independent_engine_families', 0) < 2 or ensemble.get('corroborated_fields', 0) < 4:
+                      invalid_declared.append(pid)
+
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          summary = {
+              'inventory_products': 4280,
+              'selection_products': len(expected),
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared': counts.get('DECLARED', 0),
+              'review': counts.get('REVIEW', 0),
+              'no_visual_region': counts.get('NO_VISUAL_REGION', 0),
+              'error': counts.get('ERROR', 0),
+              'declared_product_ids': sorted(pid for pid, row in ((str(r.get('product_id')), r) for r in rows) if row.get('status') == 'DECLARED'),
+              'invalid_declared_product_ids': sorted(invalid_declared),
+              'duplicates': duplicates,
+              'missing': missing,
+              'extra': extra,
+              'provenance_errors': sorted(provenance_errors),
+              'previous_exact_processed': 2968,
+              'prospective_exact_processed_if_reconciled': 2968 + len(rows),
+              'prospective_exact_processed_pct': round((2968 + len(rows)) * 100 / 4280, 4),
+              'food_route_residual_after_success': 0,
+              'actionable_p9_remaining': 0,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'photo_selection_policy': 'EXPLICIT_FIRST_PARTY_PHOTO_INDEX',
+              'redistribution_allowed': False,
+              'historical_nutrition_inherited': False,
+              'review_auto_promoted': False,
+              'images_persisted': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          staged = Path('mercadona-final-no-p9-food-staged')
+          staged.mkdir(exist_ok=True)
+          (staged / 'results.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          (staged / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          db = sqlite3.connect(staged / 'results.sqlite')
+          try:
+              db.execute(
+                  'CREATE TABLE ocr_results (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, '
+                  'perspective TEXT NOT NULL, image_index INTEGER NOT NULL, image_url TEXT NOT NULL, '
+                  'evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, row_json TEXT NOT NULL)'
+              )
+              db.executemany(
+                  'INSERT INTO ocr_results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                  [(
+                      str(row['product_id']), str(row['status']), str(row['perspective']), int(row['image_index']),
+                      str(row['image_url']), str(row['evidence_level']), f"{row['source']}/{row['source_record_kind']}",
+                      1 if row['redistribution_allowed'] else 0,
+                      json.dumps(row, ensure_ascii=False, sort_keys=True),
+                  ) for row in rows],
+              )
+              db.commit()
+          finally:
+              db.close()
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+          fatal = duplicates or missing or extra or invalid_declared or provenance_errors or len(rows) != len(expected)
+          if fatal:
+              raise SystemExit('Safety/coverage validation failed')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-final-no-p9-food
+          path: |
+            tools/catalog/mercadona-final-no-p9-food-ocr/
+            tools/catalog/mercadona-final-no-p9-food-staged/
+          retention-days: 30
+          if-no-files-found: error

@@ -1,0 +1,20 @@
+{
+  "purpose": "Final bounded Mercadona first-party food-route OCR residual after perspective=9 exhaustion and the 27-product no-p9 alternate-photo wave",
+  "products": [
+    {
+      "product_id": "3529",
+      "name": "Sandía baja en semillas",
+      "perspective": 10,
+      "image_index": 1,
+      "reason": "duplicate perspective values require explicit first-party image-index pinning; choose the first perspective=10 photo deterministically"
+    }
+  ],
+  "selection_policy": "Explicit product_id + image_index + perspective; fail closed if index/perspective/zoom no longer match the first-party baseline",
+  "source_audit_run_id": 34061827231,
+  "preceding_wave_run_id": 34069910163,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
