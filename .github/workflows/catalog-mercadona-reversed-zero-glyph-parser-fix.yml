@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Apply narrow parser patch
-        run: git apply --check tools/catalog/mercadona-reversed-zero-glyph-parser-v149.patch && git apply tools/catalog/mercadona-reversed-zero-glyph-parser-v149.patch
+        run: python tools/catalog/apply_mercadona_reversed_zero_glyph_parser_v149.py
       - name: Run parser regressions
         working-directory: tools/catalog
         run: |
