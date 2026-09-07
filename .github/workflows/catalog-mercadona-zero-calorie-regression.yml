@@ -1,0 +1,126 @@
+name: Catalog Mercadona zero-calorie OCR regression
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-zero-calorie-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-zero-calorie-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Build exact regression input
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          target = '27184'
+          rows = [json.loads(x) for x in Path('mercadona-first-party-final/products.jsonl').read_text().splitlines() if x.strip()]
+          selected = [x for x in rows if str(x.get('product_id') or '') == target]
+          if len(selected) != 1:
+              raise SystemExit(f'expected exactly one {target} row, got {len(selected)}')
+          row = selected[0]
+          if not row.get('ingredients'):
+              raise SystemExit('target no longer has structured ingredients')
+          photos = row.get('photos') if isinstance(row.get('photos'), list) else []
+          if not any(isinstance(p, dict) and str(p.get('perspective')) == '9' and p.get('zoom') for p in photos):
+              raise SystemExit('target no longer has a usable perspective=9 label image')
+          Path('zero-calorie-regression-product.jsonl').write_text(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n')
+          PY
+      - name: Install OCR engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run zero-calorie and safety regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_nutrition_ocr_ensemble.py test_nutrition_label_reader.py test_mercadona_ocr_safety_regressions.py test_mercadona_neural_ocr_tesseract_preprocess_rescue.py
+          python -m py_compile nutrition_ocr_ensemble.py mercadona_neural_ocr_tesseract_preprocess_rescue.py
+      - name: Reprocess exact affected product
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            --products zero-calorie-regression-product.jsonl \
+            --out mercadona-zero-calorie-regression \
+            --shard-index 0 --shard-count 1 --limit 0 --delay 0
+      - name: Enforce conservative regression contract
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          paths = list(Path('mercadona-zero-calorie-regression').glob('results-*.jsonl'))
+          rows = []
+          for path in paths:
+              rows.extend(json.loads(x) for x in path.read_text().splitlines() if x.strip())
+          if len(rows) != 1 or str(rows[0].get('product_id') or '') != '27184':
+              raise SystemExit(f'unexpected exact rerun rows: {len(rows)}')
+          row = rows[0]
+          attempts = [a for a in row.get('attempts') or [] if a.get('ensemble')]
+          if not attempts:
+              raise SystemExit('no ensemble attempt emitted')
+          reasons = [str(reason) for a in attempts for reason in ((a.get('ensemble') or {}).get('reasons') or [])]
+          if any(reason.startswith('MISSING_CORE:calories') for reason in reasons):
+              raise SystemExit('zero calories still misclassified as missing core')
+          if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+              raise SystemExit('wrong evidence level')
+          if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+              raise SystemExit('wrong source provenance')
+          if row.get('redistribution_allowed') is not False or str(row.get('perspective')) != '9':
+              raise SystemExit('wrong image/provenance contract')
+          summary = {
+              'product_id': '27184',
+              'name': row.get('name'),
+              'status': row.get('status'),
+              'basis': row.get('basis'),
+              'nutrition': row.get('nutrition'),
+              'reasons': reasons,
+              'evidence_level': row.get('evidence_level'),
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'zero_calories_misclassified_as_missing': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('mercadona-zero-calorie-regression/verified-summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-zero-calorie-regression
+          path: mercadona-zero-calorie-regression/
+          retention-days: 30
+          if-no-files-found: warn
