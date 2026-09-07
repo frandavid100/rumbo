@@ -52,7 +52,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: 34120999322
 
-      - name: Build exact current 3-of-4 cohort
+      - name: Build exact current p9 3-of-4 cohort
         working-directory: tools/catalog
         run: |
           python - <<'PY'
@@ -68,7 +68,7 @@ jobs:
               for line in review_path.read_text(encoding='utf-8').splitlines()
               if line.strip()
           ]
-          cohort = [
+          source_cohort = [
               row for row in review_rows
               if row.get('canonical_status') == 'REVIEW'
               and int(row.get('corroborated_fields') or 0) == 3
@@ -78,10 +78,11 @@ jobs:
               and row.get('source_record_kind') == 'label image'
               and row.get('redistribution_allowed') is False
           ]
-          ids = {str(row.get('product_id') or '') for row in cohort}
-          if len(cohort) != 82 or len(ids) != 82:
+          source_ids = {str(row.get('product_id') or '') for row in source_cohort}
+          if len(source_cohort) != 82 or len(source_ids) != 82:
               raise SystemExit(
-                  f'exact current cohort changed: expected=82 rows={len(cohort)} ids={len(ids)}'
+                  f'exact current source cohort changed: expected=82 '
+                  f'rows={len(source_cohort)} ids={len(source_ids)}'
               )
 
           products = [
@@ -90,26 +91,30 @@ jobs:
               .read_text(encoding='utf-8').splitlines()
               if line.strip()
           ]
-          selected = [row for row in products if str(row.get('product_id') or '') in ids]
-          found = {str(row.get('product_id') or '') for row in selected}
-          if found != ids or len(selected) != 82:
-              raise SystemExit(
-                  f'first-party cohort mismatch: expected={len(ids)} found={len(found)} rows={len(selected)}'
-              )
+          by_id = {str(row.get('product_id') or ''): row for row in products}
+          if not source_ids.issubset(by_id):
+              missing = sorted(source_ids - set(by_id))
+              raise SystemExit(f'first-party products missing source IDs: {missing}')
 
-          for row in selected:
+          def has_p9(row):
               photos = row.get('photos') if isinstance(row.get('photos'), list) else []
-              p9 = [
-                  photo for photo in photos
-                  if isinstance(photo, dict)
+              return any(
+                  isinstance(photo, dict)
                   and str(photo.get('perspective')) == '9'
                   and photo.get('zoom')
-              ]
-              if not p9:
-                  raise SystemExit(
-                      f"{row.get('product_id')} no longer has a usable perspective=9 label image"
-                  )
+                  for photo in photos
+              )
 
+          selected_ids = {pid for pid in source_ids if has_p9(by_id[pid])}
+          deferred_non_p9 = sorted(source_ids - selected_ids)
+          expected_deferred = ['20273', '25353', '54053']
+          if len(selected_ids) != 79 or deferred_non_p9 != expected_deferred:
+              raise SystemExit(
+                  f'p9 boundary changed: selected={len(selected_ids)} '
+                  f'deferred={deferred_non_p9}'
+              )
+
+          selected = [by_id[pid] for pid in selected_ids]
           selected.sort(key=lambda row: str(row.get('product_id') or ''))
           Path('near-safe-three-of-four-products.jsonl').write_text(
               ''.join(
@@ -122,12 +127,15 @@ jobs:
               json.dumps(
                   {
                       'source_audit_run_id': 34120999322,
+                      'source_review_cohort': 82,
                       'selection_basis': (
                           'Current canonical REVIEW products with a complete plausible 100g/100ml '
-                          'diagnostic tuple and exactly 3 of 4 core fields corroborated.'
+                          'diagnostic tuple, exactly 3 of 4 core fields corroborated, and a '
+                          'first-party perspective=9 zoom label image.'
                       ),
-                      'selected': len(selected),
-                      'product_ids': sorted(ids),
+                      'selected_p9': len(selected),
+                      'product_ids': sorted(selected_ids),
+                      'deferred_non_p9_product_ids': deferred_non_p9,
                       'nutrition_reader_required': '1.4.9',
                       'mercadona_reader_required': '1.0.5',
                       'promotion_allowed_from_prior_review': False,
@@ -174,7 +182,7 @@ jobs:
           python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
           python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
 
-      - name: Reprocess exact current 3-of-4 cohort
+      - name: Reprocess exact current p9 3-of-4 cohort
         working-directory: tools/catalog
         run: |
           python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
@@ -204,6 +212,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: first-party
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
 
       - name: Download current canonical REVIEW audit
         uses: actions/download-artifact@v4
@@ -237,7 +254,7 @@ jobs:
               for line in review_path.read_text(encoding='utf-8').splitlines()
               if line.strip()
           ]
-          expected = {
+          source_ids = {
               str(row.get('product_id') or '')
               for row in review_rows
               if row.get('canonical_status') == 'REVIEW'
@@ -248,8 +265,31 @@ jobs:
               and row.get('source_record_kind') == 'label image'
               and row.get('redistribution_allowed') is False
           }
-          if len(expected) != 82:
-              raise SystemExit(f'expected exact 82-product source cohort, got {len(expected)}')
+          if len(source_ids) != 82:
+              raise SystemExit(f'expected exact 82-product source cohort, got {len(source_ids)}')
+
+          products = [
+              json.loads(line)
+              for line in Path('first-party/products.jsonl').read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          by_id = {str(row.get('product_id') or ''): row for row in products}
+
+          def has_p9(row):
+              photos = row.get('photos') if isinstance(row.get('photos'), list) else []
+              return any(
+                  isinstance(photo, dict)
+                  and str(photo.get('perspective')) == '9'
+                  and photo.get('zoom')
+                  for photo in photos
+              )
+
+          expected = {pid for pid in source_ids if pid in by_id and has_p9(by_id[pid])}
+          deferred_non_p9 = sorted(source_ids - expected)
+          if len(expected) != 79 or deferred_non_p9 != ['20273', '25353', '54053']:
+              raise SystemExit(
+                  f'p9 source boundary changed: expected={len(expected)} deferred={deferred_non_p9}'
+              )
 
           allowed = {'DECLARED', 'REVIEW', 'NO_VISUAL_REGION', 'ERROR'}
           fields = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
@@ -333,7 +373,7 @@ jobs:
               if path.is_file() and path.suffix.lower() in image_ext
           ]
           ok = (
-              len(rows) == 82
+              len(rows) == 79
               and observed == expected
               and not duplicates
               and not missing
@@ -349,10 +389,15 @@ jobs:
           )
           Path('merged').mkdir(exist_ok=True)
           summary = {
-              'cohort': 'current canonical near-safe REVIEW with exactly 3 of 4 core fields corroborated',
+              'cohort': (
+                  'current canonical near-safe REVIEW with exactly 3 of 4 core fields '
+                  'corroborated and a first-party perspective=9 label image'
+              ),
               'source_audit_run_id': 34120999322,
-              'processed': len(rows),
+              'source_review_cohort': 82,
+              'processed_p9': len(rows),
               'distinct_products_processed': len(observed),
+              'deferred_non_p9_product_ids': deferred_non_p9,
               'status_counts': dict(sorted(counts.items())),
               'new_live_declared_product_ids': declared_ids,
               'new_live_declared_count': len(declared_ids),
@@ -408,7 +453,7 @@ jobs:
 
           print(json.dumps(summary, ensure_ascii=False, indent=2))
           if not ok:
-              raise SystemExit('near-safe 3-of-4 rerun failed conservative safety contract')
+              raise SystemExit('near-safe p9 3-of-4 rerun failed conservative safety contract')
           PY
 
       - uses: actions/upload-artifact@v4
