@@ -146,6 +146,33 @@ Peso Neto:
         })
         self.assertIn("VALUE_BEFORE_LABEL_RESCUED", result.reasons)
 
+    def test_complete_value_before_label_rescue_stays_review_below_confidence_floor(self):
+        observed = """100 g
+1500 kJ
+Valor
+354 kcal
+Energético
+1.2 g
+Grasas
+de las cuales:
+0.2g
+-Saturadas
+79 g
+Hidratos de Carbono
+de los cuales:
+0.5g
+-Azúcares
+1g
+Fibra alimentaria
+7g
+Proteínas
+0.01g
+Sal
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.80)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertNotIn("VALUE_BEFORE_LABEL_RESCUED", result.reasons)
+
     def test_value_before_label_layout_is_not_rescued_without_energy_coherence(self):
         observed = """100 g
 1500 kJ
