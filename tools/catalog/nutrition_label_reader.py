@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.7"
+READER_VERSION = "1.4.8"
 
 
 @dataclass(frozen=True)
@@ -159,6 +159,19 @@ def _number_after(label_patterns: tuple[str, ...], text: str) -> float | None:
     for label in label_patterns:
         for label_match in re.finditer(label, folded, flags=re.I):
             tail = folded[label_match.end():label_match.end() + 90]
+            # Exact EasyOCR failure observed on Mercadona zero-macro cells: printed `0 g`
+            # can become `09`. Treat it as zero only when it is the complete value cell
+            # immediately after a recognised nutrient row; do not rewrite arbitrary `09`
+            # tokens and do not alter ordinary values such as 9.29 or a bare 9.
+            zero_unit_glyph = re.match(
+                r"\s*[:;|]?\s*([<>]?)\s*0\s*9(?:\s*\(\s*\d{1,3}(?:\.\d+)?\s*%\s*\))?\s*(?:\n|$)",
+                tail,
+                flags=re.I,
+            )
+            if zero_unit_glyph:
+                if zero_unit_glyph.group(1) in ("<", ">"):
+                    return None
+                return 0.0
             number = re.search(r"([<>]?)\s*(\d{1,4}(?:\.\d{1,2})?)\s*(?:g\b|gramos?\b)?", tail)
             if not number:
                 continue
@@ -352,16 +365,16 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     # Spanish row label. This keeps _number_after's prose guard intact while
     # supporting bilingual/multilingual tables such as `Grasas / Fat 0 g`.
     fat_patterns = (
-        r"(?:^|\n)\s*grasas?(?:\s*/\s*(?:lipidos?|fat|graisses?))?\b",
-        r"(?:^|\n)\s*lipidos?\b",
-        r"(?:^|\n)\s*grasa total\b",
+        r"(?:^|\n)\s*[\[|]?\s*grasas?(?:\s*/\s*(?:lipidos?|fat|graisses?))?\b",
+        r"(?:^|\n)\s*[\[|]?\s*lipidos?\b",
+        r"(?:^|\n)\s*[\[|]?\s*grasa total\b",
     )
     carb_patterns = (
-        r"(?:^|\n)\s*hidratos? de carbono(?:\s*/\s*(?:carbohydrates?|glucides?))?\b",
-        r"(?:^|\n)\s*carbohidratos?\b",
+        r"(?:^|\n)\s*[\[|]?\s*hidratos? de carbono(?:\s*/\s*(?:carbohydrates?|glucides?))?\b",
+        r"(?:^|\n)\s*[\[|]?\s*carbohidratos?\b",
     )
     protein_patterns = (
-        r"(?:^|\n)\s*proteinas?(?:\s*/\s*(?:protein|proteines?))?\b",
+        r"(?:^|\n)\s*[\[|]?\s*proteinas?(?:\s*/\s*(?:protein|proteines?))?\b",
     )
 
     calories = _energy_kcal(block)
