@@ -44,6 +44,12 @@ def fixture_summary():
                 "new_product_ids": ["3"],
                 "overlap_product_ids": ["1", "2"],
             },
+            {
+                "run_id": 30,
+                "workflow_names": ["diagnostic replay"],
+                "new_product_ids": [],
+                "overlap_product_ids": ["1", "2"],
+            },
         ],
     }
 
@@ -56,15 +62,26 @@ class CanonicalMaterializationTests(unittest.TestCase):
         self.assertTrue(by_id["1"]["usable_complete"])
         self.assertEqual(by_id["1"]["nutrition"], N1)
         self.assertEqual(by_id["1"]["latest_live_run_id"], 20)
+        self.assertEqual(by_id["1"]["workflow_names"], ["wave"])
         for field in ("calories", "protein_g", "carbohydrate_g", "fat_g"):
             self.assertEqual(by_id["1"]["nutrition_provenance"][field]["evidence_level"], EVIDENCE)
             self.assertEqual(by_id["1"]["nutrition_provenance"][field]["source"], SOURCE)
+            self.assertEqual(by_id["1"]["nutrition_provenance"][field]["latest_live_run_id"], 20)
             self.assertFalse(by_id["1"]["nutrition_provenance"][field]["redistribution_allowed"])
 
         for product_id in ("2", "3"):
             self.assertFalse(by_id[product_id]["usable_complete"])
             self.assertIsNone(by_id[product_id]["nutrition"])
             self.assertIsNone(by_id[product_id]["nutrition_provenance"])
+            self.assertIsNone(by_id[product_id]["latest_live_run_id"])
+            self.assertEqual(by_id[product_id]["workflow_names"], [])
+
+    def test_diagnostic_replay_after_live_declared_does_not_replace_macro_provenance_run(self):
+        rows = build_canonical_rows(fixture_summary())
+        declared = next(row for row in rows if row["product_id"] == "1")
+        self.assertEqual(declared["latest_live_run_id"], 20)
+        self.assertEqual(declared["workflow_names"], ["wave"])
+        self.assertNotEqual(declared["latest_live_run_id"], 30)
 
     def test_non_declared_usable_product_is_rejected(self):
         summary = fixture_summary()
@@ -72,10 +89,10 @@ class CanonicalMaterializationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "non-DECLARED"):
             build_canonical_rows(summary)
 
-    def test_missing_chronological_locator_is_rejected(self):
+    def test_missing_usable_run_metadata_is_rejected(self):
         summary = fixture_summary()
-        summary["runs"][-1]["new_product_ids"] = []
-        with self.assertRaisesRegex(ValueError, "missing chronological run locator"):
+        summary["runs"] = [run for run in summary["runs"] if run["run_id"] != 20]
+        with self.assertRaisesRegex(ValueError, "usable latest live run missing from chronological summary"):
             build_canonical_rows(summary)
 
     def test_jsonl_and_sqlite_have_identical_rows_and_sqlite_blocks_review_macros(self):
@@ -95,9 +112,12 @@ class CanonicalMaterializationTests(unittest.TestCase):
             connection = sqlite3.connect(db)
             try:
                 stored = connection.execute(
-                    "SELECT product_id, status, usable_complete, calories FROM canonical_ocr ORDER BY product_id"
+                    "SELECT product_id, status, usable_complete, latest_live_run_id, calories FROM canonical_ocr ORDER BY product_id"
                 ).fetchall()
-                self.assertEqual(stored, [("1", "DECLARED", 1, 100.0), ("2", "REVIEW", 0, None), ("3", "REVIEW", 0, None)])
+                self.assertEqual(
+                    stored,
+                    [("1", "DECLARED", 1, 20, 100.0), ("2", "REVIEW", 0, None, None), ("3", "REVIEW", 0, None, None)],
+                )
                 with self.assertRaises(sqlite3.IntegrityError):
                     connection.execute(
                         "UPDATE canonical_ocr SET calories = 1.0 WHERE product_id = '2'"
