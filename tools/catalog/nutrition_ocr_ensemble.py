@@ -6,7 +6,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.0"
+ENSEMBLE_VERSION = "1.3.1"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -226,9 +226,14 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
         ensemble_confidence = min(ensemble_confidence, .84)
 
     synthetic_basis = "100 g" if basis == "100_g" else "100 ml" if basis == "100_ml" else ""
+    # The label parser intentionally required at least two energy digits in its
+    # generic kcal matcher to reduce OCR false positives. This synthetic tuple is
+    # already numeric ensemble evidence, so zero/single-digit energy must not be
+    # turned back into a false MISSING_CORE during the independent coherence pass.
+    synthetic_calories = f"{nutrition['calories']:.1f}".rjust(4, "0")
     synthetic = (
         f"Información nutricional por {synthetic_basis}\n"
-        f"Valor energético {nutrition['calories']} kcal\n"
+        f"Valor energético {synthetic_calories} kcal\n"
         f"Grasas {nutrition['fat_g']} g\n"
         f"Hidratos de carbono {nutrition['carbohydrate_g']} g\n"
         f"Proteínas {nutrition['protein_g']} g\n"
