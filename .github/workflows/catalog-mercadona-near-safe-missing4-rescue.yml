@@ -57,17 +57,31 @@ jobs:
           github-token: ${{ github.token }}
           run-id: 34129507364
 
-      - name: Build exact omitted four-product cohort
+      - name: Derive exact omitted four-product cohort from evidence
         run: |
           python - <<'PY'
-          import json
+          import glob, json
           from pathlib import Path
 
-          missing = {'20292', '3541', '5831', '9085'}
+          reviews = [json.loads(x) for x in Path(
+              'current-audit/current-review-failure-modes/near-safe-complete-review.jsonl'
+          ).read_text(encoding='utf-8').splitlines() if x.strip()]
+          source_ids = {str(r.get('product_id') or '') for r in reviews if (
+              r.get('canonical_status') == 'REVIEW'
+              and int(r.get('corroborated_fields') or 0) == 3
+              and r.get('promotion_allowed') is False
+              and r.get('evidence_level') == 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+              and r.get('source') == 'MERCADONA_FIRST_PARTY'
+              and r.get('source_record_kind') == 'label image'
+              and r.get('redistribution_allowed') is False
+          )}
+          if len(source_ids) != 82:
+              raise SystemExit(f'expected source cohort 82, got {len(source_ids)}')
+
           products = [json.loads(x) for x in Path('first-party/products.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
           by_id = {str(r.get('product_id') or ''): r for r in products}
-          if not missing.issubset(by_id):
-              raise SystemExit(f'missing inventory rows: {sorted(missing - set(by_id))}')
+          if not source_ids.issubset(by_id):
+              raise SystemExit(f'missing source inventory IDs: {sorted(source_ids - set(by_id))}')
 
           def has_p9(row):
               return any(
@@ -75,10 +89,31 @@ jobs:
                   for p in (row.get('photos') if isinstance(row.get('photos'), list) else [])
               )
 
-          bad_p9 = sorted(pid for pid in missing if not has_p9(by_id[pid]))
+          expected = {pid for pid in source_ids if has_p9(by_id[pid])}
+          deferred = sorted(source_ids - expected)
+          if len(expected) != 79 or deferred != ['20273', '25353', '54053']:
+              raise SystemExit(f'p9 boundary drift: expected={len(expected)} deferred={deferred}')
+
+          prior_paths = sorted(glob.glob('prior/**/results-*.jsonl', recursive=True))
+          if len(prior_paths) != 8:
+              raise SystemExit(f'expected 8 prior result files, got {len(prior_paths)}: {prior_paths}')
+          prior_rows = []
+          for path in prior_paths:
+              prior_rows.extend(json.loads(x) for x in Path(path).read_text(encoding='utf-8').splitlines() if x.strip())
+          prior_ids = [str(r.get('product_id') or '') for r in prior_rows]
+          observed = set(prior_ids)
+          if len(prior_rows) != 75 or len(observed) != 75 or not observed.issubset(expected):
+              raise SystemExit(f'prior boundary drift: rows={len(prior_rows)} distinct={len(observed)} unexpected={sorted(observed-expected)}')
+
+          missing = expected - observed
+          known_missing = {'22879', '25461', '2779', '84597'}
+          if missing != known_missing:
+              raise SystemExit(f'omitted set drift: derived={sorted(missing)} expected={sorted(known_missing)}')
+
+          no_p9 = sorted(pid for pid in missing if not has_p9(by_id[pid]))
           with_ingredients = sorted(pid for pid in missing if by_id[pid].get('ingredients'))
-          if bad_p9 or with_ingredients:
-              raise SystemExit(f'omitted-cohort drift: no_p9={bad_p9} with_ingredients={with_ingredients}')
+          if no_p9 or with_ingredients:
+              raise SystemExit(f'omitted cohort eligibility drift: no_p9={no_p9} with_ingredients={with_ingredients}')
 
           rows = sorted((by_id[pid] for pid in missing), key=lambda r: str(r.get('product_id') or ''))
           Path('missing4-products.jsonl').write_text(
@@ -86,11 +121,17 @@ jobs:
               encoding='utf-8',
           )
           Path('missing4-selection.json').write_text(json.dumps({
+              'source_audit_run_id': 34120999322,
               'source_failed_run_id': 34129507364,
-              'selection_reason': 'Rows omitted because the exact p9 cohort was passed through priority/structured-ingredients eligibility a second time.',
-              'product_ids': sorted(missing),
+              'source_review_cohort': 82,
+              'expected_p9': 79,
+              'reused_prior_products': 75,
+              'derived_missing_product_ids': sorted(missing),
+              'deferred_non_p9_product_ids': deferred,
+              'selection_reason': 'Exact set difference between the 79 eligible current p9 3-of-4 REVIEW products and the 75 rows actually emitted by run 34129507364.',
               'eligibility_mode': 'p9-no-ingredients-all',
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
               'redistribution_allowed': False,
               'CLASSIFIED': 0,
               'MENU_ELIGIBLE': 0,
@@ -137,7 +178,10 @@ jobs:
           from collections import Counter
           from pathlib import Path
 
-          missing4 = {'20292', '3541', '5831', '9085'}
+          selection = json.loads(Path('missing4-selection.json').read_text(encoding='utf-8'))
+          missing4 = set(selection['derived_missing_product_ids'])
+          expected = None
+
           reviews = [json.loads(x) for x in Path(
               'current-audit/current-review-failure-modes/near-safe-complete-review.jsonl'
           ).read_text(encoding='utf-8').splitlines() if x.strip()]
@@ -150,29 +194,17 @@ jobs:
               and r.get('source_record_kind') == 'label image'
               and r.get('redistribution_allowed') is False
           )}
-          if len(source_ids) != 82:
-              raise SystemExit(f'expected source cohort 82, got {len(source_ids)}')
-
           products = [json.loads(x) for x in Path('first-party/products.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
           by_id = {str(r.get('product_id') or ''): r for r in products}
           def has_p9(row):
-              return any(
-                  isinstance(p, dict) and str(p.get('perspective')) == '9' and p.get('zoom')
-                  for p in (row.get('photos') if isinstance(row.get('photos'), list) else [])
-              )
+              return any(isinstance(p, dict) and str(p.get('perspective')) == '9' and p.get('zoom') for p in (row.get('photos') or []))
           expected = {pid for pid in source_ids if pid in by_id and has_p9(by_id[pid])}
           deferred = sorted(source_ids - expected)
           if len(expected) != 79 or deferred != ['20273', '25353', '54053']:
-              raise SystemExit(f'p9 boundary drift: expected={len(expected)} deferred={deferred}')
-          if not missing4.issubset(expected):
-              raise SystemExit(f'missing-four no longer inside exact cohort: {sorted(missing4 - expected)}')
+              raise SystemExit(f'p9 boundary drift during merge: expected={len(expected)} deferred={deferred}')
 
           prior_paths = sorted(glob.glob('prior/**/results-*.jsonl', recursive=True))
-          if len(prior_paths) != 8:
-              raise SystemExit(f'expected 8 prior shard result files, got {len(prior_paths)}: {prior_paths}')
-          prior_rows = []
-          for path in prior_paths:
-              prior_rows.extend(json.loads(x) for x in Path(path).read_text(encoding='utf-8').splitlines() if x.strip())
+          prior_rows = [json.loads(x) for path in prior_paths for x in Path(path).read_text(encoding='utf-8').splitlines() if x.strip()]
           rescue_paths = sorted(glob.glob('missing4/results-*.jsonl'))
           if len(rescue_paths) != 1:
               raise SystemExit(f'expected one rescue result file, got {rescue_paths}')
@@ -245,6 +277,7 @@ jobs:
               'expected_p9': 79,
               'reused_prior_products': 75,
               'newly_processed_products': 4,
+              'rescued_product_ids': sorted(missing4),
               'distinct_products_processed': len(observed),
               'deferred_non_p9_product_ids': deferred,
               'status_counts': dict(sorted(counts.items())),
@@ -274,6 +307,7 @@ jobs:
           (out/'results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True)+'\n' for r in sorted_rows), encoding='utf-8')
           (out/'audited-products.json').write_text(json.dumps(audited, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
           (out/'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          (out/'selection.json').write_text(json.dumps(selection, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
 
           db = sqlite3.connect(out/'staging.sqlite')
           db.execute('CREATE TABLE ocr_results (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, raw_json TEXT NOT NULL)')
@@ -289,7 +323,7 @@ jobs:
 
           print(json.dumps(summary, ensure_ascii=False, indent=2))
           if not ok:
-              raise SystemExit('rescued exact cohort failed safety contract')
+              raise SystemExit('rescued 79-product cohort failed conservative safety contract')
           PY
 
       - uses: actions/upload-artifact@v4
