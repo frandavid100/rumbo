@@ -1,0 +1,98 @@
+{
+  "cut_date": "2026-09-07",
+  "purpose": "Auditable closure of the exact current Mercadona near-safe 3-of-4 REVIEW residual without perspective=9, using the only available first-party label-bearing photo for each product.",
+  "source_universe_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "source_canonical_audit": {
+    "run_id": 34141459485,
+    "artifact_id": 10026244488,
+    "canonical_processed": 2969,
+    "canonical_declared": 239,
+    "canonical_review": 2730,
+    "usable_complete_pct_inventory": 5.5841
+  },
+  "workflow": {
+    "run_id": 34142516468,
+    "head_sha": "7f2b5555322696dbd02475bef263dd711de23522",
+    "artifact_name": "mercadona-near-safe-no-p9-three",
+    "artifact_id": 10026592505,
+    "artifact_sha256": "c140914a5a732a5955bc662d0fc966182c80cb67c92a4eef7e4a8ac81cb511a5"
+  },
+  "selection": {
+    "products": 3,
+    "product_ids": ["20273", "25353", "54053"],
+    "criteria": "Current canonical REVIEW, exactly 3/4 core fields corroborated, no safety blockers, no perspective=9, structured ingredients present, and exactly one first-party zoom photo at perspective=2.",
+    "photo_selection_policy": "EXPLICIT_NON_P9_FIRST_PARTY_PHOTO"
+  },
+  "result": {
+    "processed": 3,
+    "status_counts": {
+      "DECLARED": 0,
+      "REVIEW": 3,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "new_live_declared_product_ids": [],
+    "products": [
+      {
+        "product_id": "20273",
+        "name": "Jamón cocido extrafino Hacendado lonchas",
+        "status": "REVIEW",
+        "perspective": 2,
+        "image_index": 0,
+        "corroborated_fields": 3,
+        "independent_engine_families": 3,
+        "diagnostic_candidate_only": {
+          "calories": 102.0,
+          "protein_g": 19.0,
+          "carbohydrate_g": 0.9
+        },
+        "review_reasons": ["OCR_FIELD_CONFLICT:fat_g", "MISSING_CORE:fat_g"]
+      },
+      {
+        "product_id": "25353",
+        "name": "Solomillo de pavo marinado congelado",
+        "status": "REVIEW",
+        "perspective": 2,
+        "image_index": 0,
+        "corroborated_fields": 3,
+        "independent_engine_families": 3,
+        "diagnostic_candidate_only": {
+          "calories": 93.0,
+          "protein_g": 22.0,
+          "carbohydrate_g": 1.0,
+          "fat_g": 0.7
+        },
+        "review_reasons": ["UNCORROBORATED_CORE_FIELDS", "LOW_EXTRACTION_CONFIDENCE"]
+      },
+      {
+        "product_id": "54053",
+        "name": "Lomo Hacendado",
+        "status": "REVIEW",
+        "perspective": 2,
+        "image_index": 0,
+        "corroborated_fields": 3,
+        "independent_engine_families": 2,
+        "diagnostic_candidate_only": {
+          "calories": 199.0,
+          "protein_g": 38.0,
+          "carbohydrate_g": 0.5,
+          "fat_g": 5.0
+        },
+        "review_reasons": ["UNCORROBORATED_BASIS", "UNCORROBORATED_CORE_FIELDS", "LOW_EXTRACTION_CONFIDENCE"]
+      }
+    ]
+  },
+  "safety": {
+    "review_auto_promoted": false,
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "unsafe_rows": 0,
+    "structured_api_macros_claimed": false,
+    "classified": 0,
+    "menu_eligible": 0
+  },
+  "closure": "The exact no-p9 near-safe trio is exhausted with the current conservative parser/ensemble: all three remain REVIEW and none is usable nutrition."
+}
