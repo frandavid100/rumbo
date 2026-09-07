@@ -1,0 +1,65 @@
+{
+  "cut_date": "2026-09-07",
+  "scope": "Mercadona first-party exact zero-macro under-corroborated regression",
+  "workflow_run_id": 34106643554,
+  "workflow_head_sha": "f8f7e8d32acb2825afbf9653230fa5e6d89a7a2e",
+  "artifact": {
+    "id": 10012941200,
+    "name": "mercadona-zero-macro-undercorroborated-regression-merged",
+    "sha256": "38e6897166884c39873060a7ac3ebf1c45f6b205bf39c28e0d003487c434bb85"
+  },
+  "selection": {
+    "products": 13,
+    "product_ids": [
+      "16314", "27321", "2781", "2817", "28575", "39191", "39394",
+      "4640", "4740", "50483", "67938", "67939", "8309"
+    ],
+    "basis": "Current near-safe REVIEW products with exactly three corroborated core fields, a zero-valued diagnostic core macro, and latest raw-live OCR predating parser v1.4.8."
+  },
+  "result": {
+    "processed": 13,
+    "distinct_products_processed": 13,
+    "DECLARED": 1,
+    "REVIEW": 12,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "safety_assessment": "VALIDATED",
+    "unsafe_declared": 0,
+    "provenance_errors": 0,
+    "duplicate_product_ids": 0,
+    "missing_product_ids": 0,
+    "unexpected_product_ids": 0,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "REVIEW_promoted_without_new_live_OCR": 0
+  },
+  "declared_products": [
+    {
+      "product_id": "4740",
+      "name": "Aceite de oliva virgen extra Hacendado",
+      "basis": "100_ml",
+      "calories": 822.0,
+      "protein_g": 0.0,
+      "carbohydrate_g": 0.0,
+      "fat_g": 91.4,
+      "image_url": "https://prod-mercadona.imgix.net/images/97013919c5b0bf60473bab330a8c24eb.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "redistribution_allowed": false
+    }
+  ],
+  "ocr": {
+    "reader_version": "1.4.8",
+    "engine": "paddleocr-v5-server+easyocr-ensemble",
+    "confidence_mode": "conservative_agreement"
+  },
+  "canonical_reconciliation": {
+    "policy": "LATEST_RAW_LIVE_OCR_WINS",
+    "pending": true,
+    "canonical_declared_before_reconciliation": 229,
+    "note": "Do not arithmetically add product 4740 until the raw-live canonical reconciliation is rerun."
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
