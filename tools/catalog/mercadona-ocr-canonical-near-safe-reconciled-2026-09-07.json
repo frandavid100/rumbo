@@ -1,0 +1,79 @@
+{
+  "cut": "mercadona-ocr-canonical-near-safe-reconciled-2026-09-07",
+  "inventory_products": 4280,
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 239,
+    "REVIEW": 2730
+  },
+  "usable_complete": 239,
+  "usable_complete_pct_inventory": 5.5841,
+  "usable_field_counts": {
+    "calories": 239,
+    "protein_g": 239,
+    "carbohydrate_g": 239,
+    "fat_g": 239
+  },
+  "delta_from_previous_persisted_canonical_cut": {
+    "previous_declared": 232,
+    "current_declared": 239,
+    "net_declared_delta": 7,
+    "new_canonical_declared_product_ids": [
+      "13632",
+      "13708",
+      "14484",
+      "17640",
+      "21581",
+      "55125",
+      "60633"
+    ]
+  },
+  "raw_live_near_safe_anchor": {
+    "workflow_run_id": 34139973333,
+    "artifact_id": 10025704622,
+    "cohort_products": 79,
+    "DECLARED": 7,
+    "REVIEW": 72
+  },
+  "canonical_reconciliation": {
+    "workflow_run_id": 34144668619,
+    "artifact_id": 10027415409,
+    "historical_declared_products": 271,
+    "latest_review_after_historical_declared": 32,
+    "excluded_rows": {
+      "DERIVED_CANONICAL_MATERIALIZATION": 32659,
+      "DIAGNOSTIC_REPLAY_WRAPPER": 45799
+    }
+  },
+  "current_review_audit": {
+    "near_safe_complete_review": 132,
+    "complete_but_safety_blocked": 45,
+    "fully_corroborated_but_still_review": 0,
+    "products_with_ocr_signal": 2730,
+    "products_without_ocr_signal": 0,
+    "no_visual_region_without_ocr_signal": 0
+  },
+  "operational_residual": {
+    "residual_total": 1311,
+    "ocr_actionable_p9_total": 0,
+    "ocr_blocked_no_p9_food_route_total": 0,
+    "ocr_deferred_bodega_total": 11,
+    "ocr_out_of_scope_total": 1300
+  },
+  "provenance": {
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false
+  },
+  "safety": {
+    "REVIEW_promoted_without_new_live_ocr": 0,
+    "CLASSIFIED": 0,
+    "MENU_ELIGIBLE": 0
+  },
+  "notes": "Canonical counts are reconstructed from the successful strict-evidence Mercadona OCR artifact union. Diagnostic replay wrappers and prior canonical materializations never replace raw-live status. REVIEW rows remain non-usable and carry no canonical nutrition."
+}
