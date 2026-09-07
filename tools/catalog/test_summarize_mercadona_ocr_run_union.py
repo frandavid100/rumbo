@@ -60,6 +60,15 @@ class LatestObservationReconciliationTests(unittest.TestCase):
         self.assertFalse(result["A"]["usable_complete"])
         self.assertEqual(result["A"]["nutrition_issue"], "INCOMPLETE_DECLARED_NUTRITION_LATEST_RUN")
 
+    def test_declared_with_incomplete_raw_provenance_is_never_usable(self):
+        result = reconcile_latest_observations([
+            (20, "A", "DECLARED", N1, False),
+        ])
+        self.assertEqual(result["A"]["status"], "DECLARED")
+        self.assertFalse(result["A"]["usable_complete"])
+        self.assertIsNone(result["A"]["nutrition"])
+        self.assertEqual(result["A"]["nutrition_issue"], "INCOMPLETE_STRICT_PROVENANCE_LATEST_RUN")
+
     def test_diagnostic_replay_wrapper_never_updates_canonical_status(self):
         live_row = {
             "product_id": "A",
