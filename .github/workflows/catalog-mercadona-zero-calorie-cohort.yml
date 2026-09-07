@@ -58,6 +58,62 @@ jobs:
               ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected)
           )
           PY
+      - name: Apply narrow EasyOCR zero-glyph parser experiment
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('nutrition_label_reader.py')
+          text = path.read_text()
+
+          replacements = [
+              ('READER_VERSION = "1.4.7"', 'READER_VERSION = "1.4.8"'),
+              (
+                  '            number = re.search(r"([<>]?)\\s*(\\d{1,4}(?:\\.\\d{1,2})?)\\s*(?:g\\b|gramos?\\b)?", tail)\n',
+                  '            # Prefer an explicit gram-like unit. EasyOCR often renders the printed `g` as `9`,\n'
+                  '            # so `09` in a zero-macro cell means numeric 0 followed by the observed unit glyph.\n'
+                  '            # Only nutrient-row context reaches this helper; a bare `9` remains numeric nine.\n'
+                  '            number = re.search(\n'
+                  '                r"([<>]?)\\s*(\\d{1,3}(?:\\.\\d{1,2})?)\\s*(?:g\\b|9\\b|q\\b|yg\\b|y\\b|gramos?\\b)",\n'
+                  '                tail,\n'
+                  '            )\n'
+                  '            if not number:\n'
+                  '                number = re.search(r"([<>]?)\\s*(\\d{1,4}(?:\\.\\d{1,2})?)", tail)\n'
+              ),
+              (
+                  '        r"(?:^|\\n)\\s*grasas?(?:\\s*/\\s*(?:lipidos?|fat|graisses?))?\\b",\n',
+                  '        r"(?:^|\\n)\\s*[\\[|]?\\s*grasas?(?:\\s*/\\s*(?:lipidos?|fat|graisses?))?\\b",\n'
+              ),
+              (
+                  '        r"(?:^|\\n)\\s*lipidos?\\b",\n',
+                  '        r"(?:^|\\n)\\s*[\\[|]?\\s*lipidos?\\b",\n'
+              ),
+              (
+                  '        r"(?:^|\\n)\\s*grasa total\\b",\n',
+                  '        r"(?:^|\\n)\\s*[\\[|]?\\s*grasa total\\b",\n'
+              ),
+              (
+                  '        r"(?:^|\\n)\\s*hidratos? de carbono(?:\\s*/\\s*(?:carbohydrates?|glucides?))?\\b",\n',
+                  '        r"(?:^|\\n)\\s*[\\[|]?\\s*hidratos? de carbono(?:\\s*/\\s*(?:carbohydrates?|glucides?))?\\b",\n'
+              ),
+              (
+                  '        r"(?:^|\\n)\\s*carbohidratos?\\b",\n',
+                  '        r"(?:^|\\n)\\s*[\\[|]?\\s*carbohidratos?\\b",\n'
+              ),
+              (
+                  '        r"(?:^|\\n)\\s*proteinas?(?:\\s*/\\s*(?:protein|proteines?))?\\b",\n',
+                  '        r"(?:^|\\n)\\s*[\\[|]?\\s*proteinas?(?:\\s*/\\s*(?:protein|proteines?))?\\b",\n'
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'expected parser fragment not found: {old!r}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
       - name: Install OCR engines
         run: |
           sudo apt-get update -qq
@@ -67,8 +123,8 @@ jobs:
       - name: Run zero-calorie and safety regressions
         working-directory: tools/catalog
         run: |
-          python -m unittest -v test_nutrition_ocr_ensemble.py test_nutrition_label_reader.py test_mercadona_ocr_safety_regressions.py test_mercadona_neural_ocr_tesseract_preprocess_rescue.py
-          python -m py_compile nutrition_ocr_ensemble.py mercadona_neural_ocr_tesseract_preprocess_rescue.py
+          python -m unittest -v test_nutrition_ocr_ensemble.py test_nutrition_label_reader.py test_nutrition_label_reader_easyocr_zero_glyph.py test_mercadona_ocr_safety_regressions.py test_mercadona_neural_ocr_tesseract_preprocess_rescue.py
+          python -m py_compile nutrition_ocr_ensemble.py nutrition_label_reader.py mercadona_neural_ocr_tesseract_preprocess_rescue.py
       - name: Reprocess exact low-calorie cohort
         working-directory: tools/catalog
         run: |
@@ -151,6 +207,9 @@ jobs:
           }
           Path('mercadona-zero-calorie-cohort/verified-summary.json').write_text(
               json.dumps(summary, ensure_ascii=False, indent=2) + '\n'
+          )
+          Path('mercadona-zero-calorie-cohort/patched-nutrition_label_reader.py').write_text(
+              Path('nutrition_label_reader.py').read_text()
           )
           print(json.dumps(summary, ensure_ascii=False, indent=2))
           PY
