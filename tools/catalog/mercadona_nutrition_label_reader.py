@@ -9,7 +9,7 @@ from nutrition_label_reader import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.5"
+READER_VERSION = "1.0.6"
 
 
 _FAT_PATTERNS = (
@@ -124,8 +124,8 @@ def _complete_value_before_label_rescue(
     basis and calories are explicit, the source extraction itself meets the
     DECLARED confidence floor, and the resulting four-field tuple is near-exactly
     energy coherent. For a REVIEW input, only a plain missing-core/energy-mismatch
-    result is eligible; multicolumn, impossible-value, low-confidence and other
-    safety reviews remain blocked.
+    or conservative single-reversed-macro candidate result is eligible;
+    multicolumn, impossible-value, low-confidence and other safety reviews remain blocked.
     """
     if result.status not in {"DECLARED", "REVIEW"} or result.nutrition is None:
         return None
@@ -137,12 +137,18 @@ def _complete_value_before_label_rescue(
         return None
 
     if result.status == "REVIEW":
-        if not any(reason.startswith("MISSING_CORE:") for reason in result.reasons):
+        recoverable_reversed_evidence = any(
+            reason.startswith("MISSING_CORE:")
+            or reason.startswith("SINGLE_REVERSED_MACRO_CANDIDATE:")
+            for reason in result.reasons
+        )
+        if not recoverable_reversed_evidence:
             return None
         if any(
             not (
                 reason.startswith("MISSING_CORE:")
                 or reason.startswith("ENERGY_MACRO_MISMATCH:")
+                or reason.startswith("SINGLE_REVERSED_MACRO_CANDIDATE:")
             )
             for reason in result.reasons
         ):

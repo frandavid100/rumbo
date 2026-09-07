@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.9"
+READER_VERSION = "1.4.10"
 
 
 @dataclass(frozen=True)
@@ -399,17 +399,19 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
 
     values = {"calories": calories, "fat_g": fat, "carbohydrate_g": carbs, "protein_g": protein}
 
-    # A visual table can be linearised value-before-label. Use that layout only
-    # when at least two macro fields are missing, every missing macro has an
-    # explicit immediately-preceding gram value, and the completed four-field
-    # tuple independently passes the strict energy/macronutrient coherence test.
-    # Single-field backfills remain REVIEW because a preceding sugar/saturate
-    # value can otherwise be mistaken for the next row in ordinary reading order.
+    # A visual table can be linearised value-before-label. Multi-field reversed
+    # layouts can still be completed exactly as before when every missing macro
+    # has an explicit immediately-preceding gram value and the full tuple is
+    # energy-coherent. A newly observed Mercadona failure mode leaves exactly one
+    # macro in that reversed layout. Expose that one value only as REVIEW evidence:
+    # it may help a later independent OCR family corroborate the field, but this
+    # parser must never promote the single reversed observation by itself.
     macro_patterns = {
         "fat_g": fat_patterns,
         "carbohydrate_g": carb_patterns,
         "protein_g": protein_patterns,
     }
+    single_reversed_macro_candidate: str | None = None
     missing_macros = [key for key in macro_patterns if values[key] is None]
     if calories is not None and len(missing_macros) >= 2:
         reversed_values = {
@@ -424,6 +426,21 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
                 coherent, _ = _plausible(completed_nutrition)
                 if coherent:
                     values.update(reversed_values)
+    elif calories is not None and len(missing_macros) == 1:
+        key = missing_macros[0]
+        reversed_value = _number_immediately_before(macro_patterns[key], block)
+        if reversed_value is not None:
+            completed = dict(values)
+            completed[key] = reversed_value
+            if all(completed.get(field) is not None for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")):
+                completed_nutrition = {
+                    field: float(completed[field])
+                    for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")
+                }
+                coherent, _ = _plausible(completed_nutrition)
+                if coherent:
+                    values[key] = reversed_value
+                    single_reversed_macro_candidate = key
 
     # Reject individually impossible OCR values before returning a partial read.
     # Previously plausibility checks ran only after all four core fields existed,
@@ -452,6 +469,12 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     reasons.extend(plausibility_reasons)
     if not plausible:
         return LabelReadResult("REVIEW", basis, nutrition, min(extraction_confidence, .65), tuple(reasons), normalized)
+
+    if single_reversed_macro_candidate is not None:
+        reasons.append(f"SINGLE_REVERSED_MACRO_CANDIDATE:{single_reversed_macro_candidate}")
+        return LabelReadResult(
+            "REVIEW", basis, nutrition, min(extraction_confidence, .84), tuple(reasons), normalized
+        )
 
     if extraction_confidence < .85:
         reasons.append("LOW_EXTRACTION_CONFIDENCE")
