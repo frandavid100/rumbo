@@ -1,0 +1,303 @@
+name: Catalog Mercadona near-safe missing-4 rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-near-safe-missing4-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-near-safe-missing4-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download first-party inventory
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: first-party
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Download current canonical REVIEW audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: current-audit
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 34120999322
+
+      - name: Download successful shards from failed exact rerun
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-near-safe-three-of-four-rerun-*
+          path: prior
+          merge-multiple: true
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 34129507364
+
+      - name: Build exact omitted four-product cohort
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          missing = {'20292', '3541', '5831', '9085'}
+          products = [json.loads(x) for x in Path('first-party/products.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
+          by_id = {str(r.get('product_id') or ''): r for r in products}
+          if not missing.issubset(by_id):
+              raise SystemExit(f'missing inventory rows: {sorted(missing - set(by_id))}')
+
+          def has_p9(row):
+              return any(
+                  isinstance(p, dict) and str(p.get('perspective')) == '9' and p.get('zoom')
+                  for p in (row.get('photos') if isinstance(row.get('photos'), list) else [])
+              )
+
+          bad_p9 = sorted(pid for pid in missing if not has_p9(by_id[pid]))
+          with_ingredients = sorted(pid for pid in missing if by_id[pid].get('ingredients'))
+          if bad_p9 or with_ingredients:
+              raise SystemExit(f'omitted-cohort drift: no_p9={bad_p9} with_ingredients={with_ingredients}')
+
+          rows = sorted((by_id[pid] for pid in missing), key=lambda r: str(r.get('product_id') or ''))
+          Path('missing4-products.jsonl').write_text(
+              ''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows),
+              encoding='utf-8',
+          )
+          Path('missing4-selection.json').write_text(json.dumps({
+              'source_failed_run_id': 34129507364,
+              'selection_reason': 'Rows omitted because the exact p9 cohort was passed through priority/structured-ingredients eligibility a second time.',
+              'product_ids': sorted(missing),
+              'eligibility_mode': 'p9-no-ingredients-all',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Install OCR engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Verify conservative parser regressions
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import mercadona_nutrition_label_reader, nutrition_label_reader
+          assert nutrition_label_reader.READER_VERSION == '1.4.9', nutrition_label_reader.READER_VERSION
+          assert mercadona_nutrition_label_reader.READER_VERSION == '1.0.5', mercadona_nutrition_label_reader.READER_VERSION
+          PY
+          python -m unittest -v \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_easyocr_zero_glyph.py \
+            test_mercadona_nutrition_label_reader.py \
+            test_nutrition_row_order_ambiguity.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+          python -m py_compile nutrition_label_reader.py mercadona_nutrition_label_reader.py nutrition_ocr_ensemble.py mercadona_neural_ocr_tesseract_preprocess_rescue.py
+
+      - name: OCR exact omitted four rows
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            --products ../../missing4-products.jsonl \
+            --out ../../missing4 \
+            --shard-index 0 --shard-count 1 --limit 0 --delay 0.25 \
+            --eligibility-mode p9-no-ingredients-all
+
+      - name: Merge prior 75 plus rescued four and enforce live contract
+        run: |
+          python - <<'PY'
+          import glob, json, sqlite3
+          from collections import Counter
+          from pathlib import Path
+
+          missing4 = {'20292', '3541', '5831', '9085'}
+          reviews = [json.loads(x) for x in Path(
+              'current-audit/current-review-failure-modes/near-safe-complete-review.jsonl'
+          ).read_text(encoding='utf-8').splitlines() if x.strip()]
+          source_ids = {str(r.get('product_id') or '') for r in reviews if (
+              r.get('canonical_status') == 'REVIEW'
+              and int(r.get('corroborated_fields') or 0) == 3
+              and r.get('promotion_allowed') is False
+              and r.get('evidence_level') == 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+              and r.get('source') == 'MERCADONA_FIRST_PARTY'
+              and r.get('source_record_kind') == 'label image'
+              and r.get('redistribution_allowed') is False
+          )}
+          if len(source_ids) != 82:
+              raise SystemExit(f'expected source cohort 82, got {len(source_ids)}')
+
+          products = [json.loads(x) for x in Path('first-party/products.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
+          by_id = {str(r.get('product_id') or ''): r for r in products}
+          def has_p9(row):
+              return any(
+                  isinstance(p, dict) and str(p.get('perspective')) == '9' and p.get('zoom')
+                  for p in (row.get('photos') if isinstance(row.get('photos'), list) else [])
+              )
+          expected = {pid for pid in source_ids if pid in by_id and has_p9(by_id[pid])}
+          deferred = sorted(source_ids - expected)
+          if len(expected) != 79 or deferred != ['20273', '25353', '54053']:
+              raise SystemExit(f'p9 boundary drift: expected={len(expected)} deferred={deferred}')
+          if not missing4.issubset(expected):
+              raise SystemExit(f'missing-four no longer inside exact cohort: {sorted(missing4 - expected)}')
+
+          prior_paths = sorted(glob.glob('prior/**/results-*.jsonl', recursive=True))
+          if len(prior_paths) != 8:
+              raise SystemExit(f'expected 8 prior shard result files, got {len(prior_paths)}: {prior_paths}')
+          prior_rows = []
+          for path in prior_paths:
+              prior_rows.extend(json.loads(x) for x in Path(path).read_text(encoding='utf-8').splitlines() if x.strip())
+          rescue_paths = sorted(glob.glob('missing4/results-*.jsonl'))
+          if len(rescue_paths) != 1:
+              raise SystemExit(f'expected one rescue result file, got {rescue_paths}')
+          rescue_rows = [json.loads(x) for x in Path(rescue_paths[0]).read_text(encoding='utf-8').splitlines() if x.strip()]
+
+          prior_ids = [str(r.get('product_id') or '') for r in prior_rows]
+          rescue_ids = [str(r.get('product_id') or '') for r in rescue_rows]
+          if len(prior_rows) != 75 or set(prior_ids) != expected - missing4 or len(set(prior_ids)) != 75:
+              raise SystemExit(f'prior shard boundary mismatch: rows={len(prior_rows)} distinct={len(set(prior_ids))} missing={sorted((expected-missing4)-set(prior_ids))} unexpected={sorted(set(prior_ids)-(expected-missing4))}')
+          if len(rescue_rows) != 4 or set(rescue_ids) != missing4 or len(set(rescue_ids)) != 4:
+              raise SystemExit(f'rescue boundary mismatch: rows={len(rescue_rows)} ids={sorted(set(rescue_ids))}')
+
+          rows = prior_rows + rescue_rows
+          ids = [str(r.get('product_id') or '') for r in rows]
+          observed = set(ids)
+          duplicates = sorted(pid for pid, n in Counter(ids).items() if n > 1)
+          counts = Counter(str(r.get('status') or 'UNKNOWN') for r in rows)
+          allowed = {'DECLARED', 'REVIEW', 'NO_VISUAL_REGION', 'ERROR'}
+          fields = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+          provenance_errors, unsafe_declared, audited = [], [], []
+
+          for row in sorted(rows, key=lambda r: str(r.get('product_id') or '')):
+              pid = str(row.get('product_id') or '')
+              if not (
+                  row.get('evidence_level') == 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  and row.get('source') == 'MERCADONA_FIRST_PARTY'
+                  and row.get('source_record_kind') == 'label image'
+                  and row.get('redistribution_allowed') is False
+                  and str(row.get('perspective')) == '9'
+              ):
+                  provenance_errors.append(pid)
+              status, nutrition = str(row.get('status') or ''), row.get('nutrition')
+              if status == 'DECLARED':
+                  if not isinstance(nutrition, dict) or any(nutrition.get(f) is None for f in fields):
+                      unsafe_declared.append(f'{pid}:incomplete_declared')
+                  accepted = next((a for a in row.get('attempts') or [] if isinstance(a.get('ensemble'), dict) and a['ensemble'].get('status') == 'DECLARED'), None)
+                  ensemble = (accepted or {}).get('ensemble') or {}
+                  if int(ensemble.get('independent_engine_families') or 0) < 2 or int(ensemble.get('corroborated_fields') or 0) < 4:
+                      unsafe_declared.append(f'{pid}:insufficient_corroboration')
+              elif nutrition is not None:
+                  unsafe_declared.append(f'{pid}:non_declared_carries_nutrition')
+              audited.append({
+                  'product_id': pid,
+                  'ean': row.get('ean'),
+                  'name': row.get('name'),
+                  'status': status,
+                  'basis': row.get('basis'),
+                  'nutrition': nutrition if status == 'DECLARED' else None,
+                  'image_url': row.get('image_url'),
+                  'image_perspective': str(row.get('perspective') or ''),
+                  'source': 'MERCADONA_FIRST_PARTY/label image',
+                  'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+                  'redistribution_allowed': False,
+              })
+
+          image_ext = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tif', '.tiff'}
+          persisted_images = [str(p) for root in ('prior', 'missing4') for p in Path(root).rglob('*') if p.is_file() and p.suffix.lower() in image_ext]
+          bad_statuses = sorted(set(counts) - allowed)
+          ok = (
+              len(rows) == 79 and observed == expected and not duplicates
+              and not bad_statuses and not provenance_errors and not unsafe_declared and not persisted_images
+          )
+          declared_ids = sorted(r['product_id'] for r in audited if r['status'] == 'DECLARED')
+          rescue_declared_ids = sorted(str(r.get('product_id') or '') for r in rescue_rows if r.get('status') == 'DECLARED')
+          summary = {
+              'cohort': 'current canonical near-safe REVIEW; exactly 3/4 core fields corroborated; first-party perspective=9 label image',
+              'source_audit_run_id': 34120999322,
+              'reused_failed_run_id': 34129507364,
+              'source_review_cohort': 82,
+              'expected_p9': 79,
+              'reused_prior_products': 75,
+              'newly_processed_products': 4,
+              'distinct_products_processed': len(observed),
+              'deferred_non_p9_product_ids': deferred,
+              'status_counts': dict(sorted(counts.items())),
+              'declared_product_ids_in_79': declared_ids,
+              'declared_count_in_79': len(declared_ids),
+              'new_live_declared_product_ids_from_rescue': rescue_declared_ids,
+              'new_live_declared_count_from_rescue': len(rescue_declared_ids),
+              'unsafe_declared': unsafe_declared,
+              'provenance_errors': provenance_errors,
+              'duplicate_product_ids': duplicates,
+              'unexpected_statuses': bad_statuses,
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'REVIEW_promoted_without_new_live_OCR': 0,
+              'nutrition_reader_version': '1.4.9',
+              'mercadona_reader_version': '1.0.5',
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'safety_assessment': 'VALIDATED' if ok else 'FAILED',
+          }
+
+          out = Path('merged'); out.mkdir(exist_ok=True)
+          sorted_rows = sorted(rows, key=lambda r: str(r.get('product_id') or ''))
+          (out/'results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True)+'\n' for r in sorted_rows), encoding='utf-8')
+          (out/'audited-products.json').write_text(json.dumps(audited, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          (out/'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+
+          db = sqlite3.connect(out/'staging.sqlite')
+          db.execute('CREATE TABLE ocr_results (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, raw_json TEXT NOT NULL)')
+          db.executemany(
+              'INSERT INTO ocr_results VALUES (?, ?, ?, ?, ?, ?)',
+              [(
+                  str(r.get('product_id') or ''), str(r.get('status') or ''),
+                  'OCR_DERIVED_FROM_MERCADONA_IMAGE', 'MERCADONA_FIRST_PARTY/label image', 0,
+                  json.dumps(r, ensure_ascii=False, sort_keys=True),
+              ) for r in sorted_rows],
+          )
+          db.commit(); db.close()
+
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if not ok:
+              raise SystemExit('rescued exact cohort failed safety contract')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-near-safe-three-of-four-rescued
+          path: |
+            merged/
+            missing4-selection.json
+          retention-days: 30
+          if-no-files-found: warn
