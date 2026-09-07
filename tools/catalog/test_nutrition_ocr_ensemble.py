@@ -107,6 +107,30 @@ class OCREnsembleTest(unittest.TestCase):
         self.assertEqual(r.nutrition['carbohydrate_g'], 32.0)
         self.assertEqual(r.nutrition['protein_g'], 10.0)
 
+    def test_zero_calorie_complete_tuple_is_not_reclassified_as_missing_core(self):
+        zero = reading('DECLARED', '100_ml', {
+            'calories': 0.0, 'fat_g': 0.0, 'carbohydrate_g': 0.0, 'protein_g': 0.0
+        }, .97)
+        r = fuse_ocr_readings([
+            ParsedOCRReading('paddle-region', zero, engine_family='paddleocr'),
+            ParsedOCRReading('tesseract-psm6', zero, engine_family='tesseract'),
+        ])
+        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.nutrition['calories'], 0.0)
+        self.assertFalse(any(x.startswith('MISSING_CORE:calories') for x in r.reasons), r)
+
+    def test_zero_calorie_nonzero_macros_still_fail_energy_coherence(self):
+        contradictory = reading('DECLARED', '100_g', {
+            'calories': 0.0, 'fat_g': 4.0, 'carbohydrate_g': 8.0, 'protein_g': 3.0
+        }, .97)
+        r = fuse_ocr_readings([
+            ParsedOCRReading('paddle-region', contradictory, engine_family='paddleocr'),
+            ParsedOCRReading('tesseract-psm6', contradictory, engine_family='tesseract'),
+        ])
+        self.assertEqual(r.status, 'REVIEW', r)
+        self.assertTrue(any(x.startswith('ENERGY_MACRO_MISMATCH') for x in r.reasons), r)
+        self.assertFalse(any(x.startswith('MISSING_CORE:calories') for x in r.reasons), r)
+
     def test_partial_readings_do_not_get_promoted_on_arithmetic_alone(self):
         a = reading('REVIEW', '100_g', {
             'calories': 427.0, 'fat_g': 9.2, 'carbohydrate_g': 76.0
