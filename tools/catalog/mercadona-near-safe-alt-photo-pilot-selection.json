@@ -1,0 +1,37 @@
+{
+  "purpose": "Bounded alternate-photo rescue pilot for current Mercadona near-safe p9 REVIEW products with exactly 3/4 corroborated core fields.",
+  "source_audit_run_id": 34143129093,
+  "selection_policy": "Current canonical REVIEW; near-safe complete diagnostic tuple; 3/4 core fields corroborated; no safety blockers; structured ingredients; p9 exists; one explicit non-p9 first-party photo; diagnostic energy/macros coherent. No prior REVIEW is promoted by selection.",
+  "products": [
+    {
+      "product_id": "23145",
+      "perspective": 2,
+      "reason": "near-safe 3/4; coherent diagnostic tuple; explicit alternate perspective=2"
+    },
+    {
+      "product_id": "52426",
+      "perspective": 2,
+      "reason": "near-safe 3/4; coherent diagnostic tuple; explicit alternate perspective=2"
+    },
+    {
+      "product_id": "13709",
+      "perspective": 3,
+      "reason": "near-safe 3/4; coherent diagnostic tuple; explicit alternate perspective=3"
+    },
+    {
+      "product_id": "5020",
+      "perspective": 2,
+      "reason": "near-safe 3/4; coherent diagnostic tuple; explicit alternate perspective=2"
+    },
+    {
+      "product_id": "63648",
+      "perspective": 2,
+      "reason": "near-safe 3/4; coherent diagnostic tuple; explicit alternate perspective=2"
+    }
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
