@@ -71,15 +71,20 @@ jobs:
               ('READER_VERSION = "1.4.7"', 'READER_VERSION = "1.4.8"'),
               (
                   '            number = re.search(r"([<>]?)\\s*(\\d{1,4}(?:\\.\\d{1,2})?)\\s*(?:g\\b|gramos?\\b)?", tail)\n',
-                  '            # Prefer an explicit gram-like unit. EasyOCR often renders the printed `g` as `9`,\n'
-                  '            # so `09` in a zero-macro cell means numeric 0 followed by the observed unit glyph.\n'
-                  '            # Only nutrient-row context reaches this helper; a bare `9` remains numeric nine.\n'
-                  '            number = re.search(\n'
-                  '                r"([<>]?)\\s*(\\d{1,3}(?:\\.\\d{1,2})?)\\s*(?:g\\b|9\\b|q\\b|yg\\b|y\\b|gramos?\\b)",\n'
+                  '            # Exact EasyOCR failure observed on Mercadona zero-macro cells: printed `0 g`\n'
+                  '            # can become `09`. Treat it as zero only when it is the complete value cell\n'
+                  '            # immediately after a recognised nutrient row; do not rewrite arbitrary `09`\n'
+                  '            # tokens and do not alter ordinary values such as 9.29 or a bare 9.\n'
+                  '            zero_unit_glyph = re.match(\n'
+                  '                r"\\s*[:;|]?\\s*([<>]?)\\s*0\\s*9(?:\\s*\\(\\s*\\d{1,3}(?:\\.\\d+)?\\s*%\\s*\\))?\\s*(?:\\n|$)",\n'
                   '                tail,\n'
+                  '                flags=re.I,\n'
                   '            )\n'
-                  '            if not number:\n'
-                  '                number = re.search(r"([<>]?)\\s*(\\d{1,4}(?:\\.\\d{1,2})?)", tail)\n'
+                  '            if zero_unit_glyph:\n'
+                  '                if zero_unit_glyph.group(1) in ("<", ">"):\n'
+                  '                    return None\n'
+                  '                return 0.0\n'
+                  '            number = re.search(r"([<>]?)\\s*(\\d{1,4}(?:\\.\\d{1,2})?)\\s*(?:g\\b|gramos?\\b)?", tail)\n'
               ),
               (
                   '        r"(?:^|\\n)\\s*grasas?(?:\\s*/\\s*(?:lipidos?|fat|graisses?))?\\b",\n',
