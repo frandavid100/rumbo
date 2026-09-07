@@ -1,0 +1,68 @@
+{
+  "cut_date": "2026-09-07",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 34070440663,
+  "artifact_id": 10000326959,
+  "artifact_name": "mercadona-final-no-p9-food",
+  "final_residual": {
+    "product_id": "3529",
+    "name": "Sandía baja en semillas",
+    "selected_perspective": 10,
+    "selected_image_index": 1,
+    "photo_selection_policy": "EXPLICIT_FIRST_PARTY_PHOTO_INDEX",
+    "status": "REVIEW",
+    "visual_regions_detected": 0,
+    "nutrition": null,
+    "reason": "No nutrition markers/visual nutrition region were found; no values inferred or promoted."
+  },
+  "validation": {
+    "selection_products": 1,
+    "processed": 1,
+    "status_counts": {"REVIEW": 1},
+    "declared": 0,
+    "review": 1,
+    "no_visual_region": 0,
+    "error": 0,
+    "invalid_declared_product_ids": [],
+    "duplicates": [],
+    "missing": [],
+    "extra": [],
+    "provenance_errors": []
+  },
+  "coverage": {
+    "inventory_products": 4280,
+    "processed_distinct_union": 2969,
+    "processed_pct": 69.3692,
+    "residual_total": 1311,
+    "actionable_p9_remaining": 0,
+    "blocked_no_p9_food_route_remaining": 0,
+    "deferred_bodega_remaining": 11,
+    "out_of_scope_non_food_or_mixed_remaining": 1300
+  },
+  "canonical_current_status": {
+    "DECLARED": 169,
+    "REVIEW": 2800,
+    "ERROR": 0,
+    "usable_complete": 169,
+    "usable_complete_pct_inventory": 3.9486,
+    "usable_field_counts": {
+      "calories": 169,
+      "protein_g": 169,
+      "carbohydrate_g": 169,
+      "fat_g": 169
+    }
+  },
+  "route_state": {
+    "state": "FIRST_PARTY_FOOD_OCR_ROUTE_EXHAUSTED_EXCEPT_DEFERRED_BODEGA",
+    "policy": "All residuals routed as actionable perspective=9 food or blocked no-p9 food by audit policy 1.2.0 have now received a bounded first-party OCR attempt. Bodega remains explicitly deferred and non-food/mixed residuals remain out of OCR scope. REVIEW is not usable nutrition."
+  },
+  "historical_nutrition_inherited": false,
+  "review_auto_promoted": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0
+}
