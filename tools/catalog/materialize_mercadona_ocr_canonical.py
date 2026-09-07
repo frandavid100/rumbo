@@ -12,14 +12,12 @@ EVIDENCE = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
 SOURCE = "MERCADONA_FIRST_PARTY/label image"
 SOURCE_RECORD_KIND = "label image"
 NUTRITION_FIELDS = ("calories", "protein_g", "carbohydrate_g", "fat_g")
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.0.1"
 
 
 def _product_sort_key(product_id: str) -> tuple[int, int | str]:
     text = str(product_id)
-    if text.isdigit():
-        return (0, int(text))
-    return (1, text)
+    return (0, int(text)) if text.isdigit() else (1, text)
 
 
 def _complete_nutrition(value: Any) -> dict[str, float] | None:
@@ -37,30 +35,31 @@ def _complete_nutrition(value: Any) -> dict[str, float] | None:
     return out
 
 
-def _latest_run_locators(summary: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    latest: dict[str, dict[str, Any]] = {}
+def _run_metadata(summary: dict[str, Any]) -> dict[int, list[str]]:
+    """Map persisted run IDs to workflow names without inferring per-product liveness.
+
+    The chronological union deliberately includes diagnostic replay wrappers for processed-ID
+    coverage. Therefore the last union run mentioning a product is not necessarily its latest
+    *live* canonical OCR observation. We only attach a live run locator where the canonical
+    summary itself exposes one: currently that is every usable DECLARED row via
+    ``latest_usable_products[].latest_run_id``. Non-usable rows keep the locator null rather
+    than falsely attributing a replay run.
+    """
     runs = summary.get("runs")
     if not isinstance(runs, list):
         raise ValueError("summary.runs must be a list")
+    result: dict[int, list[str]] = {}
     for run in runs:
         if not isinstance(run, dict):
             raise ValueError("summary.runs entries must be objects")
         run_id = run.get("run_id")
         if isinstance(run_id, bool) or not isinstance(run_id, int):
             raise ValueError("run_id must be an integer")
-        ids = set()
-        for key in ("new_product_ids", "overlap_product_ids"):
-            values = run.get(key)
-            if not isinstance(values, list):
-                raise ValueError(f"{key} must be a list")
-            ids.update(str(value) for value in values)
-        locator = {
-            "latest_live_run_id": run_id,
-            "workflow_names": sorted(str(value) for value in (run.get("workflow_names") or [])),
-        }
-        for product_id in ids:
-            latest[product_id] = locator
-    return latest
+        names = run.get("workflow_names") or []
+        if not isinstance(names, list):
+            raise ValueError("workflow_names must be a list")
+        result[run_id] = sorted(str(value) for value in names)
+    return result
 
 
 def build_canonical_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
@@ -84,17 +83,10 @@ def build_canonical_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
             if previous is not None and previous != str(status):
                 raise ValueError(f"product {product_id} appears in multiple canonical statuses")
             status_map[product_id] = str(status)
-
     if len(status_map) != expected:
-        raise ValueError(
-            f"canonical status partition has {len(status_map)} products; expected {expected}"
-        )
+        raise ValueError(f"canonical status partition has {len(status_map)} products; expected {expected}")
 
-    locators = _latest_run_locators(summary)
-    missing_locators = sorted(set(status_map) - set(locators), key=_product_sort_key)
-    if missing_locators:
-        raise ValueError(f"canonical products missing chronological run locator: {missing_locators[:10]}")
-
+    run_metadata = _run_metadata(summary)
     usable_by_id: dict[str, dict[str, Any]] = {}
     usable_products = summary.get("latest_usable_products")
     if not isinstance(usable_products, list):
@@ -111,7 +103,15 @@ def build_canonical_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
         run_id = item.get("latest_run_id")
         if isinstance(run_id, bool) or not isinstance(run_id, int):
             raise ValueError(f"usable product {product_id} has invalid latest_run_id")
-        usable_by_id[product_id] = {"latest_run_id": run_id, "nutrition": nutrition}
+        if run_id not in run_metadata:
+            raise ValueError(
+                f"usable latest live run missing from chronological summary: product={product_id} run={run_id}"
+            )
+        usable_by_id[product_id] = {
+            "latest_run_id": run_id,
+            "workflow_names": run_metadata[run_id],
+            "nutrition": nutrition,
+        }
 
     non_declared_usable = sorted(
         (product_id for product_id in usable_by_id if status_map.get(product_id) != "DECLARED"),
@@ -119,22 +119,20 @@ def build_canonical_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
     )
     if non_declared_usable:
         raise ValueError(f"non-DECLARED products marked usable: {non_declared_usable[:10]}")
-
-    reported_usable = summary.get("latest_usable_complete")
-    if reported_usable != len(usable_by_id):
+    if summary.get("latest_usable_complete") != len(usable_by_id):
         raise ValueError(
-            f"usable product count {len(usable_by_id)} does not match latest_usable_complete={reported_usable}"
+            f"usable product count {len(usable_by_id)} does not match "
+            f"latest_usable_complete={summary.get('latest_usable_complete')}"
         )
 
     rows: list[dict[str, Any]] = []
     for product_id in sorted(status_map, key=_product_sort_key):
         status = status_map[product_id]
-        locator = locators[product_id]
         usable = usable_by_id.get(product_id)
-        if usable is not None and usable["latest_run_id"] != locator["latest_live_run_id"]:
-            raise ValueError(f"usable product {product_id} latest run disagrees with chronological union")
-
         nutrition = usable["nutrition"] if usable is not None else None
+        latest_live_run_id = usable["latest_run_id"] if usable is not None else None
+        workflow_names = usable["workflow_names"] if usable is not None else []
+
         provenance = None
         if nutrition is not None:
             provenance = {
@@ -143,7 +141,7 @@ def build_canonical_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
                     "source": SOURCE,
                     "source_record_kind": SOURCE_RECORD_KIND,
                     "redistribution_allowed": False,
-                    "latest_live_run_id": locator["latest_live_run_id"],
+                    "latest_live_run_id": latest_live_run_id,
                 }
                 for field in NUTRITION_FIELDS
             }
@@ -156,8 +154,9 @@ def build_canonical_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
                 "usable_complete": usable is not None,
                 "nutrition": nutrition,
                 "nutrition_provenance": provenance,
-                "latest_live_run_id": locator["latest_live_run_id"],
-                "workflow_names": locator["workflow_names"],
+                "latest_live_run_id": latest_live_run_id,
+                "workflow_names": workflow_names,
+                "canonical_status_source": "run-union-summary/latest-live reconciliation",
                 "evidence_level": EVIDENCE,
                 "source": SOURCE,
                 "source_record_kind": SOURCE_RECORD_KIND,
@@ -195,7 +194,7 @@ def write_sqlite(path: Path, rows: list[dict[str, Any]], manifest: dict[str, Any
                 product_id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
                 usable_complete INTEGER NOT NULL CHECK (usable_complete IN (0, 1)),
-                latest_live_run_id INTEGER NOT NULL,
+                latest_live_run_id INTEGER,
                 workflow_names_json TEXT NOT NULL,
                 calories REAL,
                 protein_g REAL,
@@ -211,12 +210,12 @@ def write_sqlite(path: Path, rows: list[dict[str, Any]], manifest: dict[str, Any
                 classified INTEGER NOT NULL CHECK (classified = 0),
                 menu_eligible INTEGER NOT NULL CHECK (menu_eligible = 0),
                 CHECK (
-                    (usable_complete = 1 AND status = 'DECLARED'
+                    (usable_complete = 1 AND status = 'DECLARED' AND latest_live_run_id IS NOT NULL
                      AND calories IS NOT NULL AND protein_g IS NOT NULL
                      AND carbohydrate_g IS NOT NULL AND fat_g IS NOT NULL
                      AND nutrition_provenance_json IS NOT NULL)
                     OR
-                    (usable_complete = 0
+                    (usable_complete = 0 AND latest_live_run_id IS NULL
                      AND calories IS NULL AND protein_g IS NULL
                      AND carbohydrate_g IS NULL AND fat_g IS NULL
                      AND nutrition_provenance_json IS NULL)
@@ -240,30 +239,18 @@ def write_sqlite(path: Path, rows: list[dict[str, Any]], manifest: dict[str, Any
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0)
                 """,
                 (
-                    row["product_id"],
-                    row["status"],
-                    int(row["usable_complete"]),
-                    row["latest_live_run_id"],
+                    row["product_id"], row["status"], int(row["usable_complete"]), row["latest_live_run_id"],
                     json.dumps(row["workflow_names"], ensure_ascii=False, sort_keys=True),
-                    nutrition.get("calories"),
-                    nutrition.get("protein_g"),
-                    nutrition.get("carbohydrate_g"),
+                    nutrition.get("calories"), nutrition.get("protein_g"), nutrition.get("carbohydrate_g"),
                     nutrition.get("fat_g"),
-                    (
-                        json.dumps(row["nutrition_provenance"], ensure_ascii=False, sort_keys=True)
-                        if row["nutrition_provenance"] is not None
-                        else None
-                    ),
-                    row["evidence_level"],
-                    row["source"],
-                    row["source_record_kind"],
+                    json.dumps(row["nutrition_provenance"], ensure_ascii=False, sort_keys=True)
+                    if row["nutrition_provenance"] is not None else None,
+                    row["evidence_level"], row["source"], row["source_record_kind"],
                 ),
             )
         connection.commit()
         stored = connection.execute("SELECT COUNT(*) FROM canonical_ocr").fetchone()[0]
-        usable = connection.execute(
-            "SELECT COUNT(*) FROM canonical_ocr WHERE usable_complete = 1"
-        ).fetchone()[0]
+        usable = connection.execute("SELECT COUNT(*) FROM canonical_ocr WHERE usable_complete = 1").fetchone()[0]
         if stored != len(rows) or usable != manifest["usable_complete"]:
             raise RuntimeError("SQLite verification count mismatch")
     finally:
@@ -281,20 +268,23 @@ def build_manifest(rows: list[dict[str, Any]], inventory_total: int) -> dict[str
         "redistribution_allowed": False,
         "inventory_products": inventory_total,
         "processed_canonical_products": len(rows),
-        "processed_pct_inventory": round((len(rows) / inventory_total * 100.0), 4) if inventory_total else None,
+        "processed_pct_inventory": round(len(rows) / inventory_total * 100.0, 4),
         "status_counts": dict(sorted(status_counts.items())),
         "usable_complete": len(usable),
-        "usable_complete_pct_inventory": round((len(usable) / inventory_total * 100.0), 4) if inventory_total else None,
+        "usable_complete_pct_inventory": round(len(usable) / inventory_total * 100.0, 4),
         "usable_field_counts": {field: len(usable) for field in NUTRITION_FIELDS},
+        "nonusable_latest_live_run_locator_materialized": False,
         "images_persisted": False,
         "missing_values_inferred": False,
         "structured_api_macros_claimed": False,
         "classified": 0,
         "menu_eligible": 0,
         "policy": (
-            "Materialized from the conservative latest-live OCR reconciliation. REVIEW and every other "
-            "non-usable canonical state retain null nutrition. Only complete latest-live DECLARED rows "
-            "are staged as usable, with every macro explicitly marked OCR_DERIVED_FROM_MERCADONA_IMAGE."
+            "Materialized from the conservative latest-live OCR reconciliation. REVIEW and every other non-usable "
+            "canonical state retain null nutrition. Only complete latest-live DECLARED rows are staged as usable, "
+            "with every macro explicitly marked OCR_DERIVED_FROM_MERCADONA_IMAGE. Diagnostic replay union rows never "
+            "replace the live run locator attached to usable macro provenance. Non-usable live run locators are left "
+            "null because the current summary intentionally does not expose them per product."
         ),
     }
 
@@ -316,13 +306,9 @@ def main() -> int:
 
     rows = build_canonical_rows(summary)
     manifest = build_manifest(rows, args.inventory_total)
-
     write_jsonl(Path(args.jsonl), rows)
     write_sqlite(Path(args.sqlite), rows, manifest)
-    Path(args.manifest).write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    Path(args.manifest).write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(manifest, indent=2, sort_keys=True))
     return 0
 
