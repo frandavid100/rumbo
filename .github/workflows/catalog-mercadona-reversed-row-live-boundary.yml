@@ -86,7 +86,8 @@ jobs:
           python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
             --products reversed-row-live-boundary-products.jsonl \
             --out mercadona-reversed-row-live-boundary \
-            --shard-index 0 --shard-count 1 --limit 0 --delay 0.25
+            --shard-index 0 --shard-count 1 --limit 0 --delay 0.25 \
+            --eligibility-mode p9-no-ingredients-all
       - name: Enforce conservative live outcomes
         working-directory: tools/catalog
         run: |
