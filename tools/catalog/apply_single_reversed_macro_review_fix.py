@@ -107,3 +107,57 @@ if text.count(old_tail) != 1:
 text = text.replace(old_tail, new_tail, 1)
 
 path.write_text(text, encoding="utf-8")
+
+mercadona_path = Path(__file__).with_name("mercadona_nutrition_label_reader.py")
+mercadona = mercadona_path.read_text(encoding="utf-8")
+mercadona_old_version = 'READER_VERSION = "1.0.5"'
+if mercadona.count(mercadona_old_version) != 1:
+    raise SystemExit("mercadona reader version drift")
+mercadona = mercadona.replace(mercadona_old_version, 'READER_VERSION = "1.0.6"', 1)
+
+old_doc = '''    energy coherent. For a REVIEW input, only a plain missing-core/energy-mismatch
+    result is eligible; multicolumn, impossible-value, low-confidence and other
+    safety reviews remain blocked.
+'''
+new_doc = '''    energy coherent. For a REVIEW input, only a plain missing-core/energy-mismatch
+    or conservative single-reversed-macro candidate result is eligible;
+    multicolumn, impossible-value, low-confidence and other safety reviews remain blocked.
+'''
+if mercadona.count(old_doc) != 1:
+    raise SystemExit("mercadona rescue doc drift")
+mercadona = mercadona.replace(old_doc, new_doc, 1)
+
+old_review_gate = '''    if result.status == "REVIEW":
+        if not any(reason.startswith("MISSING_CORE:") for reason in result.reasons):
+            return None
+        if any(
+            not (
+                reason.startswith("MISSING_CORE:")
+                or reason.startswith("ENERGY_MACRO_MISMATCH:")
+            )
+            for reason in result.reasons
+        ):
+            return None
+'''
+new_review_gate = '''    if result.status == "REVIEW":
+        recoverable_reversed_evidence = any(
+            reason.startswith("MISSING_CORE:")
+            or reason.startswith("SINGLE_REVERSED_MACRO_CANDIDATE:")
+            for reason in result.reasons
+        )
+        if not recoverable_reversed_evidence:
+            return None
+        if any(
+            not (
+                reason.startswith("MISSING_CORE:")
+                or reason.startswith("ENERGY_MACRO_MISMATCH:")
+                or reason.startswith("SINGLE_REVERSED_MACRO_CANDIDATE:")
+            )
+            for reason in result.reasons
+        ):
+            return None
+'''
+if mercadona.count(old_review_gate) != 1:
+    raise SystemExit("mercadona rescue review gate drift")
+mercadona = mercadona.replace(old_review_gate, new_review_gate, 1)
+mercadona_path.write_text(mercadona, encoding="utf-8")

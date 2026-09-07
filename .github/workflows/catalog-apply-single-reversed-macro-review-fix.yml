@@ -40,7 +40,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add tools/catalog/nutrition_label_reader.py
+          git add tools/catalog/nutrition_label_reader.py tools/catalog/mercadona_nutrition_label_reader.py
           git diff --cached --check
-          git commit -m 'fix(catalog): expose coherent reversed macro as REVIEW evidence'
+          git commit -m 'fix(catalog): preserve complete reversed-table rescue'
           git push origin HEAD:agent/catalog-phase1
