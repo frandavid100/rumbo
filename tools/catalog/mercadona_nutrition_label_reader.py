@@ -9,7 +9,7 @@ from nutrition_label_reader import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.4"
+READER_VERSION = "1.0.5"
 
 
 _FAT_PATTERNS = (
@@ -107,29 +107,47 @@ def _bare_multicolumn_ambiguity(result: LabelReadResult) -> bool:
     return False
 
 
-def _complete_value_before_label_rescue(result: LabelReadResult) -> LabelReadResult | None:
+def _complete_value_before_label_rescue(
+    result: LabelReadResult,
+    *,
+    extraction_confidence: float,
+) -> LabelReadResult | None:
     """Recover one fully evidenced single-column value-before-label layout.
 
     PP-OCR can linearise a single visual nutrition table by reading the numeric
-    column immediately before each macro label. The generic sequential parser can
-    then bind the following row (observed: salt) to the previous macro. Accept the
-    reversed layout only when all three macro rows independently expose an exact
-    standalone gram value immediately before their labels, the basis is explicit,
-    and replacing the parsed macros yields a near-exact energy tuple that is
-    materially better than the already-plausible sequential tuple.
+    column immediately before each macro label. A later parser improvement may
+    correctly recover one of those reversed rows while leaving another macro
+    missing; that partial REVIEW must not disable the all-or-nothing rescue.
 
-    This is intentionally all-or-nothing. A lone preceding value can be a sugar,
-    saturate or fibre row, so partial reversed observations are never promoted.
+    Accept the reversed layout only when all three macro rows independently
+    expose exact standalone gram values immediately before their labels, the
+    basis and calories are explicit, the source extraction itself meets the
+    DECLARED confidence floor, and the resulting four-field tuple is near-exactly
+    energy coherent. For a REVIEW input, only a plain missing-core/energy-mismatch
+    result is eligible; multicolumn, impossible-value, low-confidence and other
+    safety reviews remain blocked.
     """
-    if result.status != "DECLARED" or result.nutrition is None:
+    if result.status not in {"DECLARED", "REVIEW"} or result.nutrition is None:
         return None
     if result.basis not in {"100_g", "100_ml"}:
         return None
-
-    required = ("calories", "fat_g", "carbohydrate_g", "protein_g")
-    if any(result.nutrition.get(key) is None for key in required):
+    if extraction_confidence < .85:
         return None
-    current = {key: float(result.nutrition[key]) for key in required}
+    if result.nutrition.get("calories") is None:
+        return None
+
+    if result.status == "REVIEW":
+        if not any(reason.startswith("MISSING_CORE:") for reason in result.reasons):
+            return None
+        if any(
+            not (
+                reason.startswith("MISSING_CORE:")
+                or reason.startswith("ENERGY_MACRO_MISMATCH:")
+            )
+            for reason in result.reasons
+        ):
+            return None
+
     block = _nutrition_block(result.normalized_text)
     preceding = {
         key: _number_immediately_before(patterns, block)
@@ -138,29 +156,38 @@ def _complete_value_before_label_rescue(result: LabelReadResult) -> LabelReadRes
     if any(value is None for value in preceding.values()):
         return None
 
-    rescued = dict(current)
-    for key, value in preceding.items():
-        rescued[key] = float(value)
-    if all(abs(rescued[key] - current[key]) <= 0.05 for key in _MACRO_PATTERNS):
-        return None
+    rescued = {
+        "calories": float(result.nutrition["calories"]),
+        **{key: float(value) for key, value in preceding.items()},
+    }
     if any(rescued[key] < 0 or rescued[key] > 100 for key in _MACRO_PATTERNS):
         return None
 
-    current_residual = _energy_residual(current)
     rescued_residual = _energy_residual(rescued)
     near_exact = rescued_residual <= max(6.0, rescued["calories"] * 0.03)
-    material_improvement = (
-        current_residual - rescued_residual
-        >= max(6.0, rescued["calories"] * 0.02)
-    )
-    if not (near_exact and material_improvement):
+    if not near_exact:
         return None
+
+    if result.status == "DECLARED":
+        required = ("calories", "fat_g", "carbohydrate_g", "protein_g")
+        if any(result.nutrition.get(key) is None for key in required):
+            return None
+        current = {key: float(result.nutrition[key]) for key in required}
+        if all(abs(rescued[key] - current[key]) <= 0.05 for key in _MACRO_PATTERNS):
+            return None
+        current_residual = _energy_residual(current)
+        material_improvement = (
+            current_residual - rescued_residual
+            >= max(6.0, rescued["calories"] * 0.02)
+        )
+        if not material_improvement:
+            return None
 
     return LabelReadResult(
         status="DECLARED",
         basis=result.basis,
         nutrition=rescued,
-        confidence=result.confidence,
+        confidence=min(1.0, extraction_confidence),
         reasons=tuple(result.reasons) + ("VALUE_BEFORE_LABEL_RESCUED",),
         normalized_text=result.normalized_text,
     )
@@ -223,7 +250,10 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
             normalized_text=result.normalized_text,
         )
 
-    rescued = _complete_value_before_label_rescue(result)
+    rescued = _complete_value_before_label_rescue(
+        result,
+        extraction_confidence=extraction_confidence,
+    )
     if rescued is not None:
         return rescued
 
