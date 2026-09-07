@@ -9,6 +9,8 @@ from typing import Any, Iterable
 
 VALID = {"DECLARED", "REVIEW", "NO_VISUAL_REGION", "ERROR"}
 EVIDENCE = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+SOURCE = "MERCADONA_FIRST_PARTY"
+SOURCE_RECORD_KIND = "label image"
 NUTRITION_FIELDS = ("calories", "protein_g", "carbohydrate_g", "fat_g")
 REASON_FAMILY_ORDER = (
     "EXPLICIT_FIELD_CONFLICT",
@@ -44,10 +46,10 @@ def complete_nutrition(value: Any) -> dict[str, float] | None:
         item = value.get(field)
         if isinstance(item, bool) or not isinstance(item, (int, float)):
             return None
-        item = float(item)
-        if not math.isfinite(item):
+        number = float(item)
+        if not math.isfinite(number):
             return None
-        out[field] = item
+        out[field] = number
     return out
 
 
@@ -56,23 +58,29 @@ def nutrition_key(value: dict[str, float]) -> tuple[float, ...]:
 
 
 def is_canonical_status_row(row: dict[str, Any]) -> bool:
-    """Return whether a persisted OCR row may update canonical current status.
-
-    Replay artifacts wrap an older live OCR row and attach a ``replay`` diagnostic
-    containing the parser/ensemble result under test. Their top-level ``status``
-    and ``nutrition`` deliberately remain the source cut's historical values.
-    Treating such wrappers as a newer live observation can therefore roll a later
-    targeted OCR result backwards merely because a parser regression workflow ran.
-
-    Replays remain part of the auditable processed-id union, but never update the
-    canonical state. In particular, replay REVIEW->DECLARED candidates are not
-    promoted here and replay wrappers cannot demote newer live DECLARED evidence.
-    """
+    """Replay wrappers count as processed evidence but never replace live state."""
     return not isinstance(row.get("replay"), dict)
 
 
+def has_strict_raw_provenance(row: dict[str, Any]) -> bool:
+    """Require the producer's persisted first-party label-image provenance.
+
+    The exact OCR evidence marker remains the processed-union gate. This stricter
+    predicate is only the usability gate: malformed or provenance-incomplete rows
+    can still prove that a product was processed, but they can never supply macros.
+    """
+    image_url = row.get("image_url")
+    return (
+        row.get("evidence_level") == EVIDENCE
+        and row.get("source") == SOURCE
+        and row.get("source_record_kind") == SOURCE_RECORD_KIND
+        and row.get("redistribution_allowed") is False
+        and isinstance(image_url, str)
+        and image_url.startswith(("https://", "http://"))
+    )
+
+
 def _diagnostic_values(row: dict[str, Any]) -> list[str]:
-    """Extract compact machine diagnostics without inspecting arbitrary OCR text."""
     values: list[str] = []
 
     def add(value: Any) -> None:
@@ -82,7 +90,6 @@ def _diagnostic_values(row: dict[str, Any]) -> list[str]:
             for item in value:
                 add(item)
         elif isinstance(value, dict):
-            # Conflict maps often carry field names as keys and values as details.
             for key, item in value.items():
                 add(str(key))
                 if isinstance(item, (str, list, tuple, set, dict)):
@@ -90,7 +97,6 @@ def _diagnostic_values(row: dict[str, Any]) -> list[str]:
 
     for key in ("nutrition_issue", "review_reason", "review_reasons", "rejection_reason", "reason", "reasons"):
         add(row.get(key))
-
     attempts = row.get("attempts")
     if isinstance(attempts, list):
         for attempt in attempts:
@@ -101,15 +107,8 @@ def _diagnostic_values(row: dict[str, Any]) -> list[str]:
             ensemble = attempt.get("ensemble")
             if isinstance(ensemble, dict):
                 for key in (
-                    "nutrition_issue",
-                    "review_reason",
-                    "review_reasons",
-                    "rejection_reason",
-                    "reason",
-                    "reasons",
-                    "conflict",
-                    "conflicts",
-                    "field_conflicts",
+                    "nutrition_issue", "review_reason", "review_reasons", "rejection_reason",
+                    "reason", "reasons", "conflict", "conflicts", "field_conflicts",
                 ):
                     add(ensemble.get(key))
     return values
@@ -128,17 +127,15 @@ def _attempt_has_ocr_signal(row: dict[str, Any]) -> bool:
         text = attempt.get("ocr_full_text")
         if isinstance(text, str) and text.strip():
             return True
+        engines = attempt.get("engines")
+        if isinstance(engines, dict):
+            for value in engines.values():
+                if isinstance(value, dict) and isinstance(value.get("normalized_ocr_text"), str) and value["normalized_ocr_text"].strip():
+                    return True
     return False
 
 
 def classify_review_reason_families(row: dict[str, Any]) -> list[str]:
-    """Classify why a strict live row is non-usable, without changing its status.
-
-    This deliberately treats ``visual_regions_detected == 0`` as NO_VISUAL_REGION
-    only when no OCR fallback signal exists. Some successful/partially successful
-    runs use full-image OCR after region detection misses, so zero detected regions
-    alone is not sufficient evidence that the label was unreadable.
-    """
     status = str(row.get("status") or "")
     if status == "DECLARED":
         return ["NONE"]
@@ -147,7 +144,6 @@ def classify_review_reason_families(row: dict[str, Any]) -> list[str]:
 
     diagnostics = "\n".join(_diagnostic_values(row)).upper()
     families: set[str] = set()
-
     if "OCR_FIELD_CONFLICT" in diagnostics or "FIELD_CONFLICT" in diagnostics:
         families.add("EXPLICIT_FIELD_CONFLICT")
     if "INCOHER" in diagnostics or "ENERGY_MACRO" in diagnostics or "MACRO_ENERGY" in diagnostics:
@@ -158,30 +154,18 @@ def classify_review_reason_families(row: dict[str, Any]) -> list[str]:
     no_region_signal = status == "NO_VISUAL_REGION" or "NO_VISUAL_REGION" in diagnostics
     if no_region_signal and not _attempt_has_ocr_signal(row):
         families.add("NO_VISUAL_REGION")
-
     if "CORROBOR" in diagnostics or "INDEPENDENT_SUPPORT" in diagnostics:
         families.add("INSUFFICIENT_CORROBORATION")
     if any(token in diagnostics for token in ("MISSING", "INCOMPLETE", "NO_NUTRITION", "NO_TABLE", "NO_MACRO")):
         families.add("INCOMPLETE_EXTRACTION")
-
-    # If a NO_VISUAL_REGION diagnostic coexists with successful full-image OCR,
-    # retain any more specific parser reason and otherwise report OTHER_REVIEW.
     if not families and status in {"REVIEW", "NO_VISUAL_REGION"}:
         families.add("OTHER_REVIEW")
-
     return [family for family in REASON_FAMILY_ORDER if family in families]
 
 
 def summarize_declared_to_review_transitions(
     history: dict[str, list[tuple[int, str, list[str]]]],
 ) -> dict[str, Any]:
-    """Audit live products that were once DECLARED but are REVIEW in their latest run.
-
-    This is diagnostic only. It intentionally does not retain or resurrect older
-    nutrition. The output makes it possible to distinguish positive contradictory
-    evidence from later extraction/corroboration failures before any canonical
-    evidence-retention policy is considered.
-    """
     historical_declared_ids: list[str] = []
     transition_ids: list[str] = []
     reason_ids: dict[str, list[str]] = defaultdict(list)
@@ -201,17 +185,12 @@ def summarize_declared_to_review_transitions(
         latest_statuses = {status for status, _ in latest_events}
         if latest_statuses != {"REVIEW"} or max(declared_runs) >= latest_run:
             continue
-
         transition_ids.append(product_id)
         families = {
-            family
-            for _, event_families in latest_events
-            for family in event_families
-            if family != "NONE"
+            family for _, event_families in latest_events for family in event_families if family != "NONE"
         } or {"OTHER_REVIEW"}
         for family in sorted(families):
             reason_ids[family].append(product_id)
-
         if families & EXPLICIT_CONTRADICTION_FAMILIES:
             explicit_ids.append(product_id)
         if families & SAFETY_BLOCKING_FAMILIES:
@@ -236,28 +215,33 @@ def summarize_declared_to_review_transitions(
 
 
 def reconcile_latest_observations(
-    observations: Iterable[tuple[int, str, str, Any]],
+    observations: Iterable[tuple[int, str, str, Any] | tuple[int, str, str, Any, bool]],
 ) -> dict[str, dict[str, Any]]:
     """Return one conservative latest persisted live OCR state per product.
 
-    A later live OCR run supersedes an older live run for status accounting.
-    Within the same latest run, however, any status disagreement is treated as
-    non-usable. A latest DECLARED product is usable only when every strict
-    DECLARED observation in that run carries a complete four-field nutrition
-    payload and all complete payloads agree exactly. Older DECLARED nutrition is
-    never inherited by a later REVIEW, ERROR or NO_VISUAL_REGION observation.
+    Four-item observations are accepted for backwards-compatible tests/callers and
+    imply strict provenance. Production passes a fifth boolean derived from the raw
+    persisted row. A provenance-incomplete DECLARED observation remains DECLARED
+    for status accounting but can never become nutrition-usable.
     """
-    grouped: dict[str, dict[int, list[tuple[str, Any]]]] = defaultdict(lambda: defaultdict(list))
-    for run_id, product_id, status, nutrition in observations:
+    grouped: dict[str, dict[int, list[tuple[str, Any, bool]]]] = defaultdict(lambda: defaultdict(list))
+    for observation in observations:
+        if len(observation) == 4:
+            run_id, product_id, status, nutrition = observation
+            strict_provenance = True
+        elif len(observation) == 5:
+            run_id, product_id, status, nutrition, strict_provenance = observation
+        else:
+            raise ValueError("observations must contain 4 or 5 values")
         if status not in VALID:
             continue
-        grouped[str(product_id)][int(run_id)].append((status, nutrition))
+        grouped[str(product_id)][int(run_id)].append((status, nutrition, bool(strict_provenance)))
 
     result: dict[str, dict[str, Any]] = {}
     for product_id, by_run in grouped.items():
         latest_run = max(by_run)
         values = by_run[latest_run]
-        statuses = {status for status, _ in values}
+        statuses = {status for status, _, _ in values}
         if len(statuses) != 1:
             result[product_id] = {
                 "latest_run_id": latest_run,
@@ -281,7 +265,18 @@ def reconcile_latest_observations(
             }
             continue
 
-        normalized = [complete_nutrition(nutrition) for _, nutrition in values]
+        if any(not strict_provenance for _, _, strict_provenance in values):
+            result[product_id] = {
+                "latest_run_id": latest_run,
+                "status": "DECLARED",
+                "latest_run_statuses": ["DECLARED"],
+                "usable_complete": False,
+                "nutrition": None,
+                "nutrition_issue": "INCOMPLETE_STRICT_PROVENANCE_LATEST_RUN",
+            }
+            continue
+
+        normalized = [complete_nutrition(nutrition) for _, nutrition, _ in values]
         if any(item is None for item in normalized):
             result[product_id] = {
                 "latest_run_id": latest_run,
@@ -292,10 +287,8 @@ def reconcile_latest_observations(
                 "nutrition_issue": "INCOMPLETE_DECLARED_NUTRITION_LATEST_RUN",
             }
             continue
-
         complete_values = [item for item in normalized if item is not None]
-        unique = {nutrition_key(item) for item in complete_values}
-        if len(unique) != 1:
+        if len({nutrition_key(item) for item in complete_values}) != 1:
             result[product_id] = {
                 "latest_run_id": latest_run,
                 "status": "DECLARED",
@@ -305,7 +298,6 @@ def reconcile_latest_observations(
                 "nutrition_issue": "CONFLICTING_COMPLETE_NUTRITION_LATEST_RUN",
             }
             continue
-
         result[product_id] = {
             "latest_run_id": latest_run,
             "status": "DECLARED",
@@ -327,10 +319,12 @@ def main() -> int:
     by_run: dict[str, set[str]] = defaultdict(set)
     by_run_status: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     files_by_run: dict[str, set[str]] = defaultdict(set)
-    observations: list[tuple[int, str, str, Any]] = []
+    observations: list[tuple[int, str, str, Any, bool]] = []
     live_history: dict[str, list[tuple[int, str, list[str]]]] = defaultdict(list)
     canonical_excluded_rows: Counter[str] = Counter()
     canonical_excluded_runs: set[int] = set()
+    strict_provenance_failures: Counter[str] = Counter()
+
     for path in sorted(Path(args.root).rglob("*.jsonl")):
         rel = path.relative_to(args.root)
         first = rel.parts[0] if rel.parts else ""
@@ -354,19 +348,31 @@ def main() -> int:
             status = str(row.get("status") or "")
             if not product_id or status not in VALID or row.get("evidence_level") != EVIDENCE:
                 continue
+
             by_run[run_id].add(product_id)
             by_run_status[run_id][status].add(product_id)
             files_by_run[run_id].add(str(rel))
             if is_canonical_status_row(row):
-                observations.append((int(run_id), product_id, status, row.get("nutrition")))
+                strict = has_strict_raw_provenance(row)
+                observations.append((int(run_id), product_id, status, row.get("nutrition"), strict))
                 live_history[product_id].append((int(run_id), status, classify_review_reason_families(row)))
+                if not strict:
+                    if row.get("source") != SOURCE:
+                        strict_provenance_failures["SOURCE"] += 1
+                    if row.get("source_record_kind") != SOURCE_RECORD_KIND:
+                        strict_provenance_failures["SOURCE_RECORD_KIND"] += 1
+                    if row.get("redistribution_allowed") is not False:
+                        strict_provenance_failures["REDISTRIBUTION_ALLOWED"] += 1
+                    image_url = row.get("image_url")
+                    if not isinstance(image_url, str) or not image_url.startswith(("https://", "http://")):
+                        strict_provenance_failures["IMAGE_URL"] += 1
             else:
                 canonical_excluded_rows["DIAGNOSTIC_REPLAY_WRAPPER"] += 1
                 canonical_excluded_runs.add(int(run_id))
 
     names = load_run_names(Path(args.artifacts_tsv))
     seen: set[str] = set()
-    rows = []
+    rows: list[dict[str, Any]] = []
     for run_id in sorted(by_run, key=int):
         ids = by_run[run_id]
         new_ids = ids - seen
@@ -387,23 +393,16 @@ def main() -> int:
 
     latest = reconcile_latest_observations(observations)
     latest_status_counts = Counter(item["status"] for item in latest.values())
-    nutrition_issue_counts = Counter(
-        item["nutrition_issue"] for item in latest.values() if item.get("nutrition_issue")
-    )
+    nutrition_issue_counts = Counter(item["nutrition_issue"] for item in latest.values() if item.get("nutrition_issue"))
     usable = {
-        product_id: item
-        for product_id, item in latest.items()
+        product_id: item for product_id, item in latest.items()
         if item.get("usable_complete") is True and isinstance(item.get("nutrition"), dict)
     }
     latest_status_product_ids: dict[str, list[str]] = defaultdict(list)
     for product_id, item in latest.items():
         latest_status_product_ids[str(item["status"])].append(product_id)
     usable_products = [
-        {
-            "product_id": product_id,
-            "latest_run_id": item["latest_run_id"],
-            "nutrition": item["nutrition"],
-        }
+        {"product_id": product_id, "latest_run_id": item["latest_run_id"], "nutrition": item["nutrition"]}
         for product_id, item in sorted(usable.items())
     ]
     coverage_without_canonical_state = sorted(seen - set(latest))
@@ -411,17 +410,21 @@ def main() -> int:
 
     result = {
         "policy": (
-            "Chronological strict-provenance distinct union. Diagnostic replay wrappers remain in processed-id "
-            "coverage but are excluded from canonical current status because their top-level state is historical; "
-            "replay promotions are never applied canonically. Among live OCR observations, the latest persisted run "
-            "wins for status accounting; a product is usable only when its latest live run contains only DECLARED "
-            "strict OCR observations and every such observation has the same complete calories/protein/carbohydrate/fat "
-            "payload. Older DECLARED nutrition is never inherited by a later live non-DECLARED status. The transition "
-            "audit is diagnostic only and separates later positive conflicts/incoherence from extraction or independent-"
-            "corroboration misses; it never promotes or resurrects nutrition. No semantic classification or missing-value "
-            "inference occurs here."
+            "Chronological exact-evidence processed union with latest-live canonical reconciliation. Diagnostic replay "
+            "wrappers remain in processed coverage but never update canonical status. A latest live DECLARED row becomes "
+            "nutrition-usable only when every latest-run observation has complete agreeing four-field nutrition and the "
+            "raw persisted provenance is exactly Mercadona first-party label-image OCR with redistribution disallowed. "
+            "Provenance-incomplete DECLARED rows remain DECLARED for status accounting but have null usable nutrition. "
+            "Older DECLARED nutrition is never inherited by a later non-usable state; no missing values are inferred."
         ),
         "evidence_level": EVIDENCE,
+        "strict_provenance": {
+            "source": SOURCE,
+            "source_record_kind": SOURCE_RECORD_KIND,
+            "redistribution_allowed": False,
+            "image_url_required": True,
+        },
+        "strict_provenance_failure_counts": dict(sorted(strict_provenance_failures.items())),
         "runs_with_strict_ocr_rows": len(rows),
         "final_distinct_union": len(seen),
         "canonical_status_products": len(latest),
@@ -447,6 +450,7 @@ def main() -> int:
         "final_distinct_union": len(seen),
         "canonical_status_products": len(latest),
         "canonical_excluded_row_counts": dict(sorted(canonical_excluded_rows.items())),
+        "strict_provenance_failure_counts": dict(sorted(strict_provenance_failures.items())),
         "coverage_without_canonical_state": len(coverage_without_canonical_state),
         "latest_status_counts": dict(sorted(latest_status_counts.items())),
         "latest_nutrition_issue_counts": dict(sorted(nutrition_issue_counts.items())),
