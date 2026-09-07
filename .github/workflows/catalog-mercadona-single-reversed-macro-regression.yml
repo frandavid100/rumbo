@@ -1,0 +1,29 @@
+name: Catalog Mercadona single reversed macro regression
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-single-reversed-macro-regression.yml'
+      - 'tools/catalog/test_nutrition_label_reader_single_reversed_candidate.py'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run focused conservative regression
+        working-directory: tools/catalog
+        run: python -m unittest -v test_nutrition_label_reader_single_reversed_candidate.py
