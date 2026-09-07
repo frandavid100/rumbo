@@ -1,0 +1,96 @@
+name: Catalog Mercadona reversed zero-glyph parser fix
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-reversed-zero-glyph-parser-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog-mercadona-reversed-zero-glyph-parser-fix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply narrow reversed zero-glyph parser repair
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('nutrition_label_reader.py')
+          text = path.read_text()
+          old_version = 'READER_VERSION = "1.4.8"'
+          new_version = 'READER_VERSION = "1.4.9"'
+          if old_version not in text:
+              raise SystemExit('expected reader version 1.4.8 before patch')
+
+          old = '''            tail = folded[label_match.end():label_match.end() + 90]
+            if re.match(
+                r"\\s*[<>]?\\s*\\d{1,3}(?:\\.\\d{1,2})?\\s*(?:g|9|q|yg|y)?\\s*\\n\\s*[-–—]?\\s*(?:saturad|baturad)",
+                tail,
+                flags=re.I,
+            ):
+                return before
+'''
+          new = '''            tail = folded[label_match.end():label_match.end() + 90]
+            # EasyOCR can linearise a printed total-fat `0 g` cell as the
+            # standalone token `09` immediately *before* `Grasas`, while the
+            # saturated-fat subrow remains immediately after the label. Accept
+            # that reversed value only under this exact three-row structure.
+            # This deliberately does not rewrite arbitrary `09` tokens.
+            if re.match(
+                r"\\s*de\\s*las\\s+cuales\\s*:?\\s*\\n"
+                r"\\s*(?:[<>]?\\s*\\d{1,3}(?:\\.\\d{1,2})?\\s*(?:g|q|yg|y)|0\\s*9)\\s*\\n"
+                r"\\s*[-–—]?\\s*(?:saturad|baturad)",
+                tail,
+                flags=re.I,
+            ):
+                return before
+            if re.match(
+                r"\\s*[<>]?\\s*\\d{1,3}(?:\\.\\d{1,2})?\\s*(?:g|9|q|yg|y)?\\s*\\n\\s*[-–—]?\\s*(?:saturad|baturad)",
+                tail,
+                flags=re.I,
+            ):
+                return before
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one fat-row anchor, got {text.count(old)}')
+          text = text.replace(old_version, new_version, 1).replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - name: Run parser regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_easyocr_zero_glyph.py \
+            test_nutrition_label_reader_easyocr_reversed_zero_glyph.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+          python -m py_compile nutrition_label_reader.py nutrition_ocr_ensemble.py
+      - name: Commit validated parser fix
+        run: |
+          if git diff --quiet -- tools/catalog/nutrition_label_reader.py; then
+            echo 'No parser change produced' >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/catalog/nutrition_label_reader.py
+          git commit -m 'fix(catalog): parse reversed EasyOCR zero-glyph fat row'
+          git push origin HEAD:agent/catalog-phase1
