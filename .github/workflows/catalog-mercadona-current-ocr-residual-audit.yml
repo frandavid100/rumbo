@@ -6,10 +6,12 @@ on:
     paths:
       - '.github/workflows/catalog-mercadona-current-ocr-residual-audit.yml'
       - 'tools/catalog/audit_mercadona_current_ocr_residual.py'
+      - 'tools/catalog/audit_mercadona_current_review_failure_modes.py'
       - 'tools/catalog/diagnose_mercadona_ocr_union.py'
       - 'tools/catalog/summarize_mercadona_ocr_run_union.py'
       - 'tools/catalog/materialize_mercadona_ocr_canonical.py'
       - 'tools/catalog/test_audit_mercadona_current_ocr_residual.py'
+      - 'tools/catalog/test_audit_mercadona_current_review_failure_modes.py'
       - 'tools/catalog/test_summarize_mercadona_ocr_run_union.py'
       - 'tools/catalog/test_materialize_mercadona_ocr_canonical.py'
   workflow_dispatch:
@@ -49,8 +51,8 @@ jobs:
       - name: Run residual census unit tests
         working-directory: tools/catalog
         run: |
-          python -m unittest -v test_audit_mercadona_current_ocr_residual.py test_summarize_mercadona_ocr_run_union.py test_materialize_mercadona_ocr_canonical.py
-          python -m py_compile audit_mercadona_current_ocr_residual.py diagnose_mercadona_ocr_union.py summarize_mercadona_ocr_run_union.py materialize_mercadona_ocr_canonical.py
+          python -m unittest -v test_audit_mercadona_current_ocr_residual.py test_audit_mercadona_current_review_failure_modes.py test_summarize_mercadona_ocr_run_union.py test_materialize_mercadona_ocr_canonical.py
+          python -m py_compile audit_mercadona_current_ocr_residual.py audit_mercadona_current_review_failure_modes.py diagnose_mercadona_ocr_union.py summarize_mercadona_ocr_run_union.py materialize_mercadona_ocr_canonical.py
 
       - name: Reconstruct successful Mercadona OCR artifact union
         shell: bash
@@ -121,6 +123,14 @@ jobs:
             --root /tmp/mercadona-ocr-artifacts \
             --artifacts-tsv mercadona-current-ocr-residual-audit/artifacts.tsv \
             --out mercadona-current-ocr-residual-audit/run-union-summary.json
+
+      - name: Audit latest raw-live REVIEW failure modes
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_current_review_failure_modes.py \
+            --root /tmp/mercadona-ocr-artifacts \
+            --run-union-summary mercadona-current-ocr-residual-audit/run-union-summary.json \
+            --out mercadona-current-ocr-residual-audit/current-review-failure-modes
 
       - name: Materialize canonical OCR staging
         working-directory: tools/catalog
