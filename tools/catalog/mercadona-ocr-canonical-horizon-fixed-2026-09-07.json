@@ -1,0 +1,121 @@
+{
+  "cut_date": "2026-09-07",
+  "purpose": "Auditable Mercadona OCR canonical reconciliation after fixing repository-wide GitHub Actions history horizon loss.",
+  "source_universe_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow": {
+    "run_id": 34104348594,
+    "head_sha": "4a26394ae296d29d15010599eca0e835c733a30a",
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10011900593,
+    "artifact_sha256": "d1eb3993ba3e3a6384f73011e1675e11e1061c48465e48489ab5e98e331631e2"
+  },
+  "canonical_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "coverage": {
+    "processed_distinct_union": 2969,
+    "processed_pct": 69.3692,
+    "residual_total": 1311,
+    "actionable_p9_remaining": 0,
+    "blocked_no_p9_food_route_remaining": 0,
+    "deferred_bodega_remaining": 11,
+    "out_of_scope_non_food_or_mixed_remaining": 1300
+  },
+  "canonical_current_status": {
+    "DECLARED": 229,
+    "REVIEW": 2740,
+    "ERROR": 0,
+    "usable_complete": 229,
+    "usable_complete_pct_inventory": 5.3505,
+    "usable_field_counts": {
+      "calories": 229,
+      "protein_g": 229,
+      "carbohydrate_g": 229,
+      "fat_g": 229
+    }
+  },
+  "zero_calorie_reconciliation": {
+    "newly_current_usable_vs_225_baseline": 4,
+    "products": [
+      {
+        "product_id": "27184",
+        "status": "DECLARED",
+        "latest_live_run_id": 34089909052,
+        "nutrition": {
+          "calories": 0.0,
+          "protein_g": 0.02,
+          "carbohydrate_g": 0.0,
+          "fat_g": 0.0
+        }
+      },
+      {
+        "product_id": "26997",
+        "status": "DECLARED",
+        "latest_live_run_id": 34096565461,
+        "nutrition": {
+          "calories": 0.0,
+          "protein_g": 0.0,
+          "carbohydrate_g": 0.0,
+          "fat_g": 0.0
+        }
+      },
+      {
+        "product_id": "27449",
+        "status": "DECLARED",
+        "latest_live_run_id": 34096565461,
+        "nutrition": {
+          "calories": 2.0,
+          "protein_g": 0.0,
+          "carbohydrate_g": 0.0,
+          "fat_g": 0.0
+        }
+      },
+      {
+        "product_id": "27559",
+        "status": "DECLARED",
+        "latest_live_run_id": 34096565461,
+        "nutrition": {
+          "calories": 0.0,
+          "protein_g": 0.0,
+          "carbohydrate_g": 0.0,
+          "fat_g": 0.0
+        }
+      },
+      {
+        "product_id": "9887",
+        "status": "REVIEW",
+        "nutrition": null
+      }
+    ],
+    "review_auto_promoted": false,
+    "missing_values_inferred": false
+  },
+  "actions_history_horizon_regression": {
+    "failure_mode": "The repository-wide Actions runs endpoint exposed a bounded recent horizon after branch activity exceeded roughly one thousand runs. Mercadona filtering happened after pagination, so older still-valid OCR runs disappeared from the reconstructed audit union even though their artifacts were not expired.",
+    "fix": "Enumerate Mercadona workflow definitions first, then paginate successful runs independently per workflow since 2026-08-27. Require historical neural PP-OCRv6 pilot run 33048440695 as an integration regression anchor.",
+    "prior_audit_artifacts": 371,
+    "fixed_audit_artifacts": 412,
+    "prior_artifacts_missing_after_fix": 0,
+    "historical_anchor_run": 33048440695,
+    "historical_anchor_present": true,
+    "historical_declared_products_restored": 263,
+    "latest_review_after_historical_declared": 34,
+    "explicit_contradiction_products": 14,
+    "safety_blocking_products": 14,
+    "non_contradictory_review_products": 20
+  },
+  "derived_rows_excluded_from_live_state": {
+    "DERIVED_CANONICAL_MATERIALIZATION": 14845,
+    "DIAGNOSTIC_REPLAY_WRAPPER": 43169
+  },
+  "legacy_raw_provenance_diagnostics": {
+    "SOURCE_RECORD_KIND_rows": 137,
+    "note": "These are historical raw rows in the audit union. They are not promoted into usable nutrition unless the latest raw-live observation satisfies the strict provenance contract; current usable DECLARED rows all materialize successfully."
+  },
+  "images_downloaded_by_audit": false,
+  "images_persisted": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0
+}
