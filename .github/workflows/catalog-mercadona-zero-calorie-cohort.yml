@@ -1,0 +1,163 @@
+name: Catalog Mercadona zero-calorie OCR cohort
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-zero-calorie-cohort.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-zero-calorie-cohort-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Build exact low-calorie cohort input
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          targets = {'26997', '27449', '27559', '9887'}
+          rows = [json.loads(x) for x in Path('mercadona-first-party-final/products.jsonl').read_text().splitlines() if x.strip()]
+          selected = [x for x in rows if str(x.get('product_id') or '') in targets]
+          found = {str(x.get('product_id') or '') for x in selected}
+          if found != targets or len(selected) != len(targets):
+              raise SystemExit(f'exact cohort mismatch: expected={sorted(targets)} found={sorted(found)} rows={len(selected)}')
+          for row in selected:
+              photos = row.get('photos') if isinstance(row.get('photos'), list) else []
+              if not any(isinstance(p, dict) and str(p.get('perspective')) == '9' and p.get('zoom') for p in photos):
+                  raise SystemExit(f"{row.get('product_id')} no longer has a usable perspective=9 label image")
+          selected.sort(key=lambda x: str(x.get('product_id') or ''))
+          Path('zero-calorie-cohort-products.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected)
+          )
+          PY
+      - name: Install OCR engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run zero-calorie and safety regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_nutrition_ocr_ensemble.py test_nutrition_label_reader.py test_mercadona_ocr_safety_regressions.py test_mercadona_neural_ocr_tesseract_preprocess_rescue.py
+          python -m py_compile nutrition_ocr_ensemble.py mercadona_neural_ocr_tesseract_preprocess_rescue.py
+      - name: Reprocess exact low-calorie cohort
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            --products zero-calorie-cohort-products.jsonl \
+            --out mercadona-zero-calorie-cohort \
+            --shard-index 0 --shard-count 1 --limit 0 --delay 0
+      - name: Enforce conservative cohort contract
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+
+          expected = {'26997', '27449', '27559', '9887'}
+          rows = []
+          for path in Path('mercadona-zero-calorie-cohort').glob('results-*.jsonl'):
+              rows.extend(json.loads(x) for x in path.read_text().splitlines() if x.strip())
+          ids = {str(row.get('product_id') or '') for row in rows}
+          if ids != expected or len(rows) != len(expected):
+              raise SystemExit(f'unexpected cohort output: ids={sorted(ids)} rows={len(rows)}')
+
+          audited = []
+          for row in sorted(rows, key=lambda x: str(x.get('product_id') or '')):
+              pid = str(row.get('product_id') or '')
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  raise SystemExit(f'{pid}: wrong evidence level')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  raise SystemExit(f'{pid}: wrong source provenance')
+              if row.get('redistribution_allowed') is not False or str(row.get('perspective')) != '9':
+                  raise SystemExit(f'{pid}: wrong image/provenance contract')
+              if row.get('status') != 'DECLARED' and row.get('nutrition') is not None:
+                  raise SystemExit(f'{pid}: REVIEW/non-DECLARED row unexpectedly carries usable nutrition')
+
+              attempts = [a for a in row.get('attempts') or [] if isinstance(a.get('ensemble'), dict)]
+              if not attempts:
+                  raise SystemExit(f'{pid}: no ensemble attempt emitted')
+              for attempt in attempts:
+                  ensemble = attempt['ensemble']
+                  nutrition = ensemble.get('nutrition') if isinstance(ensemble.get('nutrition'), dict) else {}
+                  reasons = [str(reason) for reason in ensemble.get('reasons') or []]
+                  if isinstance(nutrition.get('calories'), (int, float)) and any(
+                      reason.startswith('MISSING_CORE:calories') for reason in reasons
+                  ):
+                      raise SystemExit(f'{pid}: numeric calories still reclassified as missing core')
+
+              audited.append({
+                  'product_id': pid,
+                  'name': row.get('name'),
+                  'status': row.get('status'),
+                  'basis': row.get('basis'),
+                  'nutrition': row.get('nutrition') if row.get('status') == 'DECLARED' else None,
+                  'evidence_level': row.get('evidence_level'),
+                  'source': 'MERCADONA_FIRST_PARTY/label image',
+                  'redistribution_allowed': False,
+                  'images_persisted': False,
+                  'missing_values_inferred': False,
+              })
+
+          forbidden_ext = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tif', '.tiff'}
+          persisted_images = [str(p) for p in Path('mercadona-zero-calorie-cohort').rglob('*') if p.is_file() and p.suffix.lower() in forbidden_ext]
+          if persisted_images:
+              raise SystemExit(f'image bytes persisted unexpectedly: {persisted_images}')
+
+          counts = Counter(x['status'] for x in audited)
+          summary = {
+              'cohort_product_ids': sorted(expected),
+              'processed': len(audited),
+              'status_counts': dict(sorted(counts.items())),
+              'products': audited,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'REVIEW_promoted_without_new_live_OCR': 0,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('mercadona-zero-calorie-cohort/verified-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + '\n'
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-zero-calorie-cohort
+          path: tools/catalog/mercadona-zero-calorie-cohort/
+          retention-days: 30
+          if-no-files-found: error
