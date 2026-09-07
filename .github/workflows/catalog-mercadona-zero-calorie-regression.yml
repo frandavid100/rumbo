@@ -121,6 +121,6 @@ jobs:
         if: always()
         with:
           name: mercadona-zero-calorie-regression
-          path: mercadona-zero-calorie-regression/
+          path: tools/catalog/mercadona-zero-calorie-regression/
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
