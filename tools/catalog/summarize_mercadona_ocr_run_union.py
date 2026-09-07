@@ -57,9 +57,24 @@ def nutrition_key(value: dict[str, float]) -> tuple[float, ...]:
     return tuple(value[field] for field in NUTRITION_FIELDS)
 
 
+def canonical_exclusion_reason(row: dict[str, Any]) -> str | None:
+    """Return why an exact-evidence row is not a raw live OCR observation.
+
+    Replay wrappers and rows materialized by a prior canonical audit are derived
+    evidence. They can prove that the product occurred in the processed union, but
+    they must never become a newer live status merely because their workflow ran
+    later than the OCR producer that they summarize.
+    """
+    if isinstance(row.get("replay"), dict):
+        return "DIAGNOSTIC_REPLAY_WRAPPER"
+    if isinstance(row.get("canonical_status_source"), str) and row["canonical_status_source"].strip():
+        return "DERIVED_CANONICAL_MATERIALIZATION"
+    return None
+
+
 def is_canonical_status_row(row: dict[str, Any]) -> bool:
-    """Replay wrappers count as processed evidence but never replace live state."""
-    return not isinstance(row.get("replay"), dict)
+    """Only raw live OCR rows may replace canonical product status."""
+    return canonical_exclusion_reason(row) is None
 
 
 def has_strict_raw_provenance(row: dict[str, Any]) -> bool:
@@ -367,7 +382,8 @@ def main() -> int:
                     if not isinstance(image_url, str) or not image_url.startswith(("https://", "http://")):
                         strict_provenance_failures["IMAGE_URL"] += 1
             else:
-                canonical_excluded_rows["DIAGNOSTIC_REPLAY_WRAPPER"] += 1
+                reason = canonical_exclusion_reason(row) or "NON_LIVE_DERIVED_ROW"
+                canonical_excluded_rows[reason] += 1
                 canonical_excluded_runs.add(int(run_id))
 
     names = load_run_names(Path(args.artifacts_tsv))
@@ -411,11 +427,12 @@ def main() -> int:
     result = {
         "policy": (
             "Chronological exact-evidence processed union with latest-live canonical reconciliation. Diagnostic replay "
-            "wrappers remain in processed coverage but never update canonical status. A latest live DECLARED row becomes "
-            "nutrition-usable only when every latest-run observation has complete agreeing four-field nutrition and the "
-            "raw persisted provenance is exactly Mercadona first-party label-image OCR with redistribution disallowed. "
-            "Provenance-incomplete DECLARED rows remain DECLARED for status accounting but have null usable nutrition. "
-            "Older DECLARED nutrition is never inherited by a later non-usable state; no missing values are inferred."
+            "wrappers and prior derived canonical materializations remain in processed coverage but never update canonical "
+            "status. A latest live DECLARED row becomes nutrition-usable only when every latest-run observation has "
+            "complete agreeing four-field nutrition and the raw persisted provenance is exactly Mercadona first-party "
+            "label-image OCR with redistribution disallowed. Provenance-incomplete DECLARED rows remain DECLARED for "
+            "status accounting but have null usable nutrition. Older DECLARED nutrition is never inherited by a later "
+            "non-usable state; no missing values are inferred."
         ),
         "evidence_level": EVIDENCE,
         "strict_provenance": {
