@@ -1,0 +1,106 @@
+{
+  "cut_date": "2026-09-07",
+  "purpose": "Auditable Mercadona OCR canonical reconciliation after parser v1.4.9 and reversed-row live boundary validation.",
+  "source_universe_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow": {
+    "run_id": 34120999322,
+    "head_sha": "599664fcaa63734ea38acc8368628ad533f2e272",
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10018456802,
+    "artifact_sha256": "f218e76877b24cf9df779291692547c0b3879ce5beea9727cdae1b70332e2020"
+  },
+  "canonical_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "coverage": {
+    "processed_distinct_union": 2969,
+    "processed_pct": 69.3692,
+    "residual_total": 1311,
+    "actionable_p9_remaining": 0,
+    "blocked_no_p9_food_route_remaining": 0,
+    "deferred_bodega_remaining": 11,
+    "out_of_scope_non_food_or_mixed_remaining": 1300
+  },
+  "canonical_current_status": {
+    "DECLARED": 232,
+    "REVIEW": 2737,
+    "ERROR": 0,
+    "usable_complete": 232,
+    "usable_complete_pct_inventory": 5.4206,
+    "usable_field_counts": {
+      "calories": 232,
+      "protein_g": 232,
+      "carbohydrate_g": 232,
+      "fat_g": 232
+    }
+  },
+  "delta_vs_horizon_fixed_229": {
+    "usable_complete_delta": 3,
+    "review_delta": -3,
+    "newly_current_usable_product_ids": ["16314", "4740", "2851"],
+    "products": [
+      {
+        "product_id": "16314",
+        "name": "Acelgas troceadas Hacendado",
+        "latest_live_run_id": 34113865663,
+        "basis": "100_g",
+        "nutrition": {
+          "calories": 10.0,
+          "protein_g": 0.7,
+          "carbohydrate_g": 1.1,
+          "fat_g": 0.0
+        }
+      },
+      {
+        "product_id": "4740",
+        "name": "Aceite de oliva virgen extra Hacendado",
+        "latest_live_run_id": 34113865663,
+        "basis": "100_ml",
+        "nutrition": {
+          "calories": 822.0,
+          "protein_g": 0.0,
+          "carbohydrate_g": 0.0,
+          "fat_g": 91.4
+        }
+      },
+      {
+        "product_id": "2851",
+        "name": "Manos de cerdo",
+        "latest_live_run_id": 34115899050,
+        "basis": "100_g",
+        "nutrition": {
+          "calories": 170.0,
+          "protein_g": 20.54,
+          "carbohydrate_g": 0.0,
+          "fat_g": 9.82
+        }
+      }
+    ],
+    "control_reviews": [
+      {
+        "product_id": "39191",
+        "status": "REVIEW"
+      },
+      {
+        "product_id": "29130",
+        "status": "REVIEW"
+      }
+    ]
+  },
+  "current_review_census": {
+    "near_safe_complete_review": 165,
+    "near_safe_complete_with_3_of_4_corroborated_fields": 82,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 40
+  },
+  "safety": {
+    "review_auto_promoted": false,
+    "missing_values_inferred": false,
+    "images_downloaded_by_audit": false,
+    "images_persisted": false,
+    "structured_api_macros_claimed": false,
+    "classified": 0,
+    "menu_eligible": 0
+  }
+}
