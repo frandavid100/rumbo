@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "cut_date": "2026-09-08",
+  "cut_kind": "MERCADONA_OCR_CANONICAL_RECONCILIATION",
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "repository_branch": "agent/catalog-phase1",
+  "baseline_commit": "7b7b4a35c681fe78f882bfc310cf8da7abe4820c",
+  "audit_workflow": {
+    "name": "Mercadona Current OCR Residual Audit",
+    "run_id": 34194536188,
+    "artifact_id": 10043580092,
+    "status": "success"
+  },
+  "inventory": {
+    "total_products": 4280,
+    "processed_ocr": 2969,
+    "processed_ocr_pct": 69.3692,
+    "canonical_status_counts": {"DECLARED": 269, "REVIEW": 2700},
+    "usable_complete": 269,
+    "usable_complete_pct_inventory": 6.2850,
+    "usable_field_counts": {
+      "calories": 269,
+      "protein_g": 269,
+      "carbohydrate_g": 269,
+      "fat_g": 269
+    }
+  },
+  "delta_from_previous_canonical_cut": {
+    "previous_declared": 268,
+    "previous_review": 2701,
+    "declared_delta": 1,
+    "review_delta": -1,
+    "newly_canonical_declared": [{
+      "product_id": "27321",
+      "name": "Refresco Coca-Cola",
+      "basis": "100_ml",
+      "nutrition": {
+        "calories": 42.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 10.6,
+        "fat_g": 0.0
+      },
+      "latest_live_run_id": 34193585639,
+      "parser_version": "1.4.14",
+      "status": "DECLARED",
+      "usable_complete": true
+    }]
+  },
+  "residual_ocr_scope": {
+    "p9_actionable_candidates": 0,
+    "food_missing_p9_found": 0,
+    "bodega_deferred": 11,
+    "out_of_scope_unprocessed": 1300
+  },
+  "review_diagnostics": {
+    "review_total": 2700,
+    "near_safe_complete_review": 105,
+    "near_safe_complete_by_corroborated_fields": {"0": 1, "1": 31, "2": 53, "3": 20},
+    "complete_but_safety_blocked": 44,
+    "fully_corroborated_but_still_review": 0,
+    "three_way_adjudication_eligible": 0,
+    "review_promoted_by_diagnostics": 0,
+    "usable_products_created_by_diagnostics": 0
+  },
+  "provenance_policy": {
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "source_record_kind": "label image",
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false
+  },
+  "semantic_state": {"CLASSIFIED": 0, "MENU_ELIGIBLE": 0},
+  "notes": [
+    "Product 27321 is now present in the canonical latest-live materialization as DECLARED with complete usable nutrition.",
+    "No REVIEW row was promoted by diagnostic replay or by near-safe shape alone.",
+    "The 20 REVIEW rows with three corroborated core fields remain non-usable and require new independent first-party OCR evidence before any promotion."
+  ]
+}
