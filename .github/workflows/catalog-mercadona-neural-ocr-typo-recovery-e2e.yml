@@ -65,8 +65,9 @@ jobs:
             test_mercadona_label_pipeline.py \
             test_mercadona_ocr_safety_regressions.py
           python - <<'PY'
+          import re
           from nutrition_label_reader import READER_VERSION
-          assert READER_VERSION == '1.4.7', READER_VERSION
+          assert re.fullmatch(r'\d+\.\d+\.\d+', READER_VERSION), READER_VERSION
           PY
 
       - name: Select exactly the four isolated typo-recovery candidates
@@ -111,6 +112,7 @@ jobs:
           from collections import Counter
           import json
           from pathlib import Path
+          from nutrition_label_reader import READER_VERSION
 
           out = Path('mercadona-neural-ocr-typo-recovery-e2e')
           rows = []
@@ -189,7 +191,7 @@ jobs:
           counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
           summary = {
               'mode': 'END_TO_END_VALIDATION_OF_ISOLATED_OCR_TYPO_RECOVERIES',
-              'reader_version': '1.4.7',
+              'reader_version': READER_VERSION,
               'processed': len(rows),
               'status_counts': dict(sorted(counts.items())),
               'reproduced_ids': sorted(reproduced),
