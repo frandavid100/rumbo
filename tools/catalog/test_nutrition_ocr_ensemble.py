@@ -71,6 +71,34 @@ class OCREnsembleTest(unittest.TestCase):
         self.assertEqual(r.corroborated_fields, 4)
         self.assertEqual(r.nutrition['carbohydrate_g'], 4.6)
 
+    def test_ambiguous_family_does_not_veto_two_clean_independent_families(self):
+        easy = reading('REVIEW', '100_g', {
+            'calories': 199.0, 'fat_g': 13.0, 'carbohydrate_g': 3.0, 'protein_g': 17.0
+        }, .76, 'LOW_EXTRACTION_CONFIDENCE')
+        paddle = reading('DECLARED', '100_g', {
+            'calories': 199.0, 'fat_g': 13.0, 'carbohydrate_g': 3.0, 'protein_g': 17.0
+        }, .98)
+        tess_bad = reading('REVIEW', '100_g', {
+            'calories': 199.0, 'carbohydrate_g': 30.0, 'protein_g': 17.0
+        }, .81, 'MISSING_CORE:fat_g')
+        tess_good = reading('REVIEW', '100_g', {
+            'calories': 199.0, 'fat_g': 13.0, 'carbohydrate_g': 3.0, 'protein_g': 17.0
+        }, .76, 'LOW_EXTRACTION_CONFIDENCE')
+        r = fuse_ocr_readings([
+            ParsedOCRReading('easyocr', easy, engine_family='easyocr'),
+            ParsedOCRReading('paddle-region', paddle, engine_family='paddleocr'),
+            ParsedOCRReading('tesseract-psm11', tess_bad, engine_family='tesseract'),
+            ParsedOCRReading('tesseract-psm6', tess_good, engine_family='tesseract'),
+        ])
+        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.independent_engine_families, 3)
+        self.assertEqual(r.corroborated_fields, 4)
+        self.assertEqual(r.nutrition['carbohydrate_g'], 3.0)
+        self.assertIn(
+            'IGNORED_AMBIGUOUS_ENGINE_FAMILY:carbohydrate_g:tesseract',
+            r.reasons,
+        )
+
     def test_same_engine_split_without_majority_remains_review(self):
         paddle = reading('DECLARED', '100_g', {
             'calories': 46.0, 'fat_g': 1.5, 'carbohydrate_g': 4.6, 'protein_g': 3.0
