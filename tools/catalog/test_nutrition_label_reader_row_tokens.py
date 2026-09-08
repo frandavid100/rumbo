@@ -74,5 +74,36 @@ class RowTokenRegressionTest(unittest.TestCase):
         self.assertEqual(r.status, 'REVIEW', r)
         self.assertIn('MISSING_CORE:protein_g', r.reasons)
 
+    def test_impossible_forward_number_does_not_hide_coherent_reversed_protein_cell(self):
+        # Observed on Mercadona 61416: OCR linearises the real protein cell
+        # immediately before the row label, then a manufacturer/address number
+        # appears after the label. The impossible forward number must not hide
+        # the explicit 2.5 g cell, but one reversed observation remains REVIEW
+        # evidence until an independent OCR family corroborates it.
+        text = (
+            'INFORMACIÓN NUTRICIONAL\npor 100 g\n'
+            'Valor energético 625 kJ / 150 kcal\n'
+            'Grasas 6.1 g\nHidratos de carbono 20 g\n'
+            '2.5 g\nProteínas\n800 500 220\nTopaasstraat 54-62\nSal 0.79 g\n'
+        )
+        r = read_nutrition_label(text, extraction_confidence=.96)
+        self.assertEqual(r.status, 'REVIEW', r)
+        self.assertEqual(r.nutrition['protein_g'], 2.5)
+        self.assertIn('SINGLE_REVERSED_MACRO_CANDIDATE:protein_g', r.reasons)
+        self.assertNotIn('IMPOSSIBLE_PROTEIN_G', r.reasons)
+
+    def test_incoherent_reversed_cell_does_not_replace_impossible_forward_number(self):
+        text = (
+            'INFORMACIÓN NUTRICIONAL\npor 100 g\n'
+            'Valor energético 625 kJ / 150 kcal\n'
+            'Grasas 6.1 g\nHidratos de carbono 20 g\n'
+            '25 g\nProteínas\n800 500 220\nTopaasstraat 54-62\nSal 0.79 g\n'
+        )
+        r = read_nutrition_label(text, extraction_confidence=.96)
+        self.assertEqual(r.status, 'REVIEW', r)
+        self.assertNotIn('protein_g', r.nutrition or {})
+        self.assertIn('IMPOSSIBLE_PROTEIN_G', r.reasons)
+        self.assertIn('MISSING_CORE:protein_g', r.reasons)
+
 if __name__ == '__main__':
     unittest.main()
