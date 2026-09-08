@@ -1,0 +1,93 @@
+name: Mercadona Crasas parser patch targeted
+
+on:
+  push:
+    branches:
+      - agent/catalog-phase1
+    paths:
+      - .github/workflows/catalog-mercadona-crasas-parser-patch-targeted.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Apply narrow parser patch
+        id: patch
+        shell: bash
+        run: |
+          set +e
+          python - <<'PY'
+          from pathlib import Path
+
+          parser = Path('tools/catalog/nutrition_label_reader.py')
+          text = parser.read_text()
+          old_version = 'READER_VERSION = "1.4.12"'
+          assert text.count(old_version) == 1, 'unexpected parser version'
+          text = text.replace(old_version, 'READER_VERSION = "1.4.13"', 1)
+
+          needle = '''    text = re.sub(\n        r"(?im)^([ \\t]*)(?:brasas|vrasas)([ \\t]*)$",\n        r"\\1Grasas\\2",\n        text,\n    )\n'''
+          assert text.count(needle) == 1, 'standalone fat row repair block changed'
+          replacement = needle + '''    # EasyOCR has also emitted `Crasas;` for the printed total-fat row.\n    # Repair only an entire standalone row label (with optional row punctuation);\n    # prose containing the token remains untouched.\n    text = re.sub(\n        r"(?im)^([ \\t]*)crasas([ \\t]*[:;]?[ \\t]*)$",\n        r"\\1Grasas\\2",\n        text,\n    )\n'''
+          text = text.replace(needle, replacement, 1)
+          parser.write_text(text)
+
+          test = Path('tools/catalog/test_nutrition_label_reader_easyocr_zero_glyph.py')
+          t = test.read_text()
+          old_import = 'from nutrition_label_reader import read_nutrition_label\n'
+          assert t.count(old_import) == 1, 'test import changed'
+          t = t.replace(old_import, 'from nutrition_label_reader import normalize_text, read_nutrition_label\n', 1)
+          marker = '''    def test_bare_nine_without_unit_glyph_is_not_repaired_to_zero(self):\n'''
+          assert t.count(marker) == 1, 'test insertion marker changed'
+          addition = '''    def test_easyocr_coca_cola_crasas_row_keeps_zero_total_fat(self):\n        observed = """INFORMACIÓN NUTRICIONAL\nPor 100 ml\nValor energético 180 kJ / 42 kcal\nCrasas;\n09\nHidratos de carbono:\n10.6 g\nProteínas:\n0 g\nSal 0 g\n"""\n        r = read_nutrition_label(observed, extraction_confidence=.95)\n        self.assertEqual(r.status, "DECLARED", r)\n        self.assertEqual(r.basis, "100_ml")\n        self.assertEqual(r.nutrition, {\n            "calories": 42.0,\n            "fat_g": 0.0,\n            "carbohydrate_g": 10.6,\n            "protein_g": 0.0,\n        })\n\n    def test_crasas_repair_is_standalone_only(self):\n        self.assertEqual(normalize_text("Crasas;"), "Grasas;")\n        self.assertEqual(normalize_text("Crasas:"), "Grasas:")\n        self.assertEqual(normalize_text("Crasas"), "Grasas")\n        self.assertEqual(normalize_text("Crasas a la brasa"), "Crasas a la brasa")\n\n    def test_crasas_in_prose_cannot_supply_missing_fat(self):\n        observed = """INFORMACIÓN NUTRICIONAL\nPor 100 g\nValor energético 420 kJ / 100 kcal\nCrasas a la brasa\nHidratos de carbono 20 g\nProteínas 5 g\n"""\n        r = read_nutrition_label(observed, extraction_confidence=.95)\n        self.assertEqual(r.status, "REVIEW", r)\n        self.assertIn("MISSING_CORE:fat_g", r.reasons)\n\n'''
+          t = t.replace(marker, addition + marker, 1)
+          test.write_text(t)
+          PY
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run targeted regression file
+        id: targeted
+        if: steps.patch.outputs.rc == '0'
+        shell: bash
+        run: |
+          set +e
+          cd tools/catalog
+          python -m unittest test_nutrition_label_reader_easyocr_zero_glyph.py
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit validated patch
+        if: steps.patch.outputs.rc == '0' && steps.targeted.outputs.rc == '0'
+        shell: bash
+        run: |
+          git rm .github/workflows/catalog-mercadona-crasas-parser-patch-targeted.yml
+          git add tools/catalog/nutrition_label_reader.py tools/catalog/test_nutrition_label_reader_easyocr_zero_glyph.py
+          git config user.name "David Prieto"
+          git config user.email "frandavid100@gmail.com"
+          git commit -m "fix(catalog): repair standalone Crasas OCR row"
+          git push origin HEAD:agent/catalog-phase1
+
+      - name: Remove probe if targeted validation failed
+        if: steps.patch.outputs.rc != '0' || steps.targeted.outputs.rc != '0'
+        shell: bash
+        run: |
+          git restore tools/catalog/nutrition_label_reader.py tools/catalog/test_nutrition_label_reader_easyocr_zero_glyph.py || true
+          git rm .github/workflows/catalog-mercadona-crasas-parser-patch-targeted.yml
+          git config user.name "David Prieto"
+          git config user.email "frandavid100@gmail.com"
+          git commit -m "chore(catalog): drop failed targeted Crasas patch probe"
+          git push origin HEAD:agent/catalog-phase1
