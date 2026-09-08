@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.14"
+READER_VERSION = "1.4.15"
 
 
 @dataclass(frozen=True)
@@ -474,6 +474,33 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
                 if coherent:
                     values[key] = reversed_value
                     single_reversed_macro_candidate = key
+
+    # A forward OCR number outside physical per-100 macro bounds can be package
+    # noise immediately after the row label. If all core fields are otherwise
+    # present and exactly one macro is impossible, allow an explicit dedicated
+    # gram cell immediately before that label to replace the noise only when the
+    # completed tuple is energy-coherent. It remains REVIEW evidence until an
+    # independent OCR family corroborates it.
+    if calories is not None and not missing_macros:
+        impossible_forward_macros = [
+            key for key in macro_patterns
+            if values[key] is not None and (values[key] < 0 or values[key] > 100)
+        ]
+        if len(impossible_forward_macros) == 1:
+            key = impossible_forward_macros[0]
+            reversed_value = _number_immediately_before(macro_patterns[key], block)
+            if reversed_value is not None:
+                completed = dict(values)
+                completed[key] = reversed_value
+                if all(completed.get(field) is not None for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")):
+                    completed_nutrition = {
+                        field: float(completed[field])
+                        for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")
+                    }
+                    coherent, _ = _plausible(completed_nutrition)
+                    if coherent:
+                        values[key] = reversed_value
+                        single_reversed_macro_candidate = key
 
     # Reject individually impossible OCR values before returning a partial read.
     # Previously plausibility checks ran only after all four core fields existed,
