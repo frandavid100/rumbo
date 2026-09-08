@@ -115,20 +115,56 @@ jobs:
                       rows.append(json.loads(line))
           counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
           declared = [row for row in rows if row.get('status') == 'DECLARED']
+          review = [row for row in rows if row.get('status') == 'REVIEW']
+          errors = [row for row in rows if row.get('status') == 'ERROR']
+          no_visual_region = [row for row in rows if row.get('visual_regions_detected') == 0]
           invalid_declared = []
+          invalid_provenance = []
+          classified_true = []
+          menu_eligible_true = []
+          for row in rows:
+              pid = row.get('product_id')
+              if (
+                  row.get('source') != 'MERCADONA_FIRST_PARTY'
+                  or row.get('source_record_kind') != 'label image'
+                  or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  or row.get('redistribution_allowed') is not False
+              ):
+                  invalid_provenance.append(pid)
+              if row.get('classified') is True or row.get('CLASSIFIED') is True:
+                  classified_true.append(pid)
+              if row.get('menu_eligible') is True or row.get('MENU_ELIGIBLE') is True:
+                  menu_eligible_true.append(pid)
           for row in declared:
               attempts = row.get('attempts') or []
               accepted = next((a for a in attempts if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
               ensemble = (accepted or {}).get('ensemble') or {}
               if ensemble.get('independent_engine_families', 0) < 2 or ensemble.get('corroborated_fields', 0) < 4:
                   invalid_declared.append(row.get('product_id'))
+          denominator = len(rows)
+          evaluation_counts = {
+              'DECLARED': len(declared),
+              'REVIEW': len(review),
+              'NO_VISUAL_REGION': len(no_visual_region),
+              'ERROR': len(errors),
+          }
+          evaluation_rates = {
+              key: round(value / denominator, 4) if denominator else 0.0
+              for key, value in evaluation_counts.items()
+          }
           summary = {
               'inventory_products': 4280,
               'processed': len(rows),
               'status_counts': dict(sorted(counts.items())),
+              'evaluation_counts': evaluation_counts,
+              'evaluation_rates': evaluation_rates,
+              'no_visual_region_is_diagnostic_not_primary_status': True,
               'declared_rate': round(len(declared) / len(rows), 4) if rows else 0.0,
               'declared_with_two_independent_engines_and_four_corroborated_fields': len(declared) - len(invalid_declared),
               'invalid_declared_product_ids': invalid_declared,
+              'invalid_provenance_product_ids': invalid_provenance,
+              'classified_true_product_ids': classified_true,
+              'menu_eligible_true_product_ids': menu_eligible_true,
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
               'source': 'MERCADONA_FIRST_PARTY/label image',
               'redistribution_allowed': False,
@@ -137,8 +173,17 @@ jobs:
           Path('merged/results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows), encoding='utf-8')
           Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
           print(json.dumps(summary, ensure_ascii=False, indent=2))
+          failures = []
           if invalid_declared:
-              raise SystemExit('Unsafe DECLARED rows detected: ' + ','.join(map(str, invalid_declared)))
+              failures.append('Unsafe DECLARED rows: ' + ','.join(map(str, invalid_declared)))
+          if invalid_provenance:
+              failures.append('Invalid provenance rows: ' + ','.join(map(str, invalid_provenance)))
+          if classified_true:
+              failures.append('Unexpected CLASSIFIED rows: ' + ','.join(map(str, classified_true)))
+          if menu_eligible_true:
+              failures.append('Unexpected MENU_ELIGIBLE rows: ' + ','.join(map(str, menu_eligible_true)))
+          if failures:
+              raise SystemExit('; '.join(failures))
           PY
       - uses: actions/upload-artifact@v4
         if: always()
