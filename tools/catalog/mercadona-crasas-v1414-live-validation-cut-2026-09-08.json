@@ -1,0 +1,46 @@
+{
+  "cut_date": "2026-09-08",
+  "scope": "Mercadona first-party exact live OCR validation for parser v1.4.14 interleaved zero-fat rescue before canonical reconciliation",
+  "product_id": "27321",
+  "name": "Refresco Coca-Cola",
+  "perspective": "9",
+  "reader_version": "1.4.14",
+  "live_validation": {
+    "run_id": 34193585639,
+    "artifact_id": 10043201961,
+    "artifact_name": "mercadona-crasas-live-regression-v1414",
+    "status": "DECLARED",
+    "basis": "100_ml",
+    "nutrition": {
+      "calories": 42.0,
+      "protein_g": 0.0,
+      "carbohydrate_g": 10.6,
+      "fat_g": 0.0
+    },
+    "corroborated_fields": 4,
+    "independent_engine_families": 2,
+    "expected_values_match": true,
+    "safety_assessment": "VALIDATED"
+  },
+  "previous_canonical": {
+    "cut": "tools/catalog/mercadona-ocr-canonical-bilingual-fat-reconciled-2026-09-08.json",
+    "status_counts": {
+      "DECLARED": 268,
+      "REVIEW": 2701
+    },
+    "processed_canonical_products": 2969,
+    "product_27321_status": "REVIEW"
+  },
+  "canonical_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "canonical_reconciliation_pending": true,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "REVIEW_promoted_without_new_live_OCR": 0,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
