@@ -1,0 +1,140 @@
+{
+  "cut_date": "2026-09-08",
+  "scope": "Mercadona first-party OCR canonical reconciliation after parser v1.4.12 live reruns and bilingual total-fat regression",
+  "canonical_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 268,
+    "REVIEW": 2701
+  },
+  "usable_complete": 268,
+  "usable_complete_pct_inventory": 6.2617,
+  "usable_field_counts": {
+    "calories": 268,
+    "protein_g": 268,
+    "carbohydrate_g": 268,
+    "fat_g": 268
+  },
+  "delta_from_previous_canonical": {
+    "previous_declared": 263,
+    "previous_review": 2706,
+    "declared_delta_net": 5,
+    "review_delta_net": -5,
+    "processed_delta": 0,
+    "new_declared_products": 6,
+    "demoted_declared_to_review_products": 1
+  },
+  "new_live_declared_product_ids": [
+    "15700",
+    "22879",
+    "51201",
+    "6042",
+    "60964",
+    "63238"
+  ],
+  "new_live_declared_sources": {
+    "15700": 34186910294,
+    "22879": 34186910294,
+    "51201": 34186910476,
+    "6042": 34186910476,
+    "60964": 34186910425,
+    "63238": 34187009594
+  },
+  "declared_to_review_product_ids": [
+    "58298"
+  ],
+  "declared_to_review_reason_families": {
+    "58298": [
+      "EXPLICIT_FIELD_CONFLICT",
+      "INCOMPLETE_EXTRACTION"
+    ]
+  },
+  "live_runs": [
+    {
+      "run_id": 34186910294,
+      "workflow": "Catalog Mercadona neural OCR p9 no-ingredients processed wave2",
+      "artifact_id": 10041300242,
+      "status_counts": {
+        "DECLARED": 4,
+        "REVIEW": 28
+      }
+    },
+    {
+      "run_id": 34186910425,
+      "workflow": "Catalog Mercadona neural OCR p9 no-ingredients processed wave4",
+      "artifact_id": 10041237266,
+      "status_counts": {
+        "DECLARED": 1,
+        "REVIEW": 8
+      }
+    },
+    {
+      "run_id": 34186910476,
+      "workflow": "Catalog Mercadona neural OCR pilot",
+      "artifact_id": 10041405364,
+      "status_counts": {
+        "DECLARED": 8,
+        "REVIEW": 56
+      }
+    },
+    {
+      "run_id": 34186910522,
+      "workflow": "Catalog Mercadona neural OCR p9 no-ingredients processed wave3",
+      "artifact_id": 10041222466,
+      "status_counts": {
+        "DECLARED": 0,
+        "REVIEW": 32
+      }
+    },
+    {
+      "run_id": 34187009594,
+      "workflow": "Catalog Mercadona bilingual fat regression v1.4.12",
+      "artifact_id": 10041134116,
+      "status_counts": {
+        "DECLARED": 1,
+        "REVIEW": 1
+      },
+      "target_product_id": "63238",
+      "safety_control_product_id": "21432",
+      "target_nutrition_per_100_g": {
+        "calories": 224.0,
+        "protein_g": 5.6,
+        "carbohydrate_g": 33.0,
+        "fat_g": 7.4
+      }
+    }
+  ],
+  "canonical_audit": {
+    "run_id": 34181925570,
+    "run_attempt": 2,
+    "artifact_id": 10041896421,
+    "artifact_digest_sha256": "9896dcd6c8e67faf755b482ca99172ad96c329b867332be6662e22dbe844d35d",
+    "latest_review_products": 2701,
+    "near_safe_complete_review": 106,
+    "near_safe_complete_with_3_of_4_corroborated": 21,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 44,
+    "ocr_actionable_p9_total": 0,
+    "ocr_blocked_no_p9_food_route_total": 0,
+    "ocr_deferred_bodega_total": 11,
+    "ocr_out_of_scope_total": 1300
+  },
+  "parser_integration": {
+    "nutrition_reader_version": "1.4.12",
+    "integration_commit": "adac62d831ab3fe1f832fe45926993883ac72225",
+    "workflow_commit": "2a6d8f212089cd5862b1d9600858de06504b315d",
+    "regression_tests_persisted": true
+  },
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "REVIEW_promoted_without_new_live_OCR": 0,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
