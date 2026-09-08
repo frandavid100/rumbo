@@ -26,6 +26,28 @@ Sal 0 g
             "protein_g": 0.0,
         })
 
+    def test_easyocr_coca_cola_crasas_row_keeps_zero_total_fat(self):
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 ml
+Valor energético 180 kJ / 42 kcal
+Crasas;
+09
+Hidratos de carbono:
+10.6 g
+Proteínas:
+0 g
+Sal 0 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.95)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.basis, "100_ml")
+        self.assertEqual(r.nutrition, {
+            "calories": 42.0,
+            "fat_g": 0.0,
+            "carbohydrate_g": 10.6,
+            "protein_g": 0.0,
+        })
+
     def test_bare_nine_without_unit_glyph_is_not_repaired_to_zero(self):
         observed = """INFORMACIÓN NUTRICIONAL
 Por 100 g
