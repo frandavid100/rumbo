@@ -16,6 +16,7 @@ on:
       - 'tools/catalog/label_text_extractor.py'
       - 'tools/catalog/test_label_easyocr_extractor.py'
       - 'tools/catalog/test_nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_label_reader_ocr_typos.py'
       - 'tools/catalog/test_nutrition_label_reader_row_tokens.py'
       - 'tools/catalog/test_nutrition_ocr_ensemble.py'
       - 'tools/catalog/test_mercadona_label_pipeline.py'
@@ -68,6 +69,7 @@ jobs:
           python -m unittest -v \
             test_label_easyocr_extractor.py \
             test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
             test_nutrition_label_reader_row_tokens.py \
             test_nutrition_ocr_ensemble.py \
             test_mercadona_label_pipeline.py \
