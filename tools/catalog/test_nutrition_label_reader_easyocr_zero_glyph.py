@@ -66,6 +66,50 @@ Proteínas 5 g
         self.assertEqual(r.status, "REVIEW", r)
         self.assertIn("MISSING_CORE:fat_g", r.reasons)
 
+    def test_tesseract_interleaved_zero_fat_before_saturates(self):
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 ml
+Valor energético 180 kJ / 42 kcal
+Grasas
+Coca-Cola Europacific Partners
+colorante
+E 150d acidulante ácido fosfórico
+0g
+0g (0%)
+Iberia S.L.U. Ribera del Loira
+aromas naturales y aroma cafeína
+de las cuales saturadas
+0g
+Hidratos de carbono
+10.6 g
+Proteínas
+0g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.95)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.basis, "100_ml")
+        self.assertEqual(r.nutrition, {
+            "calories": 42.0, "fat_g": 0.0,
+            "carbohydrate_g": 10.6, "protein_g": 0.0,
+        })
+
+    def test_tesseract_interleaved_zero_fat_rejects_conflicting_cells(self):
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 420 kJ / 100 kcal
+Grasas
+manufacturer column
+0 g
+5 g
+de las cuales saturadas
+0 g
+Hidratos de carbono 20 g
+Proteínas 5 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.95)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertIn("MISSING_CORE:fat_g", r.reasons)
+
     def test_bare_nine_without_unit_glyph_is_not_repaired_to_zero(self):
         observed = """INFORMACIÓN NUTRICIONAL
 Por 100 g

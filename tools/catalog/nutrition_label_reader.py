@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.13"
+READER_VERSION = "1.4.14"
 
 
 @dataclass(frozen=True)
@@ -265,6 +265,31 @@ def _fat_value(label_patterns: tuple[str, ...], text: str) -> float | None:
                 flags=re.I,
             ):
                 return before
+    # Tesseract can interleave a manufacturer/ingredients column between the
+    # printed total-fat label and its value cells. Rescue only the exact zero-fat
+    # case when an explicit saturated-fat subrow closes the span and every
+    # dedicated gram-like cell before it is zero. This handles two-column labels
+    # whose total-fat values are both zero without choosing between conflicting
+    # columns or borrowing a saturated-fat value.
+    if ordinary is None:
+        for label in label_patterns:
+            for label_match in re.finditer(label, folded, flags=re.I):
+                tail = folded[label_match.end():label_match.end() + 260]
+                saturated = re.search(r"\b(?:saturad|baturad)[a-z]*\b", tail, flags=re.I)
+                if not saturated:
+                    continue
+                before_saturated = tail[:saturated.start()]
+                cells = list(re.finditer(
+                    r"(?m)^\s*([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*"
+                    r"(?:g|9|q|yg|y)\s*(?:\(\s*\d{1,3}(?:\.\d+)?\s*%?\s*\))?\s*$",
+                    before_saturated,
+                    flags=re.I,
+                ))
+                if not cells or any(m.group(1) in ("<", ">") for m in cells):
+                    continue
+                values = [_repair_ocr_number(m.group(2)) for m in cells]
+                if values and all(v == 0.0 for v in values):
+                    return 0.0
     return ordinary
 
 
