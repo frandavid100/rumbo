@@ -1,0 +1,81 @@
+{
+  "cut_date": "2026-09-08",
+  "scope": "Mercadona first-party OCR canonical reconciliation after the current single-reversed-macro 3-of-4 REVIEW rerun",
+  "canonical_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 255,
+    "REVIEW": 2714
+  },
+  "usable_complete": 255,
+  "usable_complete_pct_inventory": 5.9579,
+  "usable_field_counts": {
+    "calories": 255,
+    "protein_g": 255,
+    "carbohydrate_g": 255,
+    "fat_g": 255
+  },
+  "delta_from_previous_canonical": {
+    "previous_declared": 239,
+    "previous_review": 2730,
+    "declared_delta": 16,
+    "review_delta": -16,
+    "processed_delta": 0
+  },
+  "new_live_declared_product_ids": [
+    "12747",
+    "13936",
+    "14298",
+    "15031",
+    "16833",
+    "34820",
+    "4640",
+    "50968",
+    "5330",
+    "54209",
+    "6326",
+    "63400",
+    "8246",
+    "82735",
+    "85827",
+    "9264"
+  ],
+  "source_rerun": {
+    "original_run_id": 34173272187,
+    "recovery_run_id": 34176070130,
+    "recovery_artifact_id": 10037276771,
+    "processed_p9": 46,
+    "status_counts": {
+      "DECLARED": 16,
+      "REVIEW": 30
+    },
+    "deferred_non_p9_product_ids": ["25353", "54053"],
+    "safety_assessment": "VALIDATED"
+  },
+  "canonical_audit": {
+    "run_id": 34176118887,
+    "artifact_id": 10037425461,
+    "artifact_digest_sha256": "63b6fed37217f0d9ffdd6e5350705aa48048540f10dffb85710fcd64f77b5fc5",
+    "latest_review_products": 2714,
+    "near_safe_complete_review": 113,
+    "near_safe_complete_with_3_of_4_corroborated": 29,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 45,
+    "ocr_actionable_p9_total": 0,
+    "ocr_blocked_no_p9_food_route_total": 0,
+    "ocr_deferred_bodega_total": 11,
+    "ocr_out_of_scope_total": 1300
+  },
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "REVIEW_promoted_without_new_live_OCR": 0,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
