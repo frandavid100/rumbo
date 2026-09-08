@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.11"
+READER_VERSION = "1.4.12"
 
 
 @dataclass(frozen=True)
@@ -378,7 +378,7 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     # Spanish row label. This keeps _number_after's prose guard intact while
     # supporting bilingual/multilingual tables such as `Grasas / Fat 0 g`.
     fat_patterns = (
-        r"(?:^|\n)\s*[\[|]?\s*grasas?(?:\s*/?\s*(?:lipidos?|ilipidos?|lapidos?|ipidos?|fat|graisses?))?\b",
+        r"(?:^|\n)\s*[\[|]?\s*grasas?(?:\s*/?\s*(?:lipidos?|ilipidos?|lapidos?|ipidos?|fat|graisses?)(?:\s+totais?)?)?\b",
         r"(?:^|\n)\s*[\[|]?\s*lipidos?\b",
         r"(?:^|\n)\s*[\[|]?\s*grasa total\b",
     )
