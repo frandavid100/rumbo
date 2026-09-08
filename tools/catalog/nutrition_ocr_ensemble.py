@@ -6,7 +6,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.1"
+ENSEMBLE_VERSION = "1.3.2"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -89,7 +89,8 @@ def _family_representative(field: str, family_candidates):
     repeated observations from the same engine family. When a unique strict majority
     of those layouts agrees within the ordinary field tolerance, an isolated layout
     outlier may be discarded. A 1-vs-1 split, two equally large compatible clusters,
-    or any other ambiguous family remains a hard same-engine conflict.
+    or any other ambiguous family remains a hard same-engine conflict unless two
+    other independent OCR families already agree on the field.
     """
     family_candidates = tuple(family_candidates)
     if not family_candidates:
@@ -124,18 +125,27 @@ def _choose_field(field: str, candidates):
 
     # OCR layouts/crops from the same engine are correlated observations, not
     # independent evidence. First reduce each engine family to one internally
-    # consistent representative. A unique strict same-family majority may drop
-    # one isolated layout outlier, but ambiguous splits remain REVIEW-only.
+    # consistent representative. An ambiguous family cannot manufacture evidence
+    # and normally keeps the field in REVIEW. The one safe exception is when at
+    # least two *other* independent families already agree: in that case the
+    # ambiguous family is ignored instead of being allowed to veto corroborated
+    # evidence from two clean families.
     by_family: dict[str, list[tuple[float, float, str, str]]] = {}
     for candidate in candidates:
         by_family.setdefault(candidate[3], []).append(candidate)
 
     representatives = []
+    ambiguous_families = []
     for family, family_candidates in sorted(by_family.items()):
         selected = _family_representative(field, family_candidates)
         if selected is None:
-            return None, f"OCR_SAME_ENGINE_CONFLICT:{field}:{family}"
+            ambiguous_families.append(family)
+            continue
         representatives.append(selected)
+
+    if not representatives:
+        family = ambiguous_families[0] if ambiguous_families else "unknown"
+        return None, f"OCR_SAME_ENGINE_CONFLICT:{field}:{family}"
 
     selected = max(representatives, key=lambda x: x[1])
     if len(representatives) >= 2 and any(
@@ -143,13 +153,23 @@ def _choose_field(field: str, candidates):
     ):
         return None, f"OCR_FIELD_CONFLICT:{field}"
 
-    agreeing = [x for x in candidates if _close(field, selected[0], x[0])]
+    representative_families = {x[3] for x in representatives}
+    if ambiguous_families and len(representative_families) < 2:
+        return None, f"OCR_SAME_ENGINE_CONFLICT:{field}:{','.join(sorted(ambiguous_families))}"
+
+    agreeing = [
+        x for x in candidates
+        if x[3] in representative_families and _close(field, selected[0], x[0])
+    ]
     strategies = tuple(sorted({x[2] for x in agreeing}))
     confidences = tuple(x[1] for x in agreeing)
-    families = tuple(sorted({x[3] for x in representatives}))
+    families = tuple(sorted(representative_families))
+    note = None
+    if ambiguous_families:
+        note = f"IGNORED_AMBIGUOUS_ENGINE_FAMILY:{field}:{','.join(sorted(ambiguous_families))}"
     return EnsembleField(
         field, selected[0], strategies, confidences, families, len(families) >= 2
-    ), None
+    ), note
 
 
 def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult:
