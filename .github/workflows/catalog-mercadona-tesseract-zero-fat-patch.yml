@@ -1,0 +1,87 @@
+name: Mercadona Tesseract interleaved zero-fat patch
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-tesseract-zero-fat-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Add regression first and apply narrow zero-fat structural rescue
+        id: patch
+        shell: bash
+        run: |
+          set +e
+          python - <<'PY'
+          from pathlib import Path
+
+          parser=Path('tools/catalog/nutrition_label_reader.py')
+          text=parser.read_text()
+          assert text.count('READER_VERSION = "1.4.13"') == 1, 'unexpected reader version'
+          text=text.replace('READER_VERSION = "1.4.13"','READER_VERSION = "1.4.14"',1)
+          marker='''    return ordinary\n\n\ndef _interleaved_carbohydrate(text: str) -> float | None:\n'''
+          assert text.count(marker)==1, 'fat fallback insertion point changed'
+          replacement='''    # Tesseract can interleave a manufacturer/ingredients column between the\n    # printed total-fat label and its value cells. Rescue only the exact zero-fat\n    # case when an explicit saturated-fat subrow closes the span and every\n    # dedicated gram-like cell before it is zero. This handles two-column labels\n    # whose total-fat values are both zero without choosing between conflicting\n    # columns or borrowing a saturated-fat value.\n    if ordinary is None:\n        for label in label_patterns:\n            for label_match in re.finditer(label, folded, flags=re.I):\n                tail = folded[label_match.end():label_match.end() + 260]\n                saturated = re.search(r"\\b(?:saturad|baturad)[a-z]*\\b", tail, flags=re.I)\n                if not saturated:\n                    continue\n                before_saturated = tail[:saturated.start()]\n                cells = list(re.finditer(\n                    r"(?m)^\\s*([<>]?)\\s*(\\d{1,3}(?:\\.\\d{1,2})?)\\s*"\n                    r"(?:g|9|q|yg|y)\\s*(?:\\(\\s*\\d{1,3}(?:\\.\\d+)?\\s*%?\\s*\\))?\\s*$",\n                    before_saturated,\n                    flags=re.I,\n                ))\n                if not cells or any(m.group(1) in ("<", ">") for m in cells):\n                    continue\n                values = [_repair_ocr_number(m.group(2)) for m in cells]\n                if values and all(v == 0.0 for v in values):\n                    return 0.0\n    return ordinary\n\n\ndef _interleaved_carbohydrate(text: str) -> float | None:\n'''
+          text=text.replace(marker,replacement,1)
+          parser.write_text(text)
+
+          test=Path('tools/catalog/test_nutrition_label_reader_easyocr_zero_glyph.py')
+          t=test.read_text()
+          assert 'test_tesseract_interleaved_zero_fat_before_saturates' not in t
+          marker2='''    def test_bare_nine_without_unit_glyph_is_not_repaired_to_zero(self):\n'''
+          assert t.count(marker2)==1
+          addition='''    def test_tesseract_interleaved_zero_fat_before_saturates(self):\n        observed = """INFORMACIÓN NUTRICIONAL\nPor 100 ml\nValor energético 180 kJ / 42 kcal\nGrasas\nCoca-Cola Europacific Partners\ncolorante\nE 150d acidulante ácido fosfórico\n0g\n0g (0%)\nIberia S.L.U. Ribera del Loira\naromas naturales y aroma cafeína\nde las cuales saturadas\n0g\nHidratos de carbono\n10.6 g\nProteínas\n0g\n"""\n        r = read_nutrition_label(observed, extraction_confidence=.95)\n        self.assertEqual(r.status, "DECLARED", r)\n        self.assertEqual(r.basis, "100_ml")\n        self.assertEqual(r.nutrition, {\n            "calories": 42.0, "fat_g": 0.0,\n            "carbohydrate_g": 10.6, "protein_g": 0.0,\n        })\n\n    def test_tesseract_interleaved_zero_fat_rejects_conflicting_cells(self):\n        observed = """INFORMACIÓN NUTRICIONAL\nPor 100 g\nValor energético 420 kJ / 100 kcal\nGrasas\nmanufacturer column\n0 g\n5 g\nde las cuales saturadas\n0 g\nHidratos de carbono 20 g\nProteínas 5 g\n"""\n        r = read_nutrition_label(observed, extraction_confidence=.95)\n        self.assertEqual(r.status, "REVIEW", r)\n        self.assertIn("MISSING_CORE:fat_g", r.reasons)\n\n'''
+          test.write_text(t.replace(marker2,addition+marker2,1))
+          PY
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run targeted safety regressions
+        id: targeted
+        if: steps.patch.outputs.rc == '0'
+        shell: bash
+        run: |
+          set +e
+          cd tools/catalog
+          python -m unittest -v test_nutrition_label_reader_easyocr_zero_glyph.py test_nutrition_label_reader_row_tokens.py
+          rc=$?
+          python -c "import nutrition_label_reader as n; assert n.READER_VERSION == '1.4.14'" || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit validated parser v1.4.14
+        if: steps.patch.outputs.rc == '0' && steps.targeted.outputs.rc == '0'
+        shell: bash
+        run: |
+          git rm .github/workflows/catalog-mercadona-tesseract-zero-fat-patch.yml
+          git add tools/catalog/nutrition_label_reader.py tools/catalog/test_nutrition_label_reader_easyocr_zero_glyph.py
+          git config user.name "David Prieto"
+          git config user.email "frandavid100@gmail.com"
+          git commit -m "fix(catalog): rescue interleaved zero-fat OCR cells"
+          git push origin HEAD:agent/catalog-phase1
+
+      - name: Drop failed patch probe
+        if: steps.patch.outputs.rc != '0' || steps.targeted.outputs.rc != '0'
+        shell: bash
+        run: |
+          git restore tools/catalog/nutrition_label_reader.py tools/catalog/test_nutrition_label_reader_easyocr_zero_glyph.py || true
+          git rm .github/workflows/catalog-mercadona-tesseract-zero-fat-patch.yml
+          git config user.name "David Prieto"
+          git config user.email "frandavid100@gmail.com"
+          git commit -m "chore(catalog): drop failed interleaved zero-fat patch probe"
+          git push origin HEAD:agent/catalog-phase1
