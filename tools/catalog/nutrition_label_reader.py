@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.10"
+READER_VERSION = "1.4.11"
 
 
 @dataclass(frozen=True)
@@ -164,7 +164,7 @@ def _number_after(label_patterns: tuple[str, ...], text: str) -> float | None:
             # immediately after a recognised nutrient row; do not rewrite arbitrary `09`
             # tokens and do not alter ordinary values such as 9.29 or a bare 9.
             zero_unit_glyph = re.match(
-                r"\s*[:;|]?\s*([<>]?)\s*0\s*9(?:\s*\(\s*\d{1,3}(?:\.\d+)?\s*%\s*\))?\s*(?:\n|$)",
+                r"\s*[:;|]?\s*([<>]?)\s*(?:0\s*9|o\s*g)(?:\s*\(\s*\d{1,3}(?:\.\d+)?\s*%\s*\))?\s*(?:\n|$)",
                 tail,
                 flags=re.I,
             )
@@ -378,7 +378,7 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     # Spanish row label. This keeps _number_after's prose guard intact while
     # supporting bilingual/multilingual tables such as `Grasas / Fat 0 g`.
     fat_patterns = (
-        r"(?:^|\n)\s*[\[|]?\s*grasas?(?:\s*/\s*(?:lipidos?|fat|graisses?))?\b",
+        r"(?:^|\n)\s*[\[|]?\s*grasas?(?:\s*/?\s*(?:lipidos?|ilipidos?|lapidos?|ipidos?|fat|graisses?))?\b",
         r"(?:^|\n)\s*[\[|]?\s*lipidos?\b",
         r"(?:^|\n)\s*[\[|]?\s*grasa total\b",
     )
@@ -387,7 +387,7 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
         r"(?:^|\n)\s*[\[|]?\s*carbohidratos?\b",
     )
     protein_patterns = (
-        r"(?:^|\n)\s*[\[|]?\s*proteinas?(?:\s*/\s*(?:protein|proteines?))?\b",
+        r"(?:^|\n)\s*[\[|]?\s*(?:proteinas?|prote_nas?)(?:\s*/\s*(?:protein|proteines?))?(?=[\s._:;|]|$)",
     )
 
     calories = _energy_kcal(block)
