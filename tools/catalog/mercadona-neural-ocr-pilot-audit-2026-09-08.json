@@ -1,0 +1,54 @@
+{
+  "cut_date": "2026-09-08",
+  "scope": "Mercadona neural OCR deterministic pilot audit",
+  "source_workflow_run": 34259354029,
+  "source_artifact_id": 10070476210,
+  "source_head_sha": "6824a08a0091276b158e50ff78e80a3454f5204a",
+  "inventory_products": 4280,
+  "pilot_processed": 64,
+  "status_counts": {
+    "DECLARED": 8,
+    "REVIEW": 56,
+    "NO_VISUAL_REGION": 8,
+    "ERROR": 0
+  },
+  "declared_rate": 0.125,
+  "declared_safety_gate": {
+    "required_independent_engine_families": 2,
+    "required_corroborated_core_fields": 4,
+    "declared_passing_gate": 8,
+    "declared_failing_gate": 0
+  },
+  "visual_region_note": "NO_VISUAL_REGION is diagnostic: 8 products had visual_regions_detected=0 but were still conservatively attempted against the full first-party back image and remained REVIEW unless independently corroborated.",
+  "manual_ground_truth_precision": null,
+  "manual_ground_truth_precision_note": "This cut records structural OCR corroboration, not a manual image-by-image ground-truth precision estimate. No DECLARED row is treated as manually verified solely from engine agreement.",
+  "declared_examples": [
+    {"product_id": "16485", "name": "Salami extra pimienta Hacendado finas lonchas", "basis": "100_g", "calories": 440.0, "fat_g": 40.0, "carbohydrate_g": 5.0, "protein_g": 15.0},
+    {"product_id": "51201", "name": "Mozzarella fresca di bufala campana Hacendado", "basis": "100_g", "calories": 247.0, "fat_g": 21.0, "carbohydrate_g": 0.5, "protein_g": 14.0},
+    {"product_id": "17151", "name": "Tomate frito Hacendado", "basis": "100_g", "calories": 81.0, "fat_g": 3.0, "carbohydrate_g": 11.6, "protein_g": 1.4},
+    {"product_id": "6042", "name": "Longaniza roja fresca", "basis": "100_g", "calories": 230.0, "fat_g": 18.0, "carbohydrate_g": 3.0, "protein_g": 14.0},
+    {"product_id": "63400", "name": "Croquetas de jamón Hacendado ultracongeladas", "basis": "100_g", "calories": 205.0, "fat_g": 10.0, "carbohydrate_g": 20.0, "protein_g": 7.4},
+    {"product_id": "16812", "name": "Migas de bonito del norte en aceite de oliva Hacendado", "basis": "100_g", "calories": 331.0, "fat_g": 28.0, "carbohydrate_g": 0.7, "protein_g": 19.0},
+    {"product_id": "35856", "name": "Golosinas Mix con pica Hacendado", "basis": "100_g", "calories": 333.0, "fat_g": 0.0, "carbohydrate_g": 79.0, "protein_g": 4.3, "note": "single explicit basis accepted only with full independent core corroboration"},
+    {"product_id": "22703", "name": "Chocolate negro 72% cacao Hacendado con trozos de naranja", "basis": "100_g", "calories": 522.0, "fat_g": 33.0, "carbohydrate_g": 43.0, "protein_g": 8.2}
+  ],
+  "systematic_finding": {
+    "product_id": "13710",
+    "name": "Codillo de cerdo asado Hacendado",
+    "previous_status": "REVIEW",
+    "reason": "Tesseract had a 1-vs-1 carbohydrate split (30.0 vs 3.0) while EasyOCR and PaddleOCR independently agreed on the complete tuple 199 kcal / 13 g fat / 3 g carbohydrate / 17 g protein. The previous ensemble let the ambiguous Tesseract family veto two clean independent families.",
+    "safety_fix": "An ambiguous OCR family may now be ignored for a field only when at least two other unambiguous independent families agree within the existing tolerance. One clean family plus one ambiguous family remains REVIEW; cross-family disagreement remains REVIEW.",
+    "ensemble_version": "1.3.2",
+    "implementation_commit": "11e6cc27e0c0fc93ecfa5e509e0f4b451415682a",
+    "regression_test_commit": "f4701103e98a9962ab733e12160f270693433481",
+    "live_validation_status": "pending bounded neural pilot"
+  },
+  "provenance": {
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "classified": false,
+    "menu_eligible": false
+  }
+}
