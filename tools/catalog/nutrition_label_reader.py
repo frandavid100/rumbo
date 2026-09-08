@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.12"
+READER_VERSION = "1.4.13"
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,14 @@ def normalize_text(text: str) -> str:
     # Deliberately do not repair looser strings or prose such as `a las brasas`.
     text = re.sub(
         r"(?im)^([ \t]*)(?:brasas|vrasas)([ \t]*)$",
+        r"\1Grasas\2",
+        text,
+    )
+    # EasyOCR has also emitted `Crasas;` for the printed total-fat row.
+    # Repair only an entire standalone row label (with optional row punctuation);
+    # prose containing the token remains untouched.
+    text = re.sub(
+        r"(?im)^([ \t]*)crasas([ \t]*[:;]?[ \t]*)$",
         r"\1Grasas\2",
         text,
     )
