@@ -1,0 +1,356 @@
+name: Catalog Mercadona current single-reversed rerun v2
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-single-reversed-rerun-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-single-reversed-rerun-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download first-party inventory
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Download latest canonical REVIEW audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/current-audit
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 34144668619
+
+      - name: Build exact current p9 3-of-4 cohort and routing slices
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          reviews = [json.loads(x) for x in Path(
+              'current-audit/current-review-failure-modes/near-safe-complete-review.jsonl'
+          ).read_text(encoding='utf-8').splitlines() if x.strip()]
+          source = [r for r in reviews if (
+              r.get('canonical_status') == 'REVIEW'
+              and int(r.get('corroborated_fields') or 0) == 3
+              and r.get('promotion_allowed') is False
+              and r.get('evidence_level') == 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+              and r.get('source') == 'MERCADONA_FIRST_PARTY'
+              and r.get('source_record_kind') == 'label image'
+              and r.get('redistribution_allowed') is False
+              and not (r.get('safety_blockers') or [])
+          )]
+          source_ids = {str(r.get('product_id') or '') for r in source}
+          if len(source) != 48 or len(source_ids) != 48:
+              raise SystemExit(f'expected 48 current safe 3-of-4 REVIEW rows, got rows={len(source)} ids={len(source_ids)}')
+
+          products = [json.loads(x) for x in Path(
+              'mercadona-first-party-final/products.jsonl'
+          ).read_text(encoding='utf-8').splitlines() if x.strip()]
+          by_id = {str(r.get('product_id') or ''): r for r in products}
+          if not source_ids.issubset(by_id):
+              raise SystemExit(f'missing inventory IDs: {sorted(source_ids - set(by_id))}')
+
+          def has_p9(row):
+              return any(
+                  isinstance(p, dict) and str(p.get('perspective')) == '9' and p.get('zoom')
+                  for p in (row.get('photos') if isinstance(row.get('photos'), list) else [])
+              )
+
+          selected_ids = {pid for pid in source_ids if has_p9(by_id[pid])}
+          deferred = sorted(source_ids - selected_ids)
+          if len(selected_ids) != 46 or deferred != ['25353', '54053']:
+              raise SystemExit(f'current p9 boundary drift: selected={len(selected_ids)} deferred={deferred}')
+
+          selected = sorted((by_id[pid] for pid in selected_ids), key=lambda r: str(r.get('product_id') or ''))
+          priority = [r for r in selected if r.get('ingredients')]
+          no_ingredients = [r for r in selected if not r.get('ingredients')]
+          if len(priority) + len(no_ingredients) != 46 or {str(r.get('product_id')) for r in priority} & {str(r.get('product_id')) for r in no_ingredients}:
+              raise SystemExit('routing slices do not partition the 46-product cohort')
+
+          def dump(path, rows):
+              Path(path).write_text(
+                  ''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows),
+                  encoding='utf-8',
+              )
+
+          dump('current-single-reversed-priority.jsonl', priority)
+          dump('current-single-reversed-no-ingredients.jsonl', no_ingredients)
+          Path('current-single-reversed-selection.json').write_text(json.dumps({
+              'source_audit_run_id': 34144668619,
+              'source_review_cohort': 48,
+              'selected_p9': 46,
+              'priority_with_structured_ingredients': len(priority),
+              'p9_without_structured_ingredients': len(no_ingredients),
+              'product_ids': sorted(selected_ids),
+              'deferred_non_p9_product_ids': deferred,
+              'routing_policy': 'Partition exact p9 cohort by structured ingredients; priority mode for ingredient rows, p9-no-ingredients-all for the disjoint remainder.',
+              'nutrition_reader_required': '1.4.10',
+              'mercadona_reader_required': '1.0.6',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(f'route partition: priority={len(priority)} no_ingredients={len(no_ingredients)} total=46')
+          PY
+
+      - name: Install OCR engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Verify conservative reversed-macro regressions
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import mercadona_nutrition_label_reader, nutrition_label_reader
+          assert nutrition_label_reader.READER_VERSION == '1.4.10', nutrition_label_reader.READER_VERSION
+          assert mercadona_nutrition_label_reader.READER_VERSION == '1.0.6', mercadona_nutrition_label_reader.READER_VERSION
+          PY
+          python -m unittest -v \
+            test_nutrition_label_reader_single_reversed_candidate.py \
+            test_nutrition_row_order_ambiguity.py \
+            test_nutrition_label_reader_easyocr_zero_glyph.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Reprocess structured-ingredients slice
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set +e
+          python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            --products current-single-reversed-priority.jsonl \
+            --out mercadona-current-single-reversed-priority-rerun \
+            --shard-index ${{ matrix.shard }} --shard-count 4 --limit 0 --delay 0.25 \
+            --eligibility-mode priority
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then exit "$rc"; fi
+
+      - name: Reprocess no-ingredients slice
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set +e
+          python mercadona_neural_ocr_tesseract_preprocess_rescue.py \
+            --products current-single-reversed-no-ingredients.jsonl \
+            --out mercadona-current-single-reversed-no-ingredients-rerun \
+            --shard-index ${{ matrix.shard }} --shard-count 4 --limit 0 --delay 0.25 \
+            --eligibility-mode p9-no-ingredients-all
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then exit "$rc"; fi
+
+      - name: Combine disjoint routing slices
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          shard = int('${{ matrix.shard }}')
+          inputs = [
+              Path('mercadona-current-single-reversed-priority-rerun') / f'results-{shard:02d}.jsonl',
+              Path('mercadona-current-single-reversed-no-ingredients-rerun') / f'results-{shard:02d}.jsonl',
+          ]
+          rows = []
+          for path in inputs:
+              if path.is_file():
+                  rows.extend(json.loads(x) for x in path.read_text(encoding='utf-8').splitlines() if x.strip())
+          ids = [str(r.get('product_id') or '') for r in rows]
+          if len(ids) != len(set(ids)):
+              raise SystemExit(f'duplicate IDs across routing slices: {ids}')
+          out = Path('mercadona-current-single-reversed-rerun')
+          out.mkdir(exist_ok=True)
+          (out / f'combined-results-{shard:02d}.jsonl').write_text(
+              ''.join(json.dumps(r, ensure_ascii=False, sort_keys=True) + '\n' for r in rows),
+              encoding='utf-8',
+          )
+          print(f'shard {shard}: combined {len(rows)} rows')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-single-reversed-rerun-v2-${{ matrix.shard }}
+          path: |
+            tools/catalog/mercadona-current-single-reversed-rerun/
+            tools/catalog/mercadona-current-single-reversed-priority-rerun/
+            tools/catalog/mercadona-current-single-reversed-no-ingredients-rerun/
+            tools/catalog/current-single-reversed-selection.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ always() && needs.ocr.result == 'success' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-current-single-reversed-rerun-v2-*
+          path: input
+          merge-multiple: false
+
+      - name: Merge and enforce conservative live contract
+        run: |
+          python - <<'PY'
+          import glob, json, sqlite3
+          from collections import Counter
+          from pathlib import Path
+
+          paths = sorted(glob.glob('input/**/combined-results-*.jsonl', recursive=True))
+          if len(paths) != 4:
+              raise SystemExit(f'expected 4 combined shard result files, got {len(paths)}: {paths}')
+          rows = [json.loads(x) for path in paths for x in Path(path).read_text(encoding='utf-8').splitlines() if x.strip()]
+          ids = [str(r.get('product_id') or '') for r in rows]
+          observed = set(ids)
+          duplicates = sorted(pid for pid, n in Counter(ids).items() if n > 1)
+          if len(rows) != 46 or len(observed) != 46 or duplicates:
+              raise SystemExit(f'cohort drift: rows={len(rows)} distinct={len(observed)} duplicates={duplicates}')
+
+          counts = Counter(str(r.get('status') or 'UNKNOWN') for r in rows)
+          allowed = {'DECLARED', 'REVIEW', 'NO_VISUAL_REGION', 'ERROR'}
+          bad_statuses = sorted(set(counts) - allowed)
+          fields = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+          provenance_errors, unsafe_declared, audited = [], [], []
+
+          for row in sorted(rows, key=lambda r: str(r.get('product_id') or '')):
+              pid = str(row.get('product_id') or '')
+              if not (
+                  row.get('evidence_level') == 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  and row.get('source') == 'MERCADONA_FIRST_PARTY'
+                  and row.get('source_record_kind') == 'label image'
+                  and row.get('redistribution_allowed') is False
+                  and str(row.get('perspective')) == '9'
+              ):
+                  provenance_errors.append(pid)
+              status = str(row.get('status') or '')
+              nutrition = row.get('nutrition')
+              basis = row.get('basis')
+              if status == 'DECLARED':
+                  if basis not in {'100_g', '100_ml'} or not isinstance(nutrition, dict) or any(nutrition.get(f) is None for f in fields):
+                      unsafe_declared.append(f'{pid}:incomplete_declared')
+                  accepted = next((a for a in row.get('attempts') or [] if isinstance(a.get('ensemble'), dict) and a['ensemble'].get('status') == 'DECLARED'), None)
+                  ensemble = (accepted or {}).get('ensemble') or {}
+                  if int(ensemble.get('independent_engine_families') or 0) < 2 or int(ensemble.get('corroborated_fields') or 0) < 4:
+                      unsafe_declared.append(f'{pid}:insufficient_corroboration')
+              elif nutrition is not None:
+                  unsafe_declared.append(f'{pid}:non_declared_carries_nutrition')
+
+              audited.append({
+                  'product_id': pid,
+                  'ean': row.get('ean'),
+                  'name': row.get('name'),
+                  'status': status,
+                  'basis': basis if status == 'DECLARED' else None,
+                  'nutrition': nutrition if status == 'DECLARED' else None,
+                  'image_url': row.get('image_url'),
+                  'image_perspective': str(row.get('perspective') or ''),
+                  'source': 'MERCADONA_FIRST_PARTY/label image',
+                  'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+                  'redistribution_allowed': False,
+                  'image_persisted': False,
+                  'missing_values_inferred': False,
+                  'CLASSIFIED': 0,
+                  'MENU_ELIGIBLE': 0,
+              })
+
+          image_ext = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tif', '.tiff'}
+          persisted_images = [str(p) for p in Path('input').rglob('*') if p.is_file() and p.suffix.lower() in image_ext]
+          ok = not bad_statuses and not provenance_errors and not unsafe_declared and not persisted_images
+          declared_ids = sorted(r['product_id'] for r in audited if r['status'] == 'DECLARED')
+          summary = {
+              'cohort': 'latest canonical safe REVIEW; exactly 3/4 core fields corroborated; p9 first-party label image; rerun under single-reversed-macro parser fix',
+              'source_audit_run_id': 34144668619,
+              'source_review_cohort': 48,
+              'processed_p9': len(rows),
+              'distinct_products_processed': len(observed),
+              'deferred_non_p9_product_ids': ['25353', '54053'],
+              'status_counts': dict(sorted(counts.items())),
+              'new_live_declared_product_ids': declared_ids,
+              'new_live_declared_count': len(declared_ids),
+              'unsafe_declared': unsafe_declared,
+              'provenance_errors': provenance_errors,
+              'unexpected_statuses': bad_statuses,
+              'routing_fix': 'disjoint structured-ingredients and no-ingredients slices; no product excluded by routing mode',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'REVIEW_promoted_without_new_live_OCR': 0,
+              'nutrition_reader_version': '1.4.10',
+              'mercadona_reader_version': '1.0.6',
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'safety_assessment': 'VALIDATED' if ok else 'FAILED',
+          }
+          out = Path('merged'); out.mkdir(exist_ok=True)
+          sorted_rows = sorted(rows, key=lambda r: str(r.get('product_id') or ''))
+          (out/'results.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False, sort_keys=True)+'\n' for r in sorted_rows), encoding='utf-8')
+          (out/'audited-products.json').write_text(json.dumps(audited, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          (out/'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+
+          db = sqlite3.connect(out/'staging.sqlite')
+          db.execute('CREATE TABLE nutrition_ocr (product_id TEXT PRIMARY KEY, ean TEXT, name TEXT, status TEXT NOT NULL, basis TEXT, calories REAL, protein_g REAL, carbohydrate_g REAL, fat_g REAL, image_url TEXT, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, classified INTEGER NOT NULL, menu_eligible INTEGER NOT NULL)')
+          for a in audited:
+              n = a['nutrition'] or {}
+              db.execute('INSERT INTO nutrition_ocr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (
+                  a['product_id'], a['ean'], a['name'], a['status'], a['basis'],
+                  n.get('calories'), n.get('protein_g'), n.get('carbohydrate_g'), n.get('fat_g'),
+                  a['image_url'], a['evidence_level'], a['source'], 0, 0, 0,
+              ))
+          db.commit(); db.close()
+
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if not ok:
+              raise SystemExit('safety contract failed')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-current-single-reversed-rerun-v2
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
