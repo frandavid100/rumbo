@@ -1,0 +1,86 @@
+{
+  "cut_date": "2026-09-08",
+  "scope": "Mercadona first-party OCR canonical reconciliation after the validated row-token parser/live OCR regression",
+  "canonical_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 263,
+    "REVIEW": 2706
+  },
+  "usable_complete": 263,
+  "usable_complete_pct_inventory": 6.1449,
+  "usable_field_counts": {
+    "calories": 263,
+    "protein_g": 263,
+    "carbohydrate_g": 263,
+    "fat_g": 263
+  },
+  "delta_from_previous_canonical": {
+    "previous_declared": 255,
+    "previous_review": 2714,
+    "declared_delta": 8,
+    "review_delta": -8,
+    "processed_delta": 0
+  },
+  "new_live_declared_product_ids": [
+    "10276",
+    "14221",
+    "2817",
+    "60652",
+    "69670",
+    "69697",
+    "69741",
+    "69757"
+  ],
+  "safety_control_product_ids": [
+    "18615",
+    "21988"
+  ],
+  "safety_control_statuses": {
+    "18615": "REVIEW",
+    "21988": "REVIEW"
+  },
+  "source_live_validation": {
+    "run_id": 34179063906,
+    "artifact_id": 10038521760,
+    "artifact_digest_sha256": "7ae701ce743388c810af503f4fed74ed69b6e986acc874a52db39e02b9ef3d76",
+    "processed": 10,
+    "status_counts": {
+      "DECLARED": 8,
+      "REVIEW": 2
+    },
+    "nutrition_reader_version": "1.4.11",
+    "safety_assessment": "VALIDATED"
+  },
+  "canonical_audit": {
+    "run_id": 34181925570,
+    "artifact_id": 10039290294,
+    "artifact_digest_sha256": "e34e21d63ebc19338b503c749c119483fb4f952b3c08486df8998f0c729f22a1",
+    "latest_review_products": 2706,
+    "near_safe_complete_review": 105,
+    "near_safe_complete_with_3_of_4_corroborated": 21,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 45,
+    "ocr_actionable_p9_total": 0,
+    "ocr_blocked_no_p9_food_route_total": 0,
+    "ocr_deferred_bodega_total": 11,
+    "ocr_out_of_scope_total": 1300
+  },
+  "parser_integration": {
+    "nutrition_reader_version": "1.4.11",
+    "integration_commit": "0ec8b6f2b5ff1837f24eebfbb57f0e9bd3b655bb",
+    "regression_tests_persisted": true
+  },
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "REVIEW_promoted_without_new_live_OCR": 0,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
