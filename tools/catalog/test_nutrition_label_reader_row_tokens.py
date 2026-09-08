@@ -16,6 +16,30 @@ class RowTokenRegressionTest(unittest.TestCase):
                 self.assertEqual(r.status, 'DECLARED', (row, r))
                 self.assertEqual(r.nutrition['fat_g'], 35.0)
 
+    def test_observed_portuguese_total_fat_qualifier(self):
+        text = (
+            'INFORMACIÓN NUTRICIONAL\nPor 100 g\n'
+            'VALOR ENERGÉTICO / ENERGIA\n943 kJ / 224 kcal\n'
+            'GRASAS / LÍPIDOS TOTAIS.\n.7.4 g\n'
+            'de las cuales saturadas / dos quais saturados\n2.2 g\n'
+            'HIDRATOS DE CARBONO\n33 g\nPROTEÍNAS\n5.6 g\nSAL\n1.0 g\n'
+        )
+        r = read_nutrition_label(text, extraction_confidence=.96)
+        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.nutrition['fat_g'], 7.4)
+        self.assertEqual(r.nutrition['carbohydrate_g'], 33.0)
+        self.assertEqual(r.nutrition['protein_g'], 5.6)
+
+    def test_total_fat_qualifier_does_not_disable_prose_guard(self):
+        text = (
+            'INFORMACIÓN NUTRICIONAL\nPor 100 g\nValor energético 224 kcal\n'
+            'GRASAS / LÍPIDOS TOTAIS ingredientes 7.4 g\n'
+            'Hidratos de carbono 33 g\nProteínas 5.6 g\nSal 1.0 g\n'
+        )
+        r = read_nutrition_label(text, extraction_confidence=.96)
+        self.assertEqual(r.status, 'REVIEW', r)
+        self.assertIn('MISSING_CORE:fat_g', r.reasons)
+
     def test_observed_protein_underscore_tokens(self):
         for row in ('PROTEINAS_', 'PROTE_NAS .'):
             with self.subTest(row=row):
