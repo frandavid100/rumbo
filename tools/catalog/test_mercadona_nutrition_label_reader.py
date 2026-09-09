@@ -104,6 +104,24 @@ Sal
             "protein_g": 4.3,
         })
 
+    def test_material_energy_macro_mismatch_is_review_without_numeric_evidence(self):
+        # Observed Mercadona product 35197. All OCR families read the same tuple,
+        # but 35*9 + 4*4 + 13*4 = 383 kcal while the label reads 349 kcal. The
+        # Mercadona wrapper must suppress this tuple so cross-engine agreement
+        # cannot promote an internally inconsistent observation.
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 1445 kJ / 349 kcal
+Grasas 35 g
+Hidratos de carbono 4 g
+Proteínas 13 g
+Sal 2 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertIsNone(result.nutrition)
+        self.assertIn("ENERGY_MACRO_MISMATCH_STRICT:383.0", result.reasons)
+
     def test_complete_single_column_value_before_label_layout_is_rescued(self):
         # Observed PP-OCR layout for Mercadona product 29130 (Harina de arroz).
         # All three core macro values are explicit standalone gram rows immediately
