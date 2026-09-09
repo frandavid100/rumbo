@@ -43,6 +43,7 @@ jobs:
         shard: [0, 1, 2, 3, 4, 5, 6, 7]
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,6 +58,68 @@ jobs:
           path: tools/catalog/mercadona-first-party-final
           github-token: ${{ github.token }}
           run-id: 33046950149
+      - name: Resolve latest successful canonical OCR audit
+        id: canonical-audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          if ! [[ "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "No successful canonical OCR audit run found" >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using canonical audit run $run_id"
+      - name: Download latest canonical OCR audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/mercadona-current-ocr-residual-audit
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.canonical-audit.outputs.run_id }}
+      - name: Exclude already-canonical usable products from bounded sample
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          canonical_path = Path('mercadona-current-ocr-residual-audit/canonical-ocr.jsonl')
+          source_path = Path('mercadona-first-party-final/products.jsonl')
+          output_path = Path('mercadona-neural-ocr-candidates.jsonl')
+          usable_ids = set()
+          for line in canonical_path.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              if row.get('usable_complete') is True and row.get('status') == 'DECLARED':
+                  usable_ids.add(str(row.get('product_id') or ''))
+
+          kept = []
+          total = 0
+          for line in source_path.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              total += 1
+              row = json.loads(line)
+              if str(row.get('product_id') or '') not in usable_ids:
+                  kept.append(row)
+
+          output_path.write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in kept),
+              encoding='utf-8',
+          )
+          print(json.dumps({
+              'inventory_products': total,
+              'canonical_declared_excluded': len(usable_ids),
+              'remaining_products_before_priority_filter': len(kept),
+          }, sort_keys=True))
+          if not usable_ids:
+              raise SystemExit('Canonical audit unexpectedly contains no usable DECLARED products')
+          PY
       - name: Install independent OCR engines and visual detector dependencies
         run: |
           sudo apt-get update -qq
@@ -78,7 +141,7 @@ jobs:
         working-directory: tools/catalog
         run: |
           python mercadona_neural_ocr_wave.py \
-            --products mercadona-first-party-final/products.jsonl \
+            --products mercadona-neural-ocr-candidates.jsonl \
             --out mercadona-neural-ocr-pilot \
             --shard-index ${{ matrix.shard }} \
             --shard-count 8 \
