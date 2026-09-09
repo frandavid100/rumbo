@@ -36,6 +36,12 @@ RESCUE_VARIANT_NAMES = (
     "crop_bottom",
 )
 
+# PSM 3 (automatic layout) and PSM 12 (sparse text with OSD) are deliberately
+# confined to this tiny near-safe rescue pass. They can recover a row glyph that
+# PSM 4/6/11 misses, but all Tesseract layouts remain one correlated engine
+# family in the ensemble and therefore cannot create independent corroboration.
+RESCUE_TESSERACT_PSMS = (3, 4, 6, 11, 12)
+
 
 def should_run_variant_rescue(ensemble) -> bool:
     """Retry only clean 3/4-corroborated REVIEW tuples.
@@ -71,25 +77,16 @@ def _strategy_suffix(variant_name: str) -> str:
 
 def _extract_variant(evidence, variant, readings, engine_errors) -> None:
     suffix = _strategy_suffix(variant.name)
-    specs = (
+    specs = [
         (f"paddleocr-{suffix}", "paddleocr", extract_with_paddleocr),
-        (
-            f"tesseract-psm4-{suffix}",
+    ]
+    for psm in RESCUE_TESSERACT_PSMS:
+        specs.append((
+            f"tesseract-psm{psm}-{suffix}",
             "tesseract",
-            lambda path: extract_with_tesseract(path, language="spa", psm=4),
-        ),
-        (
-            f"tesseract-psm6-{suffix}",
-            "tesseract",
-            lambda path: extract_with_tesseract(path, language="spa", psm=6),
-        ),
-        (
-            f"tesseract-psm11-{suffix}",
-            "tesseract",
-            lambda path: extract_with_tesseract(path, language="spa", psm=11),
-        ),
-        (f"easyocr-{suffix}", "easyocr", extract_with_easyocr),
-    )
+            lambda path, psm=psm: extract_with_tesseract(path, language="spa", psm=psm),
+        ))
+    specs.append((f"easyocr-{suffix}", "easyocr", extract_with_easyocr))
     for strategy, family, extractor in specs:
         try:
             extracted = extractor(variant.path)
