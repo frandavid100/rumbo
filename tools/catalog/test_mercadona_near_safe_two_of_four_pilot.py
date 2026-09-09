@@ -113,6 +113,24 @@ Grasas 6.1 g
                 {"100", "200", "300"},
             )
 
+    def test_attempted_ids_are_collected_only_from_explicit_selection_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "wave.json"
+            path.write_text(
+                json.dumps({
+                    "result": {
+                        "declared_product_ids": ["should-not-count"],
+                        "nested": {"selected_product_ids": ["400", 500]},
+                    },
+                    "diagnostics": [{"selected_product_ids": ["600"]}],
+                }),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                load_previously_attempted_product_ids([path]),
+                {"400", "500", "600"},
+            )
+
     def test_attempted_id_loader_rejects_non_object_cut(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "bad.json"
