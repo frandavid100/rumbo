@@ -1,0 +1,56 @@
+{
+  "cut_date": "2026-09-09",
+  "inventory_products": 4280,
+  "workflow_run_id": 34397367128,
+  "artifact_id": 10122650311,
+  "artifact_name": "mercadona-two-of-four-wave3",
+  "selection_policy": "CLEAN_CANONICAL_2_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_IMAGE; PRIORITIZE_STRUCTURED_INGREDIENTS_THEN_ENGINE_FAMILIES_THEN_CONFIDENCE",
+  "image_selection_policy": "EXACT_CANONICAL_TWO_OF_FOUR_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO",
+  "candidate_count": 16,
+  "processed": 16,
+  "status_counts": {
+    "DECLARED": 0,
+    "REVIEW": 16,
+    "ERROR": 0
+  },
+  "reported_no_visual_region": 3,
+  "declared_product_ids": [],
+  "invalid_product_ids": [],
+  "selected_product_ids": [
+    "10846",
+    "33436",
+    "34025",
+    "59160",
+    "64705",
+    "2632",
+    "80794",
+    "12348",
+    "20287",
+    "60873",
+    "32316",
+    "13984",
+    "16561",
+    "16616",
+    "22179",
+    "22910"
+  ],
+  "diagnostic_only": {
+    "complete_best_snapshot_with_3_of_4_corroborated": [
+      "64705",
+      "16561",
+      "22910"
+    ],
+    "incomplete_best_snapshot_with_3_of_4_corroborated": [
+      "13984"
+    ],
+    "note": "These are raw diagnostic observations only. They are not usable nutrition and must be re-evaluated by the canonical latest-raw-live residual audit before any exact-image rescue."
+  },
+  "acceptance_policy_changed": false,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "classified": 0,
+  "menu_eligible": 0
+}
