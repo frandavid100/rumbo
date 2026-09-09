@@ -1,6 +1,10 @@
 import unittest
 
-from mercadona_near_safe_variant_rescue import should_run_variant_rescue
+from mercadona_near_safe_variant_rescue import (
+    RESCUE_VARIANT_NAMES,
+    _strategy_suffix,
+    should_run_variant_rescue,
+)
 from nutrition_label_reader import read_nutrition_label
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
@@ -30,6 +34,18 @@ Hidratos de carbono 20 g
 
     def test_routes_only_clean_three_of_four_corroborated_tuple(self):
         self.assertTrue(should_run_variant_rescue(self._near_safe()))
+
+    def test_tries_only_deterministic_existing_fallback_variants(self):
+        self.assertEqual(RESCUE_VARIANT_NAMES, (
+            "full_autocontrast",
+            "crop_center",
+            "crop_left",
+            "crop_right",
+            "crop_top",
+            "crop_bottom",
+        ))
+        self.assertEqual(_strategy_suffix("full_autocontrast"), "autocontrast")
+        self.assertEqual(_strategy_suffix("crop_center"), "crop_center")
 
     def test_does_not_retry_already_declared_tuple(self):
         parsed = read_nutrition_label("""Información nutricional por 100 g
