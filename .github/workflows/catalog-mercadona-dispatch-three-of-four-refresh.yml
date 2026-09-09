@@ -1,0 +1,23 @@
+name: Catalog Mercadona dispatch 3-of-4 refresh
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-dispatch-three-of-four-refresh.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Dispatch current clean 3-of-4 rescue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run catalog-mercadona-near-safe-three-of-four-refresh.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
