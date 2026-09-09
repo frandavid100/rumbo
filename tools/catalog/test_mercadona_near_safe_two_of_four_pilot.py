@@ -1,6 +1,12 @@
+import json
+from pathlib import Path
+import tempfile
 import unittest
 
-from mercadona_near_safe_two_of_four_pilot import should_run_two_of_four_variant_rescue
+from mercadona_near_safe_two_of_four_pilot import (
+    load_previously_attempted_product_ids,
+    should_run_two_of_four_variant_rescue,
+)
 from mercadona_near_safe_variant_rescue import _bounded_dissenting_family_rescue
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
@@ -87,6 +93,31 @@ Grasas 6.1 g
 """, extraction_confidence=.95)
         self.assertEqual(parsed.status, "NOT_NUTRITION_LABEL")
         self.assertIn("INSUFFICIENT_NUTRITION_MARKERS", parsed.reasons)
+
+    def test_loads_attempted_ids_from_current_and_legacy_cut_shapes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = root / "wave1.json"
+            second = root / "wave2.json"
+            first.write_text(
+                json.dumps({"selected_product_ids": ["100", 200]}),
+                encoding="utf-8",
+            )
+            second.write_text(
+                json.dumps({"selection": {"selected_product_ids": ["300", "100"]}}),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                load_previously_attempted_product_ids([first, second]),
+                {"100", "200", "300"},
+            )
+
+    def test_attempted_id_loader_rejects_non_object_cut(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad.json"
+            path.write_text("[]", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_previously_attempted_product_ids([path])
 
 
 if __name__ == "__main__":
