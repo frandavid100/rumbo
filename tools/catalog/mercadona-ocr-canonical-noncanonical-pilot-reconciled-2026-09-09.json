@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0.0",
+  "cut_date": "2026-09-09",
+  "cut_kind": "MERCADONA_OCR_CANONICAL_RECONCILIATION",
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "repository_branch": "agent/catalog-phase1",
+  "baseline_commit": "c530c54ebd685a4dab51f3d700547308d951adef",
+  "audit_workflow": {
+    "name": "Mercadona Current OCR Residual Audit",
+    "run_id": 34307970764,
+    "artifact_id": 10087558278,
+    "status": "success"
+  },
+  "reconstruction": {
+    "mercadona_workflow_definitions_seen": 178,
+    "successful_mercadona_runs_since_2026_08_27": 416,
+    "nonexpired_artifacts_downloaded": 495,
+    "runs_with_strict_ocr_rows": 354,
+    "strict_distinct_product_ids": 2969,
+    "historical_declared_products": 301,
+    "latest_review_after_historical_declared": 30
+  },
+  "inventory": {
+    "total_products": 4280,
+    "processed_ocr": 2969,
+    "processed_ocr_pct": 69.3692,
+    "canonical_status_counts": {"DECLARED": 271, "REVIEW": 2698},
+    "usable_complete": 271,
+    "usable_complete_pct_inventory": 6.3318,
+    "usable_field_counts": {
+      "calories": 271,
+      "protein_g": 271,
+      "carbohydrate_g": 271,
+      "fat_g": 271
+    }
+  },
+  "delta_from_previous_canonical_cut": {
+    "previous_declared": 270,
+    "previous_review": 2699,
+    "declared_delta": 1,
+    "review_delta": -1,
+    "newly_canonical_declared": [
+      {
+        "product_id": "27406",
+        "name": "Refresco Coca-Cola light",
+        "basis": "100_ml",
+        "nutrition": {
+          "calories": 0.0,
+          "protein_g": 0.07,
+          "carbohydrate_g": 0.0,
+          "fat_g": 0.0
+        },
+        "latest_live_run_id": 34303263764,
+        "status": "DECLARED",
+        "usable_complete": true,
+        "independent_engine_families": 3,
+        "corroborated_fields": 4
+      }
+    ]
+  },
+  "residual_ocr_scope": {
+    "p9_actionable_candidates": 0,
+    "food_missing_p9_found": 0,
+    "bodega_deferred": 11,
+    "out_of_scope_unprocessed": 1300
+  },
+  "review_diagnostics": {
+    "review_total": 2698,
+    "near_safe_complete_review": 105,
+    "near_safe_complete_by_corroborated_fields": {"0": 1, "1": 31, "2": 53, "3": 20},
+    "complete_but_safety_blocked": 44,
+    "fully_corroborated_but_still_review": 0,
+    "review_promoted_by_diagnostics": 0,
+    "usable_products_created_by_diagnostics": 0
+  },
+  "provenance_policy": {
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "source_record_kind": "label image",
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false
+  },
+  "semantic_state": {"CLASSIFIED": 0, "MENU_ELIGIBLE": 0},
+  "notes": [
+    "The canonical 271 count is reconstructed from raw-live exact-evidence OCR artifacts; it is not an arithmetic projection from the pilot.",
+    "Product 27406 is promoted by the bounded noncanonical pilot's new raw-live OCR evidence, with all four core fields corroborated across three independent OCR engine families.",
+    "The accepted ensemble for 27406 ignores ambiguous Tesseract fat evidence; the four accepted core fields remain independently corroborated.",
+    "No REVIEW row was promoted by diagnostics, completeness shape, historical DECLARED status, or missing-value inference.",
+    "Operational residual routing remains exhausted for current food-image routes: zero actionable p9 candidates and zero food products blocked solely by missing p9; 11 Bodega products remain deferred and 1300 products remain out of scope."
+  ]
+}
