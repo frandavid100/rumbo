@@ -79,7 +79,8 @@ jobs:
               if not line.strip():
                   continue
               row = json.loads(line)
-              if row.get('canonical_status') == 'REVIEW' and row.get('corroborated_fields') == 3:
+              status = row.get('status', row.get('canonical_status'))
+              if status == 'REVIEW' and row.get('corroborated_fields') == 3:
                   target_ids.add(str(row.get('product_id') or ''))
 
           with_ingredients = []
