@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import replace
+from itertools import combinations
 import tempfile
 from pathlib import Path
 
 import mercadona_neural_ocr_wave as base
+import nutrition_ocr_ensemble as ensemble_mod
 from label_easyocr_extractor import extract_with_easyocr
 from label_image_preprocess import build_fallback_variants
 from label_neural_extractor import extract_with_paddleocr
@@ -96,8 +99,126 @@ def _extract_variant(evidence, variant, readings, engine_errors) -> None:
             engine_errors[strategy] = f"{type(exc).__name__}:{exc}"
 
 
+def _bounded_dissenting_family_rescue(parsed_readings, fused):
+    """Ignore one field outlier only when two other OCR families uniquely agree.
+
+    This is intentionally narrower than changing the global ensemble policy.  It
+    applies only after the bounded near-safe variant pass, only to a tuple that is
+    already 3/4 corroborated, and only when exactly one core field is blocked by a
+    three-family cross-engine conflict.  The dissenting value is removed from the
+    *fusion candidate* rather than changed or inferred; the original OCR reading
+    remains persisted in the attempt payload for audit.
+
+    A complete parser-DECLARED reading from the dissenting family is never ignored.
+    The resulting tuple must still pass the ordinary two-family corroboration,
+    explicit basis and energy/macro coherence checks in ``fuse_ocr_readings``.
+    """
+    parsed_readings = tuple(parsed_readings)
+    if fused.status != "REVIEW" or fused.declared_usable:
+        return None
+    if fused.basis not in {"100_g", "100_ml"}:
+        return None
+    if fused.independent_engine_families < 3:
+        return None
+    if fused.corroborated_fields != len(base.CORE_NUTRITION_FIELDS) - 1:
+        return None
+
+    conflict_fields = [
+        str(reason).split(":", 1)[1]
+        for reason in fused.reasons
+        if str(reason).startswith("OCR_FIELD_CONFLICT:")
+    ]
+    if len(conflict_fields) != 1:
+        return None
+    field = conflict_fields[0]
+    if field not in base.CORE_NUTRITION_FIELDS:
+        return None
+    if any(
+        str(reason).startswith(prefix)
+        for reason in fused.reasons
+        for prefix in (
+            "OCR_BASIS_CONFLICT",
+            "ENERGY_MACRO_MISMATCH",
+            "MULTIPLE_NUTRITION_COLUMNS",
+            "IMPOSSIBLE_",
+        )
+    ):
+        return None
+
+    candidates = ensemble_mod._field_candidates(parsed_readings, field)
+    by_family = {}
+    for candidate in candidates:
+        by_family.setdefault(candidate[3], []).append(candidate)
+
+    representatives = {}
+    for family, family_candidates in sorted(by_family.items()):
+        representative = ensemble_mod._family_representative(field, family_candidates)
+        if representative is None:
+            return None
+        representatives[family] = representative
+    # The production pipeline has exactly PaddleOCR, Tesseract and EasyOCR.  Do
+    # not generalize this rescue to an unknown number of OCR families implicitly.
+    if len(representatives) != 3:
+        return None
+
+    agreeing_pairs = [
+        (left, right)
+        for left, right in combinations(sorted(representatives), 2)
+        if ensemble_mod._close(
+            field,
+            representatives[left][0],
+            representatives[right][0],
+        )
+    ]
+    if len(agreeing_pairs) != 1:
+        return None
+    agreeing = set(agreeing_pairs[0])
+    dissenting = next(iter(set(representatives) - agreeing))
+
+    # If the dissenting engine itself has a complete parser-DECLARED observation,
+    # it is real contradictory evidence and remains a hard REVIEW.
+    for reading in parsed_readings:
+        nutrition = reading.result.nutrition or {}
+        if (
+            reading.family == dissenting
+            and reading.result.status == "DECLARED"
+            and all(name in nutrition for name in base.CORE_NUTRITION_FIELDS)
+        ):
+            return None
+
+    filtered = []
+    for reading in parsed_readings:
+        nutrition = reading.result.nutrition
+        if reading.family == dissenting and nutrition and field in nutrition:
+            kept = dict(nutrition)
+            kept.pop(field, None)
+            filtered.append(replace(
+                reading,
+                result=replace(reading.result, nutrition=kept or None),
+            ))
+        else:
+            filtered.append(reading)
+
+    candidate = fuse_ocr_readings(filtered)
+    if not candidate.declared_usable:
+        return None
+    selected_field = next((item for item in candidate.fields if item.name == field), None)
+    if selected_field is None or not all(
+        ensemble_mod._close(field, selected_field.value, representatives[family][0])
+        for family in agreeing
+    ):
+        return None
+
+    note = f"IGNORED_DISSENTING_ENGINE_FAMILY:{field}:{dissenting}"
+    return replace(
+        candidate,
+        reasons=tuple(dict.fromkeys((*candidate.reasons, note))),
+    )
+
+
 def _best_fusion(readings, target_kind: str):
-    fused = fuse_ocr_readings(base._as_parsed_readings(readings, target_kind))
+    parsed_readings = base._as_parsed_readings(readings, target_kind)
+    fused = fuse_ocr_readings(parsed_readings)
     if fused.declared_usable:
         return fused
 
@@ -108,7 +229,11 @@ def _best_fusion(readings, target_kind: str):
         ),
         target_kind,
     )
-    return strict if strict.declared_usable else fused
+    if strict.declared_usable:
+        return strict
+
+    bounded = _bounded_dissenting_family_rescue(parsed_readings, fused)
+    return bounded if bounded is not None else fused
 
 
 def _extract_region(evidence, region_path: Path, target_kind: str):
