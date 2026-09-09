@@ -55,19 +55,14 @@ jobs:
           from pathlib import Path
 
           exact_images = {
-              # Ordinary coherent controls from the near-safe rescue wave.
               '6331': 'https://prod-mercadona.imgix.net/images/80cfd71a0abbcd821311af40c8b1a5f0.jpg?fit=crop&h=3600&w=3600',
               '50483': 'https://prod-mercadona.imgix.net/images/5c2961a0164db2ecea6f84b64c93cb16.jpg?fit=crop&h=3600&w=3600',
               '16275': 'https://prod-mercadona.imgix.net/images/358dca5edc4c4fb325d0dc1661db8778.jpg?fit=crop&h=3600&w=3600',
               '87607': 'https://prod-mercadona.imgix.net/images/cba789f8819495ead3395b825a72f877.jpg?fit=crop&h=3600&w=3600',
-              # Unexplained core energy mismatch: must never reach DECLARED.
               '35197': 'https://prod-mercadona.imgix.net/images/78faaf4ad3c6197e77fd42ce5adca3f6.jpg?fit=crop&h=3600&w=3600',
-              # Historical two-column parse: per-100 and serving cells were mixed.
-              '12282': 'https://prod-mercadona.imgix.net/images/3ded6c8a7110fc6f4fe8a569374c69a5f0.jpg?fit=crop&h=3600&w=3600',
-              # Valid EU energy accounting with explicit fibre.
+              '12282': 'https://prod-mercadona.imgix.net/images/3ded6c8a7110fc6f4fe8a569374c69a5.jpg?fit=crop&h=3600&w=3600',
               '29134': 'https://prod-mercadona.imgix.net/images/ab1222575ae20f03e432a6abd1440b04.jpg?fit=crop&h=3600&w=3600',
               '14347': 'https://prod-mercadona.imgix.net/images/302f4910b97c6eaeebca50264e8b9110.jpg?fit=crop&h=3600&w=3600',
-              # Explicit fibre/polyols exist, but the photographed table is two-column.
               '12946': 'https://prod-mercadona.imgix.net/images/4a459b53091fa1e3db69f5cb792ff213.jpg?fit=crop&h=3600&w=3600',
           }
           rows = {}
@@ -80,10 +75,7 @@ jobs:
               if image_url is None:
                   continue
               photos = row.get('photos') if isinstance(row.get('photos'), list) else []
-              match = next((
-                  (i, p) for i, p in enumerate(photos)
-                  if isinstance(p, dict) and str(p.get('zoom') or '') == image_url
-              ), None)
+              match = next(((i, p) for i, p in enumerate(photos) if isinstance(p, dict) and str(p.get('zoom') or '') == image_url), None)
               if match is None:
                   raise SystemExit(f'exact current first-party image no longer present for {pid}')
               image_index, photo = match
@@ -104,8 +96,7 @@ jobs:
               raise SystemExit(f'missing validation products: {missing}')
           ordered = [rows[pid] for pid in exact_images]
           Path('energy-guard-products.jsonl').write_text(
-              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in ordered),
-              encoding='utf-8',
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in ordered), encoding='utf-8'
           )
           Path('energy-guard-selection.json').write_text(json.dumps({
               'product_ids': list(exact_images),
