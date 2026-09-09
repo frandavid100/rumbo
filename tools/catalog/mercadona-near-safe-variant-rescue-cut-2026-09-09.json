@@ -2,49 +2,75 @@
   "dataset": "mercadona_first_party_nutrition_ocr",
   "cut_date": "2026-09-09",
   "stage": "near_safe_variant_rescue",
-  "source_run_id": 34319684225,
-  "source_artifact_id": 10091823540,
+  "source_run_id": 34347229617,
+  "source_artifact_id": 10102695361,
   "source_artifact": "mercadona-near-safe-variant-rescue-merged",
+  "source_artifact_digest": "sha256:683f2fac09f16ebcad546611b641ccfa66e5613b37243ab50802971c12328e4c",
   "inventory_products": 4280,
-  "processed": 18,
+  "processed": 7,
   "status_counts": {
-    "DECLARED": 1,
-    "REVIEW": 17
+    "DECLARED": 4,
+    "REVIEW": 3
   },
   "declared_product_ids": [
-    "18615"
+    "5815",
+    "67947",
+    "52772",
+    "34865"
   ],
-  "declared_examples": [
-    {
-      "product_id": "18615",
-      "ean": "8402001013645",
-      "name": "Mejillones de Chile en escabeche Hacendado pequeños",
-      "basis": "100_g",
-      "calories": 201.0,
-      "protein_g": 13.0,
-      "carbohydrate_g": 4.3,
-      "fat_g": 15.0,
-      "perspective": 9,
-      "image_index": 1,
-      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
-      "source": "MERCADONA_FIRST_PARTY",
-      "source_record_kind": "label image",
-      "redistribution_allowed": false,
-      "corroborated_fields": 4,
-      "independent_engine_families": 3
+  "review_product_ids": [
+    "29606",
+    "84597",
+    "5214"
+  ],
+  "new_declared_candidate_vs_275_canonical_cut": {
+    "product_id": "5815",
+    "ean": "8480000058157",
+    "name": "Salchichas cocidas de cerdo estilo Bratwurst Hacendado",
+    "basis": "100_g",
+    "calories": 289.0,
+    "protein_g": 13.0,
+    "carbohydrate_g": 2.4,
+    "fat_g": 25.0,
+    "perspective": 9,
+    "image_index": 1,
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY",
+    "source_record_kind": "label image",
+    "redistribution_allowed": false,
+    "corroborated_fields": 4,
+    "independent_engine_families": 3,
+    "field_engine_families": {
+      "calories": ["easyocr", "paddleocr", "tesseract"],
+      "fat_g": ["easyocr", "paddleocr", "tesseract"],
+      "carbohydrate_g": ["paddleocr", "tesseract"],
+      "protein_g": ["easyocr", "paddleocr"]
     }
+  },
+  "already_canonical_declared_product_ids": [
+    "67947",
+    "52772",
+    "34865"
   ],
+  "invalid_product_ids": [],
+  "error": 0,
+  "no_visual_region": 0,
   "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
   "source": "MERCADONA_FIRST_PARTY/label image",
   "redistribution_allowed": false,
   "images_persisted": false,
   "classified": 0,
   "menu_eligible": 0,
-  "canonical_reconciliation": "LATEST_RAW_LIVE_OCR_WINS_CONFIRMED_BY_RUN_34322639130",
-  "canonical_audit_run_id": 34322639130,
-  "canonical_audit_artifact_id": 10092789080,
+  "canonical_reconciliation": "PENDING_LATEST_RAW_LIVE_OCR_WINS_AFTER_RUN_34347229617",
+  "canonical_baseline": {
+    "declared": 275,
+    "review": 2694,
+    "cut": "mercadona-ocr-canonical-crop-variant-reconciled-2026-09-09.json",
+    "commit": "bb3d20e79ec631d9d5a39681dffbf5eba6865d45"
+  },
   "notes": [
-    "Persisted from the completed merged rescue artifact and checked against the canonical latest-live reconciliation.",
-    "No REVIEW row is promoted by this cut; the canonical audit remains authoritative."
+    "This cut is persisted directly from completed merged artifact 10102695361; no arithmetic canonical promotion is asserted.",
+    "Product 5815 is a new safe DECLARED candidate relative to the 275-product canonical cut, with four corroborated macro fields and three independent OCR families overall.",
+    "REVIEW rows remain non-usable; no values are inferred and no label image is persisted."
   ]
 }
