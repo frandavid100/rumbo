@@ -1,0 +1,72 @@
+{
+  "kind": "MERCADONA_NEAR_SAFE_EXACT_FIRST_PARTY_IMAGE_VALIDATION_CUT",
+  "date": "2026-09-09",
+  "branch": "agent/catalog-phase1",
+  "source_workflow_run_id": 34360056723,
+  "source_artifact_id": 10108040249,
+  "source_artifact_name": "mercadona-near-safe-variant-rescue-merged",
+  "source_commit": "23a121e673d4b77977005a98e0242d4a7fbcf9ad",
+  "selection_policy": "EXACT_CANONICAL_NEAR_SAFE_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO",
+  "inventory_products": 4280,
+  "processed": 2,
+  "status_counts": {
+    "DECLARED": 2,
+    "REVIEW": 0,
+    "ERROR": 0
+  },
+  "no_visual_region": 0,
+  "images_persisted": false,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "products": [
+    {
+      "product_id": "25353",
+      "ean": "2105100253535",
+      "name": "Solomillo de pavo marinado congelado",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 93.0,
+        "protein_g": 22.0,
+        "carbohydrate_g": 1.0,
+        "fat_g": 0.7
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "perspective": 2,
+      "image_url": "https://prod-mercadona.imgix.net/images/134b36b88ca0f81fd392ce8dc434f3aa.jpg?fit=crop&h=3600&w=3600",
+      "image_selection_basis": "EXACT_CANONICAL_NEAR_SAFE_IMAGE_URL_MATCHED_CURRENT_FIRST_PARTY_PHOTO"
+    },
+    {
+      "product_id": "54053",
+      "ean": "2105600540531",
+      "name": "Lomo Hacendado",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 199.0,
+        "protein_g": 38.0,
+        "carbohydrate_g": 0.5,
+        "fat_g": 5.0
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4,
+      "perspective": 2,
+      "image_url": "https://prod-mercadona.imgix.net/images/7147e883ae9a96d0f38020aca77e1dd0.jpg?fit=crop&h=3600&w=3600",
+      "image_selection_basis": "EXACT_CANONICAL_NEAR_SAFE_IMAGE_URL_MATCHED_CURRENT_FIRST_PARTY_PHOTO"
+    }
+  ],
+  "safety": {
+    "no_inference": true,
+    "review_not_usable": true,
+    "exact_current_first_party_image_url_required": true,
+    "real_perspective_restored_before_persistence": true,
+    "synthetic_p9_routing_persisted": false,
+    "declared_requires_four_corroborated_fields": true,
+    "declared_requires_at_least_two_independent_engine_families": true
+  },
+  "next_step": "RECONCILE_WITH_LATEST_RAW_LIVE_OCR_WINS_BEFORE_COUNTING_CANONICAL_COVERAGE"
+}
