@@ -1,0 +1,263 @@
+name: Catalog Mercadona near-safe variant rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/mercadona_near_safe_variant_rescue.py'
+      - 'tools/catalog/test_mercadona_near_safe_variant_rescue.py'
+      - '.github/workflows/catalog-mercadona-near-safe-variant-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-near-safe-variant-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Resolve latest successful canonical OCR audit
+        id: canonical-audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          if ! [[ "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "No successful canonical OCR audit run found" >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using canonical audit run $run_id"
+      - name: Download latest canonical OCR audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/mercadona-current-ocr-residual-audit
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.canonical-audit.outputs.run_id }}
+      - name: Build exact 3-of-4 near-safe candidate cohort
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          diagnostic_path = Path('mercadona-current-ocr-residual-audit/current-review-failure-modes/near-safe-complete-review.jsonl')
+          product_path = Path('mercadona-first-party-final/products.jsonl')
+          target_ids = set()
+          for line in diagnostic_path.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              if row.get('canonical_status') == 'REVIEW' and row.get('corroborated_fields') == 3:
+                  target_ids.add(str(row.get('product_id') or ''))
+
+          with_ingredients = []
+          without_ingredients = []
+          missing_p9 = []
+          for line in product_path.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              pid = str(row.get('product_id') or '')
+              if pid not in target_ids:
+                  continue
+              photos = row.get('photos') if isinstance(row.get('photos'), list) else []
+              has_p9 = any(
+                  isinstance(photo, dict)
+                  and str(photo.get('perspective')) == '9'
+                  and photo.get('zoom')
+                  for photo in photos
+              )
+              if not has_p9:
+                  missing_p9.append(pid)
+                  continue
+              (with_ingredients if row.get('ingredients') else without_ingredients).append(row)
+
+          def write(path, rows):
+              Path(path).write_text(
+                  ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+                  encoding='utf-8',
+              )
+
+          write('near-safe-with-ingredients.jsonl', with_ingredients)
+          write('near-safe-without-ingredients.jsonl', without_ingredients)
+          summary = {
+              'canonical_three_of_four_targets': len(target_ids),
+              'current_p9_targets': len(with_ingredients) + len(without_ingredients),
+              'with_structured_ingredients': len(with_ingredients),
+              'without_structured_ingredients': len(without_ingredients),
+              'currently_missing_p9': sorted(missing_p9),
+          }
+          Path('near-safe-selection-summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          print(json.dumps(summary, sort_keys=True))
+          if not target_ids or not (with_ingredients or without_ingredients):
+              raise SystemExit('No actionable 3-of-4 near-safe products found')
+          PY
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative rescue tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_near_safe_variant_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+      - name: OCR exact near-safe cohort with temporary autocontrast rescue
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-near-safe-variant-rescue/with-ingredients mercadona-near-safe-variant-rescue/without-ingredients
+          run_group() {
+            local products="$1"
+            local out="$2"
+            local mode="$3"
+            set +e
+            python mercadona_near_safe_variant_rescue.py \
+              --products "$products" \
+              --out "$out" \
+              --shard-index ${{ matrix.shard }} \
+              --shard-count 4 \
+              --limit 0 \
+              --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            if [[ $rc -ne 0 && $rc -ne 2 ]]; then
+              return "$rc"
+            fi
+          }
+          run_group near-safe-with-ingredients.jsonl mercadona-near-safe-variant-rescue/with-ingredients priority
+          run_group near-safe-without-ingredients.jsonl mercadona-near-safe-variant-rescue/without-ingredients p9-no-ingredients-all
+          cp near-safe-selection-summary.json mercadona-near-safe-variant-rescue/selection-summary.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-near-safe-variant-rescue-${{ matrix.shard }}
+          path: tools/catalog/mercadona-near-safe-variant-rescue/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-near-safe-variant-rescue-*
+          path: input
+      - name: Merge and validate auditable rescue results
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob
+          import json
+          from pathlib import Path
+
+          rows = []
+          seen = set()
+          for path in sorted(glob.glob('input/**/results-*.jsonl', recursive=True)):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  pid = str(row.get('product_id') or '')
+                  if pid in seen:
+                      raise SystemExit(f'duplicate product in rescue merge: {pid}')
+                  seen.add(pid)
+                  rows.append(row)
+
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          invalid = []
+          declared = []
+          for row in rows:
+              pid = row.get('product_id')
+              if (
+                  row.get('source') != 'MERCADONA_FIRST_PARTY'
+                  or row.get('source_record_kind') != 'label image'
+                  or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  or row.get('redistribution_allowed') is not False
+              ):
+                  invalid.append(pid)
+              if row.get('status') == 'DECLARED':
+                  declared.append(row)
+                  attempt = next(
+                      (a for a in row.get('attempts', []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'),
+                      None,
+                  )
+                  ensemble = (attempt or {}).get('ensemble') or {}
+                  if ensemble.get('independent_engine_families', 0) < 2 or ensemble.get('corroborated_fields', 0) < 4:
+                      invalid.append(pid)
+
+          summary = {
+              'inventory_products': 4280,
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared': len(declared),
+              'review': counts.get('REVIEW', 0),
+              'error': counts.get('ERROR', 0),
+              'no_visual_region': sum(row.get('visual_regions_detected') == 0 for row in rows),
+              'declared_product_ids': [str(row.get('product_id')) for row in declared],
+              'invalid_product_ids': invalid,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'classified': 0,
+              'menu_eligible': 0,
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if invalid:
+              raise SystemExit('Unsafe rescue rows: ' + ','.join(map(str, invalid)))
+          if not rows:
+              raise SystemExit('No rescue rows merged')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-near-safe-variant-rescue-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
