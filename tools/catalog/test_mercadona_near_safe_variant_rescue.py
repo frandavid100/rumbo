@@ -2,10 +2,11 @@ import unittest
 
 from mercadona_near_safe_variant_rescue import (
     RESCUE_VARIANT_NAMES,
+    _bounded_dissenting_family_rescue,
     _strategy_suffix,
     should_run_variant_rescue,
 )
-from nutrition_label_reader import read_nutrition_label
+from nutrition_label_reader import LabelReadResult, read_nutrition_label
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
 
@@ -96,6 +97,96 @@ Proteínas 2.6 g
         self.assertEqual(ensemble.independent_engine_families, 1)
         self.assertEqual(ensemble.status, "REVIEW")
         self.assertIn("INSUFFICIENT_INDEPENDENT_OCR_ENGINES", ensemble.reasons)
+
+    def test_two_clean_families_can_ignore_one_non_declared_field_outlier(self):
+        paddle = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 289 kcal
+Grasas 25 g
+Hidratos de carbono 2.4 g
+Proteínas 13 g
+""", extraction_confidence=.98)
+        tesseract = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 289 kcal
+Grasas 25 g
+Hidratos de carbono 2.4 g
+""", extraction_confidence=.82)
+        easy = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 289 kcal
+Grasas 25 g
+Hidratos de carbono 24 g
+Proteínas 13 g
+""", extraction_confidence=.76)
+        self.assertEqual(paddle.status, "DECLARED")
+        self.assertEqual(easy.status, "REVIEW")
+        readings = (
+            ParsedOCRReading("paddleocr", paddle, .98, "paddleocr"),
+            ParsedOCRReading("tesseract-psm11", tesseract, .82, "tesseract"),
+            ParsedOCRReading("easyocr", easy, .76, "easyocr"),
+        )
+        fused = fuse_ocr_readings(readings)
+        self.assertEqual(fused.status, "REVIEW", fused)
+        self.assertEqual(fused.corroborated_fields, 3)
+        self.assertIn("OCR_FIELD_CONFLICT:carbohydrate_g", fused.reasons)
+
+        rescued = _bounded_dissenting_family_rescue(readings, fused)
+        self.assertIsNotNone(rescued)
+        self.assertEqual(rescued.status, "DECLARED", rescued)
+        self.assertEqual(rescued.nutrition["carbohydrate_g"], 2.4)
+        self.assertIn(
+            "IGNORED_DISSENTING_ENGINE_FAMILY:carbohydrate_g:easyocr",
+            rescued.reasons,
+        )
+
+    def test_complete_declared_dissenting_family_is_never_ignored(self):
+        good = LabelReadResult(
+            "DECLARED", "100_g",
+            {"calories": 289.0, "fat_g": 25.0, "carbohydrate_g": 2.4, "protein_g": 13.0},
+            .98, tuple(), "fixture",
+        )
+        partial = LabelReadResult(
+            "REVIEW", "100_g",
+            {"calories": 289.0, "fat_g": 25.0, "carbohydrate_g": 2.4},
+            .82, ("MISSING_CORE:protein_g",), "fixture",
+        )
+        dissent = LabelReadResult(
+            "DECLARED", "100_g",
+            {"calories": 289.0, "fat_g": 25.0, "carbohydrate_g": 24.0, "protein_g": 13.0},
+            .96, tuple(), "fixture",
+        )
+        readings = (
+            ParsedOCRReading("paddleocr", good, .98, "paddleocr"),
+            ParsedOCRReading("tesseract-psm11", partial, .82, "tesseract"),
+            ParsedOCRReading("easyocr", dissent, .96, "easyocr"),
+        )
+        fused = fuse_ocr_readings(readings)
+        self.assertEqual(fused.status, "REVIEW")
+        self.assertEqual(fused.corroborated_fields, 3)
+        self.assertIsNone(_bounded_dissenting_family_rescue(readings, fused))
+
+    def test_no_unique_two_family_value_consensus_remains_review(self):
+        paddle = LabelReadResult(
+            "DECLARED", "100_g",
+            {"calories": 289.0, "fat_g": 25.0, "carbohydrate_g": 2.4, "protein_g": 13.0},
+            .98, tuple(), "fixture",
+        )
+        tesseract = LabelReadResult(
+            "REVIEW", "100_g",
+            {"calories": 289.0, "fat_g": 25.0, "carbohydrate_g": 3.5},
+            .82, ("MISSING_CORE:protein_g",), "fixture",
+        )
+        easy = LabelReadResult(
+            "REVIEW", "100_g",
+            {"calories": 289.0, "fat_g": 25.0, "carbohydrate_g": 24.0, "protein_g": 13.0},
+            .76, ("ENERGY_MACRO_MISMATCH:373.0",), "fixture",
+        )
+        readings = (
+            ParsedOCRReading("paddleocr", paddle, .98, "paddleocr"),
+            ParsedOCRReading("tesseract-psm11", tesseract, .82, "tesseract"),
+            ParsedOCRReading("easyocr", easy, .76, "easyocr"),
+        )
+        fused = fuse_ocr_readings(readings)
+        self.assertEqual(fused.status, "REVIEW")
+        self.assertIsNone(_bounded_dissenting_family_rescue(readings, fused))
 
 
 if __name__ == "__main__":
