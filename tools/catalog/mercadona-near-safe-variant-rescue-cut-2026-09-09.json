@@ -1,0 +1,49 @@
+{
+  "dataset": "mercadona_first_party_nutrition_ocr",
+  "cut_date": "2026-09-09",
+  "stage": "near_safe_variant_rescue",
+  "source_run_id": 34319684225,
+  "source_artifact_id": 10091823540,
+  "source_artifact": "mercadona-near-safe-variant-rescue-merged",
+  "inventory_products": 4280,
+  "processed": 18,
+  "status_counts": {
+    "DECLARED": 1,
+    "REVIEW": 17
+  },
+  "declared_product_ids": [
+    "18615"
+  ],
+  "declared_examples": [
+    {
+      "product_id": "18615",
+      "ean": "8480000150143",
+      "name": "Café molido mezcla fuerte Hacendado",
+      "basis": "per_100g",
+      "kcal": 223.0,
+      "protein_g": 14.0,
+      "carbs_g": 2.4,
+      "fat_g": 12.0,
+      "parser_version": "1.4.14",
+      "engine": "high_res_targeted_variant_retry",
+      "perspective": "9",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "source": "MERCADONA_FIRST_PARTY",
+      "source_record_kind": "label image",
+      "redistribution_allowed": false,
+      "corroborated_fields": 4,
+      "independent_engine_families_min": 2
+    }
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "canonical_reconciliation": "PENDING_LATEST_RAW_LIVE_OCR_WINS",
+  "notes": [
+    "Persisted from the completed merged rescue artifact before canonical reconciliation.",
+    "No REVIEW row is promoted by this cut; the canonical audit remains authoritative."
+  ]
+}
