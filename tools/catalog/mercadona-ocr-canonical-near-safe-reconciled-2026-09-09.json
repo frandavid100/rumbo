@@ -1,0 +1,101 @@
+{
+  "dataset": "mercadona_first_party_nutrition_ocr",
+  "cut_date": "2026-09-09",
+  "stage": "canonical_near_safe_reconciled",
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "canonical_audit_run_id": 34357546283,
+  "canonical_audit_artifact_id": 10106627913,
+  "canonical_audit_artifact": "mercadona-current-ocr-residual-audit",
+  "canonical_audit_artifact_digest": "sha256:d0dbe5ccd18e8b8b46b45b1f2e657b79198347a45eefd9ab5e2fd6bf7cc598b5",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 276,
+    "REVIEW": 2693
+  },
+  "usable_complete": 276,
+  "usable_complete_pct_inventory": 6.4486,
+  "usable_field_counts": {
+    "calories": 276,
+    "protein_g": 276,
+    "carbohydrate_g": 276,
+    "fat_g": 276
+  },
+  "new_canonical_promotion": {
+    "product_id": "5815",
+    "ean": "8480000058157",
+    "name": "Salchichas cocidas de cerdo estilo Bratwurst Hacendado",
+    "basis": "100_g",
+    "calories": 289.0,
+    "protein_g": 13.0,
+    "carbohydrate_g": 2.4,
+    "fat_g": 25.0,
+    "latest_live_run_id": 34347229617,
+    "source_workflow": "Catalog Mercadona near-safe variant rescue",
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false
+  },
+  "latest_review_failure_modes": {
+    "near_safe_complete_review": 89,
+    "near_safe_complete_by_corroborated_fields": {
+      "0": 1,
+      "1": 33,
+      "2": 53,
+      "3": 2
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 45,
+    "exact_three_of_four_targets": [
+      {
+        "product_id": "25353",
+        "name": "Solomillo de pavo marinado congelado",
+        "independent_engine_families": 3,
+        "diagnostic_candidate_values": {
+          "calories": 93.0,
+          "protein_g": 22.0,
+          "carbohydrate_g": 1.0,
+          "fat_g": 0.7
+        },
+        "promotion_allowed": false
+      },
+      {
+        "product_id": "54053",
+        "name": "Lomo Hacendado",
+        "independent_engine_families": 2,
+        "diagnostic_candidate_values": {
+          "calories": 199.0,
+          "protein_g": 38.0,
+          "carbohydrate_g": 0.5,
+          "fat_g": 5.0
+        },
+        "promotion_allowed": false
+      }
+    ]
+  },
+  "residual_routing": {
+    "ocr_actionable_p9_total": 0,
+    "ocr_blocked_no_p9_food_route_total": 0,
+    "ocr_deferred_bodega_total": 11,
+    "ocr_out_of_scope_total": 1300
+  },
+  "next_bounded_rescue": {
+    "commit": "249e62efd36eaa9ec9aade308d7f9ca4ff2bd995",
+    "workflow_run_id": 34358529046,
+    "change": "Add Tesseract PSM 3 and PSM 12 only inside the exact near-safe variant rescue; all Tesseract observations remain one OCR engine family and acceptance rules are unchanged."
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "notes": [
+    "Canonical counts come from the completed audit artifact, not arithmetic projection.",
+    "REVIEW rows remain non-usable and diagnostic candidate values are not staged as nutrition.",
+    "The next rescue is intentionally bounded to the two current 3-of-4 near-safe targets and does not relax parser or ensemble safety policy."
+  ]
+}
