@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from mercadona_near_safe_two_of_four_pilot import (
+    build_deduplicated_two_of_four_candidates,
     load_previously_attempted_product_ids,
     should_run_two_of_four_variant_rescue,
 )
@@ -118,6 +119,64 @@ Grasas 6.1 g
             path.write_text("[]", encoding="utf-8")
             with self.assertRaises(ValueError):
                 load_previously_attempted_product_ids([path])
+
+    def test_candidate_builder_excludes_attempted_and_keeps_exact_current_image(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            diagnostic_path = root / "diagnostic.jsonl"
+            product_path = root / "products.jsonl"
+            diagnostics = []
+            products = []
+            for pid, confidence in (("100", .99), ("200", .95), ("300", .90)):
+                diagnostics.append({
+                    "product_id": pid,
+                    "canonical_status": "REVIEW",
+                    "corroborated_fields": 2,
+                    "independent_engine_families": 2,
+                    "basis": "100_g",
+                    "diagnostic_candidate_values": {
+                        "calories": 150,
+                        "fat_g": 6.1,
+                        "carbohydrate_g": 20,
+                        "protein_g": 2.6,
+                    },
+                    "safety_blockers": [],
+                    "image_url": f"https://example.invalid/{pid}.jpg",
+                    "latest_raw_run_id": 42,
+                    "confidence": confidence,
+                })
+                products.append({
+                    "product_id": pid,
+                    "ingredients": "x" if pid != "300" else None,
+                    "photos": [{
+                        "zoom": f"https://example.invalid/{pid}.jpg",
+                        "perspective": 7,
+                    }],
+                })
+            diagnostic_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in diagnostics),
+                encoding="utf-8",
+            )
+            product_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in products),
+                encoding="utf-8",
+            )
+
+            selected, summary = build_deduplicated_two_of_four_candidates(
+                diagnostic_path,
+                product_path,
+                {"100"},
+                limit=2,
+            )
+            self.assertEqual([row["product_id"] for row in selected], ["200", "300"])
+            self.assertEqual(summary["excluded_previously_attempted_current_two_of_four"], ["100"])
+            self.assertEqual(summary["selected_product_ids"], ["200", "300"])
+            self.assertEqual(selected[0]["photos"][0]["perspective"], 9)
+            self.assertEqual(selected[0]["_near_safe_image_meta"]["perspective"], 7)
+            self.assertEqual(
+                selected[0]["_near_safe_image_meta"]["image_url"],
+                "https://example.invalid/200.jpg",
+            )
 
 
 if __name__ == "__main__":
