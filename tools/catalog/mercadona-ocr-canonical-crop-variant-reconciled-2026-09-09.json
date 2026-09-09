@@ -1,0 +1,57 @@
+{
+  "dataset": "mercadona_first_party_nutrition_ocr",
+  "cut_date": "2026-09-09",
+  "stage": "canonical_crop_variant_reconciled",
+  "canonical_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "canonical_audit_run_id": 34346528622,
+  "canonical_audit_artifact_id": 10102316730,
+  "source_rescue_run_id": 34340494234,
+  "source_rescue_artifact_id": 10100143324,
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 275,
+    "REVIEW": 2694
+  },
+  "usable_complete": 275,
+  "usable_complete_pct_inventory": 6.4252,
+  "usable_field_counts": {
+    "calories": 275,
+    "protein_g": 275,
+    "carbohydrate_g": 275,
+    "fat_g": 275
+  },
+  "newly_reconciled_declared_product_ids": [
+    "34865",
+    "52772",
+    "67947"
+  ],
+  "latest_review_diagnostics": {
+    "complete_review": 89,
+    "near_safe_complete_review": 89,
+    "near_safe_complete_with_3_of_4_corroborated": 2,
+    "fully_corroborated_still_review": 0,
+    "complete_but_safety_blocked": 45
+  },
+  "residual_scope": {
+    "ocr_actionable_p9_total": 0,
+    "ocr_blocked_no_p9_food_route_total": 0,
+    "ocr_deferred_bodega_total": 11,
+    "ocr_out_of_scope_total": 1300
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "notes": [
+    "Canonical counts are copied from the completed successful current OCR residual audit; they are not arithmetic projections.",
+    "The three new usable rows were REVIEW in the preceding canonical audit and are DECLARED in latest live run 34340494234.",
+    "REVIEW remains non-usable. No missing macro value was inferred and no image bytes were persisted."
+  ]
+}
