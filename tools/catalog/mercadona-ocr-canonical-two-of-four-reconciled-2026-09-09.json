@@ -1,0 +1,123 @@
+{
+  "kind": "MERCADONA_OCR_CANONICAL_TWO_OF_FOUR_RECONCILED_CUT",
+  "date": "2026-09-09",
+  "branch": "agent/catalog-phase1",
+  "source_audit_run_id": 34380144975,
+  "source_audit_attempt": 1,
+  "source_audit_artifact_id": 10115988568,
+  "source_audit_artifact_name": "mercadona-current-ocr-residual-audit",
+  "source_commit": "ba4cd5bd1e7caf96da43af8eeb6161d259fae323",
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 283,
+    "REVIEW": 2686
+  },
+  "usable_complete": 283,
+  "usable_complete_pct_inventory": 6.6121,
+  "usable_field_counts": {
+    "calories": 283,
+    "protein_g": 283,
+    "carbohydrate_g": 283,
+    "fat_g": 283
+  },
+  "newly_reconciled_products": [
+    {
+      "product_id": "8966",
+      "name": "Helado de vainilla Hacendado",
+      "latest_live_run_id": 34375111593,
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 222.0,
+        "protein_g": 2.9,
+        "carbohydrate_g": 25.0,
+        "fat_g": 12.0
+      }
+    },
+    {
+      "product_id": "68149",
+      "name": "Flan de huevo Hacendado",
+      "latest_live_run_id": 34375111593,
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 136.0,
+        "protein_g": 4.79,
+        "carbohydrate_g": 20.4,
+        "fat_g": 4.0
+      }
+    },
+    {
+      "product_id": "14467",
+      "name": "Torreznos Hacendado",
+      "latest_live_run_id": 34375111593,
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 600.0,
+        "protein_g": 52.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 44.0
+      }
+    },
+    {
+      "product_id": "52561",
+      "name": "Helado sabor huevo de chocolate Hacendado",
+      "latest_live_run_id": 34375111593,
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 283.0,
+        "protein_g": 3.69,
+        "carbohydrate_g": 31.0,
+        "fat_g": 16.0
+      }
+    },
+    {
+      "product_id": "34016",
+      "name": "Cacahuete tostado con sal Hacendado",
+      "latest_live_run_id": 34375111593,
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 595.0,
+        "protein_g": 24.9,
+        "carbohydrate_g": 10.0,
+        "fat_g": 48.0
+      }
+    }
+  ],
+  "current_review_failure_modes": {
+    "latest_review_products": 2686,
+    "near_safe_complete_review": 76,
+    "near_safe_complete_by_corroborated_fields": {
+      "0": 1,
+      "1": 35,
+      "2": 37,
+      "3": 3
+    },
+    "near_safe_complete_by_engine_families": {
+      "2": 55,
+      "3": 21
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 46
+  },
+  "three_of_four_followup_product_ids": [
+    "32227",
+    "4711",
+    "90933"
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "next_step": "RUN_EXACT_IMAGE_THREE_OF_FOUR_VARIANT_RESCUE_WITHOUT_RELAXING_ACCEPTANCE"
+}
