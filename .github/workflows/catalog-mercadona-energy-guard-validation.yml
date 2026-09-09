@@ -5,6 +5,12 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-energy-guard-validation.yml'
+      - 'tools/catalog/mercadona_nutrition_label_reader.py'
+      - 'tools/catalog/test_mercadona_nutrition_label_reader.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - 'tools/catalog/mercadona_neural_ocr_wave.py'
+      - 'tools/catalog/mercadona_near_safe_two_of_four_pilot.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
   workflow_dispatch:
 
 permissions:
@@ -49,11 +55,20 @@ jobs:
           from pathlib import Path
 
           exact_images = {
+              # Ordinary coherent controls from the near-safe rescue wave.
               '6331': 'https://prod-mercadona.imgix.net/images/80cfd71a0abbcd821311af40c8b1a5f0.jpg?fit=crop&h=3600&w=3600',
               '50483': 'https://prod-mercadona.imgix.net/images/5c2961a0164db2ecea6f84b64c93cb16.jpg?fit=crop&h=3600&w=3600',
-              '35197': 'https://prod-mercadona.imgix.net/images/78faaf4ad3c6197e77fd42ce5adca3f6.jpg?fit=crop&h=3600&w=3600',
               '16275': 'https://prod-mercadona.imgix.net/images/358dca5edc4c4fb325d0dc1661db8778.jpg?fit=crop&h=3600&w=3600',
               '87607': 'https://prod-mercadona.imgix.net/images/cba789f8819495ead3395b825a72f877.jpg?fit=crop&h=3600&w=3600',
+              # Unexplained core energy mismatch: must never reach DECLARED.
+              '35197': 'https://prod-mercadona.imgix.net/images/78faaf4ad3c6197e77fd42ce5adca3f6.jpg?fit=crop&h=3600&w=3600',
+              # Historical two-column parse: per-100 and serving cells were mixed.
+              '12282': 'https://prod-mercadona.imgix.net/images/3ded6c8a7110fc6f4fe8a569374c69a5f0.jpg?fit=crop&h=3600&w=3600',
+              # Valid EU energy accounting with explicit fibre.
+              '29134': 'https://prod-mercadona.imgix.net/images/ab1222575ae20f03e432a6abd1440b04.jpg?fit=crop&h=3600&w=3600',
+              '14347': 'https://prod-mercadona.imgix.net/images/302f4910b97c6eaeebca50264e8b9110.jpg?fit=crop&h=3600&w=3600',
+              # Explicit fibre/polyols exist, but the photographed table is two-column.
+              '12946': 'https://prod-mercadona.imgix.net/images/4a459b53091fa1e3db69f5cb792ff213.jpg?fit=crop&h=3600&w=3600',
           }
           rows = {}
           for line in Path('mercadona-first-party-final/products.jsonl').read_text(encoding='utf-8').splitlines():
@@ -94,7 +109,7 @@ jobs:
           )
           Path('energy-guard-selection.json').write_text(json.dumps({
               'product_ids': list(exact_images),
-              'selection_policy': 'EXACT_IMAGE_REPLAY_OF_2_OF_4_WAVE_34409903280',
+              'selection_policy': 'EXACT_CURRENT_FIRST_PARTY_IMAGES_FOR_ENERGY_GUARD_AND_AUXILIARY_ENERGY_REGRESSION',
               'acceptance_policy_changed': False,
               'images_persisted': False,
           }, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -118,7 +133,7 @@ jobs:
             --limit 0 \
             --eligibility-mode priority
 
-      - name: Validate guard and coherent controls
+      - name: Validate guard, ambiguity rejection and coherent controls
         working-directory: tools/catalog
         run: |
           python - <<'PY'
@@ -130,30 +145,45 @@ jobs:
           for path in glob.glob('mercadona-energy-guard-validation/results-*.jsonl'):
               rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
           by_id = {str(row.get('product_id')): row for row in rows}
-          expected_ids = {'6331', '50483', '35197', '16275', '87607'}
+          expected_ids = {'6331', '50483', '35197', '16275', '87607', '12282', '29134', '14347', '12946'}
           if set(by_id) != expected_ids:
               raise SystemExit(f'unexpected replay IDs: {sorted(by_id)}')
 
           bad = by_id['35197']
-          if bad.get('status') == 'DECLARED':
-              raise SystemExit('35197 remained DECLARED after strict energy guard')
           if bad.get('status') != 'REVIEW':
               raise SystemExit(f"35197 expected REVIEW, got {bad.get('status')}")
           strict_hits = []
           for attempt in bad.get('attempts', []):
               for engine in (attempt.get('engines') or {}).values():
-                  if any(str(reason).startswith('ENERGY_MACRO_MISMATCH_STRICT:') for reason in engine.get('reasons', [])):
+                  strict = any(str(reason).startswith('ENERGY_MACRO_MISMATCH_STRICT:') for reason in engine.get('reasons', []))
+                  if strict:
                       strict_hits.append(engine.get('engine'))
-                  if any(str(reason).startswith('ENERGY_MACRO_MISMATCH_STRICT:') for reason in engine.get('reasons', [])) and engine.get('nutrition') is not None:
+                  if strict and engine.get('nutrition') is not None:
                       raise SystemExit('strict mismatch leaked numeric parser evidence for 35197')
           if len(strict_hits) < 2:
               raise SystemExit(f'35197 strict guard not independently exercised enough: {strict_hits}')
+
+          for pid in ('12282', '12946'):
+              row = by_id[pid]
+              if row.get('status') != 'REVIEW':
+                  raise SystemExit(f"ambiguous two-column control {pid} expected REVIEW, got {row.get('status')}")
+              multicolumn_hits = []
+              for attempt in row.get('attempts', []):
+                  for engine in (attempt.get('engines') or {}).values():
+                      if 'MULTIPLE_NUTRITION_COLUMNS' in (engine.get('reasons') or []):
+                          multicolumn_hits.append(engine.get('engine'))
+                          if engine.get('nutrition') is not None:
+                              raise SystemExit(f'multicolumn evidence leaked numeric parser evidence for {pid}')
+              if not multicolumn_hits:
+                  raise SystemExit(f'two-column detector was not exercised for {pid}')
 
           expected = {
               '6331': {'calories': 361.0, 'fat_g': 1.5, 'carbohydrate_g': 72.9, 'protein_g': 13.0},
               '50483': {'calories': 324.0, 'fat_g': 24.0, 'carbohydrate_g': 0.0, 'protein_g': 26.0},
               '16275': {'calories': 356.0, 'fat_g': 0.0, 'carbohydrate_g': 0.0, 'protein_g': 89.0},
               '87607': {'calories': 399.0, 'fat_g': 24.0, 'carbohydrate_g': 40.0, 'protein_g': 5.3},
+              '29134': {'calories': 328.0, 'fat_g': 2.0, 'carbohydrate_g': 60.0, 'protein_g': 12.0},
+              '14347': {'calories': 340.0, 'fat_g': 4.4, 'carbohydrate_g': 59.0, 'protein_g': 10.0},
           }
           for pid, nutrition in expected.items():
               row = by_id[pid]
@@ -176,6 +206,8 @@ jobs:
               'declared_product_ids': sorted(pid for pid, row in by_id.items() if row.get('status') == 'DECLARED'),
               'review_product_ids': sorted(pid for pid, row in by_id.items() if row.get('status') == 'REVIEW'),
               'energy_guard_product_id': '35197',
+              'two_column_guard_product_ids': ['12282', '12946'],
+              'auxiliary_energy_positive_controls': ['29134', '14347'],
               'strict_guard_engine_hits': strict_hits,
               'acceptance_policy_changed': False,
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
