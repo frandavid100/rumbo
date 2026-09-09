@@ -1,0 +1,202 @@
+name: Catalog Mercadona energy guard exact-image validation
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-energy-guard-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-energy-guard-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run parser safety regression first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_mercadona_nutrition_label_reader.py
+
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+
+      - name: Build exact-image regression cohort
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          exact_images = {
+              '6331': 'https://prod-mercadona.imgix.net/images/80cfd71a0abbcd821311af40c8b1a5f0.jpg?fit=crop&h=3600&w=3600',
+              '50483': 'https://prod-mercadona.imgix.net/images/5c2961a0164db2ecea6f84b64c93cb16.jpg?fit=crop&h=3600&w=3600',
+              '35197': 'https://prod-mercadona.imgix.net/images/78faaf4ad3c6197e77fd42ce5adca3f6.jpg?fit=crop&h=3600&w=3600',
+              '16275': 'https://prod-mercadona.imgix.net/images/358dca5edc4c4fb325d0dc1661db8778.jpg?fit=crop&h=3600&w=3600',
+              '87607': 'https://prod-mercadona.imgix.net/images/cba789f8819495ead3395b825a72f877.jpg?fit=crop&h=3600&w=3600',
+          }
+          rows = {}
+          for line in Path('mercadona-first-party-final/products.jsonl').read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              pid = str(row.get('product_id') or '')
+              image_url = exact_images.get(pid)
+              if image_url is None:
+                  continue
+              photos = row.get('photos') if isinstance(row.get('photos'), list) else []
+              match = next((
+                  (i, p) for i, p in enumerate(photos)
+                  if isinstance(p, dict) and str(p.get('zoom') or '') == image_url
+              ), None)
+              if match is None:
+                  raise SystemExit(f'exact current first-party image no longer present for {pid}')
+              image_index, photo = match
+              routed = dict(photo)
+              routed['perspective'] = 9
+              candidate = dict(row)
+              candidate['photos'] = [routed]
+              candidate['_energy_guard_validation'] = {
+                  'original_image_index': image_index,
+                  'original_perspective': photo.get('perspective'),
+                  'image_url': image_url,
+              }
+              if not candidate.get('ingredients'):
+                  raise SystemExit(f'expected structured ingredients signal missing for {pid}')
+              rows[pid] = candidate
+          missing = sorted(set(exact_images) - set(rows))
+          if missing:
+              raise SystemExit(f'missing validation products: {missing}')
+          ordered = [rows[pid] for pid in exact_images]
+          Path('energy-guard-products.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in ordered),
+              encoding='utf-8',
+          )
+          Path('energy-guard-selection.json').write_text(json.dumps({
+              'product_ids': list(exact_images),
+              'selection_policy': 'EXACT_IMAGE_REPLAY_OF_2_OF_4_WAVE_34409903280',
+              'acceptance_policy_changed': False,
+              'images_persisted': False,
+          }, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Replay exact first-party label images
+        working-directory: tools/catalog
+        run: |
+          python mercadona_near_safe_two_of_four_pilot.py \
+            --products energy-guard-products.jsonl \
+            --out mercadona-energy-guard-validation \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 \
+            --eligibility-mode priority
+
+      - name: Validate guard and coherent controls
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import glob
+          import json
+          from pathlib import Path
+
+          rows = []
+          for path in glob.glob('mercadona-energy-guard-validation/results-*.jsonl'):
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+          by_id = {str(row.get('product_id')): row for row in rows}
+          expected_ids = {'6331', '50483', '35197', '16275', '87607'}
+          if set(by_id) != expected_ids:
+              raise SystemExit(f'unexpected replay IDs: {sorted(by_id)}')
+
+          bad = by_id['35197']
+          if bad.get('status') == 'DECLARED':
+              raise SystemExit('35197 remained DECLARED after strict energy guard')
+          if bad.get('status') != 'REVIEW':
+              raise SystemExit(f"35197 expected REVIEW, got {bad.get('status')}")
+          strict_hits = []
+          for attempt in bad.get('attempts', []):
+              for engine in (attempt.get('engines') or {}).values():
+                  if any(str(reason).startswith('ENERGY_MACRO_MISMATCH_STRICT:') for reason in engine.get('reasons', [])):
+                      strict_hits.append(engine.get('engine'))
+                  if any(str(reason).startswith('ENERGY_MACRO_MISMATCH_STRICT:') for reason in engine.get('reasons', [])) and engine.get('nutrition') is not None:
+                      raise SystemExit('strict mismatch leaked numeric parser evidence for 35197')
+          if len(strict_hits) < 2:
+              raise SystemExit(f'35197 strict guard not independently exercised enough: {strict_hits}')
+
+          expected = {
+              '6331': {'calories': 361.0, 'fat_g': 1.5, 'carbohydrate_g': 72.9, 'protein_g': 13.0},
+              '50483': {'calories': 324.0, 'fat_g': 24.0, 'carbohydrate_g': 0.0, 'protein_g': 26.0},
+              '16275': {'calories': 356.0, 'fat_g': 0.0, 'carbohydrate_g': 0.0, 'protein_g': 89.0},
+              '87607': {'calories': 399.0, 'fat_g': 24.0, 'carbohydrate_g': 40.0, 'protein_g': 5.3},
+          }
+          for pid, nutrition in expected.items():
+              row = by_id[pid]
+              if row.get('status') != 'DECLARED':
+                  raise SystemExit(f"coherent control {pid} regressed to {row.get('status')}")
+              if row.get('nutrition') != nutrition:
+                  raise SystemExit(f"coherent control {pid} changed: {row.get('nutrition')} != {nutrition}")
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  raise SystemExit(f'bad source provenance for {pid}')
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  raise SystemExit(f'bad evidence level for {pid}')
+              if row.get('redistribution_allowed') is not False:
+                  raise SystemExit(f'bad redistribution flag for {pid}')
+
+          summary = {
+              'inventory_products': 4280,
+              'processed': len(rows),
+              'declared': sum(row.get('status') == 'DECLARED' for row in rows),
+              'review': sum(row.get('status') == 'REVIEW' for row in rows),
+              'declared_product_ids': sorted(pid for pid, row in by_id.items() if row.get('status') == 'DECLARED'),
+              'review_product_ids': sorted(pid for pid, row in by_id.items() if row.get('status') == 'REVIEW'),
+              'energy_guard_product_id': '35197',
+              'strict_guard_engine_hits': strict_hits,
+              'acceptance_policy_changed': False,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'classified': 0,
+              'menu_eligible': 0,
+          }
+          Path('mercadona-energy-guard-validation/validation-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-energy-guard-validation
+          path: |
+            tools/catalog/mercadona-energy-guard-validation/
+            tools/catalog/energy-guard-selection.json
+          retention-days: 30
+          if-no-files-found: warn
