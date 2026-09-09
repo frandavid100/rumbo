@@ -17,22 +17,21 @@
   "declared_examples": [
     {
       "product_id": "18615",
-      "ean": "8480000150143",
-      "name": "Café molido mezcla fuerte Hacendado",
-      "basis": "per_100g",
-      "kcal": 223.0,
-      "protein_g": 14.0,
-      "carbs_g": 2.4,
-      "fat_g": 12.0,
-      "parser_version": "1.4.14",
-      "engine": "high_res_targeted_variant_retry",
-      "perspective": "9",
+      "ean": "8402001013645",
+      "name": "Mejillones de Chile en escabeche Hacendado pequeños",
+      "basis": "100_g",
+      "calories": 201.0,
+      "protein_g": 13.0,
+      "carbohydrate_g": 4.3,
+      "fat_g": 15.0,
+      "perspective": 9,
+      "image_index": 1,
       "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
       "source": "MERCADONA_FIRST_PARTY",
       "source_record_kind": "label image",
       "redistribution_allowed": false,
       "corroborated_fields": 4,
-      "independent_engine_families_min": 2
+      "independent_engine_families": 3
     }
   ],
   "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
@@ -41,9 +40,11 @@
   "images_persisted": false,
   "classified": 0,
   "menu_eligible": 0,
-  "canonical_reconciliation": "PENDING_LATEST_RAW_LIVE_OCR_WINS",
+  "canonical_reconciliation": "LATEST_RAW_LIVE_OCR_WINS_CONFIRMED_BY_RUN_34322639130",
+  "canonical_audit_run_id": 34322639130,
+  "canonical_audit_artifact_id": 10092789080,
   "notes": [
-    "Persisted from the completed merged rescue artifact before canonical reconciliation.",
+    "Persisted from the completed merged rescue artifact and checked against the canonical latest-live reconciliation.",
     "No REVIEW row is promoted by this cut; the canonical audit remains authoritative."
   ]
 }
