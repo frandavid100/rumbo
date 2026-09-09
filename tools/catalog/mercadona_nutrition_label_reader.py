@@ -9,7 +9,7 @@ from nutrition_label_reader import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.6"
+READER_VERSION = "1.0.7"
 
 
 _FAT_PATTERNS = (
@@ -43,13 +43,38 @@ _KCAL_TOKEN_RE = re.compile(r"\b\d{1,4}(?:\.\d{1,2})?\s*kcal\b", flags=re.I)
 _KJ_TOKEN_RE = re.compile(r"\b\d{1,5}(?:\.\d{1,2})?\s*k\s*j\b", flags=re.I)
 
 
-def _energy_residual(nutrition: dict[str, float]) -> float:
-    estimated = (
+def _estimated_energy(nutrition: dict[str, float]) -> float:
+    return (
         9 * nutrition["fat_g"]
         + 4 * nutrition["carbohydrate_g"]
         + 4 * nutrition["protein_g"]
     )
-    return abs(estimated - nutrition["calories"])
+
+
+def _energy_residual(nutrition: dict[str, float]) -> float:
+    return abs(_estimated_energy(nutrition) - nutrition["calories"])
+
+
+def _strict_energy_macro_mismatch(result: LabelReadResult) -> str | None:
+    """Block complete Mercadona OCR tuples with a material energy mismatch.
+
+    The generic reader keeps a wider tolerance because labelled energy can
+    legitimately include fibre/polyols/organic acids. Mercadona OCR promotion
+    is deliberately stricter: a complete tuple that differs by more than the
+    larger of 8 kcal or 6% is not safe automatic evidence. Suppress its numeric
+    tuple so multiple OCR engines cannot corroborate the same internally
+    inconsistent reading into DECLARED.
+    """
+    if result.status != "DECLARED" or result.nutrition is None:
+        return None
+    required = ("calories", "fat_g", "carbohydrate_g", "protein_g")
+    if any(result.nutrition.get(key) is None for key in required):
+        return None
+    nutrition = {key: float(result.nutrition[key]) for key in required}
+    tolerance = max(8.0, nutrition["calories"] * 0.06)
+    if _energy_residual(nutrition) <= tolerance:
+        return None
+    return f"ENERGY_MACRO_MISMATCH_STRICT:{_estimated_energy(nutrition):.1f}"
 
 
 def _bare_multicolumn_ambiguity(result: LabelReadResult) -> bool:
@@ -260,6 +285,17 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
         result,
         extraction_confidence=extraction_confidence,
     )
+    candidate = rescued if rescued is not None else result
+    strict_mismatch = _strict_energy_macro_mismatch(candidate)
+    if strict_mismatch is not None:
+        return LabelReadResult(
+            status="REVIEW",
+            basis=candidate.basis,
+            nutrition=None,
+            confidence=min(candidate.confidence, 0.65),
+            reasons=tuple(candidate.reasons) + (strict_mismatch,),
+            normalized_text=candidate.normalized_text,
+        )
     if rescued is not None:
         return rescued
 
