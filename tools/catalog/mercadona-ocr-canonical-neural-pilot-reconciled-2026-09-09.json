@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "cut_date": "2026-09-09",
+  "cut_kind": "MERCADONA_OCR_CANONICAL_RECONCILIATION",
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "repository_branch": "agent/catalog-phase1",
+  "baseline_commit": "da3a3f80cfa9388b93753dc2ef00aa761e9cca8a",
+  "audit_workflow": {
+    "name": "Mercadona Current OCR Residual Audit",
+    "run_id": 34298420787,
+    "artifact_id": 10084246008,
+    "status": "success"
+  },
+  "inventory": {
+    "total_products": 4280,
+    "processed_ocr": 2969,
+    "processed_ocr_pct": 69.3692,
+    "canonical_status_counts": {"DECLARED": 270, "REVIEW": 2699},
+    "usable_complete": 270,
+    "usable_complete_pct_inventory": 6.3084,
+    "usable_field_counts": {
+      "calories": 270,
+      "protein_g": 270,
+      "carbohydrate_g": 270,
+      "fat_g": 270
+    }
+  },
+  "delta_from_previous_canonical_cut": {
+    "previous_declared": 269,
+    "previous_review": 2700,
+    "declared_delta": 1,
+    "review_delta": -1,
+    "newly_canonical_declared": [{
+      "product_id": "13710",
+      "name": "Codillo de cerdo asado Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 199.0,
+        "protein_g": 17.0,
+        "carbohydrate_g": 3.0,
+        "fat_g": 13.0
+      },
+      "latest_live_run_id": 34292383586,
+      "status": "DECLARED",
+      "usable_complete": true,
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    }]
+  },
+  "residual_ocr_scope": {
+    "p9_actionable_candidates": 0,
+    "food_missing_p9_found": 0,
+    "bodega_deferred": 11,
+    "out_of_scope_unprocessed": 1300
+  },
+  "review_diagnostics": {
+    "review_total": 2699,
+    "near_safe_complete_review": 105,
+    "near_safe_complete_by_corroborated_fields": {"0": 1, "1": 30, "2": 53, "3": 21},
+    "complete_but_safety_blocked": 44,
+    "fully_corroborated_but_still_review": 0,
+    "review_promoted_by_diagnostics": 0,
+    "usable_products_created_by_diagnostics": 0
+  },
+  "provenance_policy": {
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "source_record_kind": "label image",
+    "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false
+  },
+  "semantic_state": {"CLASSIFIED": 0, "MENU_ELIGIBLE": 0},
+  "notes": [
+    "Product 13710 is promoted only by new raw-live OCR evidence from run 34292383586, with all four fields corroborated by three independent OCR engine families.",
+    "The same pilot re-observed eight already-canonical DECLARED products; these refresh provenance but do not increase coverage.",
+    "No REVIEW row was promoted by diagnostics or completeness shape alone."
+  ]
+}
