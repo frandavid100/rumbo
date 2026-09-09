@@ -1,0 +1,78 @@
+{
+  "kind": "MERCADONA_OCR_CANONICAL_EXACT_IMAGE_RECONCILED_CUT",
+  "date": "2026-09-09",
+  "branch": "agent/catalog-phase1",
+  "source_audit_run_id": 34361880683,
+  "source_audit_attempt": 2,
+  "source_audit_artifact_id": 10109007128,
+  "source_audit_artifact_name": "mercadona-current-ocr-residual-audit",
+  "source_commit": "3040568dbf448731cfc73bcc6b5a44b78ff93ed8",
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 278,
+    "REVIEW": 2691
+  },
+  "usable_complete": 278,
+  "usable_complete_pct_inventory": 6.4953,
+  "usable_field_counts": {
+    "calories": 278,
+    "protein_g": 278,
+    "carbohydrate_g": 278,
+    "fat_g": 278
+  },
+  "newly_reconciled_products": [
+    {
+      "product_id": "25353",
+      "name": "Solomillo de pavo marinado congelado",
+      "latest_live_run_id": 34360056723,
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 93.0,
+        "protein_g": 22.0,
+        "carbohydrate_g": 1.0,
+        "fat_g": 0.7
+      }
+    },
+    {
+      "product_id": "54053",
+      "name": "Lomo Hacendado",
+      "latest_live_run_id": 34360056723,
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 199.0,
+        "protein_g": 38.0,
+        "carbohydrate_g": 0.5,
+        "fat_g": 5.0
+      }
+    }
+  ],
+  "current_review_failure_modes": {
+    "latest_review_products": 2691,
+    "near_safe_complete_review": 87,
+    "near_safe_complete_by_corroborated_fields": {
+      "0": 1,
+      "1": 33,
+      "2": 53
+    },
+    "near_safe_complete_by_engine_families": {
+      "2": 53,
+      "3": 34
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 45
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "next_step": "RUN_BOUNDED_EXACT_IMAGE_TWO_OF_FOUR_VARIANT_PILOT_WITHOUT_RELAXING_ACCEPTANCE"
+}

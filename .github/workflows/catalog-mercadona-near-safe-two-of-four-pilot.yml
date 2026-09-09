@@ -1,0 +1,371 @@
+name: Catalog Mercadona near-safe 2-of-4 pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/mercadona_near_safe_two_of_four_pilot.py'
+      - 'tools/catalog/test_mercadona_near_safe_two_of_four_pilot.py'
+      - '.github/workflows/catalog-mercadona-near-safe-two-of-four-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-near-safe-two-of-four-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Resolve latest successful canonical OCR audit
+        id: canonical-audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          if ! [[ "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "No successful canonical OCR audit run found" >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using canonical audit run $run_id"
+      - name: Download latest canonical OCR audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/mercadona-current-ocr-residual-audit
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.canonical-audit.outputs.run_id }}
+      - name: Build deterministic exact-image 2-of-4 pilot cohort
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          LIMIT = 16
+          CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
+          diagnostic_path = Path('mercadona-current-ocr-residual-audit/current-review-failure-modes/near-safe-complete-review.jsonl')
+          product_path = Path('mercadona-first-party-final/products.jsonl')
+
+          targets = {}
+          for line in diagnostic_path.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              pid = str(row.get('product_id') or '')
+              values = row.get('diagnostic_candidate_values') or {}
+              if (
+                  row.get('canonical_status') == 'REVIEW'
+                  and row.get('corroborated_fields') == 2
+                  and int(row.get('independent_engine_families') or 0) >= 2
+                  and row.get('basis') in {'100_g', '100_ml'}
+                  and all(field in values for field in CORE)
+                  and not (row.get('safety_blockers') or [])
+                  and pid
+                  and row.get('image_url')
+              ):
+                  targets[pid] = row
+
+          candidates = []
+          unmatched_current_photo = []
+          for line in product_path.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              pid = str(row.get('product_id') or '')
+              diagnostic = targets.get(pid)
+              if diagnostic is None:
+                  continue
+              image_url = str(diagnostic['image_url'])
+              photos = row.get('photos') if isinstance(row.get('photos'), list) else []
+              match = next((
+                  (index, photo)
+                  for index, photo in enumerate(photos)
+                  if isinstance(photo, dict) and str(photo.get('zoom') or '') == image_url
+              ), None)
+              if match is None:
+                  unmatched_current_photo.append(pid)
+                  continue
+
+              image_index, photo = match
+              actual_perspective = photo.get('perspective')
+              routed_photo = dict(photo)
+              routed_photo['perspective'] = 9
+              candidate = dict(row)
+              candidate['photos'] = [routed_photo]
+              candidate['_near_safe_image_meta'] = {
+                  'image_url': image_url,
+                  'image_index': image_index,
+                  'perspective': actual_perspective,
+                  'canonical_latest_raw_run_id': diagnostic.get('latest_raw_run_id'),
+                  'canonical_corroborated_fields': diagnostic.get('corroborated_fields'),
+                  'canonical_engine_families': diagnostic.get('independent_engine_families'),
+                  'canonical_confidence': diagnostic.get('confidence'),
+              }
+              candidates.append(candidate)
+
+          candidates.sort(key=lambda row: (
+              0 if row.get('ingredients') else 1,
+              -int((row.get('_near_safe_image_meta') or {}).get('canonical_engine_families') or 0),
+              -float((row.get('_near_safe_image_meta') or {}).get('canonical_confidence') or 0.0),
+              str(row.get('product_id') or ''),
+          ))
+          selected = candidates[:LIMIT]
+          with_ingredients = [row for row in selected if row.get('ingredients')]
+          without_ingredients = [row for row in selected if not row.get('ingredients')]
+
+          def write(path, rows):
+              Path(path).write_text(
+                  ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+                  encoding='utf-8',
+              )
+
+          write('two-of-four-with-ingredients.jsonl', with_ingredients)
+          write('two-of-four-without-ingredients.jsonl', without_ingredients)
+          summary = {
+              'pilot_limit': LIMIT,
+              'canonical_two_of_four_targets': len(targets),
+              'current_exact_first_party_image_targets': len(candidates),
+              'selected': len(selected),
+              'selected_with_structured_ingredients': len(with_ingredients),
+              'selected_without_structured_ingredients': len(without_ingredients),
+              'selected_three_engine_family_targets': sum(
+                  int((row.get('_near_safe_image_meta') or {}).get('canonical_engine_families') or 0) >= 3
+                  for row in selected
+              ),
+              'selected_product_ids': [str(row.get('product_id')) for row in selected],
+              'unmatched_current_first_party_photo': sorted(unmatched_current_photo),
+              'selection_policy': 'CLEAN_CANONICAL_2_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_IMAGE; PRIORITIZE_STRUCTURED_INGREDIENTS_THEN_ENGINE_FAMILIES_THEN_CONFIDENCE',
+              'acceptance_policy_changed': False,
+          }
+          Path('two-of-four-selection-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          if not selected:
+              raise SystemExit('No actionable clean 2-of-4 exact first-party images found')
+          PY
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative pilot tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_near_safe_two_of_four_pilot.py \
+            test_mercadona_near_safe_variant_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+      - name: OCR bounded 2-of-4 pilot with temporary variants
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-near-safe-two-of-four-pilot/with-ingredients mercadona-near-safe-two-of-four-pilot/without-ingredients
+          run_group() {
+            local products="$1"
+            local out="$2"
+            local mode="$3"
+            set +e
+            python mercadona_near_safe_two_of_four_pilot.py \
+              --products "$products" \
+              --out "$out" \
+              --shard-index ${{ matrix.shard }} \
+              --shard-count 4 \
+              --limit 0 \
+              --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            if [[ $rc -ne 0 && $rc -ne 2 ]]; then
+              return "$rc"
+            fi
+          }
+          run_group two-of-four-with-ingredients.jsonl mercadona-near-safe-two-of-four-pilot/with-ingredients priority
+          run_group two-of-four-without-ingredients.jsonl mercadona-near-safe-two-of-four-pilot/without-ingredients p9-no-ingredients-all
+
+          python - <<'PY'
+          import glob
+          import json
+          from pathlib import Path
+
+          meta = {}
+          for products_path in ('two-of-four-with-ingredients.jsonl', 'two-of-four-without-ingredients.jsonl'):
+              for line in Path(products_path).read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  pid = str(row.get('product_id') or '')
+                  image_meta = row.get('_near_safe_image_meta') or {}
+                  if pid and image_meta:
+                      meta[pid] = image_meta
+
+          for result_path in glob.glob('mercadona-near-safe-two-of-four-pilot/**/results-*.jsonl', recursive=True):
+              rows = []
+              for line in Path(result_path).read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  pid = str(row.get('product_id') or '')
+                  image_meta = meta.get(pid)
+                  if image_meta is None:
+                      raise SystemExit(f'missing pilot image metadata for result {pid}')
+                  if str(row.get('image_url') or '') != str(image_meta.get('image_url') or ''):
+                      raise SystemExit(f'pilot OCR used unexpected image for {pid}')
+                  row['image_index'] = image_meta.get('image_index')
+                  row['perspective'] = image_meta.get('perspective')
+                  row['image_selection_basis'] = 'EXACT_CANONICAL_TWO_OF_FOUR_IMAGE_URL_MATCHED_CURRENT_FIRST_PARTY_PHOTO'
+                  row['image_selection_latest_raw_run_id'] = image_meta.get('canonical_latest_raw_run_id')
+                  row['pilot_canonical_corroborated_fields'] = image_meta.get('canonical_corroborated_fields')
+                  row['pilot_canonical_engine_families'] = image_meta.get('canonical_engine_families')
+                  rows.append(row)
+              Path(result_path).write_text(
+                  ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+                  encoding='utf-8',
+              )
+
+          for summary_path in glob.glob('mercadona-near-safe-two-of-four-pilot/**/summary-*.json', recursive=True):
+              summary = json.loads(Path(summary_path).read_text(encoding='utf-8'))
+              summary['image_selection_policy'] = 'EXACT_CANONICAL_TWO_OF_FOUR_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO'
+              summary['synthetic_p9_routing_persisted'] = False
+              summary['acceptance_policy_changed'] = False
+              Path(summary_path).write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+
+          cp two-of-four-selection-summary.json mercadona-near-safe-two-of-four-pilot/selection-summary.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-near-safe-two-of-four-pilot-${{ matrix.shard }}
+          path: tools/catalog/mercadona-near-safe-two-of-four-pilot/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-near-safe-two-of-four-pilot-*
+          path: input
+      - name: Merge and validate auditable pilot results
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob
+          import json
+          from pathlib import Path
+
+          rows = []
+          seen = set()
+          for path in sorted(glob.glob('input/**/results-*.jsonl', recursive=True)):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  pid = str(row.get('product_id') or '')
+                  if pid in seen:
+                      raise SystemExit(f'duplicate product in pilot merge: {pid}')
+                  seen.add(pid)
+                  rows.append(row)
+
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          invalid = []
+          declared = []
+          for row in rows:
+              pid = row.get('product_id')
+              if (
+                  row.get('source') != 'MERCADONA_FIRST_PARTY'
+                  or row.get('source_record_kind') != 'label image'
+                  or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  or row.get('redistribution_allowed') is not False
+                  or row.get('image_selection_basis') != 'EXACT_CANONICAL_TWO_OF_FOUR_IMAGE_URL_MATCHED_CURRENT_FIRST_PARTY_PHOTO'
+                  or row.get('pilot_canonical_corroborated_fields') != 2
+              ):
+                  invalid.append(pid)
+              if row.get('status') == 'DECLARED':
+                  declared.append(row)
+                  attempt = next(
+                      (a for a in row.get('attempts', []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'),
+                      None,
+                  )
+                  ensemble = (attempt or {}).get('ensemble') or {}
+                  if ensemble.get('independent_engine_families', 0) < 2 or ensemble.get('corroborated_fields', 0) < 4:
+                      invalid.append(pid)
+
+          selection_paths = sorted(glob.glob('input/**/selection-summary.json', recursive=True))
+          selection = json.loads(Path(selection_paths[0]).read_text(encoding='utf-8')) if selection_paths else None
+          summary = {
+              'inventory_products': 4280,
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared': len(declared),
+              'review': counts.get('REVIEW', 0),
+              'error': counts.get('ERROR', 0),
+              'no_visual_region': sum(row.get('visual_regions_detected') == 0 for row in rows),
+              'declared_product_ids': [str(row.get('product_id')) for row in declared],
+              'invalid_product_ids': invalid,
+              'selection': selection,
+              'image_selection_policy': 'EXACT_CANONICAL_TWO_OF_FOUR_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO',
+              'acceptance_policy_changed': False,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'classified': 0,
+              'menu_eligible': 0,
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if invalid:
+              raise SystemExit('Unsafe pilot rows: ' + ','.join(map(str, invalid)))
+          if not rows:
+              raise SystemExit('No pilot rows merged')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-near-safe-two-of-four-pilot-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: error
