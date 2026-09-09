@@ -1,0 +1,20 @@
+name: Catalog Mercadona near-safe variant reconcile
+
+on:
+  workflow_run:
+    workflows: ["Catalog Mercadona near-safe variant rescue"]
+    types: [completed]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'agent/catalog-phase1'
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Rebuild canonical Mercadona OCR staging from completed raw-live evidence
+        run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
