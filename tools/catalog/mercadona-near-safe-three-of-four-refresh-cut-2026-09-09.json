@@ -1,0 +1,90 @@
+{
+  "kind": "MERCADONA_NEAR_SAFE_THREE_OF_FOUR_EXACT_IMAGE_REFRESH_CUT",
+  "date": "2026-09-09",
+  "generated_at_utc": "2026-09-09T18:52:54Z",
+  "branch": "agent/catalog-phase1",
+  "source_canonical_cut": "tools/catalog/mercadona-ocr-canonical-two-of-four-reconciled-2026-09-09.json",
+  "source_canonical_declared": 283,
+  "workflow": {
+    "name": "Catalog Mercadona near-safe 3-of-4 refresh",
+    "run_id": 34387371743,
+    "url": "https://github.com/frandavid100/rumbo/actions/runs/34387371743",
+    "artifact_name": "mercadona-near-safe-three-of-four-refresh",
+    "artifact_id": 10118578331,
+    "artifact_sha256": "6fcb5d0f260071fcc7c42110e564ba85e2de1deaa845c5187e9bfc7ae72bbcb2"
+  },
+  "cohort": {
+    "requested": 3,
+    "processed": 3,
+    "product_ids": [
+      "32227",
+      "4711",
+      "90933"
+    ],
+    "selection": "CLEAN_CANONICAL_3_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_IMAGE",
+    "current_exact_first_party_image_targets": 3,
+    "with_structured_ingredients": 3,
+    "without_structured_ingredients": 0,
+    "unmatched_current_first_party_photo": []
+  },
+  "results": {
+    "DECLARED": 3,
+    "REVIEW": 0,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "invalid": 0
+  },
+  "declared_products": [
+    {
+      "product_id": "32227",
+      "name": "Fideos de chocolate Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 495.0,
+        "protein_g": 6.0,
+        "carbohydrate_g": 61.0,
+        "fat_g": 24.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "4711",
+      "name": "Aceite de oliva virgen Hacendado",
+      "basis": "100_ml",
+      "nutrition": {
+        "calories": 819.0,
+        "protein_g": 0.0,
+        "carbohydrate_g": 0.0,
+        "fat_g": 91.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "90933",
+      "name": "Mantequilla light Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 384.0,
+        "protein_g": 1.8,
+        "carbohydrate_g": 1.9,
+        "fat_g": 41.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    }
+  ],
+  "image_selection_policy": "EXACT_CANONICAL_THREE_OF_FOUR_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO",
+  "acceptance_policy_changed": false,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "interpretation": "All three exact-image 3-of-4 REVIEW targets produced full DECLARED nutrition with 4/4 fields corroborated by three independent OCR engine families. Global usable count remains 283 until full LATEST_RAW_LIVE_OCR_WINS reconciliation verifies these records against the complete OCR evidence union.",
+  "next_step": "RECONCILE_LATEST_RAW_LIVE_OCR_WINS_THEN_REMEASURE_RESIDUAL_WITHOUT_RELAXING_ACCEPTANCE"
+}
