@@ -9,6 +9,11 @@ import mercadona_neural_ocr_wave as base
 # conservative ensemble policy. In particular, the bounded dissenting-family
 # rescue in mercadona_near_safe_variant_rescue still requires exactly 3/4 fields
 # and therefore cannot promote a 2/4 tuple by itself.
+#
+# Cohort selection is intentionally rebuilt from the latest canonical residual
+# on every workflow run. After a successful reconciliation, repeating the same
+# bounded 16-product wave therefore advances to the current clean 2/4 residual
+# rather than replaying products that have already left that cohort.
 def should_run_two_of_four_variant_rescue(ensemble) -> bool:
     if ensemble.status != "REVIEW" or ensemble.declared_usable:
         return False
