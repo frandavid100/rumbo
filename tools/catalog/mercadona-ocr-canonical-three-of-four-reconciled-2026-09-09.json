@@ -1,0 +1,81 @@
+{
+  "cut_date": "2026-09-09",
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 286,
+    "REVIEW": 2683
+  },
+  "usable_complete": 286,
+  "usable_complete_pct_inventory": 6.6822,
+  "usable_field_counts": {
+    "calories": 286,
+    "fat_g": 286,
+    "carbohydrate_g": 286,
+    "protein_g": 286
+  },
+  "newly_canonical_from_three_of_four_refresh": [
+    {
+      "product_id": "32227",
+      "latest_live_run_id": 34387371743,
+      "nutrition": {
+        "calories": 495.0,
+        "fat_g": 24.0,
+        "carbohydrate_g": 61.0,
+        "protein_g": 6.0
+      }
+    },
+    {
+      "product_id": "4711",
+      "latest_live_run_id": 34387371743,
+      "nutrition": {
+        "calories": 819.0,
+        "fat_g": 91.0,
+        "carbohydrate_g": 0.0,
+        "protein_g": 0.0
+      }
+    },
+    {
+      "product_id": "90933",
+      "latest_live_run_id": 34387371743,
+      "nutrition": {
+        "calories": 384.0,
+        "fat_g": 41.0,
+        "carbohydrate_g": 1.9,
+        "protein_g": 1.8
+      }
+    }
+  ],
+  "current_review_failure_modes": {
+    "latest_review_products": 2683,
+    "near_safe_complete_review": 73,
+    "near_safe_complete_by_corroborated_fields": {
+      "0": 1,
+      "1": 35,
+      "2": 37
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 46,
+    "reasonless_review_products": 0
+  },
+  "ocr_residual": {
+    "actionable_p9_total": 0,
+    "blocked_no_p9_food_route_total": 0,
+    "deferred_bodega_total": 11,
+    "out_of_scope_total": 1300
+  },
+  "audit_workflow_run_id": 34392376136,
+  "audit_artifact_id": 10120582061,
+  "audit_artifact_name": "mercadona-current-ocr-residual-audit",
+  "classified": 0,
+  "menu_eligible": 0,
+  "notes": "Canonical reconciliation after the exact-image 3-of-4 refresh. REVIEW remains non-usable. No acceptance threshold was relaxed; no images are redistributed or persisted."
+}
