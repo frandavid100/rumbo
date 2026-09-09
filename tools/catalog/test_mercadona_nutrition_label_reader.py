@@ -122,6 +122,89 @@ Sal 2 g
         self.assertIsNone(result.nutrition)
         self.assertIn("ENERGY_MACRO_MISMATCH_STRICT:383.0", result.reasons)
 
+    def test_material_energy_macro_mismatch_in_review_also_hides_numeric_evidence(self):
+        # REVIEW rows are still consumed as ensemble evidence. Low extraction
+        # confidence must therefore not allow the same inconsistent complete
+        # tuple to survive numerically just because it was already REVIEW.
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 1445 kJ / 349 kcal
+Grasas 35 g
+Hidratos de carbono 4 g
+Proteínas 13 g
+Sal 2 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.80)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertIsNone(result.nutrition)
+        self.assertIn("LOW_EXTRACTION_CONFIDENCE", result.reasons)
+        self.assertIn("ENERGY_MACRO_MISMATCH_STRICT:383.0", result.reasons)
+
+    def test_explicit_fibre_reconciles_real_eu_energy_without_relaxing_guard(self):
+        # Observed Mercadona product 29134. Core Atwater gives 306 kcal, while
+        # the label declares 328 kcal and explicitly declares 11 g fibre. Adding
+        # the EU fibre contribution (2 kcal/g) reconciles it exactly.
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 1384 kJ / 328 kcal
+Grasas 2 g
+Hidratos de carbono 60 g
+Fibra alimentaria 11 g
+Proteínas 12 g
+Sal 0,03 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "DECLARED", result)
+        self.assertEqual(result.nutrition, {
+            "calories": 328.0,
+            "fat_g": 2.0,
+            "carbohydrate_g": 60.0,
+            "protein_g": 12.0,
+        })
+
+    def test_explicit_polyols_and_fibre_reconcile_energy_without_inference(self):
+        # Observed nutrient pattern from Mercadona product 12946, represented as
+        # a single-column label so this unit test isolates energy accounting from
+        # that product's separate multi-column ambiguity. Carbohydrate includes
+        # polyols: 503 core kcal - 1.6*35 + 2*9 = 465 kcal.
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 1926 kJ / 465 kcal
+Grasas 31 g
+Hidratos de carbono 47 g
+Polialcoholes 35 g
+Fibra alimentaria 9 g
+Proteínas 9 g
+Sal 0,3 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "DECLARED", result)
+        self.assertEqual(result.nutrition, {
+            "calories": 465.0,
+            "fat_g": 31.0,
+            "carbohydrate_g": 47.0,
+            "protein_g": 9.0,
+        })
+
+    def test_inexact_polyol_ocr_cannot_rescue_inconsistent_energy(self):
+        # The auxiliary reconciliation is intentionally much tighter than the
+        # ordinary guard. A plausible-looking but wrong 30 g OCR read must not
+        # rescue the 465 kcal tuple (it would estimate 473 kcal).
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 1926 kJ / 465 kcal
+Grasas 31 g
+Hidratos de carbono 47 g
+Polialcoholes 30 g
+Fibra alimentaria 9 g
+Proteínas 9 g
+Sal 0,3 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertIsNone(result.nutrition)
+        self.assertIn("ENERGY_MACRO_MISMATCH_STRICT:503.0", result.reasons)
+
     def test_complete_single_column_value_before_label_layout_is_rescued(self):
         # Observed PP-OCR layout for Mercadona product 29130 (Harina de arroz).
         # All three core macro values are explicit standalone gram rows immediately
