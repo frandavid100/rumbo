@@ -4,12 +4,13 @@ import re
 
 from nutrition_label_reader import (
     LabelReadResult,
+    _number_after,
     _number_immediately_before,
     _nutrition_block,
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.7"
+READER_VERSION = "1.0.8"
 
 
 _FAT_PATTERNS = (
@@ -22,6 +23,12 @@ _CARB_PATTERNS = (
     r"(?:^|\n)\s*carbohidratos?\b",
 )
 _PROTEIN_PATTERNS = (r"(?:^|\n)\s*proteinas?\b",)
+_FIBRE_PATTERNS = (
+    r"(?:^|\n)\s*[-–—]?\s*fibra(?:\s+alimentaria)?\b",
+)
+_POLYOL_PATTERNS = (
+    r"(?:^|\n)\s*[-–—]?\s*(?:polialcoholes|polioles)\b",
+)
 _MACRO_PATTERNS = {
     "fat_g": _FAT_PATTERNS,
     "carbohydrate_g": _CARB_PATTERNS,
@@ -55,17 +62,53 @@ def _energy_residual(nutrition: dict[str, float]) -> float:
     return abs(_estimated_energy(nutrition) - nutrition["calories"])
 
 
-def _strict_energy_macro_mismatch(result: LabelReadResult) -> str | None:
-    """Block complete Mercadona OCR tuples with a material energy mismatch.
+def _explicit_auxiliary_energy_estimate(
+    result: LabelReadResult,
+    nutrition: dict[str, float],
+) -> float | None:
+    """Return an energy estimate only when explicit fibre/polyols explain it.
 
-    The generic reader keeps a wider tolerance because labelled energy can
-    legitimately include fibre/polyols/organic acids. Mercadona OCR promotion
-    is deliberately stricter: a complete tuple that differs by more than the
-    larger of 8 kcal or 6% is not safe automatic evidence. Suppress its numeric
-    tuple so multiple OCR engines cannot corroborate the same internally
-    inconsistent reading into DECLARED.
+    The core Atwater check treats all carbohydrate as 4 kcal/g and omits fibre,
+    which falsely rejects real EU labels where fibre contributes about 2 kcal/g
+    and polyols (already included in carbohydrate) contribute about 2.4 kcal/g.
+    These rows are accepted only when they are explicitly OCR-visible inside the
+    nutrition block; no missing auxiliary value is inferred. The reconciliation
+    itself must be much tighter than the ordinary safety threshold so a vaguely
+    plausible auxiliary OCR value cannot rescue an inconsistent core tuple.
     """
-    if result.status != "DECLARED" or result.nutrition is None:
+    block = _nutrition_block(result.normalized_text)
+    fibre = _number_after(_FIBRE_PATTERNS, block)
+    polyols = _number_after(_POLYOL_PATTERNS, block)
+    if fibre is None and polyols is None:
+        return None
+
+    fibre = 0.0 if fibre is None else float(fibre)
+    polyols = 0.0 if polyols is None else float(polyols)
+    if not (0.0 <= fibre <= 100.0 and 0.0 <= polyols <= 100.0):
+        return None
+    # Polyols are a carbohydrate sub-row. A value materially larger than total
+    # carbohydrate is structurally impossible and is more likely an OCR column
+    # or digit error than legitimate auxiliary evidence.
+    if polyols > nutrition["carbohydrate_g"] + 0.6:
+        return None
+
+    estimate = _estimated_energy(nutrition) + 2.0 * fibre - 1.6 * polyols
+    tolerance = max(4.0, nutrition["calories"] * 0.015)
+    if abs(estimate - nutrition["calories"]) > tolerance:
+        return None
+    return estimate
+
+
+def _strict_energy_macro_mismatch(result: LabelReadResult) -> str | None:
+    """Suppress any complete Mercadona OCR tuple with unexplained energy mismatch.
+
+    REVIEW readings are ensemble evidence as well as DECLARED readings, so a
+    complete low-confidence/otherwise-review tuple must not leak inconsistent
+    numbers that another OCR family can corroborate into a final DECLARED row.
+    A core mismatch is allowed only when explicit fibre/polyol rows in that same
+    OCR reading reconcile the labelled energy tightly.
+    """
+    if result.status not in {"DECLARED", "REVIEW"} or result.nutrition is None:
         return None
     required = ("calories", "fat_g", "carbohydrate_g", "protein_g")
     if any(result.nutrition.get(key) is None for key in required):
@@ -73,6 +116,8 @@ def _strict_energy_macro_mismatch(result: LabelReadResult) -> str | None:
     nutrition = {key: float(result.nutrition[key]) for key in required}
     tolerance = max(8.0, nutrition["calories"] * 0.06)
     if _energy_residual(nutrition) <= tolerance:
+        return None
+    if _explicit_auxiliary_energy_estimate(result, nutrition) is not None:
         return None
     return f"ENERGY_MACRO_MISMATCH_STRICT:{_estimated_energy(nutrition):.1f}"
 
