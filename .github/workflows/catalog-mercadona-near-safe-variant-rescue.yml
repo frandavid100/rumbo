@@ -74,36 +74,59 @@ jobs:
 
           diagnostic_path = Path('mercadona-current-ocr-residual-audit/current-review-failure-modes/near-safe-complete-review.jsonl')
           product_path = Path('mercadona-first-party-final/products.jsonl')
-          target_ids = set()
+          targets = {}
           for line in diagnostic_path.read_text(encoding='utf-8').splitlines():
               if not line.strip():
                   continue
               row = json.loads(line)
               status = row.get('status', row.get('canonical_status'))
-              if status == 'REVIEW' and row.get('corroborated_fields') == 3:
-                  target_ids.add(str(row.get('product_id') or ''))
+              pid = str(row.get('product_id') or '')
+              image_url = str(row.get('image_url') or '')
+              if status == 'REVIEW' and row.get('corroborated_fields') == 3 and pid and image_url:
+                  targets[pid] = row
 
           with_ingredients = []
           without_ingredients = []
-          missing_p9 = []
+          unmatched_current_photo = []
+          matched_meta = {}
           for line in product_path.read_text(encoding='utf-8').splitlines():
               if not line.strip():
                   continue
               row = json.loads(line)
               pid = str(row.get('product_id') or '')
-              if pid not in target_ids:
+              diagnostic = targets.get(pid)
+              if diagnostic is None:
                   continue
+              image_url = str(diagnostic['image_url'])
               photos = row.get('photos') if isinstance(row.get('photos'), list) else []
-              has_p9 = any(
-                  isinstance(photo, dict)
-                  and str(photo.get('perspective')) == '9'
-                  and photo.get('zoom')
-                  for photo in photos
-              )
-              if not has_p9:
-                  missing_p9.append(pid)
+              match = next((
+                  (index, photo)
+                  for index, photo in enumerate(photos)
+                  if isinstance(photo, dict) and str(photo.get('zoom') or '') == image_url
+              ), None)
+              if match is None:
+                  unmatched_current_photo.append(pid)
                   continue
-              (with_ingredients if row.get('ingredients') else without_ingredients).append(row)
+
+              image_index, photo = match
+              actual_perspective = photo.get('perspective')
+              # The production wave intentionally accepts only perspective=9.
+              # For this tiny canonical near-safe cohort, route the exact already-
+              # audited first-party image through that selector without claiming
+              # it is p9 in persisted output: original index/perspective are
+              # restored immediately after OCR and validated before upload.
+              routed_photo = dict(photo)
+              routed_photo['perspective'] = 9
+              candidate = dict(row)
+              candidate['photos'] = [routed_photo]
+              candidate['_near_safe_image_meta'] = {
+                  'image_url': image_url,
+                  'image_index': image_index,
+                  'perspective': actual_perspective,
+                  'canonical_latest_raw_run_id': diagnostic.get('latest_raw_run_id'),
+              }
+              matched_meta[pid] = candidate['_near_safe_image_meta']
+              (with_ingredients if row.get('ingredients') else without_ingredients).append(candidate)
 
           def write(path, rows):
               Path(path).write_text(
@@ -114,16 +137,20 @@ jobs:
           write('near-safe-with-ingredients.jsonl', with_ingredients)
           write('near-safe-without-ingredients.jsonl', without_ingredients)
           summary = {
-              'canonical_three_of_four_targets': len(target_ids),
-              'current_p9_targets': len(with_ingredients) + len(without_ingredients),
+              'canonical_three_of_four_targets': len(targets),
+              'current_exact_first_party_image_targets': len(with_ingredients) + len(without_ingredients),
+              'current_p9_targets': sum(str(meta.get('perspective')) == '9' for meta in matched_meta.values()),
+              'current_non_p9_exact_targets': sum(str(meta.get('perspective')) != '9' for meta in matched_meta.values()),
               'with_structured_ingredients': len(with_ingredients),
               'without_structured_ingredients': len(without_ingredients),
-              'currently_missing_p9': sorted(missing_p9),
+              'unmatched_current_first_party_photo': sorted(unmatched_current_photo),
+              'matched_image_meta': matched_meta,
+              'selection_policy': 'EXACT_CANONICAL_NEAR_SAFE_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO',
           }
-          Path('near-safe-selection-summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
-          print(json.dumps(summary, sort_keys=True))
-          if not target_ids or not (with_ingredients or without_ingredients):
-              raise SystemExit('No actionable 3-of-4 near-safe products found')
+          Path('near-safe-selection-summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          if not targets or not (with_ingredients or without_ingredients):
+              raise SystemExit('No actionable 3-of-4 near-safe first-party images found')
           PY
       - name: Install independent OCR engines and visual detector dependencies
         run: |
@@ -139,7 +166,7 @@ jobs:
             test_mercadona_ocr_safety_regressions.py \
             test_nutrition_ocr_ensemble.py \
             test_label_image_preprocess.py
-      - name: OCR exact near-safe cohort with temporary autocontrast rescue
+      - name: OCR exact near-safe cohort with temporary layout and crop rescue
         working-directory: tools/catalog
         shell: bash
         run: |
@@ -165,6 +192,52 @@ jobs:
           }
           run_group near-safe-with-ingredients.jsonl mercadona-near-safe-variant-rescue/with-ingredients priority
           run_group near-safe-without-ingredients.jsonl mercadona-near-safe-variant-rescue/without-ingredients p9-no-ingredients-all
+
+          python - <<'PY'
+          import glob
+          import json
+          from pathlib import Path
+
+          meta = {}
+          for products_path in ('near-safe-with-ingredients.jsonl', 'near-safe-without-ingredients.jsonl'):
+              for line in Path(products_path).read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  pid = str(row.get('product_id') or '')
+                  image_meta = row.get('_near_safe_image_meta') or {}
+                  if pid and image_meta:
+                      meta[pid] = image_meta
+
+          for result_path in glob.glob('mercadona-near-safe-variant-rescue/**/results-*.jsonl', recursive=True):
+              rows = []
+              for line in Path(result_path).read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  pid = str(row.get('product_id') or '')
+                  image_meta = meta.get(pid)
+                  if image_meta is None:
+                      raise SystemExit(f'missing near-safe image metadata for result {pid}')
+                  if str(row.get('image_url') or '') != str(image_meta.get('image_url') or ''):
+                      raise SystemExit(f'near-safe OCR used unexpected image for {pid}')
+                  row['image_index'] = image_meta.get('image_index')
+                  row['perspective'] = image_meta.get('perspective')
+                  row['image_selection_basis'] = 'EXACT_CANONICAL_NEAR_SAFE_IMAGE_URL_MATCHED_CURRENT_FIRST_PARTY_PHOTO'
+                  row['image_selection_latest_raw_run_id'] = image_meta.get('canonical_latest_raw_run_id')
+                  rows.append(row)
+              Path(result_path).write_text(
+                  ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+                  encoding='utf-8',
+              )
+
+          for summary_path in glob.glob('mercadona-near-safe-variant-rescue/**/summary-*.json', recursive=True):
+              summary = json.loads(Path(summary_path).read_text(encoding='utf-8'))
+              summary['image_selection_policy'] = 'EXACT_CANONICAL_NEAR_SAFE_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO'
+              summary['synthetic_p9_routing_persisted'] = False
+              Path(summary_path).write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+
           cp near-safe-selection-summary.json mercadona-near-safe-variant-rescue/selection-summary.json
       - uses: actions/upload-artifact@v4
         if: always()
@@ -214,6 +287,7 @@ jobs:
                   or row.get('source_record_kind') != 'label image'
                   or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
                   or row.get('redistribution_allowed') is not False
+                  or row.get('image_selection_basis') != 'EXACT_CANONICAL_NEAR_SAFE_IMAGE_URL_MATCHED_CURRENT_FIRST_PARTY_PHOTO'
               ):
                   invalid.append(pid)
               if row.get('status') == 'DECLARED':
@@ -236,6 +310,7 @@ jobs:
               'no_visual_region': sum(row.get('visual_regions_detected') == 0 for row in rows),
               'declared_product_ids': [str(row.get('product_id')) for row in declared],
               'invalid_product_ids': invalid,
+              'image_selection_policy': 'EXACT_CANONICAL_NEAR_SAFE_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO',
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
               'source': 'MERCADONA_FIRST_PARTY/label image',
               'redistribution_allowed': False,
