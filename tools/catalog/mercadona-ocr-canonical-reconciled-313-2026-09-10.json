@@ -1,0 +1,61 @@
+{
+  "cut_date": "2026-09-10",
+  "branch": "agent/catalog-phase1",
+  "kind": "MERCADONA_OCR_CANONICAL_RECONCILED_CUT",
+  "inventory_products": 4280,
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "audit": {
+    "workflow_run_id": 34525120362,
+    "artifact_id": 10171588636,
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_sha256": "0c2ede6eea00875b5bc967209bc51052013a4e5c5ff1e2023941802dbc3277b5"
+  },
+  "canonical": {
+    "processed": 2971,
+    "declared": 313,
+    "review": 2658,
+    "complete_declared": 313,
+    "complete_nutrition_coverage_pct": 7.3130841121,
+    "ocr_processed_coverage_pct": 69.4158878505,
+    "energy_kcal_products": 313,
+    "protein_g_products": 313,
+    "carbohydrate_g_products": 313,
+    "fat_g_products": 313
+  },
+  "transition_from_previous_312_cut": {
+    "previous_processed": 2969,
+    "current_processed": 2971,
+    "previous_declared": 312,
+    "current_declared": 313,
+    "new_current_p9_no_ingredients_delta_product_ids": ["17719", "17996"],
+    "declared_product_ids": ["17719"],
+    "review_product_ids": ["17996"]
+  },
+  "current_review_residual": {
+    "complete_near_safe": 54,
+    "complete_by_corrob_count": {
+      "0_of_4": 1,
+      "1_of_4": 35,
+      "2_of_4": 16,
+      "3_of_4": 2,
+      "4_of_4": 0
+    },
+    "three_of_four_product_ids": ["13250", "27905"],
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 46
+  },
+  "historical_snapshot_reconstruction": {
+    "status": "BLOCKED_HISTORICAL_FIRST_PARTY_SNAPSHOT_EXPIRED",
+    "expired_source_run": 33046950149,
+    "note": "The immutable 4,280-product first-party snapshot artifact has expired. The materialized canonical OCR union and failure-mode audit remain available and raw-live OCR increments remain possible; do not substitute the later 4,256-product live inventory for the historical audit universe."
+  },
+  "next_step": "TARGET_CURRENT_3_OF_4_REVIEW_WITH_ADDITIONAL_INDEPENDENT_EXACT_IMAGE_OCR_EVIDENCE_WITHOUT_RELAXING_ACCEPTANCE_POLICY",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
