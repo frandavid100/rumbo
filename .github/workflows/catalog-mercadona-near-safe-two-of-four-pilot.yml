@@ -96,7 +96,7 @@ jobs:
 
       - name: Install cohort selection import dependencies
         run: |
-          python -m pip install --disable-pip-version-check opencv-python-headless numpy
+          python -m pip install --disable-pip-version-check opencv-python-headless numpy Pillow
 
       - name: Build deterministic deduplicated exact-image cohort
         working-directory: tools/catalog
