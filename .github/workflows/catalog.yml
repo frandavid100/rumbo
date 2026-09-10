@@ -62,6 +62,9 @@ jobs:
       - name: Probar wrapper conservador Mercadona
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_nutrition_label_reader.py
+      - name: Probar reparación estructural OCR Mercadona
+        working-directory: tools/catalog
+        run: python -m unittest -v test_mercadona_nutrition_label_structural_repair.py
       - name: Probar tablas nutricionales multicolumna
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_multicolumn_reader.py
