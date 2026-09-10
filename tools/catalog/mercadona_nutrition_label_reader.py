@@ -10,7 +10,7 @@ from nutrition_label_reader import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.8"
+READER_VERSION = "1.0.9"
 
 
 _FAT_PATTERNS = (
@@ -24,7 +24,7 @@ _CARB_PATTERNS = (
 )
 _PROTEIN_PATTERNS = (r"(?:^|\n)\s*proteinas?\b",)
 _FIBRE_PATTERNS = (
-    r"(?:^|\n)\s*[-–—]?\s*fibra(?:\s+alimentaria)?\b",
+    r"(?:^|\n)\s*[-–—]?\s*fibra(?:\s+alimentaria)?(?:\s*/\s*fibra)?\b",
 )
 _POLYOL_PATTERNS = (
     r"(?:^|\n)\s*[-–—]?\s*(?:polialcoholes|polioles)\b",
@@ -75,10 +75,19 @@ def _explicit_auxiliary_energy_estimate(
     nutrition block; no missing auxiliary value is inferred. The reconciliation
     itself must be much tighter than the ordinary safety threshold so a vaguely
     plausible auxiliary OCR value cannot rescue an inconsistent core tuple.
+
+    Mercadona labels are frequently bilingual and PP-OCR can linearise a cell
+    immediately before its row label. For auxiliary rows only, accept that exact
+    standalone preceding value when the ordinary row-oriented read is absent;
+    the final energy-coherence check below still has to reconcile tightly.
     """
     block = _nutrition_block(result.normalized_text)
     fibre = _number_after(_FIBRE_PATTERNS, block)
+    if fibre is None:
+        fibre = _number_immediately_before(_FIBRE_PATTERNS, block)
     polyols = _number_after(_POLYOL_PATTERNS, block)
+    if polyols is None:
+        polyols = _number_immediately_before(_POLYOL_PATTERNS, block)
     if fibre is None and polyols is None:
         return None
 
