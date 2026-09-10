@@ -94,6 +94,10 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ steps.canonical-audit.outputs.run_id }}
 
+      - name: Install cohort selection import dependencies
+        run: |
+          python -m pip install --disable-pip-version-check opencv-python-headless numpy
+
       - name: Build deterministic deduplicated exact-image cohort
         working-directory: tools/catalog
         run: |
