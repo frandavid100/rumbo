@@ -1,0 +1,209 @@
+name: Catalog Mercadona reversed-carb rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-reversed-carb-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-reversed-carb-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download verified live Mercadona first-party refresh
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-live
+          github-token: ${{ github.token }}
+          run-id: 34449270667
+
+      - name: Download canonical OCR 308 audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/mercadona-current-ocr-residual-audit
+          github-token: ${{ github.token }}
+          run-id: 34449740838
+
+      - name: Build exact current-image reversed-carb cohort
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          product_id = '16561'
+          diagnostic = None
+          for line in Path('mercadona-current-ocr-residual-audit/current-review-failure-modes/near-safe-complete-review.jsonl').read_text(encoding='utf-8').splitlines():
+              row = json.loads(line)
+              if str(row.get('product_id') or '') == product_id:
+                  diagnostic = row
+                  break
+          if diagnostic is None:
+              raise SystemExit('16561 missing from canonical near-safe residual')
+          if not (
+              diagnostic.get('canonical_status') == 'REVIEW'
+              and diagnostic.get('corroborated_fields') == 3
+              and int(diagnostic.get('independent_engine_families') or 0) >= 2
+              and diagnostic.get('basis') in {'100_g', '100_ml'}
+              and not (diagnostic.get('safety_blockers') or [])
+          ):
+              raise SystemExit('16561 is no longer a clean canonical 3-of-4 REVIEW')
+
+          product = None
+          for line in Path('mercadona-first-party-live/products.jsonl').read_text(encoding='utf-8').splitlines():
+              row = json.loads(line)
+              if str(row.get('product_id') or '') == product_id:
+                  product = row
+                  break
+          if product is None:
+              raise SystemExit('16561 missing from verified live first-party inventory')
+
+          image_url = str(diagnostic.get('image_url') or '')
+          photos = product.get('photos') if isinstance(product.get('photos'), list) else []
+          matches = [
+              (idx, photo) for idx, photo in enumerate(photos)
+              if isinstance(photo, dict) and str(photo.get('zoom') or '') == image_url
+          ]
+          if len(matches) != 1:
+              raise SystemExit(f'expected one exact current first-party image match, got {len(matches)}')
+          image_index, photo = matches[0]
+          if str(photo.get('perspective')) != '9':
+              raise SystemExit('canonical image is not the current perspective=9 label photo')
+          if not product.get('ingredients'):
+              raise SystemExit('16561 unexpectedly lacks structured ingredients')
+
+          routed = dict(photo)
+          routed['perspective'] = 9
+          candidate = dict(product)
+          candidate['photos'] = [routed]
+          candidate['_reversed_carb_rescue_meta'] = {
+              'canonical_audit_run_id': 34449740838,
+              'canonical_latest_raw_run_id': diagnostic.get('latest_raw_run_id'),
+              'canonical_corroborated_fields': 3,
+              'image_index': image_index,
+              'image_url': image_url,
+              'live_first_party_run_id': 34449270667,
+          }
+          Path('reversed-carb-candidate.jsonl').write_text(
+              json.dumps(candidate, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(candidate['_reversed_carb_rescue_meta'], sort_keys=True))
+          PY
+
+      - name: Install independent OCR engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run focused parser and OCR safety tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_ocr_reversed_label.py \
+            test_mercadona_near_safe_variant_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+          python -m py_compile nutrition_ocr_reversed_label.py mercadona_reversed_carb_variant_rescue.py
+
+      - name: Run conservative exact-image rescue
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-reversed-carb-rescue
+          set +e
+          python mercadona_reversed_carb_variant_rescue.py \
+            --products reversed-carb-candidate.jsonl \
+            --out mercadona-reversed-carb-rescue \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 \
+            --eligibility-mode priority
+          rc=$?
+          set -e
+          if [[ $rc -ne 0 && $rc -ne 2 ]]; then
+            exit "$rc"
+          fi
+
+      - name: Validate persisted result contract
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import glob
+          import json
+          from pathlib import Path
+
+          paths = glob.glob('mercadona-reversed-carb-rescue/results-*.jsonl')
+          rows = [json.loads(line) for path in paths for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(rows) != 1 or str(rows[0].get('product_id') or '') != '16561':
+              raise SystemExit(f'unexpected result rows: {len(rows)}')
+          row = rows[0]
+          if (
+              row.get('source') != 'MERCADONA_FIRST_PARTY'
+              or row.get('source_record_kind') != 'label image'
+              or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+              or row.get('redistribution_allowed') is not False
+          ):
+              raise SystemExit('invalid first-party OCR provenance contract')
+          if row.get('status') == 'DECLARED':
+              declared = next((a.get('ensemble') for a in row.get('attempts', []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              if not declared:
+                  raise SystemExit('DECLARED row has no DECLARED ensemble')
+              if int(declared.get('independent_engine_families') or 0) < 2 or int(declared.get('corroborated_fields') or 0) != 4:
+                  raise SystemExit('DECLARED row lacks independent 4/4 corroboration')
+              if 'REVERSED_CARBOHYDRATE_LABEL_DIAGNOSTIC_RESCUE' not in (declared.get('reasons') or []):
+                  raise SystemExit('DECLARED row lacks reversed-carb audit marker')
+          summary = {
+              'inventory_products': 4280,
+              'processed': 1,
+              'status': row.get('status'),
+              'product_id': '16561',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'structured_api_macros_claimed': False,
+              'acceptance_policy_changed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('mercadona-reversed-carb-rescue/summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          print(json.dumps(summary, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-reversed-carb-rescue
+          path: tools/catalog/mercadona-reversed-carb-rescue/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Trigger canonical OCR reconciliation
+        run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
