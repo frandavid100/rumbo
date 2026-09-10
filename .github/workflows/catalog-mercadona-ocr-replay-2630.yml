@@ -13,6 +13,7 @@ on:
       - 'tools/catalog/mercadona_nutrition_label_reader.py'
       - 'tools/catalog/test_nutrition_row_order_ambiguity.py'
       - 'tools/catalog/test_replay_mercadona_ocr_ensemble.py'
+      - 'tools/catalog/test_nutrition_ocr_ensemble.py'
   workflow_dispatch:
 
 permissions:
@@ -60,12 +61,66 @@ jobs:
           import json
           from pathlib import Path
 
-          p = Path('tools/catalog/mercadona-ocr-replay-2630/summary.json')
-          s = json.loads(p.read_text(encoding='utf-8'))
+          out = Path('tools/catalog/mercadona-ocr-replay-2630')
+          s = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
+          changes_path = out / 'declared-value-changes.json'
+          changes = (
+              json.loads(changes_path.read_text(encoding='utf-8'))
+              if changes_path.exists()
+              else []
+          )
           assert s['processed'] == 2630, s
-          assert s['declared_value_changes'] == 0, s
           assert s['redistribution_allowed'] is False, s
           assert s['mode'] == 'REPLAY_REPARSE_FROM_PERSISTED_OCR_TEXT', s
+          assert s['declared_value_changes'] == len(changes), (s, changes)
+
+          # Exact, evidence-audited correction. EasyOCR and PaddleOCR both read
+          # protein as 5.1 g/100 g for product 61251; the prior 5.19 value was
+          # an OCR/parser artifact. Any different or additional mutation must
+          # still stop the replay for manual inspection.
+          allowed_declared_value_changes = [
+              {
+                  'product_id': '61251',
+                  'ean': '8480000610836',
+                  'name': 'Ajo troceado Hacendado ultracongelado',
+                  'old_status': 'DECLARED',
+                  'new_status': 'DECLARED',
+                  'old_nutrition': {
+                      'calories': 148.0,
+                      'carbohydrate_g': 24.0,
+                      'fat_g': 3.2,
+                      'protein_g': 5.19,
+                  },
+                  'new_nutrition': {
+                      'calories': 148.0,
+                      'fat_g': 3.2,
+                      'carbohydrate_g': 24.0,
+                      'protein_g': 5.1,
+                  },
+                  'basis': '100_g',
+              }
+          ]
+          actual_declared_value_changes = [
+              {
+                  key: change.get(key)
+                  for key in (
+                      'product_id',
+                      'ean',
+                      'name',
+                      'old_status',
+                      'new_status',
+                      'old_nutrition',
+                      'new_nutrition',
+                      'basis',
+                  )
+              }
+              for change in changes
+          ]
+          assert actual_declared_value_changes == allowed_declared_value_changes, (
+              'Current parser changes an unexpected already-DECLARED value; '
+              'inspect before accepting',
+              actual_declared_value_changes,
+          )
           print(json.dumps(s, indent=2, ensure_ascii=False))
           PY
       - uses: actions/upload-artifact@v4
