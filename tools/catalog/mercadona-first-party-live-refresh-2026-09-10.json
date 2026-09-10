@@ -1,0 +1,50 @@
+{
+  "observed_date": "2026-09-10",
+  "branch": "agent/catalog-phase1",
+  "kind": "MERCADONA_FIRST_PARTY_LIVE_REFRESH_VALIDATION",
+  "historical_cut_inventory_products": 4280,
+  "historical_cut_date": "2026-08-27",
+  "live_inventory_products": 4256,
+  "live_detail_records": 4256,
+  "live_errors": 0,
+  "inventory_delta_vs_historical_cut": -24,
+  "workflow_run_id": 34449270667,
+  "head_sha": "40de0c38a021fa8306b07cb4d5478a031d24ca15",
+  "artifact": {
+    "artifact_id": 10141325068,
+    "artifact_name": "mercadona-first-party-final",
+    "artifact_sha256": "1db14fbe5db8c8b8e757e833932314ab947db6c0f373c8ed2b630c0a31740e9d",
+    "retention_days": 90
+  },
+  "coverage": {
+    "ean": 4256,
+    "name": 4256,
+    "price": 4256,
+    "category": 4256,
+    "photos": 4256,
+    "brand": 3763,
+    "packaging": 3687,
+    "unit_size": 4218,
+    "legal_name": 2850,
+    "suppliers": 3152,
+    "ingredients": 2715,
+    "allergens": 2755,
+    "storage_instructions": 2584,
+    "products_with_multiple_photos": 4151
+  },
+  "three_of_four_refresh_current_image_validation": {
+    "source_refresh_run_id": 34443072732,
+    "checked_product_ids": ["13250", "16561", "2779", "2787", "2855", "68106", "84597", "8566"],
+    "exact_current_image_match_product_ids": ["13250", "16561", "2779", "2855", "68106", "84597", "8566"],
+    "current_image_mismatch_product_ids": ["2787"],
+    "declared_refresh_product_ids": ["2779", "2855", "68106", "8566"],
+    "declared_refresh_exact_current_image_matches": 4,
+    "declared_refresh_exact_current_image_mismatches": 0,
+    "policy": "Validate OCR evidence URL against the newly observed official first-party product photo list without downloading or persisting image bytes. Historical 4,280-product cut remains the audit denominator and is not replaced by this 4,256-product live refresh."
+  },
+  "structured_api_macros_claimed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
