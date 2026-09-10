@@ -1,0 +1,96 @@
+{
+  "kind": "MERCADONA_NEAR_SAFE_TWO_OF_FOUR_PILOT_CUT",
+  "date": "2026-09-10",
+  "branch": "agent/catalog-phase1",
+  "source_run_id": 34461737581,
+  "source_artifact_id": 10146218866,
+  "source_artifact_name": "mercadona-near-safe-two-of-four-pilot-merged",
+  "source_commit": "70512b43c109b41f3597bb5b315e40f7a67f2368",
+  "artifact_sha256": "19308650de83b320418e089c52a8438fe8c13a7b283bd0838673766c174d2180",
+  "results_jsonl_sha256": "70ef29af1625883d70217a23f7f38a95efa895e70f2c5cae2a0177b06e751642",
+  "staging_sqlite_sha256": "8e0f0c212e8a3b640fbd6f920d2b6badc76e407c2d0b87720cdb8da3cbc352f0",
+  "summary_sha256": "a2405a2f20d6521c768ff457f4b94522d3417c599fa84ddf3ad7645eecb0b3dc",
+  "selection_summary_sha256": "4afb339217c3e896ad90994ce516c20aefe725dbd23cdb868fdd952f5e172399",
+  "inventory_products": 4280,
+  "canonical_two_of_four_targets": 22,
+  "previously_attempted_ids_loaded": 16,
+  "current_exact_first_party_image_unattempted_targets": 6,
+  "pilot_processed": 6,
+  "status_counts": {
+    "DECLARED": 3,
+    "REVIEW": 3
+  },
+  "declared_rate": 0.5,
+  "error": 0,
+  "no_visual_region": 0,
+  "invalid_product_ids": [],
+  "selected_product_ids": [
+    "27905",
+    "9588",
+    "53143",
+    "51126",
+    "40361",
+    "10781"
+  ],
+  "unmatched_current_first_party_photo": [
+    "2787"
+  ],
+  "selection_policy": "CLEAN_CANONICAL_2_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_IMAGE; EXCLUDE_PERSISTED_2_OF_4_ATTEMPTS; PRIORITIZE_STRUCTURED_INGREDIENTS_THEN_ENGINE_FAMILIES_THEN_CONFIDENCE",
+  "image_selection_policy": "EXACT_CANONICAL_TWO_OF_FOUR_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO",
+  "acceptance_policy_changed": false,
+  "declared_products": [
+    {
+      "product_id": "40361",
+      "name": "Mortadela Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 244.0,
+        "protein_g": 13.2,
+        "carbohydrate_g": 7.3,
+        "fat_g": 18.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "53143",
+      "name": "Salchichas cocidas bocata gourmet Hacendado de cerdo sabor ahumado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 239.0,
+        "protein_g": 12.3,
+        "carbohydrate_g": 0.7,
+        "fat_g": 20.8
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    },
+    {
+      "product_id": "9588",
+      "name": "Harina fina de maíz Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 359.0,
+        "protein_g": 0.3,
+        "carbohydrate_g": 90.0,
+        "fat_g": 0.5
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4
+    }
+  ],
+  "review_product_ids": [
+    "27905",
+    "10781",
+    "51126"
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "next_step": "RECONCILE_LATEST_RAW_LIVE_OCR_BEFORE_COUNTING_CANONICAL_PROMOTIONS"
+}
