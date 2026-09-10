@@ -1,0 +1,307 @@
+name: Catalog Mercadona neural OCR p9 no-ingredients current delta
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-p9-no-ingredients-current-delta.yml'
+      - 'tools/catalog/audit_mercadona_p9_no_ingredients_processed_candidates.py'
+      - 'tools/catalog/test_audit_mercadona_p9_no_ingredients_processed_candidates.py'
+      - 'tools/catalog/mercadona_neural_ocr_wave.py'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/nutrition_visual_table_detector.py'
+      - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - 'tools/catalog/mercadona_nutrition_label_structural_repair.py'
+      - 'tools/catalog/label_neural_extractor.py'
+      - 'tools/catalog/label_easyocr_extractor.py'
+      - 'tools/catalog/label_text_extractor.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-p9-no-ingredients-current-delta-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download current Mercadona first-party metadata snapshot
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-current
+          repository: frandavid100/rumbo
+          github-token: ${{ github.token }}
+          run-id: 34449270667
+
+      - name: Install independent OCR engines and visual detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run conservative routing and OCR regression tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_audit_mercadona_p9_no_ingredients_processed_candidates.py \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+          python -m py_compile \
+            audit_mercadona_p9_no_ingredients_processed_candidates.py \
+            mercadona_neural_ocr_wave.py \
+            mercadona_nutrition_reader.py \
+            mercadona_nutrition_label_structural_repair.py
+
+      - name: Rebuild exact current two-product delta
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          from audit_mercadona_p9_no_ingredients_processed_candidates import candidate_payload
+
+          source = Path('mercadona-first-party-current/products.jsonl')
+          rows = [json.loads(line) for line in source.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(rows) != 4256:
+              raise SystemExit(f'current first-party snapshot drifted: expected 4256, got {len(rows)}')
+
+          historical_processed_ids = {
+              '10414','10642','11740','11925','12846','12960','13042','13250','13846','13847',
+              '14173','14239','14313','14354','14474','14934','14981','15647','15648','15700',
+              '17462','17578','18011','18037','18817','19817','19876','19940','19975','21649',
+              '21986','22879','23410','23561','24541','24543','24708','29130','31540','3362',
+              '3363','37417','51198','5250','52774','52859','52921','5546','5561','58274',
+              '58278','58280','58298','59364','60093','60095','60127','60128','60212','60226',
+              '60384','60684','60710','60964','61371','62048','65138','65143','67968','7878',
+              '7879','80531','84597','84638','86117','86168','86328','86631','86632','86840',
+              '8687','8804','8915','8946','9571','9792','9847','9891',
+          }
+          if len(historical_processed_ids) != 89:
+              raise SystemExit(f'historical processed set must contain 89 products, got {len(historical_processed_ids)}')
+
+          current_candidates = [payload for row in rows if (payload := candidate_payload(row)) is not None]
+          if len(current_candidates) != 90:
+              raise SystemExit(f'current refined cohort drifted: expected 90 candidates, got {len(current_candidates)}')
+
+          current_ids = {str(row.get('product_id') or '') for row in current_candidates}
+          historical_still_current = historical_processed_ids & current_ids
+          historical_no_longer_current = sorted(historical_processed_ids - current_ids)
+          current_delta_ids = sorted(current_ids - historical_processed_ids)
+          expected_delta_ids = ['17719', '17996']
+          if historical_no_longer_current != ['7879']:
+              raise SystemExit(f'unexpected historical/current eligibility drift: {historical_no_longer_current}')
+          if current_delta_ids != expected_delta_ids:
+              raise SystemExit(f'unexpected current delta IDs: {current_delta_ids}')
+          if len(historical_still_current) != 88:
+              raise SystemExit(f'unexpected historical/current overlap: {len(historical_still_current)}')
+
+          by_id = {str(row.get('product_id') or ''): row for row in current_candidates}
+          selected = [by_id[product_id] for product_id in expected_delta_ids]
+          Path('mercadona-p9-no-ingredients-current-delta-candidates.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          manifest = {
+              'selection_policy': 'CURRENT_FIRST_PARTY_REFINED_P9_NO_INGREDIENTS_MINUS_HISTORICAL_89_PROCESSED',
+              'historical_inventory_products': 4280,
+              'historical_candidate_universe': 89,
+              'historical_processed_count': 89,
+              'historical_wave4_run_id': 33737808339,
+              'current_metadata_snapshot_run_id': 34449270667,
+              'current_metadata_snapshot_products': 4256,
+              'current_candidate_universe': 90,
+              'historical_candidates_still_current': 88,
+              'historical_no_longer_current_ids': historical_no_longer_current,
+              'current_delta_ids': expected_delta_ids,
+              'selected': 2,
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'structured_api_macros_claimed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('mercadona-p9-no-ingredients-current-delta-manifest.json').write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(manifest, ensure_ascii=False, indent=2))
+          PY
+
+      - name: OCR exact current two-product delta
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-p9-no-ingredients-current-delta-candidates.jsonl \
+            --out mercadona-neural-ocr-p9-no-ingredients-current-delta \
+            --eligibility-mode p9-no-ingredients-all \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 2 \
+            --limit 1 \
+            --delay 0.5
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-p9-no-ingredients-current-delta-${{ matrix.shard }}
+          path: |
+            tools/catalog/mercadona-neural-ocr-p9-no-ingredients-current-delta/
+            tools/catalog/mercadona-p9-no-ingredients-current-delta-manifest.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ always() && needs.ocr.result == 'success' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-neural-ocr-p9-no-ingredients-current-delta-*
+          path: input
+          merge-multiple: true
+
+      - name: Merge and enforce unchanged DECLARED contract
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json, sqlite3
+          from pathlib import Path
+
+          rows = []
+          for path in sorted(glob.glob('input/**/results-*.jsonl', recursive=True)):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      rows.append(json.loads(line))
+
+          manifest_paths = sorted(glob.glob('input/**/mercadona-p9-no-ingredients-current-delta-manifest.json', recursive=True))
+          if not manifest_paths:
+              raise SystemExit('missing deterministic current-delta manifest')
+          manifest = json.loads(Path(manifest_paths[0]).read_text(encoding='utf-8'))
+          expected_ids = set(manifest['current_delta_ids'])
+
+          ids = [str(row.get('product_id') or '') for row in rows]
+          id_set = set(ids)
+          duplicate_ids = sorted(pid for pid, count in Counter(ids).items() if pid and count > 1)
+          missing_expected_ids = sorted(expected_ids - id_set)
+          unexpected_ids = sorted(id_set - expected_ids)
+          invalid_declared = []
+          provenance_errors = []
+          error_product_ids = []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  provenance_errors.append(pid)
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  provenance_errors.append(pid)
+              if row.get('redistribution_allowed') is not False:
+                  provenance_errors.append(pid)
+              if row.get('status') == 'ERROR':
+                  error_product_ids.append(pid)
+              if row.get('status') != 'DECLARED':
+                  continue
+              accepted = next(
+                  (attempt for attempt in (row.get('attempts') or []) if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'),
+                  None,
+              )
+              ensemble = (accepted or {}).get('ensemble') or {}
+              if (
+                  int(ensemble.get('independent_engine_families') or 0) < 2
+                  or int(ensemble.get('corroborated_fields') or 0) < 4
+                  or ensemble.get('basis') not in {'100_g', '100_ml'}
+              ):
+                  invalid_declared.append(pid)
+
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          validated = (
+              len(rows) == 2
+              and len(id_set) == 2
+              and id_set == expected_ids
+              and not invalid_declared
+              and not duplicate_ids
+              and not missing_expected_ids
+              and not unexpected_ids
+              and not provenance_errors
+              and not error_product_ids
+          )
+          summary = {
+              **manifest,
+              'processed': len(rows),
+              'distinct_products_processed': len(id_set),
+              'status_counts': dict(sorted(counts.items())),
+              'declared_rate': round(counts['DECLARED'] / len(rows), 4) if rows else 0.0,
+              'unsafe_declared': invalid_declared,
+              'duplicate_product_ids': duplicate_ids,
+              'missing_expected_product_ids': missing_expected_ids,
+              'unexpected_product_ids': unexpected_ids,
+              'provenance_errors': sorted(set(provenance_errors)),
+              'error_product_ids': sorted(set(error_product_ids)),
+              'safety_assessment': 'VALIDATED' if validated else 'FAILED',
+          }
+
+          out = Path('merged')
+          out.mkdir(exist_ok=True)
+          (out / 'results.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (out / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          db = sqlite3.connect(out / 'staging.sqlite')
+          db.execute('CREATE TABLE ocr_results (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, payload_json TEXT NOT NULL)')
+          for row in rows:
+              db.execute(
+                  'INSERT INTO ocr_results VALUES (?, ?, ?, ?, ?, ?)',
+                  (
+                      str(row.get('product_id') or ''),
+                      str(row.get('status') or 'UNKNOWN'),
+                      str(row.get('evidence_level') or ''),
+                      'MERCADONA_FIRST_PARTY/label image',
+                      0,
+                      json.dumps(row, ensure_ascii=False, sort_keys=True),
+                  ),
+              )
+          db.commit()
+          db.close()
+
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if summary['safety_assessment'] != 'VALIDATED':
+              raise SystemExit('current-delta safety/coverage checks failed')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-p9-no-ingredients-current-delta-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: warn
