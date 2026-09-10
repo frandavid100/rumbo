@@ -1,0 +1,106 @@
+{
+  "retailer": "MERCADONA",
+  "cut_date": "2026-09-10",
+  "purpose": "Auditable first-party OCR cut for the p9 no-ingredients processed wave2 cohort before canonical reconciliation.",
+  "source_run_id": 34495681977,
+  "source_head_sha": "0ace711fe8cb7bccd79177c5f7d00d3d7a29d76c",
+  "source_artifact": {
+    "id": 10160297796,
+    "name": "mercadona-neural-ocr-p9-no-ingredients-processed-wave2-merged",
+    "sha256": "eb9739abc10c5e95b03be2a547e31f65176c22398f8c8509114fca8ce8ce4b2c",
+    "expired": false
+  },
+  "selection_policy": "HISTORICAL_WAVE2_IDS_WITH_CURRENT_FIRST_PARTY_IMAGE_METADATA",
+  "historical_inventory_products": 4280,
+  "historical_candidate_universe": 89,
+  "historical_source_run_id": 33046950149,
+  "historical_source_artifact_expired": true,
+  "current_metadata_snapshot": {
+    "run_id": 34449270667,
+    "products": 4256,
+    "role": "IMAGE_URL_AND_PRODUCT_METADATA_ONLY_DO_NOT_REBASE_CANONICAL_INVENTORY"
+  },
+  "selected": 32,
+  "processed": 32,
+  "distinct_products_processed": 32,
+  "status_counts": {
+    "DECLARED": 5,
+    "REVIEW": 27,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared_rate": 0.1562,
+  "declared_candidates": [
+    {
+      "product_id": "7878",
+      "name": "Yogur líquido natural Hacendado con azúcar de caña",
+      "basis": "100_g",
+      "kcal": 70,
+      "fat_g": 1.8,
+      "carbohydrates_g": 11.5,
+      "protein_g": 1.9,
+      "core_fields_corroborated": 4,
+      "independent_ocr_families_min": 2
+    },
+    {
+      "product_id": "22879",
+      "name": "Jamón de cebo ibérico cortado a máquina",
+      "basis": "100_g",
+      "kcal": 295.8,
+      "fat_g": 16.2,
+      "carbohydrates_g": 0.7,
+      "protein_g": 36.5,
+      "core_fields_corroborated": 4,
+      "independent_ocr_families_min": 2
+    },
+    {
+      "product_id": "8946",
+      "name": "Golosinas Mini Mix con pica Hacendado",
+      "basis": "100_g",
+      "kcal": 333,
+      "fat_g": 0,
+      "carbohydrates_g": 79,
+      "protein_g": 4.3,
+      "core_fields_corroborated": 4,
+      "independent_ocr_families_min": 2
+    },
+    {
+      "product_id": "58278",
+      "name": "Jamón de cebo ibérico cortado a tapas",
+      "basis": "100_g",
+      "kcal": 397.1,
+      "fat_g": 29.5,
+      "carbohydrates_g": 1.0,
+      "protein_g": 31.9,
+      "core_fields_corroborated": 4,
+      "independent_ocr_families_min": 2
+    },
+    {
+      "product_id": "15700",
+      "name": "Jamón serrano cortado a máquina",
+      "basis": "100_g",
+      "kcal": 247.8,
+      "fat_g": 12.2,
+      "carbohydrates_g": 1.0,
+      "protein_g": 33.5,
+      "core_fields_corroborated": 4,
+      "independent_ocr_families_min": 2
+    }
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "unsafe_declared": [],
+  "duplicate_product_ids": [],
+  "missing_expected_product_ids": [],
+  "unexpected_product_ids": [],
+  "provenance_errors": [],
+  "error_product_ids": [],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "safety_assessment": "VALIDATED",
+  "canonical_status": "CANDIDATES_PENDING_LATEST_RAW_LIVE_OCR_WINS_RECONCILIATION"
+}
