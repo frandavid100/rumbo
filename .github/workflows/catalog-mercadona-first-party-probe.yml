@@ -43,7 +43,7 @@ jobs:
         with:
           name: mercadona-first-party-inventory
           path: tools/catalog/mercadona-first-party-inventory/
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: error
 
   details:
@@ -80,7 +80,7 @@ jobs:
         with:
           name: mercadona-detail-shard-${{ matrix.shard }}
           path: tools/catalog/mercadona-detail-shard/
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: warn
 
   merge:
@@ -117,5 +117,5 @@ jobs:
         with:
           name: mercadona-first-party-final
           path: tools/catalog/mercadona-first-party-final/
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: error
