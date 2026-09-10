@@ -1,0 +1,65 @@
+{
+  "cut_date": "2026-09-10",
+  "branch": "agent/catalog-phase1",
+  "kind": "MERCADONA_P9_NO_INGREDIENTS_CURRENT_DELTA_CUT",
+  "inventory_products": 4280,
+  "selection": {
+    "policy": "CURRENT_FIRST_PARTY_REFINED_P9_NO_INGREDIENTS_MINUS_HISTORICAL_89_PROCESSED",
+    "historical_candidate_universe": 89,
+    "historical_processed_count": 89,
+    "current_metadata_snapshot_products": 4256,
+    "current_candidate_universe": 90,
+    "historical_candidates_still_current": 88,
+    "historical_no_longer_current_ids": ["7879"],
+    "current_delta_ids": ["17719", "17996"],
+    "selected": 2
+  },
+  "audit": {
+    "workflow_run_id": 34513988205,
+    "head_sha": "0cdd7775d25e44a74cd8ded153f83d8b5792a476",
+    "artifact_id": 10167167422,
+    "artifact_name": "mercadona-p9-no-ingredients-current-delta",
+    "artifact_sha256": "9738d3ab003f9d1877e64da5a68dd826d83b216c60176607b4867c865dd68de7",
+    "manifest_sha256": "bfcad367f74ed6205a417282d1dd414296937562b8be1258612d839ee3c90e37",
+    "results_jsonl_sha256": "aa47fd97ce365b88381ccabed5719b613326ba69694785b577972d1f35f57040"
+  },
+  "results": {
+    "processed": 2,
+    "declared": 1,
+    "review": 1,
+    "no_visual_region": 0,
+    "errors": 0,
+    "declared_product_ids": ["17719"],
+    "review_product_ids": ["17996"],
+    "declared_products": [
+      {
+        "product_id": "17719",
+        "name": "Golosinas Jelly Beans ácidas Hacendado",
+        "basis": "100_g",
+        "calories": 373.0,
+        "fat_g": 0.0,
+        "carbohydrate_g": 91.0,
+        "protein_g": 0.0,
+        "independent_engine_families": 3,
+        "corroborated_fields": 4
+      }
+    ],
+    "review_products": [
+      {
+        "product_id": "17996",
+        "name": "Chocolate con leche Fussion Hacendado relleno de galleta caramelizada",
+        "reason": "MULTIPLE_NUTRITION_COLUMNS_AND_INSUFFICIENT_CORROBORATED_CORE_FIELDS"
+      }
+    ]
+  },
+  "reconciliation_status": "PENDING_CANONICAL_LATEST_RAW_LIVE_OCR_WINS",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "acceptance_policy_changed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
