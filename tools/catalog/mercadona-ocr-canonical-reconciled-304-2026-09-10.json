@@ -1,0 +1,93 @@
+{
+  "cut_date": "2026-09-10",
+  "branch": "agent/catalog-phase1",
+  "kind": "MERCADONA_OCR_CANONICAL_RECONCILED_CUT",
+  "inventory_products": 4280,
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "audit": {
+    "workflow_run_id": 34430788357,
+    "head_sha": "a150ea00c54dd37f75e87c7a46f104a0144d7b49",
+    "artifact_id": 10134531289,
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_sha256": "7ce247765616be1dfaf03f0bd22e88180c320d88fadbcf5532a0b4247a7bb553",
+    "source_union_sha256": "82968311140558a5878babf49b03d13a72a198341155051111943624f813b3b7"
+  },
+  "canonical": {
+    "processed": 2969,
+    "declared": 304,
+    "review": 2665,
+    "complete_declared": 304,
+    "rows_with_any_nutrition": 2969,
+    "unresolved_rows": 2665,
+    "complete_nutrition_coverage_pct": 7.1028037383,
+    "ocr_processed_coverage_pct": 69.3691588785
+  },
+  "transition_from_previous_286_cut": {
+    "previous_declared": 286,
+    "current_declared": 304,
+    "net_change": 18,
+    "review_to_declared": 19,
+    "declared_to_review": 1,
+    "promoted_product_ids": [
+      "10050", "12888", "13631", "13810", "14344", "16275", "17110", "17132", "23059",
+      "29100", "34024", "35197", "4903", "4905", "50483", "60698", "61405", "6331", "87607"
+    ],
+    "demoted_product_ids": ["12946"],
+    "demotion_note": "12946 has a newer successful raw-live OCR observation in REVIEW, which supersedes its older raw-live DECLARED result under LATEST_RAW_LIVE_OCR_WINS. Replay/staging evidence does not override canonical raw-live precedence."
+  },
+  "fresh_replay_end_to_end_validation": {
+    "workflow_run_id": 34429374976,
+    "artifact_id": 10134259059,
+    "artifact_sha256": "f1f4b542a07d325dfc12eaa9db6f9788a2d534756cc8805a0478fc062f471a5f",
+    "selected": 16,
+    "declared": 14,
+    "review": 2,
+    "declared_rate": 0.875,
+    "review_ids": ["2855", "35649"],
+    "conflicts": 0,
+    "unsafe_declared": 0,
+    "provenance_errors": 0,
+    "tests_passed": 52,
+    "acceptance_policy_changed": false
+  },
+  "current_review_residual": {
+    "complete_near_safe": 65,
+    "complete_by_corrob_count": {
+      "0_of_4": 1,
+      "1_of_4": 35,
+      "2_of_4": 21,
+      "3_of_4": 8,
+      "4_of_4": 0
+    },
+    "complete_by_independent_family_count": {
+      "1_family": 28,
+      "2_families": 26,
+      "3_families": 11
+    },
+    "safety_blocked_complete_review": [
+      {"product_id": "10010", "reason": "ENERGY_MACRO_INCONSISTENT"},
+      {"product_id": "11729", "reason": "MULTIPLE_NUTRITION_COLUMNS"},
+      {"product_id": "3712", "reason": "MULTIPLE_NUTRITION_COLUMNS"},
+      {"product_id": "85806", "reason": "MULTIPLE_NUTRITION_COLUMNS"}
+    ],
+    "three_of_four_candidates": [
+      {"product_id": "12946", "basis": "100_g", "calories": 171.0, "fat_g": 10.0, "carbohydrate_g": 11.0, "protein_g": 8.8, "independent_families": 3, "note": "newer raw-live REVIEW; one core field remains insufficiently corroborated"},
+      {"product_id": "35649", "basis": "100_g", "calories": 400.0, "fat_g": 0.0, "carbohydrate_g": 100.0, "protein_g": 0.0, "independent_families": 3, "note": "protein remains insufficiently corroborated"},
+      {"product_id": "4344", "basis": "100_g", "calories": 161.0, "fat_g": 13.0, "carbohydrate_g": 3.7, "protein_g": 7.8, "independent_families": 2, "note": "carbohydrate remains insufficiently corroborated"},
+      {"product_id": "4836", "basis": "100_g", "calories": 328.0, "fat_g": 31.7, "carbohydrate_g": 2.0, "protein_g": 9.0, "independent_families": 2, "note": "calories remain insufficiently corroborated"},
+      {"product_id": "54329", "basis": "100_g", "calories": 369.0, "fat_g": 0.0, "carbohydrate_g": 91.0, "protein_g": 0.0, "independent_families": 3, "note": "fat remains insufficiently corroborated"},
+      {"product_id": "60777", "basis": "100_g", "calories": 180.0, "fat_g": 9.1, "carbohydrate_g": 12.0, "protein_g": 13.0, "independent_families": 3, "note": "carbohydrate remains insufficiently corroborated"},
+      {"product_id": "77174", "basis": "100_g", "calories": 277.0, "fat_g": 12.1, "carbohydrate_g": 29.6, "protein_g": 11.8, "independent_families": 2, "note": "protein remains insufficiently corroborated"},
+      {"product_id": "8237", "basis": "100_g", "calories": 478.0, "fat_g": 21.0, "carbohydrate_g": 67.0, "protein_g": 4.1, "independent_families": 2, "note": "calories remain insufficiently corroborated"}
+    ]
+  },
+  "next_step": "RUN_EXACT_IMAGE_RESCUE_ON_CURRENT_3_OF_4_REVIEW_CANDIDATES_WITHOUT_RELAXING_ACCEPTANCE_POLICY",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
