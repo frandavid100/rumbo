@@ -40,14 +40,34 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Download consolidated Mercadona first-party cut
-        uses: actions/download-artifact@v4
-        with:
-          name: mercadona-first-party-final
-          path: tools/catalog/mercadona-first-party-final
-          repository: frandavid100/rumbo
-          github-token: ${{ github.token }}
-          run-id: 33046950149
+      - name: Resolve historical 4,280-product first-party snapshot
+        id: first_party_snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tools/catalog/mercadona-current-ocr-residual-audit
+          artifact_json=$(gh api -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/runs/33046950149/artifacts?per_page=100')
+          artifact_id=$(jq -r '.artifacts[] | select(.name == "mercadona-first-party-final" and .expired == false) | .id' <<<"$artifact_json" | head -n1)
+          if [[ -n "$artifact_id" ]]; then
+            mkdir -p tools/catalog/mercadona-first-party-final /tmp/mercadona-first-party-final
+            gh api -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" \
+              > /tmp/mercadona-first-party-final/artifact.zip
+            unzip -q /tmp/mercadona-first-party-final/artifact.zip \
+              -d tools/catalog/mercadona-first-party-final
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+            jq -n \
+              --argjson run_id 33046950149 \
+              --argjson artifact_id "$artifact_id" \
+              '{status:"AVAILABLE", historical_inventory_products:4280, run_id:$run_id, artifact_id:$artifact_id}' \
+              > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            jq -n \
+              '{status:"EXPIRED_OR_UNAVAILABLE", historical_inventory_products:4280, run_id:33046950149, artifact_name:"mercadona-first-party-final", exact_residual_census_available:false, policy:"Do not silently substitute a later live Mercadona inventory for the auditable 2026-08-27 4,280-product cut. Canonical OCR reconciliation remains valid because it is reconstructed from persisted raw-live OCR evidence independently of this snapshot."}' \
+              > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
+          fi
 
       - name: Run residual census unit tests
         working-directory: tools/catalog
@@ -96,9 +116,6 @@ jobs:
             echo 'No successful Mercadona runs discovered' >&2
             exit 1
           fi
-          # Regression anchors: the first neural PP-OCRv6 pilot is older than the recent
-          # repository-wide Actions horizon, while the rescued exact 79-product near-safe
-          # cohort is the newest raw-live evidence this reconciliation must consume.
           if ! grep -q $'^33048440695\t' /tmp/mercadona-ocr-runs.tsv; then
             echo 'Historical Mercadona OCR anchor run 33048440695 was not discovered' >&2
             exit 1
@@ -172,14 +189,12 @@ jobs:
             --manifest mercadona-current-ocr-residual-audit/canonical-ocr-manifest.json \
             --inventory-total 4280
 
-      - name: Audit exact current residual universe
+      - name: Audit exact historical residual universe
+        if: steps.first_party_snapshot.outputs.available == 'true'
         working-directory: tools/catalog
         shell: bash
         run: |
           set -euo pipefail
-          # The expected distinct count must come from the artifact union reconstructed in this
-          # very run. Hard-coding a previous baseline makes the audit fail as soon as a genuinely
-          # new OCR product is persisted and risks reintroducing arithmetic coverage accounting.
           expected_processed=$(jq -r '.final_distinct_union' mercadona-current-ocr-residual-audit/run-union-summary.json)
           if ! [[ "$expected_processed" =~ ^[0-9]+$ ]]; then
             echo "Invalid final_distinct_union: $expected_processed" >&2
@@ -191,10 +206,19 @@ jobs:
             --expected-processed "$expected_processed" \
             --out mercadona-current-ocr-residual-audit
 
+      - name: Record unavailable exact residual census
+        if: steps.first_party_snapshot.outputs.available != 'true'
+        working-directory: tools/catalog
+        run: |
+          jq -n \
+            --slurpfile union mercadona-current-ocr-residual-audit/run-union-summary.json \
+            '{status:"BLOCKED_HISTORICAL_FIRST_PARTY_SNAPSHOT_EXPIRED", inventory_products:4280, processed_reconstructed:$union[0].final_distinct_union, canonical_ocr_materialized:true, exact_residual_census_available:false, images_downloaded:false, images_persisted:false, missing_values_inferred:false, structured_api_macros_claimed:false, CLASSIFIED:0, MENU_ELIGIBLE:0}' \
+            > mercadona-current-ocr-residual-audit/residual-audit-status.json
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mercadona-current-ocr-residual-audit
           path: tools/catalog/mercadona-current-ocr-residual-audit/
-          retention-days: 30
+          retention-days: 90
           if-no-files-found: warn
