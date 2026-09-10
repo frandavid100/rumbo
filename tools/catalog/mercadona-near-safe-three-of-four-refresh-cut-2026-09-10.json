@@ -1,0 +1,48 @@
+{
+  "cut_date": "2026-09-10",
+  "branch": "agent/catalog-phase1",
+  "kind": "MERCADONA_NEAR_SAFE_THREE_OF_FOUR_EXACT_IMAGE_REFRESH_CUT",
+  "inventory_products": 4280,
+  "source_canonical_declared": 304,
+  "workflow_run_id": 34443072732,
+  "head_sha": "b8408942c95368ee982fd9c204d11af2c692586e",
+  "artifact": {
+    "artifact_id": 10139141993,
+    "artifact_name": "mercadona-near-safe-three-of-four-refresh",
+    "artifact_sha256": "fb4c7fa52ef59322a19e1f7708a69415357eafe5d9f96571291c28142841fefa"
+  },
+  "selection": {
+    "canonical_three_of_four_targets": 8,
+    "current_exact_first_party_image_targets": 8,
+    "with_structured_ingredients": 5,
+    "without_structured_ingredients": 3,
+    "unmatched_current_first_party_photo": [],
+    "selected_product_ids": ["13250", "16561", "2779", "2787", "2855", "68106", "84597", "8566"],
+    "selection_policy": "CLEAN_CANONICAL_3_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_IMAGE"
+  },
+  "result": {
+    "processed": 8,
+    "declared": 4,
+    "review": 4,
+    "declared_rate": 0.5,
+    "invalid_product_ids": [],
+    "declared_products": [
+      {"product_id": "2779", "name": "Medio pollo troceado", "basis": "100_g", "calories": 158.0, "fat_g": 8.7, "carbohydrate_g": 0.0, "protein_g": 20.0, "independent_engine_families": 3, "corroborated_fields": 4},
+      {"product_id": "2855", "name": "Carcasa de pollo certificado alimentado con un 50% de maíz", "basis": "100_g", "calories": 279.0, "fat_g": 24.0, "carbohydrate_g": 1.1, "protein_g": 16.0, "independent_engine_families": 3, "corroborated_fields": 4},
+      {"product_id": "68106", "name": "Flan de vainilla con caramelo Hacendado", "basis": "100_g", "calories": 95.0, "fat_g": 1.6, "carbohydrate_g": 17.7, "protein_g": 2.4, "independent_engine_families": 2, "corroborated_fields": 4},
+      {"product_id": "8566", "name": "Jamón de cebo ibérico 50% La Hacienda del Ibérico", "basis": "100_g", "calories": 397.1, "fat_g": 29.5, "carbohydrate_g": 1.0, "protein_g": 31.9, "independent_engine_families": 2, "corroborated_fields": 4}
+    ],
+    "review_product_ids": ["13250", "16561", "2787", "84597"]
+  },
+  "image_selection_policy": "EXACT_CANONICAL_THREE_OF_FOUR_IMAGE_URL_MUST_MATCH_CURRENT_FIRST_PARTY_PHOTO",
+  "acceptance_policy_changed": false,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "next_step": "RECONCILE_FULL_SUCCESSFUL_RAW_LIVE_OCR_UNION_WITH_LATEST_RAW_LIVE_OCR_WINS"
+}
