@@ -143,10 +143,11 @@ jobs:
 
           # This is an audit anchor for the present 286-DECLARED cut. The successful current
           # replay contains 127 diagnostic REVIEW->DECLARED promotions; 63 are already canonical
-          # DECLARED, leaving 64 genuinely unresolved candidates. Fail closed if the source set
-          # differs rather than silently OCRing a different cohort.
-          if len(replay_rows) != 64:
-              raise SystemExit(f'Expected 64 unresolved current replay promotions, found {len(replay_rows)}')
+          # DECLARED, leaving 64 unresolved in total. Of those, 30 meet this wave's stronger
+          # >=3-engine-family and 4-field gate; the other 34 are two-family diagnostics and stay
+          # outside this bounded validation wave. Fail closed if the strong source set differs.
+          if len(replay_rows) != 30:
+              raise SystemExit(f'Expected 30 strong unresolved current replay promotions, found {len(replay_rows)}')
 
           replay_rows.sort(key=lambda r: (-r['confidence'], r['product_id']))
           selected = replay_rows[:16]
