@@ -162,6 +162,65 @@ Sal 0,03 g
             "protein_g": 12.0,
         })
 
+    def test_bilingual_fibre_row_reconciles_observed_mercadona_energy(self):
+        # PP-OCR on product 29134 preserves the printed Spanish/Portuguese row
+        # label as `Fibra alimentaria/Fibra`. The slash label is structural text,
+        # not prose between the row and its explicit 11 g cell.
+        observed = """100g
+Valor
+1384 kJ
+Energético/Energia
+328 kcal
+Grasas/Lípidos
+2.0g
+Hidratos de Carbono
+60g
+Fibra alimentaria/Fibra
+11g
+Proteínas
+12g
+Sal
+0.03 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "DECLARED", result)
+        self.assertEqual(result.nutrition, {
+            "calories": 328.0,
+            "fat_g": 2.0,
+            "carbohydrate_g": 60.0,
+            "protein_g": 12.0,
+        })
+
+    def test_reversed_bilingual_fibre_row_reconciles_only_when_energy_is_tight(self):
+        # Observed pattern from product 14347: PP-OCR can place the explicit fibre
+        # value immediately before the bilingual row label. This is still direct
+        # OCR evidence. It may reconcile a core tuple only under the same tight
+        # energy check used for ordinary auxiliary rows.
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 1432 kJ / 340 kcal
+Grasas 4.4 g
+Hidratos de carbono 59 g
+12 g
+Fibra alimentaria/Fibra
+Proteínas 10 g
+Sal 0 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "DECLARED", result)
+        self.assertEqual(result.nutrition, {
+            "calories": 340.0,
+            "fat_g": 4.4,
+            "carbohydrate_g": 59.0,
+            "protein_g": 10.0,
+        })
+
+        incoherent = observed.replace("12 g\nFibra", "9 g\nFibra")
+        rejected = read_nutrition_label(incoherent, extraction_confidence=.99)
+        self.assertEqual(rejected.status, "REVIEW", rejected)
+        self.assertIsNone(rejected.nutrition)
+        self.assertIn("ENERGY_MACRO_MISMATCH_STRICT:315.6", rejected.reasons)
+
     def test_explicit_polyols_and_fibre_reconcile_energy_without_inference(self):
         # Observed nutrient pattern from Mercadona product 12946, represented as
         # a single-column label so this unit test isolates energy accounting from
