@@ -69,6 +69,7 @@ jobs:
           print(json.dumps(s, indent=2, ensure_ascii=False))
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: mercadona-ocr-replay-2630
           path: tools/catalog/mercadona-ocr-replay-2630/
