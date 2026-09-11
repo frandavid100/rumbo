@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.15"
+READER_VERSION = "1.4.16"
 
 
 @dataclass(frozen=True)
@@ -105,12 +105,23 @@ def _nutrition_block(text: str) -> str:
     # the marker is well after the heading so rows are not clipped accidentally.
     ends = []
     for pattern in (
-        r"\npreparacion\b", r"\nconservacion\b", r"\ncondiciones de conservacion\b",
-        r"\nmodo de empleo\b", r"\nconsumir preferentemente\b",
+        r"\npreparacion\b", r"\nmodo de empleo\b", r"\nconsumir preferentemente\b",
     ):
         m = re.search(pattern, folded_tail, flags=re.I)
         if m and m.start() > 80:
             ends.append(m.start())
+
+    # OCR column ordering can insert the standalone packaging heading
+    # `CONSERVACION` inside a split `Hidratos de / value / Carbono` row. Keep
+    # that one observed structure inside the nutrition block; otherwise retain
+    # conservation headings as ordinary end markers.
+    for m in re.finditer(r"\n(?:condiciones de )?conservacion\b", folded_tail, flags=re.I):
+        if m.start() <= 80:
+            continue
+        after = folded_tail[m.end():m.end() + 60]
+        if re.match(r"\s*\n\s*carbono\b", after, flags=re.I):
+            continue
+        ends.append(m.start())
 
     # Whole-package OCR can interleave a manufacturer/address column in the
     # middle of the nutrition table. `Fabricado por:` is therefore an end marker
@@ -298,12 +309,15 @@ def _interleaved_carbohydrate(text: str) -> float | None:
 
     In narrow Mercadona tables the visual text `Hidratos de Carbono | 2.0 g`
     is often linearised as `Hidratos de / 2.0 g / Carbono`. The value is safe
-    only when it is literally bracketed by the two halves of that same label.
+    only when it is bracketed by the two halves of that same label. One observed
+    whole-package ordering additionally inserts the standalone `CONSERVACION`
+    heading between the numeric cell and `Carbono`; no arbitrary prose is skipped.
     Observed OCR unit glyphs include g, 9, y, q and the two-character `yg`.
     """
     folded = _strip_ocr_unit_parentheses(_fold(text))
     m = re.search(
-        r"(?:^|\n)\s*hidratos?\s+de\s+([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|yg|y|q)?\s+carbono\b",
+        r"(?:^|\n)\s*hidratos?\s+de\s+([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|yg|y|q)?"
+        r"(?:\s*\n\s*conservacion\s*)?\s+carbono\b",
         folded,
         flags=re.I,
     )
