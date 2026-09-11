@@ -1,0 +1,133 @@
+{
+  "cut_date": "2026-09-11",
+  "branch": "agent/catalog-phase1",
+  "kind": "MERCADONA_OCR_CANONICAL_RECONCILED_CUT",
+  "inventory_products": 4280,
+  "reconciliation_policy": "LATEST_RAW_LIVE_OCR_WINS",
+  "reconciliation_run_id": 34597320693,
+  "audit": {
+    "workflow_run_id": 34597456830,
+    "artifact_id": 10262966831,
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_sha256": "4a311854f73427716c62267b4de27a00722273259e63782856552054b84a195b",
+    "canonical_manifest_sha256": "052aaa25d2718c7bc09e2e6ce4aab51a761a24b42cb440202de4bb42c5892a33",
+    "canonical_jsonl_sha256": "ba0094d682f256463658f6b566ce3695de251a2e70f979be33d04baf77601f46",
+    "canonical_sqlite_sha256": "a3c505855d29d01407d6ad7a26af89c292d49f3bf69ffeab38b92d82b65d1a08",
+    "run_union_summary_sha256": "88d2977b95a36a15d587b2c47d573fe82ae0d1752392374ad89fe8fb7b77f29f",
+    "review_failure_modes_summary_sha256": "73b0010961e2a4656977394b85272e90de8a9ac5d7f0c6ca37a4ebe72c712188"
+  },
+  "canonical": {
+    "processed": 2971,
+    "declared": 318,
+    "review": 2653,
+    "complete_declared": 318,
+    "complete_nutrition_coverage_pct": 7.4299065421,
+    "ocr_processed_coverage_pct": 69.4158878505,
+    "energy_kcal_products": 318,
+    "protein_g_products": 318,
+    "carbohydrate_g_products": 318,
+    "fat_g_products": 318
+  },
+  "transition_from_previous_314_cut": {
+    "previous_processed": 2971,
+    "current_processed": 2971,
+    "previous_declared": 314,
+    "current_declared": 318,
+    "previous_review": 2657,
+    "current_review": 2653,
+    "review_to_declared": 4,
+    "declared_to_review": 0,
+    "promoted_product_ids": [
+      "13984",
+      "34025",
+      "60873",
+      "80794"
+    ],
+    "source_retry_run_id": 34596435702,
+    "note": "All four DECLARED rows from the bounded docTR retry survive the conservative latest-live reconciliation; no canonical demotion occurred versus the prior 314 cut."
+  },
+  "verified_transition_examples": [
+    {
+      "product_id": "13984",
+      "name": "Mini pizzas jamón y queso Fiesta ultracongeladas",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "calories": 228.0,
+      "fat_g": 7.3,
+      "carbohydrate_g": 29.0,
+      "protein_g": 9.9,
+      "corroborated_fields": 4,
+      "independent_engine_families": 3,
+      "doctr_field_support": true
+    },
+    {
+      "product_id": "34025",
+      "name": "Avellana tostada Hacendado 0% sal añadida",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "calories": 710.0,
+      "fat_g": 68.0,
+      "carbohydrate_g": 3.0,
+      "protein_g": 18.0,
+      "corroborated_fields": 4,
+      "independent_engine_families": 3,
+      "doctr_field_support": true
+    },
+    {
+      "product_id": "60873",
+      "name": "Ajo y Perejil Hacendado",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "calories": 246.0,
+      "fat_g": 1.59,
+      "carbohydrate_g": 45.4,
+      "protein_g": 11.1,
+      "corroborated_fields": 4,
+      "independent_engine_families": 3,
+      "doctr_field_support": true
+    },
+    {
+      "product_id": "80794",
+      "name": "Tabulé oriental Hacendado",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "calories": 167.0,
+      "fat_g": 5.29,
+      "carbohydrate_g": 25.4,
+      "protein_g": 3.9,
+      "corroborated_fields": 4,
+      "independent_engine_families": 3,
+      "doctr_field_support": true
+    }
+  ],
+  "current_review_residual": {
+    "latest_review_products": 2653,
+    "complete_near_safe": 38,
+    "complete_by_corrob_count": {
+      "0_of_4": 1,
+      "1_of_4": 35,
+      "2_of_4": 1,
+      "3_of_4": 1,
+      "4_of_4": 0
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 47,
+    "no_visual_region_without_ocr_signal": 0,
+    "two_of_four_product_id": "2787",
+    "three_of_four_product_id": "2632"
+  },
+  "historical_snapshot_reconstruction": {
+    "status": "BLOCKED_HISTORICAL_FIRST_PARTY_SNAPSHOT_EXPIRED",
+    "expired_source_run": 33046950149,
+    "note": "The immutable original 4,280-product first-party artifact is expired. The historical universe remains pinned at 4,280 and the materialized raw-live OCR union remains auditable; do not substitute a later live inventory for the historical audit universe."
+  },
+  "next_step": "INSPECT_THE_TWO_HIGHEST_CORROBORATION_REVIEW_RESIDUALS_AND_ONLY_ADD_NEW_EXACT_IMAGE_EVIDENCE_IF_AN_INDEPENDENT_ROUTE_EXISTS_WITHOUT_REPEATING_THE_SAME_FAILED_EVIDENCE_OR_RELAXING_ACCEPTANCE_POLICY",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
