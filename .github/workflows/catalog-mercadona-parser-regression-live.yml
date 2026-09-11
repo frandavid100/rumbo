@@ -33,7 +33,6 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
-          python -m pip install --disable-pip-version-check requests
           python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
           python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
 
@@ -50,7 +49,7 @@ jobs:
       - name: Fetch target product from official Mercadona API
         working-directory: tools/catalog
         run: |
-          mkdir -p mercadona-parser-regression-live
+          mkdir -p mercadona-parser-regression-live /tmp/mercadona-target-details
           python - <<'PY'
           import json, os
           from pathlib import Path
@@ -62,30 +61,28 @@ jobs:
           PY
           python mercadona_first_party_details.py \
             --inventory /tmp/mercadona-target-inventory.jsonl \
-            --output /tmp/mercadona-target-details.jsonl \
-            --human-delay 0 \
+            --out /tmp/mercadona-target-details \
+            --shard-index 0 \
+            --shard-count 1 \
             --timeout 20 \
-            --max-retries 6
+            --delay 0
           python - <<'PY'
           import json, os
           from pathlib import Path
           pid = os.environ['TARGET_PRODUCT_ID']
-          rows = [json.loads(line) for line in Path('/tmp/mercadona-target-details.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          details_path = Path('/tmp/mercadona-target-details/details-00.jsonl')
+          errors_path = Path('/tmp/mercadona-target-details/errors-00.jsonl')
+          rows = [json.loads(line) for line in details_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          errors = [json.loads(line) for line in errors_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors:
+              raise SystemExit(f'first-party API fetch errors: {errors}')
           if len(rows) != 1:
               raise SystemExit(f'expected exactly one API result, got {len(rows)}')
-          row = rows[0]
-          if not row.get('success') or row.get('status') != 'SUCCESS':
-              raise SystemExit(f'first-party API fetch failed: {row}')
-          if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_method') != 'JSON_API' or row.get('first_party') is not True or row.get('redistribution_allowed') is not False:
-              raise SystemExit('invalid first-party provenance')
-          product = dict(row.get('details') or {})
-          product['product_id'] = str(row.get('product_id') or pid)
-          product['category_path'] = row.get('category_path') or []
-          product['observed_at'] = row.get('retrieved_at') or product.get('updated_at') or ''
-          product['retrieved_at'] = row.get('retrieved_at') or ''
-          product['first_party_source_url'] = row.get('source_url')
-          if product['product_id'] != pid:
+          product = rows[0]
+          if str(product.get('product_id')) != pid:
               raise SystemExit('product id mismatch')
+          if product.get('source') != 'MERCADONA_FIRST_PARTY' or product.get('evidence_type') != 'OBSERVED_API' or product.get('detail_observed') is not True:
+              raise SystemExit('invalid first-party API provenance')
           photos = product.get('photos') or []
           p9 = [p for p in photos if str(p.get('perspective')) == '9' and (p.get('zoom') or p.get('regular'))]
           if not p9:
@@ -93,10 +90,10 @@ jobs:
           Path('mercadona-parser-regression-live/target.jsonl').write_text(json.dumps(product, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
           Path('mercadona-parser-regression-live/first-party-fetch.json').write_text(json.dumps({
               'product_id': pid,
-              'source': row.get('source'),
-              'source_method': row.get('source_method'),
-              'source_url': row.get('source_url'),
-              'retrieved_at': row.get('retrieved_at'),
+              'source': product.get('source'),
+              'evidence_type': product.get('evidence_type'),
+              'source_url': product.get('source_url'),
+              'observed_at': product.get('observed_at'),
               'p9_image_url': p9[0].get('zoom') or p9[0].get('regular'),
               'redistribution_allowed': False,
           }, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -126,14 +123,17 @@ jobs:
           if len(rows) != 1 or str(rows[0].get('product_id')) != pid:
               raise SystemExit('unexpected OCR result set')
           row = rows[0]
-          if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
-              raise SystemExit('invalid OCR provenance')
+          evidence = row.get('evidence_level') or row.get('evidence_type')
+          if row.get('source') != 'MERCADONA_FIRST_PARTY' or evidence != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
+              raise SystemExit(f'invalid OCR provenance: source={row.get("source")} evidence={evidence} redistribution={row.get("redistribution_allowed")}')
           accepted = next((a for a in (row.get('attempts') or []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
           if row.get('status') == 'DECLARED':
               ens = (accepted or {}).get('ensemble') or {}
               nutrition = row.get('nutrition') or {}
-              if ens.get('independent_engine_families', 0) < 2 or ens.get('corroborated_fields', 0) < 4:
-                  raise SystemExit('unsafe DECLARED corroboration')
+              families = ens.get('independent_engine_families', (row.get('claim') or {}).get('independent_engine_families', 0))
+              corroborated = ens.get('corroborated_fields', (row.get('claim') or {}).get('corroborated_fields', 0))
+              if families < 2 or corroborated < 4:
+                  raise SystemExit(f'unsafe DECLARED corroboration: families={families} fields={corroborated}')
               if any(nutrition.get(k) is None for k in ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')):
                   raise SystemExit('unsafe DECLARED missing macro')
           parser_versions = sorted({
@@ -162,7 +162,7 @@ jobs:
               'parser_versions': parser_versions,
               'carbohydrate_observations': carbohydrate_observations,
               'visual_regions_detected': row.get('visual_regions_detected'),
-              'evidence_level': row.get('evidence_level'),
+              'evidence_level': evidence,
               'source': 'MERCADONA_FIRST_PARTY/label image',
               'redistribution_allowed': False,
               'CLASSIFIED': 0,
