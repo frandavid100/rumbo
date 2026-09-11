@@ -14,7 +14,7 @@ def build_one_of_four_candidates(
     *,
     limit: int = DEFAULT_LIMIT,
 ) -> tuple[list[dict], dict]:
-    """Select a bounded exact-image cohort from clean canonical 1/4 REVIEW rows.
+    """Select a bounded exact-image p9 cohort from clean canonical 1/4 REVIEW rows.
 
     The canonical tuple is used only to select a difficult cohort. The subsequent
     OCR run is a new raw-live observation over the exact current first-party image
@@ -41,7 +41,7 @@ def build_one_of_four_candidates(
             targets[pid] = row
 
     candidates: list[dict] = []
-    unmatched_current_photo: list[str] = []
+    unmatched_current_p9: list[str] = []
     for line in Path(product_path).read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -56,25 +56,23 @@ def build_one_of_four_candidates(
         matches = [
             (index, photo)
             for index, photo in enumerate(photos)
-            if isinstance(photo, dict) and str(photo.get("zoom") or "") == image_url
+            if (
+                isinstance(photo, dict)
+                and str(photo.get("zoom") or "") == image_url
+                and int(photo.get("perspective") or 0) == 9
+            )
         ]
         if len(matches) != 1:
-            unmatched_current_photo.append(pid)
+            unmatched_current_p9.append(pid)
             continue
 
         image_index, photo = matches[0]
-        actual_perspective = photo.get("perspective")
-        routed_photo = dict(photo)
-        # The OCR pipeline's priority mode is intentionally reused, but only for
-        # this already-proven exact image. This does not claim the source photo
-        # had a different perspective in Mercadona's API.
-        routed_photo["perspective"] = 9
         candidate = dict(row)
-        candidate["photos"] = [routed_photo]
+        candidate["photos"] = [dict(photo)]
         candidate["_near_safe_image_meta"] = {
             "image_url": image_url,
             "image_index": image_index,
-            "perspective": actual_perspective,
+            "perspective": 9,
             "canonical_latest_raw_run_id": diagnostic.get("latest_raw_run_id"),
             "canonical_corroborated_fields": 1,
             "canonical_engine_families": diagnostic.get("independent_engine_families"),
@@ -94,17 +92,17 @@ def build_one_of_four_candidates(
     summary = {
         "pilot_limit": limit,
         "canonical_one_of_four_targets": len(targets),
-        "current_exact_first_party_image_targets": len(candidates),
+        "current_exact_first_party_p9_targets": len(candidates),
         "selected": len(selected),
         "selected_with_structured_ingredients": sum(bool(row.get("ingredients")) for row in selected),
         "selected_without_structured_ingredients": sum(not bool(row.get("ingredients")) for row in selected),
         "selected_product_ids": [str(row.get("product_id")) for row in selected],
-        "unmatched_current_first_party_photo": sorted(unmatched_current_photo),
+        "unmatched_current_first_party_p9": sorted(unmatched_current_p9),
         "selection_policy": (
-            "CURRENT_CLEAN_CANONICAL_1_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_IMAGE; "
+            "CURRENT_CLEAN_CANONICAL_1_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_PERSPECTIVE_9_IMAGE; "
             "NEW_RAW_LIVE_OBSERVATION_WITH_DOCTR_AS_ADDITIONAL_INDEPENDENT_OCR_FAMILY"
         ),
-        "observation_policy": "CURRENT_EXACT_IMAGE_IS_REPROCESSED_AS_A_NEW_RAW_LIVE_OBSERVATION",
+        "observation_policy": "CURRENT_EXACT_P9_IMAGE_IS_REPROCESSED_AS_A_NEW_RAW_LIVE_OBSERVATION",
         "cross_run_value_fusion": False,
         "current_observation_must_satisfy_declared_contract_independently": True,
         "new_independent_ocr_family": "doctr",
