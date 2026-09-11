@@ -64,6 +64,22 @@ class RowTokenRegressionTest(unittest.TestCase):
         self.assertEqual(rb.status, 'REVIEW', rb)
         self.assertIn('MISSING_CORE:carbohydrate_g', rb.reasons)
 
+    def test_interleaved_carbohydrate_allows_observed_conservation_heading(self):
+        # Observed on Mercadona 14031: independent OCR families linearise the
+        # printed `Hidratos de Carbono | 1,0 g` row as `Hidratos de / 1,0 g /
+        # CONSERVACIÓN / Carbono`. Accept only this known standalone packaging
+        # heading between the numeric cell and the second half of the row label.
+        text = (
+            'INFORMACIÓN NUTRICIONAL\npor 100 g\n'
+            'Valor energético 519 kJ / 124 kcal\n'
+            'Grasas 5.6 g\n'
+            'Hidratos de\n1.0 g\nCONSERVACIÓN\nCarbono\n'
+            'Proteínas 5.6 g\nSal 0.7 g\n'
+        )
+        r = read_nutrition_label(text, extraction_confidence=.96)
+        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.nutrition['carbohydrate_g'], 1.0)
+
     def test_protein_prose_guard_is_preserved(self):
         text = (
             'INFORMACIÓN NUTRICIONAL\npor 100 g\nValor energético 100 kcal\n'
