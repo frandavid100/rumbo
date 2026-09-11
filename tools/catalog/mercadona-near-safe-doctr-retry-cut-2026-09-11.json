@@ -1,0 +1,137 @@
+{
+  "kind": "MERCADONA_NEAR_SAFE_DOCTR_RETRY_CUT",
+  "date": "2026-09-11",
+  "branch": "agent/catalog-phase1",
+  "source_run_id": 34596435702,
+  "source_artifact_id": 10261454570,
+  "source_artifact_name": "mercadona-near-safe-doctr-retry-merged",
+  "source_commit": "1bc6a552512cfa3eca6496b12b730cca4d0aec56",
+  "artifact_sha256": "2722f551c01301069e372a546bb43c508c6fee42233236819da1314a59f304dd",
+  "results_jsonl_sha256": "cda950d022e44933ff28efdd3fb23a658200972562b3b5c28dd3e45203c00a25",
+  "staging_sqlite_sha256": "cd7cddf5455b68923266541cc18311b8a8d7d6928f26e77c931b28782aa850bd",
+  "summary_sha256": "bcf311860e4c0befaed499ca083fd432cc2cb5c15fc8a34a2a3d109b78e0166e",
+  "selection_summary_sha256": "cae6348528b452b9bec57e7ae2496e3310c977423c05fa2e9812cb70ec5d606e",
+  "inventory_products": 4280,
+  "canonical_two_of_four_targets": 16,
+  "current_exact_first_party_image_targets": 15,
+  "processed": 15,
+  "status_counts": {
+    "DECLARED": 4,
+    "REVIEW": 11
+  },
+  "declared_rate": 0.2666666667,
+  "error": 0,
+  "no_visual_region": 3,
+  "invalid_product_ids": [],
+  "selected_product_ids": [
+    "10846",
+    "33436",
+    "34025",
+    "59160",
+    "64705",
+    "2632",
+    "80794",
+    "12348",
+    "20287",
+    "60873",
+    "32316",
+    "13984",
+    "16616",
+    "22179",
+    "22910"
+  ],
+  "unmatched_current_first_party_photo": [
+    "2787"
+  ],
+  "selection_policy": "CURRENT_CLEAN_CANONICAL_2_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_IMAGE; PRIOR_ATTEMPTS_ALLOWED_ONLY_BECAUSE_DOCTR_IS_A_NEW_INDEPENDENT_OCR_FAMILY",
+  "image_selection_policy": "EXACT_CANONICAL_TWO_OF_FOUR_IMAGE_URL_MATCHED_CURRENT_FIRST_PARTY_PHOTO",
+  "new_independent_ocr_family": "doctr",
+  "doctr_detection_arch": "fast_tiny",
+  "doctr_recognition_arch": "crnn_mobilenet_v3_small",
+  "acceptance_policy_changed": false,
+  "declared_products": [
+    {
+      "product_id": "13984",
+      "name": "Mini pizzas jamón y queso Fiesta ultracongeladas",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 228.0,
+        "protein_g": 9.9,
+        "carbohydrate_g": 29.0,
+        "fat_g": 7.3
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "doctr_field_support": true
+    },
+    {
+      "product_id": "34025",
+      "name": "Avellana tostada Hacendado 0% sal añadida",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 710.0,
+        "protein_g": 18.0,
+        "carbohydrate_g": 3.0,
+        "fat_g": 68.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "doctr_field_support": true
+    },
+    {
+      "product_id": "80794",
+      "name": "Tabulé oriental Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 167.0,
+        "protein_g": 3.9,
+        "carbohydrate_g": 25.4,
+        "fat_g": 5.29
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "doctr_field_support": true
+    },
+    {
+      "product_id": "60873",
+      "name": "Ajo y Perejil Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 246.0,
+        "protein_g": 11.1,
+        "carbohydrate_g": 45.4,
+        "fat_g": 1.59
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "doctr_field_support": true
+    }
+  ],
+  "review_product_ids": [
+    "20287",
+    "12348",
+    "33436",
+    "32316",
+    "22910",
+    "59160",
+    "64705",
+    "16616",
+    "2632",
+    "10846",
+    "22179"
+  ],
+  "no_visual_region_product_ids": [
+    "22910",
+    "59160",
+    "10846"
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "next_step": "RECONCILE_LATEST_RAW_LIVE_OCR_BEFORE_COUNTING_CANONICAL_PROMOTIONS"
+}
