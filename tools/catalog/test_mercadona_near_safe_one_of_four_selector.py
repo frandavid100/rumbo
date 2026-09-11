@@ -10,7 +10,7 @@ class MercadonaNearSafeOneOfFourSelectorTest(unittest.TestCase):
     def _write_jsonl(self, path: Path, rows: list[dict]) -> None:
         path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
 
-    def test_selects_only_clean_one_of_four_with_exact_unique_current_image(self):
+    def test_selects_only_clean_one_of_four_with_exact_unique_current_p9_image(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             diagnostic = root / "diagnostic.jsonl"
@@ -61,7 +61,7 @@ class MercadonaNearSafeOneOfFourSelectorTest(unittest.TestCase):
                     {
                         "product_id": "100",
                         "ingredients": "x",
-                        "photos": [{"zoom": image_100, "perspective": 7}],
+                        "photos": [{"zoom": image_100, "perspective": 9}],
                     },
                     {
                         "product_id": "200",
@@ -80,18 +80,19 @@ class MercadonaNearSafeOneOfFourSelectorTest(unittest.TestCase):
             self.assertEqual([row["product_id"] for row in selected], ["100"])
             self.assertEqual(selected[0]["photos"][0]["perspective"], 9)
             meta = selected[0]["_near_safe_image_meta"]
-            self.assertEqual(meta["perspective"], 7)
+            self.assertEqual(meta["perspective"], 9)
             self.assertEqual(meta["canonical_corroborated_fields"], 1)
             self.assertEqual(summary["canonical_one_of_four_targets"], 1)
-            self.assertEqual(summary["current_exact_first_party_image_targets"], 1)
+            self.assertEqual(summary["current_exact_first_party_p9_targets"], 1)
             self.assertFalse(summary["acceptance_policy_changed"])
             self.assertFalse(summary["cross_run_value_fusion"])
 
-    def test_replaced_or_ambiguous_image_is_not_selected(self):
+    def test_replaced_or_non_p9_image_is_not_selected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             diagnostic = root / "diagnostic.jsonl"
             products = root / "products.jsonl"
+            exact = "https://example.invalid/old.jpg"
             self._write_jsonl(
                 diagnostic,
                 [
@@ -103,8 +104,18 @@ class MercadonaNearSafeOneOfFourSelectorTest(unittest.TestCase):
                         "basis": "100_ml",
                         "diagnostic_candidate_values": {"calories": 20, "fat_g": 0, "carbohydrate_g": 5, "protein_g": 0},
                         "safety_blockers": [],
-                        "image_url": "https://example.invalid/old.jpg",
-                    }
+                        "image_url": exact,
+                    },
+                    {
+                        "product_id": "200",
+                        "canonical_status": "REVIEW",
+                        "corroborated_fields": 1,
+                        "independent_engine_families": 2,
+                        "basis": "100_g",
+                        "diagnostic_candidate_values": {"calories": 100, "fat_g": 2, "carbohydrate_g": 3, "protein_g": 4},
+                        "safety_blockers": [],
+                        "image_url": "https://example.invalid/200.jpg",
+                    },
                 ],
             )
             self._write_jsonl(
@@ -112,13 +123,17 @@ class MercadonaNearSafeOneOfFourSelectorTest(unittest.TestCase):
                 [
                     {
                         "product_id": "100",
-                        "photos": [{"zoom": "https://example.invalid/new.jpg", "perspective": 9}],
-                    }
+                        "photos": [{"zoom": exact, "perspective": 7}],
+                    },
+                    {
+                        "product_id": "200",
+                        "photos": [{"zoom": "https://example.invalid/replaced.jpg", "perspective": 9}],
+                    },
                 ],
             )
             selected, summary = build_one_of_four_candidates(diagnostic, products)
             self.assertEqual(selected, [])
-            self.assertEqual(summary["unmatched_current_first_party_photo"], ["100"])
+            self.assertEqual(summary["unmatched_current_first_party_p9"], ["100", "200"])
 
     def test_limit_prefers_structured_ingredients_then_stronger_family_support(self):
         with tempfile.TemporaryDirectory() as tmp:
