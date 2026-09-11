@@ -83,18 +83,23 @@ jobs:
               raise SystemExit('product id mismatch')
           if product.get('source') != 'MERCADONA_FIRST_PARTY' or product.get('evidence_type') != 'OBSERVED_API' or product.get('detail_observed') is not True:
               raise SystemExit('invalid first-party API provenance')
+          if not product.get('ean'):
+              raise SystemExit('live first-party target is missing EAN')
           photos = product.get('photos') or []
           p9 = [p for p in photos if str(p.get('perspective')) == '9' and (p.get('zoom') or p.get('regular'))]
           if not p9:
               raise SystemExit('target no longer has a perspective=9 label candidate')
+          p9_url = p9[0].get('zoom') or p9[0].get('regular')
           Path('mercadona-parser-regression-live/target.jsonl').write_text(json.dumps(product, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
           Path('mercadona-parser-regression-live/first-party-fetch.json').write_text(json.dumps({
               'product_id': pid,
+              'ean': product.get('ean'),
+              'name': product.get('name'),
               'source': product.get('source'),
               'evidence_type': product.get('evidence_type'),
               'source_url': product.get('source_url'),
               'observed_at': product.get('observed_at'),
-              'p9_image_url': p9[0].get('zoom') or p9[0].get('regular'),
+              'p9_image_url': p9_url,
               'redistribution_allowed': False,
           }, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
@@ -119,51 +124,65 @@ jobs:
           from pathlib import Path
           pid = os.environ['TARGET_PRODUCT_ID']
           result_path = Path('mercadona-parser-regression-live/ocr/results-00.jsonl')
+          summary_path = Path('mercadona-parser-regression-live/ocr/summary-00.json')
+          fetch_path = Path('mercadona-parser-regression-live/first-party-fetch.json')
           rows = [json.loads(line) for line in result_path.read_text(encoding='utf-8').splitlines() if line.strip()]
           if len(rows) != 1 or str(rows[0].get('product_id')) != pid:
               raise SystemExit('unexpected OCR result set')
           row = rows[0]
+          summary = json.loads(summary_path.read_text(encoding='utf-8'))
+          fetched = json.loads(fetch_path.read_text(encoding='utf-8'))
           evidence = row.get('evidence_level') or row.get('evidence_type')
           if row.get('source') != 'MERCADONA_FIRST_PARTY' or evidence != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
               raise SystemExit(f'invalid OCR provenance: source={row.get("source")} evidence={evidence} redistribution={row.get("redistribution_allowed")}')
-          accepted = next((a for a in (row.get('attempts') or []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+          if str(row.get('ean') or '') != str(fetched.get('ean') or ''):
+              raise SystemExit(f'live identity mismatch: OCR EAN={row.get("ean")} fetched EAN={fetched.get("ean")}')
+          if row.get('image_url') != fetched.get('p9_image_url'):
+              raise SystemExit('OCR did not use the exact live perspective=9 first-party image')
+          if summary.get('parser_version') != '1.4.16':
+              raise SystemExit(f'unexpected parser version: {summary.get("parser_version")}')
+
+          claim_value = row.get('claim')
+          claim_meta = claim_value if isinstance(claim_value, dict) else {}
+          attempts = row.get('attempts') or []
+          if not isinstance(attempts, list):
+              raise SystemExit(f'unexpected attempts schema: {type(attempts).__name__}')
+          accepted = next((a for a in attempts if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
           if row.get('status') == 'DECLARED':
               ens = (accepted or {}).get('ensemble') or {}
               nutrition = row.get('nutrition') or {}
-              families = ens.get('independent_engine_families', (row.get('claim') or {}).get('independent_engine_families', 0))
-              corroborated = ens.get('corroborated_fields', (row.get('claim') or {}).get('corroborated_fields', 0))
+              families = ens.get('independent_engine_families', claim_meta.get('independent_engine_families', 0))
+              corroborated = ens.get('corroborated_fields', claim_meta.get('corroborated_fields', 0))
               if families < 2 or corroborated < 4:
                   raise SystemExit(f'unsafe DECLARED corroboration: families={families} fields={corroborated}')
               if any(nutrition.get(k) is None for k in ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')):
                   raise SystemExit('unsafe DECLARED missing macro')
-          parser_versions = sorted({
-              str((engine.get('parsed') or {}).get('parser_version'))
-              for attempt in (row.get('attempts') or [])
-              for engine in (attempt.get('engines') or {}).values()
-              if (engine.get('parsed') or {}).get('parser_version')
-          })
+
           carbohydrate_observations = []
-          for attempt in (row.get('attempts') or []):
+          for attempt in attempts:
               for engine_name, engine in (attempt.get('engines') or {}).items():
                   parsed = engine.get('parsed') or {}
-                  nutrition = parsed.get('nutrition') or {}
+                  nutrition = engine.get('nutrition') or parsed.get('nutrition') or {}
                   if nutrition.get('carbohydrate_g') is not None:
                       carbohydrate_observations.append({
                           'target_kind': attempt.get('target_kind'),
                           'engine': engine_name,
-                          'status': parsed.get('status'),
+                          'status': engine.get('status') or parsed.get('status'),
                           'carbohydrate_g': nutrition.get('carbohydrate_g'),
                       })
           report = {
               'product_id': pid,
+              'ean': fetched.get('ean'),
+              'name': fetched.get('name'),
               'status': row.get('status'),
               'nutrition': row.get('nutrition'),
-              'claim': row.get('claim'),
-              'parser_versions': parser_versions,
+              'claim': claim_value,
+              'parser_version': summary.get('parser_version'),
               'carbohydrate_observations': carbohydrate_observations,
               'visual_regions_detected': row.get('visual_regions_detected'),
               'evidence_level': evidence,
               'source': 'MERCADONA_FIRST_PARTY/label image',
+              'image_url': fetched.get('p9_image_url'),
               'redistribution_allowed': False,
               'CLASSIFIED': 0,
               'MENU_ELIGIBLE': 0,
