@@ -80,6 +80,19 @@ class RowTokenRegressionTest(unittest.TestCase):
         self.assertEqual(r.status, 'DECLARED', r)
         self.assertEqual(r.nutrition['carbohydrate_g'], 1.0)
 
+    def test_interleaved_carbohydrate_does_not_skip_arbitrary_heading(self):
+        text = (
+            'INFORMACIÓN NUTRICIONAL\npor 100 g\n'
+            'Valor energético 519 kJ / 124 kcal\n'
+            'Grasas 5.6 g\n'
+            'Hidratos de\n1.0 g\nINGREDIENTES\nCarbono\n'
+            'Proteínas 5.6 g\nSal 0.7 g\n'
+        )
+        r = read_nutrition_label(text, extraction_confidence=.96)
+        self.assertEqual(r.status, 'REVIEW', r)
+        self.assertNotIn('carbohydrate_g', r.nutrition or {})
+        self.assertIn('MISSING_CORE:carbohydrate_g', r.reasons)
+
     def test_protein_prose_guard_is_preserved(self):
         text = (
             'INFORMACIÓN NUTRICIONAL\npor 100 g\nValor energético 100 kcal\n'
