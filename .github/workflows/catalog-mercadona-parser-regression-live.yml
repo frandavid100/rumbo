@@ -1,0 +1,186 @@
+name: Catalog Mercadona parser regression live
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-parser-regression-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-parser-regression-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      TARGET_PRODUCT_ID: '14031'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install first-party fetch and OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check requests
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run parser and OCR safety regression tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Fetch target product from official Mercadona API
+        working-directory: tools/catalog
+        run: |
+          mkdir -p mercadona-parser-regression-live
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pid = os.environ['TARGET_PRODUCT_ID']
+          Path('/tmp/mercadona-target-inventory.jsonl').write_text(
+              json.dumps({'product_id': pid, 'category_id': '', 'category_path': []}, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          python mercadona_first_party_details.py \
+            --inventory /tmp/mercadona-target-inventory.jsonl \
+            --output /tmp/mercadona-target-details.jsonl \
+            --human-delay 0 \
+            --timeout 20 \
+            --max-retries 6
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pid = os.environ['TARGET_PRODUCT_ID']
+          rows = [json.loads(line) for line in Path('/tmp/mercadona-target-details.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(rows) != 1:
+              raise SystemExit(f'expected exactly one API result, got {len(rows)}')
+          row = rows[0]
+          if not row.get('success') or row.get('status') != 'SUCCESS':
+              raise SystemExit(f'first-party API fetch failed: {row}')
+          if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_method') != 'JSON_API' or row.get('first_party') is not True or row.get('redistribution_allowed') is not False:
+              raise SystemExit('invalid first-party provenance')
+          product = dict(row.get('details') or {})
+          product['product_id'] = str(row.get('product_id') or pid)
+          product['category_path'] = row.get('category_path') or []
+          product['observed_at'] = row.get('retrieved_at') or product.get('updated_at') or ''
+          product['retrieved_at'] = row.get('retrieved_at') or ''
+          product['first_party_source_url'] = row.get('source_url')
+          if product['product_id'] != pid:
+              raise SystemExit('product id mismatch')
+          photos = product.get('photos') or []
+          p9 = [p for p in photos if str(p.get('perspective')) == '9' and (p.get('zoom') or p.get('regular'))]
+          if not p9:
+              raise SystemExit('target no longer has a perspective=9 label candidate')
+          Path('mercadona-parser-regression-live/target.jsonl').write_text(json.dumps(product, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
+          Path('mercadona-parser-regression-live/first-party-fetch.json').write_text(json.dumps({
+              'product_id': pid,
+              'source': row.get('source'),
+              'source_method': row.get('source_method'),
+              'source_url': row.get('source_url'),
+              'retrieved_at': row.get('retrieved_at'),
+              'p9_image_url': p9[0].get('zoom') or p9[0].get('regular'),
+              'redistribution_allowed': False,
+          }, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+
+      - name: Run live exact-product OCR with current parser
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-parser-regression-live/target.jsonl \
+            --out mercadona-parser-regression-live/ocr \
+            --eligibility-mode priority \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 1 \
+            --delay 0
+
+      - name: Validate provenance and summarize regression outcome
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pid = os.environ['TARGET_PRODUCT_ID']
+          result_path = Path('mercadona-parser-regression-live/ocr/results-00.jsonl')
+          rows = [json.loads(line) for line in result_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(rows) != 1 or str(rows[0].get('product_id')) != pid:
+              raise SystemExit('unexpected OCR result set')
+          row = rows[0]
+          if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
+              raise SystemExit('invalid OCR provenance')
+          accepted = next((a for a in (row.get('attempts') or []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+          if row.get('status') == 'DECLARED':
+              ens = (accepted or {}).get('ensemble') or {}
+              nutrition = row.get('nutrition') or {}
+              if ens.get('independent_engine_families', 0) < 2 or ens.get('corroborated_fields', 0) < 4:
+                  raise SystemExit('unsafe DECLARED corroboration')
+              if any(nutrition.get(k) is None for k in ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')):
+                  raise SystemExit('unsafe DECLARED missing macro')
+          parser_versions = sorted({
+              str((engine.get('parsed') or {}).get('parser_version'))
+              for attempt in (row.get('attempts') or [])
+              for engine in (attempt.get('engines') or {}).values()
+              if (engine.get('parsed') or {}).get('parser_version')
+          })
+          carbohydrate_observations = []
+          for attempt in (row.get('attempts') or []):
+              for engine_name, engine in (attempt.get('engines') or {}).items():
+                  parsed = engine.get('parsed') or {}
+                  nutrition = parsed.get('nutrition') or {}
+                  if nutrition.get('carbohydrate_g') is not None:
+                      carbohydrate_observations.append({
+                          'target_kind': attempt.get('target_kind'),
+                          'engine': engine_name,
+                          'status': parsed.get('status'),
+                          'carbohydrate_g': nutrition.get('carbohydrate_g'),
+                      })
+          report = {
+              'product_id': pid,
+              'status': row.get('status'),
+              'nutrition': row.get('nutrition'),
+              'claim': row.get('claim'),
+              'parser_versions': parser_versions,
+              'carbohydrate_observations': carbohydrate_observations,
+              'visual_regions_detected': row.get('visual_regions_detected'),
+              'evidence_level': row.get('evidence_level'),
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('mercadona-parser-regression-live/report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-parser-regression-live-14031
+          path: |
+            tools/catalog/mercadona-parser-regression-live/first-party-fetch.json
+            tools/catalog/mercadona-parser-regression-live/target.jsonl
+            tools/catalog/mercadona-parser-regression-live/ocr/results-00.jsonl
+            tools/catalog/mercadona-parser-regression-live/ocr/summary-00.json
+            tools/catalog/mercadona-parser-regression-live/report.json
+          retention-days: 30
+          if-no-files-found: warn
