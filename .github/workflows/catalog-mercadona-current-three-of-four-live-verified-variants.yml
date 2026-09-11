@@ -1,5 +1,6 @@
 name: Catalog Mercadona current 3-of-4 live-verified variant rescue
 
+# Retriggered 2026-09-11 to process the current canonical 3-of-4 residual.
 on:
   push:
     branches: [agent/catalog-phase1]
