@@ -3,7 +3,7 @@
   "source": "MERCADONA_FIRST_PARTY",
   "evidence_type": "OBSERVED_API",
   "anchor_source": "MERCADONA_OCR_RUN_UNION/latest_usable_products",
-  "observed_at": "2026-09-12T03:43:04.791195+00:00",
+  "observed_at": "2026-09-12T03:46:16.603204+00:00",
   "policy": "Compare the immutable EAN attached to each canonically usable Mercadona OCR product_id with a fresh official first-party product-detail observation. A different current EAN proves product_id reuse/reassignment and is reported only as an identity hazard; this audit never mutates historical canonical OCR nutrition. Missing/unavailable current identity fails closed and remains unresolved.",
   "anchored_products": 323,
   "matched_products": 321,
