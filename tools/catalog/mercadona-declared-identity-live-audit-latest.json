@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "source": "MERCADONA_FIRST_PARTY",
+  "evidence_type": "OBSERVED_API",
+  "anchor_source": "MERCADONA_OCR_RUN_UNION/latest_usable_products",
+  "observed_at": "2026-09-12T03:43:04.791195+00:00",
+  "policy": "Compare the immutable EAN attached to each canonically usable Mercadona OCR product_id with a fresh official first-party product-detail observation. A different current EAN proves product_id reuse/reassignment and is reported only as an identity hazard; this audit never mutates historical canonical OCR nutrition. Missing/unavailable current identity fails closed and remains unresolved.",
+  "anchored_products": 323,
+  "matched_products": 321,
+  "reassigned_product_ids": 0,
+  "unresolved_products": 2,
+  "status_counts": {
+    "FETCH_ERROR": 2,
+    "MATCH": 321
+  },
+  "reassigned_ids": [],
+  "unresolved_ids": [
+    "17458",
+    "17622"
+  ],
+  "images_downloaded": false,
+  "images_persisted": false,
+  "nutrition_values_changed": false,
+  "missing_values_inferred": false,
+  "classified": 0,
+  "menu_eligible": 0,
+  "source_residual_audit_run_id": 34668165621,
+  "expected_anchor_count": 323
+}
