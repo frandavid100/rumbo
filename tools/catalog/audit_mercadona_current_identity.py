@@ -52,6 +52,7 @@ def audit_identity_rows(
     errors: Iterable[dict[str, Any]],
     *,
     observed_at: str | None = None,
+    anchor_source: str = "MERCADONA_OCR_RUN_UNION/latest_usable_products",
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     anchor_by_id: dict[str, str] = {}
     for row in anchors:
@@ -129,7 +130,7 @@ def audit_identity_rows(
         "schema_version": "1.0.0",
         "source": SOURCE,
         "evidence_type": EVIDENCE_TYPE,
-        "anchor_source": "MERCADONA_OCR_RUN_UNION/latest_usable_products",
+        "anchor_source": anchor_source,
         "observed_at": observed_at or _now(),
         "policy": (
             "Compare the immutable EAN attached to each canonically usable Mercadona OCR product_id "
@@ -164,13 +165,14 @@ def main() -> int:
     ap.add_argument("--anchors", required=True)
     ap.add_argument("--details-root", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--anchor-source", default="MERCADONA_OCR_RUN_UNION/latest_usable_products")
     args = ap.parse_args()
 
     anchors = load_jsonl(Path(args.anchors))
     details_root = Path(args.details_root)
     details = load_jsonl_tree(details_root, "details-*.jsonl")
     errors = load_jsonl_tree(details_root, "errors-*.jsonl")
-    report, rows = audit_identity_rows(anchors, details, errors)
+    report, rows = audit_identity_rows(anchors, details, errors, anchor_source=args.anchor_source)
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
