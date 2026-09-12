@@ -25,7 +25,8 @@ jobs:
     timeout-minutes: 30
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
-      TARGET_PRODUCT_ID: '14031'
+      TARGET_PRODUCT_ID: '35649'
+      EXPECTED_GENERIC_PARSER_VERSION: '1.4.17'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -147,8 +148,9 @@ jobs:
               raise SystemExit(f'live identity mismatch: OCR EAN={row.get("ean")} fetched EAN={fetched.get("ean")}')
           if row.get('image_url') != fetched.get('p9_image_url'):
               raise SystemExit('OCR did not use the exact live perspective=9 first-party image')
-          if generic_parser_version != '1.4.16':
-              raise SystemExit(f'unexpected generic parser version: {generic_parser_version}')
+          expected_parser_version = os.environ['EXPECTED_GENERIC_PARSER_VERSION']
+          if generic_parser_version != expected_parser_version:
+              raise SystemExit(f'unexpected generic parser version: {generic_parser_version}; expected {expected_parser_version}')
 
           claim_value = row.get('claim')
           claim_meta = claim_value if isinstance(claim_value, dict) else {}
@@ -207,7 +209,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mercadona-parser-regression-live-14031
+          name: mercadona-parser-regression-live-${{ env.TARGET_PRODUCT_ID }}
           path: |
             tools/catalog/mercadona-parser-regression-live/first-party-fetch.json
             tools/catalog/mercadona-parser-regression-live/target.jsonl
