@@ -1,0 +1,286 @@
+name: Catalog Mercadona all OCR identity audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-all-ocr-identity-audit.yml'
+      - 'tools/catalog/extract_mercadona_ocr_identity_anchors.py'
+      - 'tools/catalog/test_extract_mercadona_ocr_identity_anchors.py'
+      - 'tools/catalog/audit_mercadona_current_identity.py'
+      - 'tools/catalog/test_audit_mercadona_current_identity.py'
+      - 'tools/catalog/mercadona_first_party_details.py'
+      - 'tools/catalog/summarize_mercadona_ocr_run_union.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: catalog-mercadona-all-ocr-identity-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  anchors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      anchor_count: ${{ steps.extract.outputs.anchor_count }}
+      canonical_count: ${{ steps.extract.outputs.canonical_count }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Test identity anchor extraction before live audit
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_extract_mercadona_ocr_identity_anchors.py test_audit_mercadona_current_identity.py
+          python -m py_compile extract_mercadona_ocr_identity_anchors.py audit_mercadona_current_identity.py summarize_mercadona_ocr_run_union.py mercadona_first_party_details.py
+
+      - name: Reconstruct non-diagnostic Mercadona raw OCR artifact union
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mercadona-ocr-artifacts tools/catalog/mercadona-all-ocr-identity-audit
+          : > tools/catalog/mercadona-all-ocr-identity-audit/artifacts.tsv
+          : > tools/catalog/mercadona-all-ocr-identity-audit/excluded-workflows.tsv
+
+          gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows?per_page=100' \
+            --jq '.workflows[] | select(.name | ascii_downcase | contains("mercadona")) | [.id, .name, .path] | @tsv' \
+            | sort -u > /tmp/mercadona-workflows.tsv
+
+          : > /tmp/mercadona-ocr-runs.tsv
+          while IFS=$'\t' read -r workflow_id workflow_name workflow_path; do
+            [[ -n "$workflow_id" ]] || continue
+            case "$workflow_path" in
+              '.github/workflows/catalog-mercadona-parser-regression-live.yml'|\
+              '.github/workflows/catalog-mercadona-current-ocr-residual-audit.yml'|\
+              '.github/workflows/catalog-mercadona-declared-identity-audit.yml'|\
+              '.github/workflows/catalog-mercadona-all-ocr-identity-audit.yml')
+                printf '%s\t%s\t%s\t%s\n' "$workflow_id" "$workflow_name" "$workflow_path" 'NON_RAW_OR_DIAGNOSTIC' \
+                  >> tools/catalog/mercadona-all-ocr-identity-audit/excluded-workflows.tsv
+                continue
+                ;;
+            esac
+            gh api --paginate \
+              -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/workflows/${workflow_id}/runs?branch=agent%2Fcatalog-phase1&created=%3E%3D2026-08-27T00%3A00%3A00Z&per_page=100" \
+              --jq '.workflow_runs[] | select(.conclusion == "success") | [.id, .name, .path] | @tsv' \
+              >> /tmp/mercadona-ocr-runs.tsv
+          done < /tmp/mercadona-workflows.tsv
+          sort -u -o /tmp/mercadona-ocr-runs.tsv /tmp/mercadona-ocr-runs.tsv
+
+          if ! grep -q $'^33048440695\t' /tmp/mercadona-ocr-runs.tsv; then
+            echo 'Historical Mercadona OCR anchor run 33048440695 was not discovered' >&2
+            exit 1
+          fi
+          if ! grep -q $'^34139973333\t' /tmp/mercadona-ocr-runs.tsv; then
+            echo 'Rescued Mercadona near-safe anchor run 34139973333 was not discovered' >&2
+            exit 1
+          fi
+
+          downloaded=0
+          while IFS=$'\t' read -r run_id run_name run_path; do
+            [[ -n "$run_id" ]] || continue
+            artifact_json=$(gh api -H 'Accept: application/vnd.github+json' "/repos/frandavid100/rumbo/actions/runs/${run_id}/artifacts?per_page=100")
+            mapfile -t merged < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | select(.name | endswith("-merged")) | [.id, .name] | @tsv' <<<"$artifact_json")
+            if (( ${#merged[@]} > 0 )); then
+              selected=("${merged[@]}")
+            else
+              mapfile -t selected < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | [.id, .name] | @tsv' <<<"$artifact_json")
+            fi
+            for item in "${selected[@]}"; do
+              IFS=$'\t' read -r artifact_id artifact_name <<<"$item"
+              [[ -n "$artifact_id" ]] || continue
+              dest="/tmp/mercadona-ocr-artifacts/${run_id}-${artifact_id}"
+              mkdir -p "$dest"
+              gh api -H 'Accept: application/vnd.github+json' "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" > "$dest/artifact.zip"
+              unzip -q "$dest/artifact.zip" -d "$dest/unpacked"
+              rm "$dest/artifact.zip"
+              printf '%s\t%s\t%s\t%s\n' "$run_id" "$run_name" "$artifact_id" "$artifact_name" \
+                >> tools/catalog/mercadona-all-ocr-identity-audit/artifacts.tsv
+              downloaded=$((downloaded + 1))
+            done
+          done < /tmp/mercadona-ocr-runs.tsv
+          (( downloaded > 0 )) || { echo 'No non-expired raw OCR artifacts downloaded' >&2; exit 1; }
+          echo "Downloaded $downloaded candidate Mercadona OCR artifacts"
+
+      - name: Extract exact EAN anchors for every canonical raw-live OCR product
+        id: extract
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python extract_mercadona_ocr_identity_anchors.py \
+            --root /tmp/mercadona-ocr-artifacts \
+            --jsonl mercadona-all-ocr-identity-audit/all-ocr-identity-anchors.jsonl \
+            --summary mercadona-all-ocr-identity-audit/anchor-summary.json
+          anchor_count=$(jq -r '.anchored_products' mercadona-all-ocr-identity-audit/anchor-summary.json)
+          canonical_count=$(jq -r '.canonical_products' mercadona-all-ocr-identity-audit/anchor-summary.json)
+          unresolved=$(jq -r '.identity_unresolved_products' mercadona-all-ocr-identity-audit/anchor-summary.json)
+          [[ "$anchor_count" =~ ^[0-9]+$ ]] && (( anchor_count >= 2971 )) || { echo "Unexpectedly low anchor count: $anchor_count" >&2; exit 1; }
+          [[ "$canonical_count" =~ ^[0-9]+$ ]] && (( canonical_count >= anchor_count )) || { echo "Invalid canonical count: $canonical_count" >&2; exit 1; }
+          [[ "$unresolved" == '0' ]] || echo "Identity anchor extraction retained $unresolved fail-closed unresolved products"
+          echo "anchor_count=$anchor_count" >> "$GITHUB_OUTPUT"
+          echo "canonical_count=$canonical_count" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-all-ocr-identity-anchors
+          path: tools/catalog/mercadona-all-ocr-identity-audit/
+          retention-days: 90
+
+  fetch-current:
+    needs: anchors
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-all-ocr-identity-anchors
+          path: /tmp/anchors
+
+      - name: Fetch current official Mercadona identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          anchors=$(find /tmp/anchors -name all-ocr-identity-anchors.jsonl -type f -print -quit)
+          [[ -n "$anchors" ]] || { echo 'All-OCR identity anchor file missing' >&2; exit 1; }
+          mkdir -p /tmp/current-identities
+          set +e
+          python tools/catalog/mercadona_first_party_details.py \
+            --inventory "$anchors" \
+            --out /tmp/current-identities \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 6 \
+            --timeout 15 \
+            --delay 0.30
+          rc=$?
+          set -e
+          summary="/tmp/current-identities/summary-$(printf '%02d' ${{ matrix.shard }}).json"
+          [[ -s "$summary" ]] || { echo "Fetcher did not produce shard summary (rc=$rc)" >&2; exit 1; }
+
+          # Persist only identity evidence from the current API, not the full product detail.
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/current-identities')
+          for path in root.glob('details-*.jsonl'):
+              rows = []
+              for line in path.read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  rows.append({
+                      'product_id': row.get('product_id'),
+                      'ean': row.get('ean'),
+                      'name': row.get('name'),
+                      'source_url': row.get('source_url'),
+                      'source': row.get('source'),
+                      'evidence_type': row.get('evidence_type'),
+                      'observed_at': row.get('observed_at'),
+                  })
+              path.write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows), encoding='utf-8')
+          PY
+          cat "$summary"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-all-ocr-identity-shard-${{ matrix.shard }}
+          path: /tmp/current-identities/
+          retention-days: 90
+          if-no-files-found: error
+
+  reconcile:
+    needs: [anchors, fetch-current]
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-all-ocr-identity-anchors
+          path: /tmp/anchors
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-current-all-ocr-identity-shard-*
+          path: /tmp/current-identities
+          merge-multiple: true
+
+      - name: Reconcile every OCR EAN anchor against current official API identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          anchors=$(find /tmp/anchors -name all-ocr-identity-anchors.jsonl -type f -print -quit)
+          anchor_summary=$(find /tmp/anchors -name anchor-summary.json -type f -print -quit)
+          [[ -n "$anchors" && -n "$anchor_summary" ]] || { echo 'Anchor evidence missing' >&2; exit 1; }
+          python tools/catalog/audit_mercadona_current_identity.py \
+            --anchors "$anchors" \
+            --details-root /tmp/current-identities \
+            --out tools/catalog/mercadona-all-ocr-identity-audit-result \
+            --anchor-source MERCADONA_OCR_RUN_UNION/all_anchored_products
+          jq --slurpfile anchors "$anchor_summary" \
+            --argjson expected '${{ needs.anchors.outputs.anchor_count }}' \
+            '. + {expected_anchor_count:$expected, anchor_extraction:$anchors[0]}' \
+            tools/catalog/mercadona-all-ocr-identity-audit-result/summary.json \
+            > /tmp/summary.json
+          mv /tmp/summary.json tools/catalog/mercadona-all-ocr-identity-audit-result/summary.json
+          actual=$(jq -r '.anchored_products' tools/catalog/mercadona-all-ocr-identity-audit-result/summary.json)
+          [[ "$actual" == '${{ needs.anchors.outputs.anchor_count }}' ]] || { echo "Anchor count mismatch: expected ${{ needs.anchors.outputs.anchor_count }}, got $actual" >&2; exit 1; }
+          cat tools/catalog/mercadona-all-ocr-identity-audit-result/summary.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-all-ocr-identity-live-audit
+          path: tools/catalog/mercadona-all-ocr-identity-audit-result/
+          retention-days: 90
+
+      - name: Persist latest all-OCR identity audit summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tools/catalog/mercadona-all-ocr-identity-audit-result/summary.json \
+            tools/catalog/mercadona-all-ocr-identity-live-audit-latest.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/catalog/mercadona-all-ocr-identity-live-audit-latest.json
+          if git diff --cached --quiet; then
+            echo 'All-OCR identity audit summary unchanged'
+            exit 0
+          fi
+          git commit -m 'Catalog Mercadona: persist all-OCR identity live audit'
+          git pull --rebase origin agent/catalog-phase1
+          git push origin HEAD:agent/catalog-phase1
