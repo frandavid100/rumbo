@@ -65,7 +65,7 @@ jobs:
           else
             echo 'available=false' >> "$GITHUB_OUTPUT"
             jq -n \
-              '{status:"EXPIRED_OR_UNAVAILABLE", historical_inventory_products:4280, run_id:33046950149, artifact_name:"mercadona-first-party-final", exact_residual_census_available:false, policy:"Do not silently substitute a later live Mercadona inventory for the auditable 2026-08-27 4,280-product cut. Canonical OCR reconciliation remains valid because it is reconstructed from persisted raw-live OCR evidence independently of this snapshot."}' \
+              '{status:"EXPIRED_OR_UNAVAILABLE", historical_inventory_products:4280, run_id:33046950149, artifact_name:"mercadona-first-party-final", exact_residual_census_available:false, historical_identity_parity_verifiable:false, policy:"Do not silently substitute a later live Mercadona inventory for the auditable 2026-08-27 4,280-product cut. Canonical OCR reconciliation can still be reconstructed from persisted raw-live OCR evidence, but full parity with the historical product_id/EAN identity map cannot be proven while the original snapshot is unavailable."}' \
               > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
           fi
 
@@ -101,8 +101,18 @@ jobs:
           echo "Discovered $workflow_count Mercadona workflow definitions"
 
           : > /tmp/mercadona-ocr-runs.tsv
+          : > tools/catalog/mercadona-current-ocr-residual-audit/diagnostic-workflows-excluded.tsv
           while IFS=$'\t' read -r workflow_id workflow_name workflow_path; do
             [[ -n "$workflow_id" ]] || continue
+            # Parser-regression workflows intentionally exercise current live products and may
+            # target a product_id that Mercadona has reassigned since the fixed 2026-08-27 cut.
+            # Their artifacts are diagnostic evidence only and must never replace canonical
+            # historical-cut OCR state.
+            if [[ "$workflow_path" == '.github/workflows/catalog-mercadona-parser-regression-live.yml' ]]; then
+              printf '%s\t%s\t%s\t%s\n' "$workflow_id" "$workflow_name" "$workflow_path" 'DIAGNOSTIC_ONLY_NOT_CANONICAL' \
+                >> tools/catalog/mercadona-current-ocr-residual-audit/diagnostic-workflows-excluded.tsv
+              continue
+            fi
             gh api --paginate \
               -H 'Accept: application/vnd.github+json' \
               "/repos/frandavid100/rumbo/actions/workflows/${workflow_id}/runs?branch=agent%2Fcatalog-phase1&created=%3E%3D2026-08-27T00%3A00%3A00Z&per_page=100" \
@@ -212,7 +222,7 @@ jobs:
         run: |
           jq -n \
             --slurpfile union mercadona-current-ocr-residual-audit/run-union-summary.json \
-            '{status:"BLOCKED_HISTORICAL_FIRST_PARTY_SNAPSHOT_EXPIRED", inventory_products:4280, processed_reconstructed:$union[0].final_distinct_union, canonical_ocr_materialized:true, exact_residual_census_available:false, images_downloaded:false, images_persisted:false, missing_values_inferred:false, structured_api_macros_claimed:false, CLASSIFIED:0, MENU_ELIGIBLE:0}' \
+            '{status:"BLOCKED_HISTORICAL_FIRST_PARTY_SNAPSHOT_EXPIRED", inventory_products:4280, processed_reconstructed:$union[0].final_distinct_union, canonical_ocr_materialized:true, exact_residual_census_available:false, historical_identity_parity_verifiable:false, images_downloaded:false, images_persisted:false, missing_values_inferred:false, structured_api_macros_claimed:false, CLASSIFIED:0, MENU_ELIGIBLE:0}' \
             > mercadona-current-ocr-residual-audit/residual-audit-status.json
 
       - uses: actions/upload-artifact@v4
