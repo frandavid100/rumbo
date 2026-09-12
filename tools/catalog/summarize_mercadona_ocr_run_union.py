@@ -57,6 +57,23 @@ def nutrition_key(value: dict[str, float]) -> tuple[float, ...]:
     return tuple(value[field] for field in NUTRITION_FIELDS)
 
 
+def normalize_ean(value: Any) -> str | None:
+    """Return a conservative exact EAN/GTIN identity token.
+
+    Do not coerce floats or rewrite punctuation: identity reconciliation must fail
+    closed rather than accidentally treating two differently persisted identifiers
+    as equivalent.
+    """
+    if value is None or isinstance(value, bool) or isinstance(value, float):
+        return None
+    if isinstance(value, int):
+        value = str(value)
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    return value or None
+
+
 def canonical_exclusion_reason(row: dict[str, Any]) -> str | None:
     """Return why an exact-evidence row is not a raw live OCR observation.
 
@@ -78,7 +95,7 @@ def is_canonical_status_row(row: dict[str, Any]) -> bool:
 
 
 def has_strict_raw_provenance(row: dict[str, Any]) -> bool:
-    """Require the producer's persisted first-party label-image provenance.
+    """Require persisted first-party label-image provenance and stable identity.
 
     The exact OCR evidence marker remains the processed-union gate. This stricter
     predicate is only the usability gate: malformed or provenance-incomplete rows
@@ -92,6 +109,7 @@ def has_strict_raw_provenance(row: dict[str, Any]) -> bool:
         and row.get("redistribution_allowed") is False
         and isinstance(image_url, str)
         and image_url.startswith(("https://", "http://"))
+        and normalize_ean(row.get("ean")) is not None
     )
 
 
@@ -145,7 +163,11 @@ def _attempt_has_ocr_signal(row: dict[str, Any]) -> bool:
         engines = attempt.get("engines")
         if isinstance(engines, dict):
             for value in engines.values():
-                if isinstance(value, dict) and isinstance(value.get("normalized_ocr_text"), str) and value["normalized_ocr_text"].strip():
+                if (
+                    isinstance(value, dict)
+                    and isinstance(value.get("normalized_ocr_text"), str)
+                    and value["normalized_ocr_text"].strip()
+                ):
                     return True
     return False
 
@@ -229,34 +251,137 @@ def summarize_declared_to_review_transitions(
     }
 
 
+Observation = (
+    tuple[int, str, str, Any]
+    | tuple[int, str, str, Any, bool]
+    | tuple[int, str, str, Any, bool, Any]
+)
+
+
+def _identity_meta(
+    *,
+    enforced: bool,
+    ean: str | None,
+    conflict_runs: set[int] | None = None,
+    conflict_eans: set[str] | None = None,
+    unverified_runs: set[int] | None = None,
+) -> dict[str, Any]:
+    return {
+        "identity_enforced": enforced,
+        "identity_anchor_source": "EARLIEST_RAW_LIVE_EAN" if enforced and ean else None,
+        "identity_ean": ean,
+        "identity_conflict_run_ids": sorted(conflict_runs or set()),
+        "identity_conflict_eans": sorted(conflict_eans or set()),
+        "identity_unverified_run_ids": sorted(unverified_runs or set()),
+    }
+
+
 def reconcile_latest_observations(
-    observations: Iterable[tuple[int, str, str, Any] | tuple[int, str, str, Any, bool]],
+    observations: Iterable[Observation],
 ) -> dict[str, dict[str, Any]]:
     """Return one conservative latest persisted live OCR state per product.
 
-    Four-item observations are accepted for backwards-compatible tests/callers and
-    imply strict provenance. Production passes a fifth boolean derived from the raw
-    persisted row. A provenance-incomplete DECLARED observation remains DECLARED
-    for status accounting but can never become nutrition-usable.
+    Four/five-item observations remain a legacy test/caller mode with no identity
+    enforcement. Production passes six items including the raw row EAN. For that
+    mode, the earliest raw-live run must expose exactly one non-empty EAN for the
+    product; that EAN becomes the immutable reconciliation anchor. Later rows with
+    a different or missing EAN are retained only as identity diagnostics and can
+    never replace the anchored product's canonical status or nutrition.
     """
-    grouped: dict[str, dict[int, list[tuple[str, Any, bool]]]] = defaultdict(lambda: defaultdict(list))
+    grouped: dict[
+        str,
+        dict[int, list[tuple[str, Any, bool, str | None, bool]]],
+    ] = defaultdict(lambda: defaultdict(list))
+
     for observation in observations:
         if len(observation) == 4:
             run_id, product_id, status, nutrition = observation
             strict_provenance = True
+            ean = None
+            identity_enforced = False
         elif len(observation) == 5:
             run_id, product_id, status, nutrition, strict_provenance = observation
+            ean = None
+            identity_enforced = False
+        elif len(observation) == 6:
+            run_id, product_id, status, nutrition, strict_provenance, raw_ean = observation
+            ean = normalize_ean(raw_ean)
+            identity_enforced = True
         else:
-            raise ValueError("observations must contain 4 or 5 values")
+            raise ValueError("observations must contain 4, 5 or 6 values")
         if status not in VALID:
             continue
-        grouped[str(product_id)][int(run_id)].append((status, nutrition, bool(strict_provenance)))
+        grouped[str(product_id)][int(run_id)].append(
+            (status, nutrition, bool(strict_provenance), ean, identity_enforced)
+        )
 
     result: dict[str, dict[str, Any]] = {}
-    for product_id, by_run in grouped.items():
+    for product_id, raw_by_run in grouped.items():
+        identity_enforced = any(
+            enforced
+            for values in raw_by_run.values()
+            for _status, _nutrition, _strict, _ean, enforced in values
+        )
+        by_run = raw_by_run
+        identity = _identity_meta(enforced=False, ean=None)
+
+        if identity_enforced:
+            earliest_run = min(raw_by_run)
+            earliest_values = [value for value in raw_by_run[earliest_run] if value[4]]
+            earliest_eans = {value[3] for value in earliest_values if value[3] is not None}
+            earliest_has_unverified = any(value[3] is None for value in earliest_values)
+            if earliest_has_unverified or len(earliest_eans) != 1:
+                result[product_id] = {
+                    "latest_run_id": earliest_run,
+                    "status": "IDENTITY_UNRESOLVED",
+                    "latest_run_statuses": sorted({value[0] for value in earliest_values}),
+                    "usable_complete": False,
+                    "nutrition": None,
+                    "nutrition_issue": "AMBIGUOUS_EARLIEST_EAN_ANCHOR",
+                    **_identity_meta(enforced=True, ean=None),
+                }
+                continue
+
+            anchor_ean = next(iter(earliest_eans))
+            conflict_runs: set[int] = set()
+            conflict_eans: set[str] = set()
+            unverified_runs: set[int] = set()
+            filtered: dict[int, list[tuple[str, Any, bool, str | None, bool]]] = defaultdict(list)
+            for run_id, values in raw_by_run.items():
+                for value in values:
+                    _status, _nutrition, _strict, ean, enforced = value
+                    if not enforced or ean is None:
+                        unverified_runs.add(run_id)
+                        continue
+                    if ean != anchor_ean:
+                        conflict_runs.add(run_id)
+                        conflict_eans.add(ean)
+                        continue
+                    filtered[run_id].append(value)
+            by_run = dict(filtered)
+            identity = _identity_meta(
+                enforced=True,
+                ean=anchor_ean,
+                conflict_runs=conflict_runs,
+                conflict_eans=conflict_eans,
+                unverified_runs=unverified_runs,
+            )
+
+        if not by_run:
+            result[product_id] = {
+                "latest_run_id": min(raw_by_run),
+                "status": "IDENTITY_UNRESOLVED",
+                "latest_run_statuses": [],
+                "usable_complete": False,
+                "nutrition": None,
+                "nutrition_issue": "NO_IDENTITY_VERIFIED_OBSERVATION",
+                **identity,
+            }
+            continue
+
         latest_run = max(by_run)
         values = by_run[latest_run]
-        statuses = {status for status, _, _ in values}
+        statuses = {status for status, _, _, _, _ in values}
         if len(statuses) != 1:
             result[product_id] = {
                 "latest_run_id": latest_run,
@@ -265,6 +390,7 @@ def reconcile_latest_observations(
                 "usable_complete": False,
                 "nutrition": None,
                 "nutrition_issue": "MULTIPLE_STATUSES_LATEST_RUN",
+                **identity,
             }
             continue
 
@@ -277,10 +403,11 @@ def reconcile_latest_observations(
                 "usable_complete": False,
                 "nutrition": None,
                 "nutrition_issue": None,
+                **identity,
             }
             continue
 
-        if any(not strict_provenance for _, _, strict_provenance in values):
+        if any(not strict_provenance for _, _, strict_provenance, _, _ in values):
             result[product_id] = {
                 "latest_run_id": latest_run,
                 "status": "DECLARED",
@@ -288,10 +415,11 @@ def reconcile_latest_observations(
                 "usable_complete": False,
                 "nutrition": None,
                 "nutrition_issue": "INCOMPLETE_STRICT_PROVENANCE_LATEST_RUN",
+                **identity,
             }
             continue
 
-        normalized = [complete_nutrition(nutrition) for _, nutrition, _ in values]
+        normalized = [complete_nutrition(nutrition) for _, nutrition, _, _, _ in values]
         if any(item is None for item in normalized):
             result[product_id] = {
                 "latest_run_id": latest_run,
@@ -300,6 +428,7 @@ def reconcile_latest_observations(
                 "usable_complete": False,
                 "nutrition": None,
                 "nutrition_issue": "INCOMPLETE_DECLARED_NUTRITION_LATEST_RUN",
+                **identity,
             }
             continue
         complete_values = [item for item in normalized if item is not None]
@@ -311,6 +440,7 @@ def reconcile_latest_observations(
                 "usable_complete": False,
                 "nutrition": None,
                 "nutrition_issue": "CONFLICTING_COMPLETE_NUTRITION_LATEST_RUN",
+                **identity,
             }
             continue
         result[product_id] = {
@@ -320,6 +450,7 @@ def reconcile_latest_observations(
             "usable_complete": True,
             "nutrition": complete_values[0],
             "nutrition_issue": None,
+            **identity,
         }
     return result
 
@@ -334,8 +465,8 @@ def main() -> int:
     by_run: dict[str, set[str]] = defaultdict(set)
     by_run_status: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     files_by_run: dict[str, set[str]] = defaultdict(set)
-    observations: list[tuple[int, str, str, Any, bool]] = []
-    live_history: dict[str, list[tuple[int, str, list[str]]]] = defaultdict(list)
+    observations: list[tuple[int, str, str, Any, bool, Any]] = []
+    raw_live_history: dict[str, list[tuple[int, str, list[str], str | None]]] = defaultdict(list)
     canonical_excluded_rows: Counter[str] = Counter()
     canonical_excluded_runs: set[int] = set()
     strict_provenance_failures: Counter[str] = Counter()
@@ -369,8 +500,11 @@ def main() -> int:
             files_by_run[run_id].add(str(rel))
             if is_canonical_status_row(row):
                 strict = has_strict_raw_provenance(row)
-                observations.append((int(run_id), product_id, status, row.get("nutrition"), strict))
-                live_history[product_id].append((int(run_id), status, classify_review_reason_families(row)))
+                ean = normalize_ean(row.get("ean"))
+                observations.append((int(run_id), product_id, status, row.get("nutrition"), strict, ean))
+                raw_live_history[product_id].append(
+                    (int(run_id), status, classify_review_reason_families(row), ean)
+                )
                 if not strict:
                     if row.get("source") != SOURCE:
                         strict_provenance_failures["SOURCE"] += 1
@@ -381,6 +515,8 @@ def main() -> int:
                     image_url = row.get("image_url")
                     if not isinstance(image_url, str) or not image_url.startswith(("https://", "http://")):
                         strict_provenance_failures["IMAGE_URL"] += 1
+                    if ean is None:
+                        strict_provenance_failures["EAN"] += 1
             else:
                 reason = canonical_exclusion_reason(row) or "NON_LIVE_DERIVED_ROW"
                 canonical_excluded_rows[reason] += 1
@@ -400,7 +536,9 @@ def main() -> int:
             "new_distinct_products": len(new_ids),
             "overlap_with_prior_union": len(overlap),
             "union_after_run": len(seen | ids),
-            "status_distinct_counts": {status: len(values) for status, values in sorted(by_run_status[run_id].items())},
+            "status_distinct_counts": {
+                status: len(values) for status, values in sorted(by_run_status[run_id].items())
+            },
             "new_product_ids": sorted(new_ids),
             "overlap_product_ids": sorted(overlap),
             "artifact_files": sorted(files_by_run[run_id]),
@@ -409,30 +547,83 @@ def main() -> int:
 
     latest = reconcile_latest_observations(observations)
     latest_status_counts = Counter(item["status"] for item in latest.values())
-    nutrition_issue_counts = Counter(item["nutrition_issue"] for item in latest.values() if item.get("nutrition_issue"))
+    nutrition_issue_counts = Counter(
+        item["nutrition_issue"] for item in latest.values() if item.get("nutrition_issue")
+    )
     usable = {
-        product_id: item for product_id, item in latest.items()
+        product_id: item
+        for product_id, item in latest.items()
         if item.get("usable_complete") is True and isinstance(item.get("nutrition"), dict)
     }
     latest_status_product_ids: dict[str, list[str]] = defaultdict(list)
     for product_id, item in latest.items():
         latest_status_product_ids[str(item["status"])].append(product_id)
     usable_products = [
-        {"product_id": product_id, "latest_run_id": item["latest_run_id"], "nutrition": item["nutrition"]}
+        {
+            "product_id": product_id,
+            "ean": item.get("identity_ean"),
+            "latest_run_id": item["latest_run_id"],
+            "nutrition": item["nutrition"],
+        }
         for product_id, item in sorted(usable.items())
     ]
     coverage_without_canonical_state = sorted(seen - set(latest))
+
+    live_history: dict[str, list[tuple[int, str, list[str]]]] = defaultdict(list)
+    for product_id, events in raw_live_history.items():
+        item = latest.get(product_id) or {}
+        if item.get("identity_enforced"):
+            anchor_ean = item.get("identity_ean")
+            if not anchor_ean:
+                continue
+            live_history[product_id].extend(
+                (run_id, status, families)
+                for run_id, status, families, ean in events
+                if ean == anchor_ean
+            )
+        else:
+            live_history[product_id].extend(
+                (run_id, status, families) for run_id, status, families, _ean in events
+            )
     transition_audit = summarize_declared_to_review_transitions(live_history)
+
+    identity_conflict_ids = sorted(
+        product_id
+        for product_id, item in latest.items()
+        if item.get("identity_conflict_run_ids")
+    )
+    identity_unverified_ids = sorted(
+        product_id
+        for product_id, item in latest.items()
+        if item.get("identity_unverified_run_ids")
+    )
+    identity_unresolved_ids = sorted(
+        product_id
+        for product_id, item in latest.items()
+        if item.get("status") == "IDENTITY_UNRESOLVED"
+    )
+    identity_conflicts = [
+        {
+            "product_id": product_id,
+            "anchor_ean": latest[product_id].get("identity_ean"),
+            "conflicting_eans": latest[product_id].get("identity_conflict_eans", []),
+            "run_ids": latest[product_id].get("identity_conflict_run_ids", []),
+        }
+        for product_id in identity_conflict_ids
+    ]
 
     result = {
         "policy": (
-            "Chronological exact-evidence processed union with latest-live canonical reconciliation. Diagnostic replay "
-            "wrappers and prior derived canonical materializations remain in processed coverage but never update canonical "
-            "status. A latest live DECLARED row becomes nutrition-usable only when every latest-run observation has "
-            "complete agreeing four-field nutrition and the raw persisted provenance is exactly Mercadona first-party "
-            "label-image OCR with redistribution disallowed. Provenance-incomplete DECLARED rows remain DECLARED for "
-            "status accounting but have null usable nutrition. Older DECLARED nutrition is never inherited by a later "
-            "non-usable state; no missing values are inferred."
+            "Chronological exact-evidence processed union with latest-live canonical reconciliation. "
+            "Raw-live product identity is anchored to the unique EAN in the earliest persisted raw-live "
+            "OCR run for each product_id. Later rows with a missing or different EAN remain auditable "
+            "identity diagnostics but never replace the anchored product's canonical status or nutrition; "
+            "an ambiguous earliest EAN fails closed as IDENTITY_UNRESOLVED. Diagnostic replay wrappers and "
+            "prior derived canonical materializations remain in processed coverage but never update canonical "
+            "status. A latest identity-matched live DECLARED row becomes nutrition-usable only when every "
+            "latest-run observation has complete agreeing four-field nutrition and the raw persisted provenance "
+            "is exactly Mercadona first-party label-image OCR with redistribution disallowed. Older DECLARED "
+            "nutrition is never inherited by a later identity-matched non-usable state; no missing values are inferred."
         ),
         "evidence_level": EVIDENCE,
         "strict_provenance": {
@@ -440,6 +631,19 @@ def main() -> int:
             "source_record_kind": SOURCE_RECORD_KIND,
             "redistribution_allowed": False,
             "image_url_required": True,
+            "ean_required": True,
+        },
+        "identity_reconciliation": {
+            "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
+            "identity_enforced_products": sum(bool(item.get("identity_enforced")) for item in latest.values()),
+            "identity_anchored_products": sum(bool(item.get("identity_ean")) for item in latest.values()),
+            "identity_conflict_products": len(identity_conflict_ids),
+            "identity_conflict_product_ids": identity_conflict_ids,
+            "identity_conflicts": identity_conflicts,
+            "identity_unverified_products": len(identity_unverified_ids),
+            "identity_unverified_product_ids": identity_unverified_ids,
+            "identity_unresolved_products": len(identity_unresolved_ids),
+            "identity_unresolved_product_ids": identity_unresolved_ids,
         },
         "strict_provenance_failure_counts": dict(sorted(strict_provenance_failures.items())),
         "runs_with_strict_ocr_rows": len(rows),
@@ -451,7 +655,8 @@ def main() -> int:
         "coverage_without_canonical_state_product_ids": coverage_without_canonical_state,
         "latest_status_counts": dict(sorted(latest_status_counts.items())),
         "latest_status_product_ids": {
-            status: sorted(product_ids) for status, product_ids in sorted(latest_status_product_ids.items())
+            status: sorted(product_ids)
+            for status, product_ids in sorted(latest_status_product_ids.items())
         },
         "latest_nutrition_issue_counts": dict(sorted(nutrition_issue_counts.items())),
         "latest_usable_complete": len(usable),
@@ -461,13 +666,17 @@ def main() -> int:
         "declared_to_review_transition_audit": transition_audit,
         "runs": rows,
     }
-    Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    Path(args.out).write_text(
+        json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     print(json.dumps({
         "runs_with_strict_ocr_rows": len(rows),
         "final_distinct_union": len(seen),
         "canonical_status_products": len(latest),
         "canonical_excluded_row_counts": dict(sorted(canonical_excluded_rows.items())),
         "strict_provenance_failure_counts": dict(sorted(strict_provenance_failures.items())),
+        "identity_reconciliation": result["identity_reconciliation"],
         "coverage_without_canonical_state": len(coverage_without_canonical_state),
         "latest_status_counts": dict(sorted(latest_status_counts.items())),
         "latest_nutrition_issue_counts": dict(sorted(nutrition_issue_counts.items())),

@@ -69,6 +69,50 @@ class LatestObservationReconciliationTests(unittest.TestCase):
         self.assertIsNone(result["A"]["nutrition"])
         self.assertEqual(result["A"]["nutrition_issue"], "INCOMPLETE_STRICT_PROVENANCE_LATEST_RUN")
 
+    def test_newer_mismatched_ean_cannot_replace_earliest_identity(self):
+        result = reconcile_latest_observations([
+            (10, "A", "DECLARED", N1, True, "1111111111111"),
+            (20, "A", "REVIEW", None, True, "2222222222222"),
+        ])
+        self.assertEqual(result["A"]["identity_ean"], "1111111111111")
+        self.assertEqual(result["A"]["latest_run_id"], 10)
+        self.assertEqual(result["A"]["status"], "DECLARED")
+        self.assertTrue(result["A"]["usable_complete"])
+        self.assertEqual(result["A"]["identity_conflict_run_ids"], [20])
+        self.assertEqual(result["A"]["identity_conflict_eans"], ["2222222222222"])
+
+    def test_missing_ean_observation_cannot_replace_anchored_identity(self):
+        result = reconcile_latest_observations([
+            (10, "A", "DECLARED", N1, True, "1111111111111"),
+            (20, "A", "REVIEW", None, False, None),
+        ])
+        self.assertEqual(result["A"]["identity_ean"], "1111111111111")
+        self.assertEqual(result["A"]["latest_run_id"], 10)
+        self.assertEqual(result["A"]["status"], "DECLARED")
+        self.assertTrue(result["A"]["usable_complete"])
+        self.assertEqual(result["A"]["identity_unverified_run_ids"], [20])
+
+    def test_same_ean_latest_review_still_replaces_declared(self):
+        result = reconcile_latest_observations([
+            (10, "A", "DECLARED", N1, True, "1111111111111"),
+            (20, "A", "REVIEW", None, True, "1111111111111"),
+        ])
+        self.assertEqual(result["A"]["identity_ean"], "1111111111111")
+        self.assertEqual(result["A"]["latest_run_id"], 20)
+        self.assertEqual(result["A"]["status"], "REVIEW")
+        self.assertFalse(result["A"]["usable_complete"])
+
+    def test_ambiguous_earliest_ean_anchor_fails_closed(self):
+        result = reconcile_latest_observations([
+            (10, "A", "DECLARED", N1, True, "1111111111111"),
+            (10, "A", "DECLARED", N1, True, "2222222222222"),
+            (20, "A", "DECLARED", N1, True, "1111111111111"),
+        ])
+        self.assertEqual(result["A"]["status"], "IDENTITY_UNRESOLVED")
+        self.assertFalse(result["A"]["usable_complete"])
+        self.assertIsNone(result["A"]["nutrition"])
+        self.assertEqual(result["A"]["nutrition_issue"], "AMBIGUOUS_EARLIEST_EAN_ANCHOR")
+
     def test_diagnostic_replay_wrapper_never_updates_canonical_status(self):
         live_row = {
             "product_id": "A",
