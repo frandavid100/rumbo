@@ -63,7 +63,7 @@ Proteínas 2.6 g
         self.assertTrue(any(reason.startswith("OCR_FIELD_CONFLICT") for reason in ensemble.reasons))
         self.assertFalse(should_run_doctr_rescue(ensemble))
 
-    def test_retry_candidate_builder_allows_prior_attempts_but_requires_exact_current_image(self):
+    def test_retry_candidate_builder_requires_exact_ean_and_current_image(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             diagnostic = root / "diagnostic.jsonl"
@@ -73,6 +73,7 @@ Proteínas 2.6 g
             for pid in ("100", "200"):
                 diagnostics.append({
                     "product_id": pid,
+                    "ean": f"84{pid}",
                     "canonical_status": "REVIEW",
                     "corroborated_fields": 2,
                     "independent_engine_families": 3,
@@ -90,11 +91,13 @@ Proteínas 2.6 g
             product_rows.extend((
                 {
                     "product_id": "100",
+                    "ean": "84100",
                     "ingredients": "x",
                     "photos": [{"zoom": "https://example.invalid/100.jpg", "perspective": 9}],
                 },
                 {
                     "product_id": "200",
+                    "ean": "84200",
                     "ingredients": "x",
                     "photos": [{"zoom": "https://example.invalid/replaced.jpg", "perspective": 9}],
                 },
@@ -105,8 +108,45 @@ Proteínas 2.6 g
             selected, summary = build_doctr_retry_candidates(diagnostic, products)
             self.assertEqual([row["product_id"] for row in selected], ["100"])
             self.assertEqual(summary["unmatched_current_first_party_photo"], ["200"])
+            meta = selected[0]["_near_safe_image_meta"]
+            self.assertEqual(meta["canonical_ean"], "84100")
+            self.assertEqual(meta["current_ean"], "84100")
+            self.assertEqual(meta["identity_basis"], "EXACT_CURRENT_EAN_MATCH")
             self.assertEqual(summary["new_independent_ocr_family"], "doctr")
             self.assertFalse(summary["acceptance_policy_changed"])
+
+    def test_reassigned_product_id_is_excluded_even_if_image_url_matches(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            diagnostic = root / "diagnostic.jsonl"
+            products = root / "products.jsonl"
+            image = "https://example.invalid/shared.jpg"
+            diagnostic.write_text(json.dumps({
+                "product_id": "14031",
+                "ean": "8480000140318",
+                "canonical_status": "REVIEW",
+                "corroborated_fields": 2,
+                "independent_engine_families": 3,
+                "basis": "100_g",
+                "diagnostic_candidate_values": {
+                    "calories": 150,
+                    "fat_g": 6.1,
+                    "carbohydrate_g": 20,
+                    "protein_g": 2.6,
+                },
+                "safety_blockers": [],
+                "image_url": image,
+            }) + "\n", encoding="utf-8")
+            products.write_text(json.dumps({
+                "product_id": "14031",
+                "ean": "8436039788039",
+                "photos": [{"zoom": image, "perspective": 9}],
+            }) + "\n", encoding="utf-8")
+
+            selected, summary = build_doctr_retry_candidates(diagnostic, products)
+            self.assertEqual(selected, [])
+            self.assertEqual(summary["reassigned_current_product_ids"], ["14031"])
+            self.assertEqual(summary["unmatched_current_first_party_photo"], [])
 
 
 if __name__ == "__main__":
