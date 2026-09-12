@@ -1,17 +1,32 @@
 name: Catalog Mercadona near-safe variant reconcile
 
 on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-near-safe-variant-reconcile.yml'
   workflow_run:
-    workflows: ["Catalog Mercadona near-safe variant rescue"]
+    workflows:
+      - "Catalog Mercadona near-safe variant rescue"
+      - "Catalog Mercadona neural OCR p9 no-ingredients current delta"
+      - "Catalog Mercadona neural OCR p9 no-ingredients processed wave2"
+      - "Catalog Mercadona neural OCR p9 no-ingredients processed wave3"
     types: [completed]
 
 permissions:
   actions: write
   contents: read
 
+concurrency:
+  group: catalog-mercadona-raw-live-reconcile-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dispatch:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'agent/catalog-phase1'
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'agent/catalog-phase1')
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
