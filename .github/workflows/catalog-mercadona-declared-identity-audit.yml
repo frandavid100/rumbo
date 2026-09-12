@@ -1,0 +1,251 @@
+name: Catalog Mercadona declared identity audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-declared-identity-audit.yml'
+      - 'tools/catalog/audit_mercadona_current_identity.py'
+      - 'tools/catalog/test_audit_mercadona_current_identity.py'
+      - 'tools/catalog/mercadona_first_party_details.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: catalog-mercadona-declared-identity-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      residual_run_id: ${{ steps.resolve.outputs.residual_run_id }}
+      anchor_count: ${{ steps.anchors.outputs.anchor_count }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Test current-identity audit before live fetch
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_audit_mercadona_current_identity.py
+          python -m py_compile audit_mercadona_current_identity.py mercadona_first_party_details.py
+
+      - name: Resolve latest successful canonical OCR residual audit
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow_id=$(gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows?per_page=100' \
+            --jq '.workflows[] | select(.path == ".github/workflows/catalog-mercadona-current-ocr-residual-audit.yml") | .id' \
+            | head -n1)
+          [[ -n "$workflow_id" ]] || { echo 'Residual-audit workflow not found' >&2; exit 1; }
+          residual_run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/workflows/${workflow_id}/runs?branch=agent%2Fcatalog-phase1&status=success&per_page=50" \
+            --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0].id')
+          [[ "$residual_run_id" =~ ^[0-9]+$ ]] || { echo 'No successful residual-audit run found' >&2; exit 1; }
+          artifact_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${residual_run_id}/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name == "mercadona-current-ocr-residual-audit" and .expired == false) | .id' \
+            | head -n1)
+          [[ "$artifact_id" =~ ^[0-9]+$ ]] || { echo "Residual artifact unavailable for run $residual_run_id" >&2; exit 1; }
+          mkdir -p /tmp/residual-audit
+          gh api -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" \
+            > /tmp/residual-audit/artifact.zip
+          unzip -q /tmp/residual-audit/artifact.zip -d /tmp/residual-audit/unpacked
+          summary=$(find /tmp/residual-audit/unpacked -name run-union-summary.json -type f -print -quit)
+          [[ -n "$summary" ]] || { echo 'run-union-summary.json missing from residual artifact' >&2; exit 1; }
+          cp "$summary" /tmp/residual-audit/run-union-summary.json
+          echo "residual_run_id=$residual_run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Materialize immutable EAN anchors for canonically usable DECLARED OCR
+        id: anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tools/catalog/mercadona-declared-identity-audit
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary = json.loads(Path('/tmp/residual-audit/run-union-summary.json').read_text(encoding='utf-8'))
+          usable = summary.get('latest_usable_products')
+          if not isinstance(usable, list):
+              raise SystemExit('latest_usable_products missing from run-union summary')
+          expected = summary.get('latest_usable_complete')
+          rows = []
+          seen = {}
+          for item in usable:
+              if not isinstance(item, dict):
+                  raise SystemExit('Non-object latest_usable_products entry')
+              product_id = str(item.get('product_id') or '').strip()
+              ean = str(item.get('ean') or '').strip()
+              if not product_id or not ean:
+                  raise SystemExit(f'Usable product missing identity anchor: {item!r}')
+              if product_id in seen and seen[product_id] != ean:
+                  raise SystemExit(f'Conflicting anchors for product_id={product_id}')
+              seen[product_id] = ean
+              rows.append({
+                  'product_id': product_id,
+                  'ean': ean,
+                  'latest_run_id': item.get('latest_run_id'),
+                  'anchor_source': 'MERCADONA_OCR_RUN_UNION/latest_usable_products',
+              })
+          if expected != len(rows):
+              raise SystemExit(f'Usable anchor count mismatch: expected={expected!r} rows={len(rows)}')
+          out = Path('tools/catalog/mercadona-declared-identity-audit/declared-identity-anchors.jsonl')
+          out.write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows), encoding='utf-8')
+          Path('tools/catalog/mercadona-declared-identity-audit/anchor-metadata.json').write_text(
+              json.dumps({
+                  'latest_usable_complete': expected,
+                  'anchor_count': len(rows),
+                  'identity_policy': summary.get('identity_reconciliation', {}).get('mode'),
+                  'images_downloaded': False,
+              }, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(len(rows))
+          PY
+          anchor_count=$(wc -l < tools/catalog/mercadona-declared-identity-audit/declared-identity-anchors.jsonl | tr -d ' ')
+          [[ "$anchor_count" =~ ^[0-9]+$ ]] && (( anchor_count > 0 )) || { echo 'No usable identity anchors' >&2; exit 1; }
+          echo "anchor_count=$anchor_count" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-declared-identity-anchors
+          path: tools/catalog/mercadona-declared-identity-audit/
+          retention-days: 90
+
+  fetch-current:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-declared-identity-anchors
+          path: /tmp/anchors
+
+      - name: Fetch current official Mercadona identities only
+        shell: bash
+        run: |
+          set -euo pipefail
+          anchors=$(find /tmp/anchors -name declared-identity-anchors.jsonl -type f -print -quit)
+          [[ -n "$anchors" ]] || { echo 'Identity anchor file missing' >&2; exit 1; }
+          mkdir -p /tmp/current-identities
+          set +e
+          python tools/catalog/mercadona_first_party_details.py \
+            --inventory "$anchors" \
+            --out /tmp/current-identities \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 4 \
+            --timeout 15 \
+            --delay 0.25
+          rc=$?
+          set -e
+          summary="/tmp/current-identities/summary-$(printf '%02d' ${{ matrix.shard }}).json"
+          [[ -s "$summary" ]] || { echo "Fetcher did not produce shard summary (rc=$rc)" >&2; exit 1; }
+          cat "$summary"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-declared-identity-shard-${{ matrix.shard }}
+          path: /tmp/current-identities/
+          retention-days: 90
+          if-no-files-found: error
+
+  reconcile:
+    needs: [prepare, fetch-current]
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-declared-identity-anchors
+          path: /tmp/anchors
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-current-declared-identity-shard-*
+          path: /tmp/current-identities
+          merge-multiple: true
+
+      - name: Reconcile current API identity against immutable OCR EAN anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+          anchors=$(find /tmp/anchors -name declared-identity-anchors.jsonl -type f -print -quit)
+          [[ -n "$anchors" ]] || { echo 'Identity anchor file missing' >&2; exit 1; }
+          python tools/catalog/audit_mercadona_current_identity.py \
+            --anchors "$anchors" \
+            --details-root /tmp/current-identities \
+            --out tools/catalog/mercadona-declared-identity-audit-result
+          jq --argjson run_id '${{ needs.prepare.outputs.residual_run_id }}' \
+            --argjson expected '${{ needs.prepare.outputs.anchor_count }}' \
+            '. + {source_residual_audit_run_id:$run_id, expected_anchor_count:$expected}' \
+            tools/catalog/mercadona-declared-identity-audit-result/summary.json \
+            > /tmp/summary.json
+          mv /tmp/summary.json tools/catalog/mercadona-declared-identity-audit-result/summary.json
+          actual=$(jq -r '.anchored_products' tools/catalog/mercadona-declared-identity-audit-result/summary.json)
+          [[ "$actual" == '${{ needs.prepare.outputs.anchor_count }}' ]] || { echo "Anchor count mismatch: expected ${{ needs.prepare.outputs.anchor_count }}, got $actual" >&2; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-declared-identity-live-audit
+          path: tools/catalog/mercadona-declared-identity-audit-result/
+          retention-days: 90
+
+      - name: Persist latest auditable identity summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tools/catalog/mercadona-declared-identity-audit-result/summary.json \
+            tools/catalog/mercadona-declared-identity-live-audit-latest.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/catalog/mercadona-declared-identity-live-audit-latest.json
+          if git diff --cached --quiet; then
+            echo 'Identity audit summary unchanged'
+            exit 0
+          fi
+          git commit -m 'Catalog Mercadona: persist declared identity live audit'
+          git pull --rebase origin agent/catalog-phase1
+          git push origin HEAD:agent/catalog-phase1
