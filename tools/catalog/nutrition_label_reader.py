@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.16"
+READER_VERSION = "1.4.17"
 
 
 @dataclass(frozen=True)
@@ -430,7 +430,7 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
         r"(?:^|\n)\s*[\[|]?\s*grasa total\b",
     )
     carb_patterns = (
-        r"(?:^|\n)\s*[\[|]?\s*hidratos? de carbono(?:\s*/\s*(?:carbohydrates?|glucides?))?\b",
+        r"(?:^|\n)\s*[\[|]?\s*hidratos?\s+de\s+carbono(?:\s*/\s*(?:carbohydrates?|glucides?))?\b",
         r"(?:^|\n)\s*[\[|]?\s*carbohidratos?\b",
     )
     protein_patterns = (
