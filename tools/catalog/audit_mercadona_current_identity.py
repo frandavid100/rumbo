@@ -5,6 +5,7 @@ import json
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+import re
 from typing import Any, Iterable
 
 SOURCE = "MERCADONA_FIRST_PARTY"
@@ -44,6 +45,11 @@ def load_jsonl_tree(root: Path, pattern: str) -> list[dict[str, Any]]:
     for path in sorted(root.rglob(pattern)):
         rows.extend(load_jsonl(path))
     return rows
+
+
+def is_http_404_fetch_error(value: str) -> bool:
+    text = str(value or "")
+    return "HTTPError" in text and re.search(r"(?<!\d)404(?!\d)", text) is not None
 
 
 def audit_identity_rows(
@@ -105,6 +111,8 @@ def audit_identity_rows(
             status = "MATCH" if current_ean == anchor_ean else "REASSIGNED_PRODUCT_ID"
         elif current_rows:
             status = "MISSING_CURRENT_EAN"
+        elif fetch_errors and all(is_http_404_fetch_error(error) for error in fetch_errors):
+            status = "CURRENT_PRODUCT_NOT_FOUND"
         elif fetch_errors:
             status = "FETCH_ERROR"
         else:
@@ -125,9 +133,10 @@ def audit_identity_rows(
     audited = len(anchor_by_id)
     matched = counts.get("MATCH", 0)
     reassigned = counts.get("REASSIGNED_PRODUCT_ID", 0)
+    current_not_found = counts.get("CURRENT_PRODUCT_NOT_FOUND", 0)
     unresolved = audited - matched - reassigned
     report = {
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "source": SOURCE,
         "evidence_type": EVIDENCE_TYPE,
         "anchor_source": anchor_source,
@@ -136,15 +145,19 @@ def audit_identity_rows(
             "Compare the immutable EAN attached to each canonically usable Mercadona OCR product_id "
             "with a fresh official first-party product-detail observation. A different current EAN "
             "proves product_id reuse/reassignment and is reported only as an identity hazard; this "
-            "audit never mutates historical canonical OCR nutrition. Missing/unavailable current "
-            "identity fails closed and remains unresolved."
+            "audit never mutates historical canonical OCR nutrition. An explicit HTTP 404 is recorded "
+            "separately as CURRENT_PRODUCT_NOT_FOUND: it proves that the current product-detail endpoint "
+            "does not expose that id at audit time, but it does not prove reassignment. Missing/unavailable "
+            "current identity fails closed and remains unresolved."
         ),
         "anchored_products": audited,
         "matched_products": matched,
         "reassigned_product_ids": reassigned,
+        "current_not_found_products": current_not_found,
         "unresolved_products": unresolved,
         "status_counts": dict(sorted(counts.items())),
         "reassigned_ids": [row["product_id"] for row in rows if row["status"] == "REASSIGNED_PRODUCT_ID"],
+        "current_not_found_ids": [row["product_id"] for row in rows if row["status"] == "CURRENT_PRODUCT_NOT_FOUND"],
         "unresolved_ids": [
             row["product_id"]
             for row in rows
