@@ -120,14 +120,13 @@ jobs:
             --products mercadona-current-35649-doctr-target.jsonl \
             --out "$out" \
             --shard-index 0 --shard-count 1 --limit 0 \
-            --eligibility-mode p9-no-ingredients-all
+            --eligibility-mode priority
           rc=$?
           set -e
           [[ $rc -eq 0 || $rc -eq 2 ]]
 
           python - <<'PY'
           import json
-          import sqlite3
           from pathlib import Path
 
           CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
