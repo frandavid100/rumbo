@@ -1,19 +1,24 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "source": "MERCADONA_FIRST_PARTY",
   "evidence_type": "OBSERVED_API",
   "anchor_source": "MERCADONA_OCR_RUN_UNION/latest_usable_products",
-  "observed_at": "2026-09-12T03:46:16.603204+00:00",
-  "policy": "Compare the immutable EAN attached to each canonically usable Mercadona OCR product_id with a fresh official first-party product-detail observation. A different current EAN proves product_id reuse/reassignment and is reported only as an identity hazard; this audit never mutates historical canonical OCR nutrition. Missing/unavailable current identity fails closed and remains unresolved.",
+  "observed_at": "2026-09-12T05:25:49.501025+00:00",
+  "policy": "Compare the immutable EAN attached to each canonically usable Mercadona OCR product_id with a fresh official first-party product-detail observation. A different current EAN proves product_id reuse/reassignment and is reported only as an identity hazard; this audit never mutates historical canonical OCR nutrition. An explicit HTTP 404 is recorded separately as CURRENT_PRODUCT_NOT_FOUND: it proves that the current product-detail endpoint does not expose that id at audit time, but it does not prove reassignment. Missing/unavailable current identity fails closed and remains unresolved.",
   "anchored_products": 323,
   "matched_products": 321,
   "reassigned_product_ids": 0,
+  "current_not_found_products": 2,
   "unresolved_products": 2,
   "status_counts": {
-    "FETCH_ERROR": 2,
+    "CURRENT_PRODUCT_NOT_FOUND": 2,
     "MATCH": 321
   },
   "reassigned_ids": [],
+  "current_not_found_ids": [
+    "17458",
+    "17622"
+  ],
   "unresolved_ids": [
     "17458",
     "17622"
