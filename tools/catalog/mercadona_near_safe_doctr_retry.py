@@ -25,6 +25,10 @@ DOCTR_VARIANT_NAMES = (
 )
 
 
+def _token(value) -> str:
+    return str(value or "").strip()
+
+
 def should_run_doctr_rescue(ensemble) -> bool:
     """Route docTR only for clean complete REVIEW tuples with weak corroboration."""
     if ensemble.status != "REVIEW" or ensemble.declared_usable:
@@ -54,18 +58,21 @@ def build_doctr_retry_candidates(
 ) -> tuple[list[dict], dict]:
     """Build a bounded retry cohort from current canonical 2/4 REVIEW rows.
 
-    Prior exact-image attempts are intentionally eligible here because this wave
-    adds docTR as a genuinely new OCR family. Exact current first-party image URL
-    equality remains mandatory and acceptance thresholds are unchanged.
+    Mercadona product_id is treated only as a lookup key, never stable identity.
+    The current first-party detail must carry the same non-empty EAN as the
+    canonical OCR observation before an image is eligible. Prior exact-image
+    attempts remain eligible because this wave adds docTR as a genuinely new OCR
+    family; acceptance thresholds remain unchanged.
     """
     targets: dict[str, dict] = {}
+    missing_anchor_ean: list[str] = []
     for line in Path(diagnostic_path).read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        pid = str(row.get("product_id") or "")
+        pid = _token(row.get("product_id"))
         values = row.get("diagnostic_candidate_values") or {}
-        if (
+        if not (
             row.get("canonical_status") == "REVIEW"
             and row.get("corroborated_fields") == 2
             and int(row.get("independent_engine_families") or 0) >= 2
@@ -75,18 +82,34 @@ def build_doctr_retry_candidates(
             and pid
             and row.get("image_url")
         ):
-            targets[pid] = row
+            continue
+        if not _token(row.get("ean")):
+            missing_anchor_ean.append(pid)
+            continue
+        targets[pid] = row
 
     candidates: list[dict] = []
     unmatched_current_photo: list[str] = []
+    missing_current_ean: list[str] = []
+    reassigned_current_product_ids: list[str] = []
     for line in Path(product_path).read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        pid = str(row.get("product_id") or "")
+        pid = _token(row.get("product_id"))
         diagnostic = targets.get(pid)
         if diagnostic is None:
             continue
+
+        anchor_ean = _token(diagnostic.get("ean"))
+        current_ean = _token(row.get("ean"))
+        if not current_ean:
+            missing_current_ean.append(pid)
+            continue
+        if current_ean != anchor_ean:
+            reassigned_current_product_ids.append(pid)
+            continue
+
         image_url = str(diagnostic["image_url"])
         photos = row.get("photos") if isinstance(row.get("photos"), list) else []
         match = next(
@@ -111,6 +134,9 @@ def build_doctr_retry_candidates(
             "image_url": image_url,
             "image_index": image_index,
             "perspective": actual_perspective,
+            "canonical_ean": anchor_ean,
+            "current_ean": current_ean,
+            "identity_basis": "EXACT_CURRENT_EAN_MATCH",
             "canonical_latest_raw_run_id": diagnostic.get("latest_raw_run_id"),
             "canonical_corroborated_fields": diagnostic.get("corroborated_fields"),
             "canonical_engine_families": diagnostic.get("independent_engine_families"),
@@ -130,13 +156,18 @@ def build_doctr_retry_candidates(
     summary = {
         "pilot_limit": limit,
         "canonical_two_of_four_targets": len(targets),
+        "canonical_two_of_four_targets_missing_ean": sorted(set(missing_anchor_ean)),
         "current_exact_first_party_image_targets": len(candidates),
+        "current_exact_identity_and_first_party_image_targets": len(candidates),
         "selected": len(selected),
         "selected_with_structured_ingredients": sum(bool(row.get("ingredients")) for row in selected),
         "selected_without_structured_ingredients": sum(not bool(row.get("ingredients")) for row in selected),
         "selected_product_ids": [str(row.get("product_id")) for row in selected],
-        "unmatched_current_first_party_photo": sorted(unmatched_current_photo),
-        "selection_policy": "CURRENT_CLEAN_CANONICAL_2_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_IMAGE; PRIOR_ATTEMPTS_ALLOWED_ONLY_BECAUSE_DOCTR_IS_A_NEW_INDEPENDENT_OCR_FAMILY",
+        "unmatched_current_first_party_photo": sorted(set(unmatched_current_photo)),
+        "missing_current_ean": sorted(set(missing_current_ean)),
+        "reassigned_current_product_ids": sorted(set(reassigned_current_product_ids)),
+        "identity_policy": "CURRENT_PRODUCT_ID_IS_NOT_IDENTITY; EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN_REQUIRED_BEFORE_IMAGE_RETRY",
+        "selection_policy": "CURRENT_CLEAN_CANONICAL_2_OF_4_REVIEW_EXACT_EAN_IDENTITY_AND_EXACT_CURRENT_FIRST_PARTY_IMAGE; PRIOR_ATTEMPTS_ALLOWED_ONLY_BECAUSE_DOCTR_IS_A_NEW_INDEPENDENT_OCR_FAMILY",
         "new_independent_ocr_family": "doctr",
         "doctr_detection_arch": DOCTR_DETECTION_ARCH,
         "doctr_recognition_arch": DOCTR_RECOGNITION_ARCH,
@@ -155,7 +186,7 @@ def refresh_workflow_cohort_if_available() -> dict | None:
 
     selected, summary = build_doctr_retry_candidates(diagnostic_path, product_path)
     if not selected:
-        raise SystemExit("No actionable current 2-of-4 exact first-party images remain for docTR retry")
+        raise SystemExit("No actionable current 2-of-4 exact-EAN exact-image targets remain for docTR retry")
 
     with_ingredients = [row for row in selected if row.get("ingredients")]
     without_ingredients = [row for row in selected if not row.get("ingredients")]
