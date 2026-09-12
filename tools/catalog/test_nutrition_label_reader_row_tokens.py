@@ -69,6 +69,8 @@ class RowTokenRegressionTest(unittest.TestCase):
         # printed `Hidratos de Carbono | 1,0 g` row as `Hidratos de / 1,0 g /
         # CONSERVACIÓN / Carbono`. Accept only this known standalone packaging
         # heading between the numeric cell and the second half of the row label.
+        # The synthetic tuple intentionally remains energy-incoherent, so this
+        # regression proves row recovery without weakening the safety gate.
         text = (
             'INFORMACIÓN NUTRICIONAL\npor 100 g\n'
             'Valor energético 519 kJ / 124 kcal\n'
@@ -77,8 +79,9 @@ class RowTokenRegressionTest(unittest.TestCase):
             'Proteínas 5.6 g\nSal 0.7 g\n'
         )
         r = read_nutrition_label(text, extraction_confidence=.96)
-        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.status, 'REVIEW', r)
         self.assertEqual(r.nutrition['carbohydrate_g'], 1.0)
+        self.assertTrue(any(reason.startswith('ENERGY_MACRO_MISMATCH:') for reason in r.reasons), r)
 
     def test_interleaved_carbohydrate_does_not_skip_arbitrary_heading(self):
         text = (
