@@ -8,27 +8,33 @@ CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 DEFAULT_LIMIT = 16
 
 
+def _token(value) -> str:
+    return str(value or "").strip()
+
+
 def build_one_of_four_candidates(
     diagnostic_path: str | Path,
     product_path: str | Path,
     *,
     limit: int = DEFAULT_LIMIT,
 ) -> tuple[list[dict], dict]:
-    """Select a bounded exact-image p9 cohort from clean canonical 1/4 REVIEW rows.
+    """Select a bounded p9 cohort from clean canonical 1/4 REVIEW rows.
 
-    The canonical tuple is used only to select a difficult cohort. The subsequent
-    OCR run is a new raw-live observation over the exact current first-party image
-    and must satisfy the normal DECLARED contract independently. No historical
-    value is fused into the new observation.
+    A current Mercadona product_id is not treated as stable identity. The current
+    first-party detail must carry the same non-empty EAN as the historical/canonical
+    OCR observation before its image can be retried. The canonical tuple is used
+    only to select a difficult cohort; the subsequent OCR run must satisfy the
+    normal DECLARED contract independently and never fuses historical values.
     """
     targets: dict[str, dict] = {}
+    missing_anchor_ean: list[str] = []
     for line in Path(diagnostic_path).read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        pid = str(row.get("product_id") or "")
+        pid = _token(row.get("product_id"))
         values = row.get("diagnostic_candidate_values") or {}
-        if (
+        if not (
             row.get("canonical_status") == "REVIEW"
             and int(row.get("corroborated_fields") or 0) == 1
             and int(row.get("independent_engine_families") or 0) >= 2
@@ -38,17 +44,32 @@ def build_one_of_four_candidates(
             and pid
             and row.get("image_url")
         ):
-            targets[pid] = row
+            continue
+        if not _token(row.get("ean")):
+            missing_anchor_ean.append(pid)
+            continue
+        targets[pid] = row
 
     candidates: list[dict] = []
     unmatched_current_p9: list[str] = []
+    missing_current_ean: list[str] = []
+    reassigned_current_product_ids: list[str] = []
     for line in Path(product_path).read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        pid = str(row.get("product_id") or "")
+        pid = _token(row.get("product_id"))
         diagnostic = targets.get(pid)
         if diagnostic is None:
+            continue
+
+        anchor_ean = _token(diagnostic.get("ean"))
+        current_ean = _token(row.get("ean"))
+        if not current_ean:
+            missing_current_ean.append(pid)
+            continue
+        if current_ean != anchor_ean:
+            reassigned_current_product_ids.append(pid)
             continue
 
         image_url = str(diagnostic["image_url"])
@@ -73,6 +94,9 @@ def build_one_of_four_candidates(
             "image_url": image_url,
             "image_index": image_index,
             "perspective": 9,
+            "canonical_ean": anchor_ean,
+            "current_ean": current_ean,
+            "identity_basis": "EXACT_CURRENT_EAN_MATCH",
             "canonical_latest_raw_run_id": diagnostic.get("latest_raw_run_id"),
             "canonical_corroborated_fields": 1,
             "canonical_engine_families": diagnostic.get("independent_engine_families"),
@@ -92,17 +116,22 @@ def build_one_of_four_candidates(
     summary = {
         "pilot_limit": limit,
         "canonical_one_of_four_targets": len(targets),
+        "canonical_one_of_four_targets_missing_ean": sorted(set(missing_anchor_ean)),
         "current_exact_first_party_p9_targets": len(candidates),
+        "current_exact_identity_and_first_party_p9_targets": len(candidates),
         "selected": len(selected),
         "selected_with_structured_ingredients": sum(bool(row.get("ingredients")) for row in selected),
         "selected_without_structured_ingredients": sum(not bool(row.get("ingredients")) for row in selected),
         "selected_product_ids": [str(row.get("product_id")) for row in selected],
-        "unmatched_current_first_party_p9": sorted(unmatched_current_p9),
+        "unmatched_current_first_party_p9": sorted(set(unmatched_current_p9)),
+        "missing_current_ean": sorted(set(missing_current_ean)),
+        "reassigned_current_product_ids": sorted(set(reassigned_current_product_ids)),
+        "identity_policy": "CURRENT_PRODUCT_ID_IS_NOT_IDENTITY; EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN_REQUIRED_BEFORE_IMAGE_RETRY",
         "selection_policy": (
-            "CURRENT_CLEAN_CANONICAL_1_OF_4_REVIEW_EXACT_CURRENT_FIRST_PARTY_PERSPECTIVE_9_IMAGE; "
+            "CURRENT_CLEAN_CANONICAL_1_OF_4_REVIEW_EXACT_EAN_IDENTITY_AND_EXACT_CURRENT_FIRST_PARTY_PERSPECTIVE_9_IMAGE; "
             "NEW_RAW_LIVE_OBSERVATION_WITH_DOCTR_AS_ADDITIONAL_INDEPENDENT_OCR_FAMILY"
         ),
-        "observation_policy": "CURRENT_EXACT_P9_IMAGE_IS_REPROCESSED_AS_A_NEW_RAW_LIVE_OBSERVATION",
+        "observation_policy": "CURRENT_EXACT_EAN_MATCHED_P9_IMAGE_IS_REPROCESSED_AS_A_NEW_RAW_LIVE_OBSERVATION",
         "cross_run_value_fusion": False,
         "current_observation_must_satisfy_declared_contract_independently": True,
         "new_independent_ocr_family": "doctr",
