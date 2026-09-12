@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: frandavid100/rumbo
     steps:
       - name: Rebuild canonical Mercadona OCR staging from completed raw-live evidence
         run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
