@@ -1,0 +1,240 @@
+name: Catalog Mercadona current 35649 docTR retry
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-35649-doctr-retry.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-35649-doctr-retry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  retry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: frandavid100/rumbo
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build exact-identity exact-image first-party target
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          PRODUCT_ID = '35649'
+          EXPECTED_EAN = '8402001008832'
+          EXPECTED_IMAGE = 'https://prod-mercadona.imgix.net/images/3f6cc37c292f5c2f3462f534cad40a17.jpg?fit=crop&h=3600&w=3600'
+
+          observed_at = _now()
+          payload, source_url = _get_json(PRODUCT_ID, timeout=20.0)
+          current = normalize(payload, source_url=source_url, observed_at=observed_at)
+          current_ean = str(current.get('ean') or '').strip()
+          if current_ean != EXPECTED_EAN:
+              raise SystemExit(f'identity mismatch: expected EAN {EXPECTED_EAN}, got {current_ean!r}')
+
+          photos = current.get('photos') if isinstance(current.get('photos'), list) else []
+          match = next((
+              (i, p) for i, p in enumerate(photos)
+              if isinstance(p, dict)
+              and str(p.get('perspective') or '') == '9'
+              and str(p.get('zoom') or '') == EXPECTED_IMAGE
+          ), None)
+          if match is None:
+              raise SystemExit('exact current first-party perspective=9 image no longer matches validated target')
+
+          image_index, photo = match
+          routed = dict(photo)
+          routed['perspective'] = 9
+          candidate = dict(current)
+          candidate['photos'] = [routed]
+          candidate['_parser_retry_meta'] = {
+              'canonical_ean': EXPECTED_EAN,
+              'current_ean': current_ean,
+              'identity_basis': 'EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN',
+              'image_url': EXPECTED_IMAGE,
+              'current_photo_index': image_index,
+              'live_detail_source_url': source_url,
+              'live_detail_observed_at': observed_at,
+              'parser_regression_target': 'nutrition_label_reader-1.4.17',
+              'cross_run_value_fusion': False,
+          }
+          Path('mercadona-current-35649-doctr-target.jsonl').write_text(
+              json.dumps(candidate, ensure_ascii=False, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Install independent OCR engines and detector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative OCR regressions first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_doctr_extractor.py \
+            test_mercadona_near_safe_doctr_retry.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: Retry current image with docTR as independent OCR family
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=mercadona-current-35649-doctr-retry
+          set +e
+          python mercadona_near_safe_doctr_retry.py \
+            --products mercadona-current-35649-doctr-target.jsonl \
+            --out "$out" \
+            --shard-index 0 --shard-count 1 --limit 0 \
+            --eligibility-mode p9-no-ingredients-all
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+
+          python - <<'PY'
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
+          root = Path('mercadona-current-35649-doctr-retry')
+          target = json.loads(Path('mercadona-current-35649-doctr-target.jsonl').read_text(encoding='utf-8'))
+          meta = target['_parser_retry_meta']
+          result_paths = sorted(root.glob('results-*.jsonl'))
+          if not result_paths:
+              raise SystemExit('No OCR result file produced')
+
+          rows = []
+          for path in result_paths:
+              patched = []
+              for line in path.read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  if str(row.get('product_id') or '') != '35649':
+                      raise SystemExit('unexpected product id')
+                  if str(row.get('ean') or '') != meta['canonical_ean']:
+                      raise SystemExit('unexpected EAN')
+                  if str(row.get('image_url') or '') != meta['image_url']:
+                      raise SystemExit('unexpected image URL')
+                  row['image_index'] = meta['current_photo_index']
+                  row['perspective'] = 9
+                  row['identity_basis'] = meta['identity_basis']
+                  row['canonical_ean'] = meta['canonical_ean']
+                  row['current_ean'] = meta['current_ean']
+                  row['image_selection_basis'] = 'EXACT_CURRENT_FIRST_PARTY_PERSPECTIVE_9_IMAGE_URL'
+                  row['live_detail_source_url'] = meta['live_detail_source_url']
+                  row['live_detail_observed_at'] = meta['live_detail_observed_at']
+                  row['parser_regression_target'] = meta['parser_regression_target']
+                  row['retry_independent_ocr_family'] = 'doctr'
+                  row['cross_run_value_fusion'] = False
+                  row['current_observation_must_satisfy_declared_contract_independently'] = True
+                  row['acceptance_policy_changed'] = False
+
+                  if (
+                      row.get('source') != 'MERCADONA_FIRST_PARTY'
+                      or row.get('source_record_kind') != 'label image'
+                      or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                      or row.get('redistribution_allowed') is not False
+                      or row.get('identity_basis') != 'EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN'
+                      or row.get('canonical_ean') != row.get('current_ean')
+                      or row.get('cross_run_value_fusion') is not False
+                  ):
+                      raise SystemExit('unsafe provenance or identity')
+
+                  if row.get('status') == 'DECLARED':
+                      nutrition = row.get('nutrition') or {}
+                      if any(nutrition.get(field) is None for field in CORE):
+                          raise SystemExit('DECLARED without complete core nutrition')
+                      ensemble = next((
+                          (attempt.get('ensemble') or {})
+                          for attempt in row.get('attempts', [])
+                          if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'
+                      ), {})
+                      if int(ensemble.get('independent_engine_families') or 0) < 2:
+                          raise SystemExit('DECLARED without two independent OCR families')
+                      if int(ensemble.get('corroborated_fields') or 0) < 4:
+                          raise SystemExit('DECLARED without four corroborated core fields')
+                  patched.append(row)
+                  rows.append(row)
+              path.write_text(
+                  ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in patched),
+                  encoding='utf-8',
+              )
+
+          if len(rows) != 1:
+              raise SystemExit(f'expected exactly one result row, got {len(rows)}')
+          row = rows[0]
+          summary = {
+              'inventory_products': 4280,
+              'processed': 1,
+              'product_id': '35649',
+              'ean': meta['canonical_ean'],
+              'status_counts': {str(row.get('status') or 'UNKNOWN'): 1},
+              'nutrition': row.get('nutrition') if row.get('status') == 'DECLARED' else None,
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'structured_api_macros_claimed': False,
+              'cross_run_value_fusion': False,
+              'parser_regression_target': meta['parser_regression_target'],
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+              'safety_assessment': 'VALIDATED',
+          }
+          (root / 'canonical-retry-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload auditable current retry without source images
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-current-35649-doctr-retry
+          path: |
+            tools/catalog/mercadona-current-35649-doctr-retry/results-*.jsonl
+            tools/catalog/mercadona-current-35649-doctr-retry/summary-*.json
+            tools/catalog/mercadona-current-35649-doctr-retry/canonical-retry-summary.json
+            tools/catalog/mercadona-current-35649-doctr-retry/staging.sqlite
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Reconcile canonical OCR staging after persisted raw-live evidence
+        run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
