@@ -1,0 +1,66 @@
+{
+  "mode": "REGRESSION_FIXTURE_FROM_PERSISTED_TEXT_TYPO_PROBE",
+  "source_workflow_run_id": 33308402054,
+  "source_artifact": "mercadona-ocr-typo-recovery-probe",
+  "source_artifact_created_at": "2026-08-30T11:14:37Z",
+  "canonical_additions_applied": 0,
+  "usable": false,
+  "note": "Regression-only expectations from the isolated persisted-text probe. Live Mercadona API identity (exact EAN) and live perspective=9 image must be revalidated before any end-to-end OCR result can be considered for canonical addition.",
+  "products": [
+    {
+      "product_id": "12946",
+      "ean": "8402001033902",
+      "name": "Chocolate extrafino con leche Hacendado 0% azúcares añadidos",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 465.0,
+        "fat_g": 31.0,
+        "carbohydrate_g": 47.0,
+        "protein_g": 9.0
+      }
+    },
+    {
+      "product_id": "15589",
+      "ean": "8480000155894",
+      "name": "Patatas fritas corte ondulado Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 550.0,
+        "fat_g": 34.0,
+        "carbohydrate_g": 53.0,
+        "protein_g": 5.7
+      }
+    },
+    {
+      "product_id": "67660",
+      "ean": "8480000676603",
+      "name": "Café soluble cappuccino caramelo Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 395.0,
+        "fat_g": 6.3,
+        "carbohydrate_g": 76.0,
+        "protein_g": 7.4
+      }
+    },
+    {
+      "product_id": "80515",
+      "ean": "8480000805157",
+      "name": "Cereales estrellas de maíz Stars Hacendado con miel",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 403.0,
+        "fat_g": 4.7,
+        "carbohydrate_g": 80.0,
+        "protein_g": 7.9
+      }
+    }
+  ],
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
