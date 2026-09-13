@@ -29,12 +29,15 @@ jobs:
         include:
           - target_product_id: '35649'
             expected_ean: '8402001008832'
+            eligibility_mode: 'priority'
           - target_product_id: '21649'
             expected_ean: '8402001054686'
+            eligibility_mode: 'p9-no-ingredients-all'
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
       TARGET_PRODUCT_ID: ${{ matrix.target_product_id }}
       EXPECTED_EAN: ${{ matrix.expected_ean }}
+      ELIGIBILITY_MODE: ${{ matrix.eligibility_mode }}
       EXPECTED_GENERIC_PARSER_VERSION: '1.4.18'
     steps:
       - uses: actions/checkout@v4
@@ -129,7 +132,7 @@ jobs:
           python mercadona_neural_ocr_wave.py \
             --products mercadona-parser-regression-live/target.jsonl \
             --out mercadona-parser-regression-live/ocr \
-            --eligibility-mode priority \
+            --eligibility-mode "$ELIGIBILITY_MODE" \
             --shard-index 0 \
             --shard-count 1 \
             --limit 1 \
