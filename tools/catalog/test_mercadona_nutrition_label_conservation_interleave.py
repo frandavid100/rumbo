@@ -1,6 +1,6 @@
 import unittest
 
-from mercadona_nutrition_label_reader import read_nutrition_label
+from mercadona_nutrition_label_structural_repair import read_nutrition_label
 
 
 class MercadonaNutritionLabelConservationInterleaveTest(unittest.TestCase):
@@ -8,8 +8,8 @@ class MercadonaNutritionLabelConservationInterleaveTest(unittest.TestCase):
         # Reduced from the live PP-OCRv6 reading for Mercadona product 21649.
         # The visual table is single-column, but OCR inserts the packaging
         # CONSERVACIÓN heading after the total-fat row and emits each remaining
-        # macro value immediately before its row label. The Mercadona-specific
-        # value-before-label rescue is safe only if _nutrition_block keeps the
+        # macro value immediately before its row label. The Mercadona production
+        # parser may rescue that ordering only if _nutrition_block keeps the
         # explicit core rows that follow the interleaved packaging heading.
         observed = """100 g
 Valor
@@ -41,7 +41,8 @@ Sal 1.1 g
             "carbohydrate_g": 26.0,
             "protein_g": 6.7,
         })
-        self.assertIn("VALUE_BEFORE_LABEL_RESCUED", r.reasons)
+        self.assertIn("FULL_VALUE_BEFORE_LABEL_STRUCTURE", r.reasons)
+        self.assertNotIn("IMPOSSIBLE_CARBOHYDRATE_G", r.reasons)
 
     def test_interleaved_conservation_does_not_make_two_column_table_usable(self):
         # Reduced from the current Carpaccio de vacuno label (product 2632).
