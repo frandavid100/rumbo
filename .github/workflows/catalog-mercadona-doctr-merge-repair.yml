@@ -1,0 +1,77 @@
+name: Catalog Mercadona docTR merge repair
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-doctr-merge-repair.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-doctr-merge-repair-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: '34753408288'
+      STALE_MERGED_ARTIFACT_ID: '10316224304'
+    steps:
+      - name: Verify source run is the failed docTR pilot rerun
+        shell: bash
+        run: |
+          set -euo pipefail
+          name=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${SOURCE_RUN_ID}" \
+            --jq '.name')
+          conclusion=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${SOURCE_RUN_ID}" \
+            --jq '.conclusion')
+          attempt=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${SOURCE_RUN_ID}" \
+            --jq '.run_attempt')
+          if [[ "$name" != 'Catalog Mercadona near-safe 3-of-4 docTR pilot' || "$conclusion" != 'failure' || "$attempt" -lt 2 ]]; then
+            echo "Unexpected source run state: name=$name conclusion=$conclusion attempt=$attempt" >&2
+            exit 1
+          fi
+
+      - name: Verify stale artifact is the prior merged artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/artifacts/${STALE_MERGED_ARTIFACT_ID}")
+          name=$(jq -r '.name' <<<"$artifact")
+          run_id=$(jq -r '.workflow_run.id' <<<"$artifact")
+          if [[ "$name" != 'mercadona-near-safe-three-of-four-doctr-pilot-merged' || "$run_id" != "$SOURCE_RUN_ID" ]]; then
+            echo "Refusing to delete unexpected artifact: name=$name run_id=$run_id" >&2
+            exit 1
+          fi
+
+      - name: Delete stale merged artifact from the previous attempt
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method DELETE \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/artifacts/${STALE_MERGED_ARTIFACT_ID}"
+
+      - name: Re-run only failed jobs in the original OCR run
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${SOURCE_RUN_ID}/rerun-failed-jobs"
+          echo "Re-requested failed-job rerun for ${SOURCE_RUN_ID}; successful OCR shard artifacts are retained and no image is persisted by this repair workflow."
