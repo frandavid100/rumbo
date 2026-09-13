@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.17"
+READER_VERSION = "1.4.18"
 
 
 @dataclass(frozen=True)
@@ -112,14 +112,23 @@ def _nutrition_block(text: str) -> str:
             ends.append(m.start())
 
     # OCR column ordering can insert the standalone packaging heading
-    # `CONSERVACION` inside a split `Hidratos de / value / Carbono` row. Keep
-    # that one observed structure inside the nutrition block; otherwise retain
-    # conservation headings as ordinary end markers.
+    # `CONSERVACION` inside the nutrition table. Keep the previously observed
+    # split `Hidratos de / value / CONSERVACION / Carbono` structure, and also
+    # keep a conservation heading when another explicit core nutrient row
+    # follows shortly afterwards. This mirrors the existing manufacturer-column
+    # guard below while remaining anchored to standalone nutrient row labels;
+    # ordinary post-table conservation prose remains an end marker.
     for m in re.finditer(r"\n(?:condiciones de )?conservacion\b", folded_tail, flags=re.I):
         if m.start() <= 80:
             continue
-        after = folded_tail[m.end():m.end() + 60]
+        after = folded_tail[m.end():m.end() + 260]
         if re.match(r"\s*\n\s*carbono\b", after, flags=re.I):
+            continue
+        if re.search(
+            r"(?:^|\n)\s*(?:grasas?|lipidos?|hidratos?\s+de\s+carbono|carbohidratos?|proteinas?)\b",
+            after,
+            flags=re.I,
+        ):
             continue
         ends.append(m.start())
 
