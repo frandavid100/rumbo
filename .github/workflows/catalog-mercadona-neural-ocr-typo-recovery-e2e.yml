@@ -5,12 +5,14 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-neural-ocr-typo-recovery-e2e.yml'
+      - 'tools/catalog/mercadona-ocr-typo-recovery-probe-fixture.json'
+      - 'tools/catalog/mercadona_first_party_details.py'
+      - 'tools/catalog/mercadona_neural_ocr_wave.py'
       - 'tools/catalog/nutrition_label_reader.py'
       - 'tools/catalog/test_nutrition_label_reader_ocr_typos.py'
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -31,22 +33,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Download consolidated Mercadona first-party cut
-        uses: actions/download-artifact@v4
-        with:
-          name: mercadona-first-party-final
-          path: tools/catalog/mercadona-first-party-final
-          github-token: ${{ github.token }}
-          run-id: 33046950149
-
-      - name: Download isolated persisted-text typo probe
-        uses: actions/download-artifact@v4
-        with:
-          name: mercadona-ocr-typo-recovery-probe
-          path: tools/catalog/mercadona-ocr-typo-recovery-probe-source
-          github-token: ${{ github.token }}
-          run-id: 33308402054
 
       - name: Install independent OCR engines and visual detector dependencies
         run: |
@@ -70,32 +56,93 @@ jobs:
           assert re.fullmatch(r'\d+\.\d+\.\d+', READER_VERSION), READER_VERSION
           PY
 
-      - name: Select exactly the four isolated typo-recovery candidates
+      - name: Fetch exact candidates from official Mercadona API and verify stable identity
         working-directory: tools/catalog
         run: |
+          rm -rf /tmp/mercadona-typo-details mercadona-neural-ocr-typo-recovery-e2e
+          mkdir -p /tmp/mercadona-typo-details mercadona-neural-ocr-typo-recovery-e2e
           python - <<'PY'
           import json
           from pathlib import Path
 
-          wanted = {'12946', '15589', '67660', '80515'}
-          source = Path('mercadona-first-party-final/products.jsonl')
-          rows = [
-              json.loads(line)
-              for line in source.read_text(encoding='utf-8').splitlines()
-              if line.strip()
-          ]
-          selected = [row for row in rows if str(row.get('product_id') or '') in wanted]
-          found = {str(row.get('product_id') or '') for row in selected}
-          if found != wanted:
-              raise SystemExit(f'Missing candidate ids: {sorted(wanted - found)}')
+          fixture = json.loads(Path('mercadona-ocr-typo-recovery-probe-fixture.json').read_text(encoding='utf-8'))
+          products = fixture.get('products') or []
+          if len(products) != 4:
+              raise SystemExit(f'expected exactly four fixture products, got {len(products)}')
+          ids = [str(row.get('product_id') or '') for row in products]
+          if len(set(ids)) != 4 or any(not pid for pid in ids):
+              raise SystemExit(f'invalid fixture product ids: {ids}')
+          Path('/tmp/mercadona-typo-inventory.jsonl').write_text(
+              ''.join(
+                  json.dumps({'product_id': pid, 'category_id': '', 'category_path': []}, ensure_ascii=False) + '\n'
+                  for pid in ids
+              ),
+              encoding='utf-8',
+          )
+          PY
+          python mercadona_first_party_details.py \
+            --inventory /tmp/mercadona-typo-inventory.jsonl \
+            --out /tmp/mercadona-typo-details \
+            --shard-index 0 \
+            --shard-count 1 \
+            --timeout 20 \
+            --delay 0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          fixture = json.loads(Path('mercadona-ocr-typo-recovery-probe-fixture.json').read_text(encoding='utf-8'))
+          expected = {str(row['product_id']): row for row in fixture['products']}
+          details_path = Path('/tmp/mercadona-typo-details/details-00.jsonl')
+          errors_path = Path('/tmp/mercadona-typo-details/errors-00.jsonl')
+          rows = [json.loads(line) for line in details_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          errors = [json.loads(line) for line in errors_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors:
+              raise SystemExit(f'first-party API fetch errors: {errors}')
+          by_id = {str(row.get('product_id') or ''): row for row in rows}
+          if set(by_id) != set(expected):
+              raise SystemExit(f'live product universe mismatch: live={sorted(by_id)} expected={sorted(expected)}')
+
+          selected = []
+          source_rows = []
+          for pid, exp in sorted(expected.items()):
+              product = by_id[pid]
+              if product.get('source') != 'MERCADONA_FIRST_PARTY' or product.get('evidence_type') != 'OBSERVED_API' or product.get('detail_observed') is not True:
+                  raise SystemExit(f'{pid}: invalid first-party API provenance')
+              live_ean = str(product.get('ean') or '')
+              expected_ean = str(exp.get('ean') or '')
+              if not live_ean or live_ean != expected_ean:
+                  raise SystemExit(f'{pid}: live first-party identity mismatch EAN={live_ean}; expected={expected_ean}')
+              photos = product.get('photos') or []
+              p9 = [p for p in photos if str(p.get('perspective')) == '9' and p.get('zoom')]
+              if not p9:
+                  raise SystemExit(f'{pid}: target no longer has a perspective=9 zoom label candidate')
+              p9_url = p9[0]['zoom']
+              selected.append(product)
+              source_rows.append({
+                  'product_id': pid,
+                  'ean': live_ean,
+                  'name': product.get('name'),
+                  'source': product.get('source'),
+                  'evidence_type': product.get('evidence_type'),
+                  'source_url': product.get('source_url'),
+                  'observed_at': product.get('observed_at'),
+                  'p9_image_url': p9_url,
+                  'redistribution_allowed': False,
+              })
+
           Path('mercadona-typo-recovery-products.jsonl').write_text(
               ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected),
               encoding='utf-8',
           )
-          print('selected', sorted(found))
+          Path('mercadona-neural-ocr-typo-recovery-e2e/first-party-live-source.json').write_text(
+              json.dumps(source_rows, ensure_ascii=False, indent=2, sort_keys=True),
+              encoding='utf-8',
+          )
+          print(json.dumps(source_rows, ensure_ascii=False, indent=2))
           PY
 
-      - name: Re-run neural OCR end to end on candidate labels
+      - name: Re-run neural OCR end to end on live exact-product label images
         working-directory: tools/catalog
         run: |
           python mercadona_neural_ocr_wave.py \
@@ -103,9 +150,10 @@ jobs:
             --out mercadona-neural-ocr-typo-recovery-e2e \
             --shard-index 0 \
             --shard-count 1 \
-            --limit 0
+            --limit 0 \
+            --delay 0
 
-      - name: Compare against persisted-text probe and enforce safety
+      - name: Compare against checked-in regression fixture and enforce safety
         working-directory: tools/catalog
         run: |
           python - <<'PY'
@@ -123,16 +171,17 @@ jobs:
                   if line.strip()
               )
 
-          expected = {'12946', '15589', '67660', '80515'}
+          fixture = json.loads(Path('mercadona-ocr-typo-recovery-probe-fixture.json').read_text(encoding='utf-8'))
+          probe = {str(row['product_id']): row for row in fixture['products']}
+          expected = set(probe)
           actual = {str(row.get('product_id') or '') for row in rows}
           if actual != expected:
               raise SystemExit(f'Unexpected product universe: actual={sorted(actual)} expected={sorted(expected)}')
 
-          probe_path = Path('mercadona-ocr-typo-recovery-probe-source/promotions.json')
-          probe_rows = json.loads(probe_path.read_text(encoding='utf-8'))
-          probe = {str(row['product_id']): row for row in probe_rows}
-          if set(probe) != expected:
-              raise SystemExit(f'Unexpected probe candidate universe: {sorted(probe)}')
+          live_source_rows = json.loads((out / 'first-party-live-source.json').read_text(encoding='utf-8'))
+          live_source = {str(row['product_id']): row for row in live_source_rows}
+          if set(live_source) != expected:
+              raise SystemExit(f'Unexpected live source universe: {sorted(live_source)}')
 
           provenance_errors = []
           unsafe = []
@@ -143,6 +192,13 @@ jobs:
 
           for row in rows:
               pid = str(row.get('product_id') or '')
+              expected_ean = str(probe[pid].get('ean') or '')
+              if str(row.get('ean') or '') != expected_ean:
+                  provenance_errors.append(f'{pid}:ocr_ean')
+              if str(live_source[pid].get('ean') or '') != expected_ean:
+                  provenance_errors.append(f'{pid}:live_ean')
+              if row.get('image_url') != live_source[pid].get('p9_image_url'):
+                  provenance_errors.append(f'{pid}:image_url')
               if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
                   provenance_errors.append(f'{pid}:evidence_level')
               if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
@@ -173,8 +229,9 @@ jobs:
               if any(float(nutrition[field]) != float(expected_nutrition[field]) for field in required):
                   conflicts.append({
                       'product_id': pid,
-                      'probe': expected_nutrition,
-                      'end_to_end': nutrition,
+                      'ean': expected_ean,
+                      'fixture': expected_nutrition,
+                      'live_end_to_end': nutrition,
                   })
                   continue
 
@@ -182,24 +239,25 @@ jobs:
               declared_nutrition[pid] = nutrition
 
           if provenance_errors:
-              raise SystemExit('Provenance contract violated: ' + ','.join(provenance_errors))
+              raise SystemExit('Provenance/identity contract violated: ' + ','.join(provenance_errors))
           if unsafe:
               raise SystemExit('Unsafe DECLARED rows detected: ' + ','.join(unsafe))
           if conflicts:
-              raise SystemExit('End-to-end conflicts against persisted-text probe: ' + json.dumps(conflicts, ensure_ascii=False))
+              raise SystemExit('End-to-end conflicts against regression fixture: ' + json.dumps(conflicts, ensure_ascii=False))
 
           counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
           summary = {
-              'mode': 'END_TO_END_VALIDATION_OF_ISOLATED_OCR_TYPO_RECOVERIES',
+              'mode': 'LIVE_END_TO_END_VALIDATION_OF_ISOLATED_OCR_TYPO_RECOVERIES',
               'reader_version': READER_VERSION,
               'processed': len(rows),
               'status_counts': dict(sorted(counts.items())),
               'reproduced_ids': sorted(reproduced),
               'review_ids': sorted(review),
               'declared_nutrition': declared_nutrition,
-              'probe_conflicts': conflicts,
+              'fixture_conflicts': conflicts,
               'unsafe_declared': unsafe,
               'provenance_errors': provenance_errors,
+              'identity_policy': 'EXACT_PRODUCT_ID_AND_EAN_WITH_LIVE_FIRST_PARTY_PERSPECTIVE_9_IMAGE',
               'safe_for_trusted_addition': sorted(reproduced),
               'canonical_additions_applied': 0,
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
