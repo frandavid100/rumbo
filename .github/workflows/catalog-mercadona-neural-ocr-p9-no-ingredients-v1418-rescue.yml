@@ -1,0 +1,214 @@
+name: Catalog Mercadona neural OCR p9 no-ingredients v1.4.18 rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-neural-ocr-p9-no-ingredients-v1418-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-neural-ocr-p9-no-ingredients-v1418-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      TARGET_PRODUCT_ID: '21649'
+      EXPECTED_EAN: '8402001054686'
+      EXPECTED_IMAGE_URL: 'https://prod-mercadona.imgix.net/images/1b085f5f14d821129d2d72b0d71138c3.jpg?fit=crop&h=3600&w=3600'
+      EXPECTED_GENERIC_PARSER_VERSION: '1.4.18'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install first-party fetch and OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run parser and OCR safety regressions first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_nutrition_label_conservation_interleave.py
+
+      - name: Fetch exact current product from official Mercadona API
+        working-directory: tools/catalog
+        run: |
+          mkdir -p mercadona-neural-ocr-p9-no-ingredients-v1418-rescue /tmp/mercadona-v1418-rescue-details
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pid = os.environ['TARGET_PRODUCT_ID']
+          Path('/tmp/mercadona-v1418-rescue-inventory.jsonl').write_text(
+              json.dumps({'product_id': pid, 'category_id': '', 'category_path': []}, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          python mercadona_first_party_details.py \
+            --inventory /tmp/mercadona-v1418-rescue-inventory.jsonl \
+            --out /tmp/mercadona-v1418-rescue-details \
+            --shard-index 0 \
+            --shard-count 1 \
+            --timeout 20 \
+            --delay 0
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          pid = os.environ['TARGET_PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
+          expected_image = os.environ['EXPECTED_IMAGE_URL']
+          details_path = Path('/tmp/mercadona-v1418-rescue-details/details-00.jsonl')
+          errors_path = Path('/tmp/mercadona-v1418-rescue-details/errors-00.jsonl')
+          rows = [json.loads(line) for line in details_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          errors = [json.loads(line) for line in errors_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors:
+              raise SystemExit(f'first-party API fetch errors: {errors}')
+          if len(rows) != 1:
+              raise SystemExit(f'expected one live product, got {len(rows)}')
+          product = rows[0]
+          if str(product.get('product_id') or '') != pid:
+              raise SystemExit('product id mismatch')
+          if str(product.get('ean') or '') != expected_ean:
+              raise SystemExit(f'identity mismatch for {pid}: EAN={product.get("ean")}; expected={expected_ean}')
+          if product.get('source') != 'MERCADONA_FIRST_PARTY' or product.get('evidence_type') != 'OBSERVED_API' or product.get('detail_observed') is not True:
+              raise SystemExit('invalid first-party API provenance')
+          if product.get('ingredients'):
+              raise SystemExit('target is no longer in the p9-no-ingredients-all eligibility branch')
+          p9 = [p for p in (product.get('photos') or []) if str(p.get('perspective')) == '9' and (p.get('zoom') or p.get('regular'))]
+          if not p9:
+              raise SystemExit('target no longer has a perspective=9 label candidate')
+          image_url = p9[0].get('zoom') or p9[0].get('regular')
+          if image_url != expected_image:
+              raise SystemExit(f'first-party p9 image changed: current={image_url!r}; anchored={expected_image!r}')
+
+          out = Path('mercadona-neural-ocr-p9-no-ingredients-v1418-rescue')
+          (out / 'target.jsonl').write_text(json.dumps(product, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
+          (out / 'identity-anchor.json').write_text(json.dumps({
+              'product_id': pid,
+              'ean': expected_ean,
+              'name': product.get('name'),
+              'image_url': expected_image,
+              'source': 'MERCADONA_FIRST_PARTY',
+              'evidence_type': 'OBSERVED_API',
+              'observed_at': product.get('observed_at'),
+              'redistribution_allowed': False,
+          }, ensure_ascii=False, indent=2, sort_keys=True), encoding='utf-8')
+          PY
+
+      - name: Re-run neural OCR end to end with parser 1.4.18
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-neural-ocr-p9-no-ingredients-v1418-rescue/target.jsonl \
+            --out mercadona-neural-ocr-p9-no-ingredients-v1418-rescue/ocr \
+            --eligibility-mode p9-no-ingredients-all \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 1 \
+            --delay 0
+
+      - name: Fail closed unless the exact anchored product is safely DECLARED
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          from nutrition_label_reader import READER_VERSION as generic_parser_version
+
+          pid = os.environ['TARGET_PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
+          expected_image = os.environ['EXPECTED_IMAGE_URL']
+          expected_parser = os.environ['EXPECTED_GENERIC_PARSER_VERSION']
+          out = Path('mercadona-neural-ocr-p9-no-ingredients-v1418-rescue')
+          result_path = out / 'ocr' / 'results-00.jsonl'
+          rows = [json.loads(line) for line in result_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(rows) != 1:
+              raise SystemExit(f'expected one OCR result, got {len(rows)}')
+          row = rows[0]
+          if generic_parser_version != expected_parser:
+              raise SystemExit(f'parser version drift: {generic_parser_version}; expected={expected_parser}')
+          if str(row.get('product_id') or '') != pid or str(row.get('ean') or '') != expected_ean:
+              raise SystemExit('OCR identity does not match anchored product/EAN')
+          if row.get('image_url') != expected_image or str(row.get('perspective')) != '9':
+              raise SystemExit('OCR image does not match exact anchored p9 image')
+          evidence = row.get('evidence_level') or row.get('evidence_type')
+          if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+              raise SystemExit('invalid OCR source provenance')
+          if evidence != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
+              raise SystemExit('invalid OCR evidence/redistribution contract')
+          if row.get('status') != 'DECLARED':
+              raise SystemExit(f'target remains non-usable: status={row.get("status")}')
+          accepted = next((a for a in (row.get('attempts') or []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+          ensemble = (accepted or {}).get('ensemble') or {}
+          if int(ensemble.get('independent_engine_families') or 0) < 2:
+              raise SystemExit('DECLARED result lacks two independent OCR families')
+          if int(ensemble.get('corroborated_fields') or 0) != 4:
+              raise SystemExit('DECLARED result does not corroborate all four core macros')
+          nutrition = row.get('nutrition') or {}
+          required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
+          if any(nutrition.get(field) is None for field in required):
+              raise SystemExit('DECLARED result has a missing core macro')
+          expected = {'calories': 240.0, 'protein_g': 6.7, 'carbohydrate_g': 26.0, 'fat_g': 12.0}
+          if any(float(nutrition[field]) != expected[field] for field in required):
+              raise SystemExit(f'validated live nutrition drifted from exact parser-regression observation: {nutrition}')
+          if any(key in row for key in ('classified', 'menu_eligible', 'CLASSIFIED', 'MENU_ELIGIBLE')):
+              raise SystemExit('semantic classification leaked into extraction result')
+
+          # Canonical audit discovery scans raw results*.jsonl. Persist the validated live row,
+          # normalized OCR text and metadata only; image bytes remain temporary and are discarded.
+          shutil.copyfile(result_path, out / 'results.jsonl')
+          summary = {
+              'decision': 'SAFE_RAW_LIVE_OCR_RESCUE_VALIDATED',
+              'product_id': pid,
+              'ean': expected_ean,
+              'name': row.get('name'),
+              'status': row.get('status'),
+              'nutrition': nutrition,
+              'parser_version': generic_parser_version,
+              'independent_engine_families': int(ensemble.get('independent_engine_families') or 0),
+              'corroborated_fields': int(ensemble.get('corroborated_fields') or 0),
+              'image_url': expected_image,
+              'evidence_level': evidence,
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          (out / 'validated-summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-neural-ocr-p9-no-ingredients-v1418-rescue-merged
+          path: |
+            tools/catalog/mercadona-neural-ocr-p9-no-ingredients-v1418-rescue/results.jsonl
+            tools/catalog/mercadona-neural-ocr-p9-no-ingredients-v1418-rescue/ocr/summary-00.json
+            tools/catalog/mercadona-neural-ocr-p9-no-ingredients-v1418-rescue/identity-anchor.json
+            tools/catalog/mercadona-neural-ocr-p9-no-ingredients-v1418-rescue/validated-summary.json
+          retention-days: 30
+          if-no-files-found: warn
