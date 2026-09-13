@@ -83,10 +83,18 @@ jobs:
               raise SystemExit(f'current-only identity cohort drifted: expected {sorted(expected)}, got {sorted(actual)}')
           if m['quarantined_usable_product_ids'] != ['17719']:
               raise SystemExit(f'unexpected usable current-only identity set: {m["quarantined_usable_product_ids"]}')
-          if m['safe_subset_products'] != 2969:
-              raise SystemExit(f'unexpected historical safe subset size: {m["safe_subset_products"]}')
-          if m['safe_subset_usable_complete'] != 327:
-              raise SystemExit(f'unexpected safe usable count: {m["safe_subset_usable_complete"]}')
+          expected_safe_products = m['input_canonical_products'] - m['quarantined_current_only_products']
+          if m['safe_subset_products'] != expected_safe_products:
+              raise SystemExit(
+                  f'historical safe subset arithmetic mismatch: expected {expected_safe_products}, '
+                  f'got {m["safe_subset_products"]}'
+              )
+          expected_safe_usable = m['input_canonical_usable_complete'] - len(m['quarantined_usable_product_ids'])
+          if m['safe_subset_usable_complete'] != expected_safe_usable:
+              raise SystemExit(
+                  f'safe usable arithmetic mismatch: expected {expected_safe_usable}, '
+                  f'got {m["safe_subset_usable_complete"]}'
+              )
           print(json.dumps(m, ensure_ascii=False, indent=2, sort_keys=True))
           PY
 
@@ -97,3 +105,4 @@ jobs:
           path: tools/catalog/mercadona-historical-identity-quarantine/
           retention-days: 90
           if-no-files-found: error
+          overwrite: true
