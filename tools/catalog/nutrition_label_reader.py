@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.18"
+READER_VERSION = "1.4.19"
 
 
 @dataclass(frozen=True)
@@ -372,18 +372,26 @@ def _basis(text: str) -> str | None:
 
 
 def _basis_heading_count(text: str) -> int:
-    """Count explicit per-100 column headings, not incidental '100 g' text.
+    """Count explicit per-100 column headings, including OCR-linearized rows.
 
-    Two explicit `por 100 g/ml` headings usually mean parallel nutrition
-    columns (e.g. net weight vs drained weight). The v1 parser is row-oriented,
-    so it must review rather than silently mix those columns.
+    Two per-100 headings usually mean parallel nutrition columns (e.g. net
+    weight vs drained weight, or product vs accompanying cheese). OCR can drop
+    the printed `Por` and linearise those headings as consecutive standalone
+    `100 g` rows, so count that exact row shape too. Incidental `100 g` prose is
+    not counted unless it occupies the whole line. The parser is row-oriented
+    and must review rather than silently mix parallel columns.
     """
     folded = _fold(text)
-    return len(re.findall(
+    explicit = re.findall(
         r"\bpor\s+100\s*(?:g\b|9\b|q\b|yg\b|y\b|m(?:l|i|1)\b)",
         folded,
         flags=re.I,
-    ))
+    )
+    standalone = re.findall(
+        r"(?im)^\s*100\s*(?:g|9|q|yg|y|m(?:l|i|1))\s*$",
+        folded,
+    )
+    return len(explicit) + len(standalone)
 
 
 def _plausible(n: dict[str, float]) -> tuple[bool, list[str]]:
