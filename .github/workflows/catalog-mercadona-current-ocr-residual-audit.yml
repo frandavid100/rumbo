@@ -140,22 +140,23 @@ jobs:
           while IFS=$'\t' read -r run_id run_name run_path; do
             [[ -n "$run_id" ]] || continue
             artifact_json=$(gh api -H 'Accept: application/vnd.github+json' "/repos/frandavid100/rumbo/actions/runs/${run_id}/artifacts?per_page=100")
-            mapfile -t merged < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | select(.name | endswith("-merged")) | [.id, .name] | @tsv' <<<"$artifact_json")
+            mapfile -t merged < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | select(.name | endswith("-merged")) | [.id, .name, .created_at] | @tsv' <<<"$artifact_json")
             if (( ${#merged[@]} > 0 )); then
               selected=("${merged[@]}")
             else
-              mapfile -t selected < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | [.id, .name] | @tsv' <<<"$artifact_json")
+              mapfile -t selected < <(jq -r '.artifacts[] | select(.expired == false) | select(.name | ascii_downcase | contains("mercadona")) | [.id, .name, .created_at] | @tsv' <<<"$artifact_json")
             fi
 
             for item in "${selected[@]}"; do
-              IFS=$'\t' read -r artifact_id artifact_name <<<"$item"
+              IFS=$'\t' read -r artifact_id artifact_name artifact_created_at <<<"$item"
               [[ -n "$artifact_id" ]] || continue
+              [[ -n "$artifact_created_at" ]] || { echo "Artifact $artifact_id missing created_at" >&2; exit 1; }
               dest="/tmp/mercadona-ocr-artifacts/${run_id}-${artifact_id}"
               mkdir -p "$dest"
               gh api -H 'Accept: application/vnd.github+json' "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" > "$dest/artifact.zip"
               unzip -q "$dest/artifact.zip" -d "$dest/unpacked"
               rm "$dest/artifact.zip"
-              printf '%s\t%s\t%s\t%s\n' "$run_id" "$run_name" "$artifact_id" "$artifact_name" >> tools/catalog/mercadona-current-ocr-residual-audit/artifacts.tsv
+              printf '%s\t%s\t%s\t%s\t%s\n' "$run_id" "$run_name" "$artifact_id" "$artifact_name" "$artifact_created_at" >> tools/catalog/mercadona-current-ocr-residual-audit/artifacts.tsv
               downloaded=$((downloaded + 1))
             done
           done < /tmp/mercadona-ocr-runs.tsv
