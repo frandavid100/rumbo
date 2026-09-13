@@ -1,0 +1,48 @@
+name: Catalog Mercadona docTR merge guard build
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-doctr-merge-guard-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - name: Build guarded workflow copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          target = Path('.github/workflows/catalog-mercadona-near-safe-three-of-four-doctr-pilot.yml')
+          text = target.read_text(encoding='utf-8')
+          guard = """      - name: Exclude stale merged artifact from prior rerun attempts\n        shell: bash\n        run: rm -rf input/mercadona-near-safe-three-of-four-doctr-pilot-merged\n\n"""
+          needle = """      - name: Merge, validate, and stage auditable pilot results\n        run: |\n"""
+          if guard not in text:
+              if text.count(needle) != 1:
+                  raise SystemExit(f'expected exactly one merge step anchor, got {text.count(needle)}')
+              text = text.replace(needle, guard + needle, 1)
+          out = Path('patched-workflow')
+          out.mkdir()
+          (out / target.name).write_text(text, encoding='utf-8')
+          PY
+          grep -A4 -B2 'Exclude stale merged artifact' patched-workflow/catalog-mercadona-near-safe-three-of-four-doctr-pilot.yml
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-doctr-merge-guard-patched-workflow
+          path: patched-workflow/
+          retention-days: 1
+          if-no-files-found: error
