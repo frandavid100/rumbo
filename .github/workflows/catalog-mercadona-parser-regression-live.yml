@@ -23,9 +23,18 @@ jobs:
   validate:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target_product_id: '35649'
+            expected_ean: '8402001008832'
+          - target_product_id: '21649'
+            expected_ean: '8402001054686'
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
-      TARGET_PRODUCT_ID: '35649'
+      TARGET_PRODUCT_ID: ${{ matrix.target_product_id }}
+      EXPECTED_EAN: ${{ matrix.expected_ean }}
       EXPECTED_GENERIC_PARSER_VERSION: '1.4.18'
     steps:
       - uses: actions/checkout@v4
@@ -77,6 +86,7 @@ jobs:
           import json, os
           from pathlib import Path
           pid = os.environ['TARGET_PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
           details_path = Path('/tmp/mercadona-target-details/details-00.jsonl')
           errors_path = Path('/tmp/mercadona-target-details/errors-00.jsonl')
           rows = [json.loads(line) for line in details_path.read_text(encoding='utf-8').splitlines() if line.strip()]
@@ -92,6 +102,8 @@ jobs:
               raise SystemExit('invalid first-party API provenance')
           if not product.get('ean'):
               raise SystemExit('live first-party target is missing EAN')
+          if str(product.get('ean')) != expected_ean:
+              raise SystemExit(f'live first-party identity mismatch for {pid}: EAN={product.get("ean")}; expected={expected_ean}')
           photos = product.get('photos') or []
           p9 = [p for p in photos if str(p.get('perspective')) == '9' and (p.get('zoom') or p.get('regular'))]
           if not p9:
