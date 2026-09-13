@@ -1,0 +1,99 @@
+name: Catalog Mercadona historical identity quarantine
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-historical-identity-quarantine.yml'
+      - 'tools/catalog/quarantine_mercadona_current_only_identity.py'
+      - 'tools/catalog/test_quarantine_mercadona_current_only_identity.py'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-historical-identity-quarantine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quarantine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve latest successful canonical OCR audit
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=50' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          if ! [[ "$run_id" =~ ^[0-9]+$ ]]; then
+            echo 'No successful current OCR residual audit found' >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using current OCR audit run $run_id"
+
+      - name: Download current canonical OCR audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/mercadona-current-ocr-residual-audit
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.audit.outputs.run_id }}
+
+      - name: Test historical identity quarantine
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_quarantine_mercadona_current_only_identity.py
+          python -m py_compile quarantine_mercadona_current_only_identity.py
+
+      - name: Materialize conservative historical-cut safe subset
+        working-directory: tools/catalog
+        run: |
+          mkdir -p mercadona-historical-identity-quarantine
+          python quarantine_mercadona_current_only_identity.py \
+            --summary mercadona-current-ocr-residual-audit/run-union-summary.json \
+            --canonical-jsonl mercadona-current-ocr-residual-audit/canonical-ocr.jsonl \
+            --out-jsonl mercadona-historical-identity-quarantine/canonical-safe-subset.jsonl \
+            --out-sqlite mercadona-historical-identity-quarantine/canonical-safe-subset.sqlite \
+            --manifest mercadona-historical-identity-quarantine/manifest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('mercadona-historical-identity-quarantine/manifest.json')
+          m = json.loads(p.read_text(encoding='utf-8'))
+          expected = {'17719', '17996'}
+          actual = set(m['quarantined_current_only_product_ids'])
+          if actual != expected:
+              raise SystemExit(f'current-only identity cohort drifted: expected {sorted(expected)}, got {sorted(actual)}')
+          if m['quarantined_usable_product_ids'] != ['17719']:
+              raise SystemExit(f'unexpected usable current-only identity set: {m["quarantined_usable_product_ids"]}')
+          if m['safe_subset_products'] != 2969:
+              raise SystemExit(f'unexpected historical safe subset size: {m["safe_subset_products"]}')
+          if m['safe_subset_usable_complete'] != 327:
+              raise SystemExit(f'unexpected safe usable count: {m["safe_subset_usable_complete"]}')
+          print(json.dumps(m, ensure_ascii=False, indent=2, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-historical-identity-quarantine
+          path: tools/catalog/mercadona-historical-identity-quarantine/
+          retention-days: 90
+          if-no-files-found: error
