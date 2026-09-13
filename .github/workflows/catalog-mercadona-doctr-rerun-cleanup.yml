@@ -1,0 +1,63 @@
+name: Catalog Mercadona docTR rerun cleanup
+
+on:
+  workflow_run:
+    workflows: ["Catalog Mercadona near-safe 3-of-4 docTR pilot"]
+    types: [in_progress]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    if: >-
+      github.event.workflow_run.head_branch == 'agent/catalog-phase1' &&
+      github.event.workflow_run.run_attempt > 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+    steps:
+      - name: Delete only stale merged artifacts from this rerun
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          run=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${SOURCE_RUN_ID}")
+          name=$(jq -r '.name' <<<"$run")
+          branch=$(jq -r '.head_branch' <<<"$run")
+          attempt=$(jq -r '.run_attempt' <<<"$run")
+
+          if [[ "$name" != 'Catalog Mercadona near-safe 3-of-4 docTR pilot' || "$branch" != 'agent/catalog-phase1' || ! "$attempt" =~ ^[0-9]+$ || "$attempt" -le 1 ]]; then
+            echo "No rerun cleanup required: name=$name branch=$branch attempt=$attempt"
+            exit 0
+          fi
+
+          mapfile -t stale_ids < <(
+            gh api --paginate \
+              -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/runs/${SOURCE_RUN_ID}/artifacts?per_page=100" \
+              --jq '.artifacts[] | select(.name == "mercadona-near-safe-three-of-four-doctr-pilot-merged") | .id'
+          )
+
+          if [[ ${#stale_ids[@]} -eq 0 ]]; then
+            echo "No stale merged artifact present for run ${SOURCE_RUN_ID} attempt ${attempt}"
+            exit 0
+          fi
+
+          for artifact_id in "${stale_ids[@]}"; do
+            if ! [[ "$artifact_id" =~ ^[0-9]+$ ]]; then
+              echo "Invalid artifact id: $artifact_id" >&2
+              exit 1
+            fi
+            gh api --method DELETE \
+              -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}"
+            echo "Deleted stale merged artifact ${artifact_id} from run ${SOURCE_RUN_ID} attempt ${attempt}"
+          done
+
+          echo "Current shard artifacts are untouched; the merge job will consume only current shard evidence."
