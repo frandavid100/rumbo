@@ -15,7 +15,7 @@ from mercadona_nutrition_label_reader import (
 )
 from nutrition_label_reader import _number_immediately_before, _nutrition_block
 
-READER_VERSION = "1.0.0"
+READER_VERSION = "1.0.1"
 
 _FAT_PATTERNS = (
     r"(?:^|\n)\s*grasas?(?:\s*/\s*lipidos?)?\b",
@@ -34,9 +34,16 @@ _MACRO_PATTERNS = {
 }
 _HARD_REASON_PREFIXES = (
     "MULTIPLE_NUTRITION_COLUMNS",
-    "IMPOSSIBLE_",
     "ENERGY_MACRO_MISMATCH_STRICT",
 )
+# Exact observed product-21649 failure: after the reversed carbohydrate cell,
+# whole-pack OCR emits `500 g / Peso Neto`. The forward row reader can bind that
+# package weight to Hidratos de Carbono and correctly flags it impossible. It is
+# safe to discard only this specific forward failure when all three core macro
+# rows independently expose dedicated immediately-preceding gram cells and the
+# resulting tuple is near-exactly energy coherent. Other impossible values remain
+# hard blockers.
+_ALLOWED_FORWARD_NOISE_REASONS = frozenset({"IMPOSSIBLE_CARBOHYDRATE_G"})
 
 
 def _repair_observed_row_label_typos(text: str) -> str:
@@ -90,6 +97,14 @@ def _full_value_before_label_evidence(
     if any(str(reason).startswith(_HARD_REASON_PREFIXES) for reason in result.reasons):
         return None
 
+    impossible_reasons = {
+        str(reason)
+        for reason in result.reasons
+        if str(reason).startswith("IMPOSSIBLE_")
+    }
+    if impossible_reasons - _ALLOWED_FORWARD_NOISE_REASONS:
+        return None
+
     block = _nutrition_block(result.normalized_text)
     preceding = {
         key: _number_immediately_before(patterns, block)
@@ -109,7 +124,12 @@ def _full_value_before_label_evidence(
             reason.startswith("MISSING_CORE:")
             or reason.startswith("ENERGY_MACRO_MISMATCH:")
             or reason.startswith("SINGLE_REVERSED_MACRO_CANDIDATE:")
+            or reason in _ALLOWED_FORWARD_NOISE_REASONS
         )
+    )
+    discarded_forward_noise = tuple(
+        f"FORWARD_{reason}_DISCARDED"
+        for reason in sorted(impossible_reasons & _ALLOWED_FORWARD_NOISE_REASONS)
     )
 
     calories = nutrition.get("calories")
@@ -129,7 +149,7 @@ def _full_value_before_label_evidence(
                 basis=result.basis,
                 nutrition=complete,
                 confidence=min(1.0, extraction_confidence),
-                reasons=cleaned_reasons + ("FULL_VALUE_BEFORE_LABEL_STRUCTURE",),
+                reasons=cleaned_reasons + discarded_forward_noise + ("FULL_VALUE_BEFORE_LABEL_STRUCTURE",),
                 normalized_text=result.normalized_text,
             )
         nutrition = complete
@@ -139,7 +159,7 @@ def _full_value_before_label_evidence(
         basis=result.basis,
         nutrition=nutrition or None,
         confidence=min(result.confidence, extraction_confidence, .84),
-        reasons=cleaned_reasons + ("FULL_VALUE_BEFORE_LABEL_PARTIAL_EVIDENCE",),
+        reasons=cleaned_reasons + discarded_forward_noise + ("FULL_VALUE_BEFORE_LABEL_PARTIAL_EVIDENCE",),
         normalized_text=result.normalized_text,
     )
 
