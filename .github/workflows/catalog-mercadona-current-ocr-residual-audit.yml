@@ -113,6 +113,17 @@ jobs:
                 >> tools/catalog/mercadona-current-ocr-residual-audit/diagnostic-workflows-excluded.tsv
               continue
             fi
+            # A *-current-delta workflow is explicitly defined as products found only by
+            # subtracting a fixed historical cohort from a later first-party snapshot. Such
+            # rows are useful current-live evidence, but they do not prove membership in the
+            # auditable 2026-08-27 4,280-product cut. Keep the evidence in its own workflow
+            # artifacts and exclude the whole workflow from the historical-cut canonical union
+            # instead of hard-coding individual product IDs.
+            if [[ "$workflow_path" == .github/workflows/catalog-mercadona-*-current-delta.yml ]]; then
+              printf '%s\t%s\t%s\t%s\n' "$workflow_id" "$workflow_name" "$workflow_path" 'POST_CUT_CURRENT_DELTA_NOT_HISTORICAL_CUT' \
+                >> tools/catalog/mercadona-current-ocr-residual-audit/diagnostic-workflows-excluded.tsv
+              continue
+            fi
             gh api --paginate \
               -H 'Accept: application/vnd.github+json' \
               "/repos/frandavid100/rumbo/actions/workflows/${workflow_id}/runs?branch=agent%2Fcatalog-phase1&created=%3E%3D2026-08-27T00%3A00%3A00Z&per_page=100" \
