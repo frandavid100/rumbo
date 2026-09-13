@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0.0",
+  "scope": "MERCADONA_FIRST_PARTY_2026-08-27_HISTORICAL_CUT_CONSERVATIVE_OCR",
+  "generated_at": "2026-09-13T20:13:23Z",
+  "inventory_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "canonical": {
+    "processed_products": 2969,
+    "processed_pct_inventory": 69.3692,
+    "status_counts": {
+      "DECLARED": 328,
+      "REVIEW": 2641
+    },
+    "usable_complete": 328,
+    "usable_complete_pct_inventory": 7.6636,
+    "usable_field_counts": {
+      "calories": 328,
+      "fat_g": 328,
+      "carbohydrate_g": 328,
+      "protein_g": 328
+    },
+    "identity_reconciliation": {
+      "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
+      "identity_anchored_products": 2969,
+      "identity_conflict_products": 0,
+      "identity_unverified_products": 0,
+      "identity_unresolved_products": 0
+    }
+  },
+  "scope_quarantine": {
+    "policy": "Exclude complete workflows explicitly defined as post-cut current-delta discovery instead of hard-coding product IDs into canonical reconciliation.",
+    "workflow_path_pattern": ".github/workflows/catalog-mercadona-*-current-delta.yml",
+    "known_workflow": ".github/workflows/catalog-mercadona-neural-ocr-p9-no-ingredients-current-delta.yml",
+    "known_current_delta_product_ids": [
+      "17719",
+      "17996"
+    ],
+    "known_current_delta_definition": {
+      "historical_inventory_products": 4280,
+      "historical_candidate_universe": 89,
+      "current_metadata_snapshot_run_id": 34449270667,
+      "current_metadata_snapshot_products": 4256,
+      "selection_policy": "CURRENT_FIRST_PARTY_REFINED_P9_NO_INGREDIENTS_MINUS_HISTORICAL_89_PROCESSED"
+    },
+    "reconstructed_union_products_including_excluded_derived_history": 2971,
+    "products_without_historical_cut_canonical_state": 2
+  },
+  "review_safety": {
+    "near_safe_complete_review": 10,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 49,
+    "hard_ocr_conflict": 225,
+    "energy_macro_incoherence": 106,
+    "ambiguous_table": 89,
+    "no_visual_region_without_ocr_signal": 0,
+    "REVIEW_promoted": 0
+  },
+  "historical_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "caveat": "The conservative scope gate removes evidence known to originate only from a later current snapshot, but the expired original 4,280-product artifact still prevents a complete independent parity proof for the whole historical identity map."
+  },
+  "audit": {
+    "workflow_run_id": 34779397609,
+    "artifact_id": 10324811578,
+    "artifact_sha256": "a149ba95d4cad2379c23fa379635edb2f1c280600354feab080d18125ce99525",
+    "head_sha": "b1ea0a063c496e2820e18a9fc89978cc5ae82354",
+    "tests_passed": 36,
+    "workflow_run_conclusion": "success"
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
