@@ -26,7 +26,7 @@ jobs:
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
       TARGET_PRODUCT_ID: '35649'
-      EXPECTED_GENERIC_PARSER_VERSION: '1.4.17'
+      EXPECTED_GENERIC_PARSER_VERSION: '1.4.18'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,7 +50,8 @@ jobs:
             test_nutrition_label_reader.py \
             test_nutrition_ocr_ensemble.py \
             test_mercadona_label_pipeline.py \
-            test_mercadona_ocr_safety_regressions.py
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_nutrition_label_conservation_interleave.py
 
       - name: Fetch target product from official Mercadona API
         working-directory: tools/catalog
