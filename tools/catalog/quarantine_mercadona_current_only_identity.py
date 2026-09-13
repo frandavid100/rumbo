@@ -77,6 +77,7 @@ def build_safe_subset(summary: dict[str, Any], rows: list[dict[str, Any]]) -> tu
     safe_rows.sort(key=lambda row: (0, int(str(row["product_id"]))) if str(row["product_id"]).isdigit() else (1, str(row["product_id"])))
     quarantined_rows = [by_id[pid] for pid in sorted(quarantined) if pid in by_id]
     quarantined_usable = sorted(str(row["product_id"]) for row in quarantined_rows if row.get("usable_complete") is True)
+    input_usable = [row for row in rows if row.get("usable_complete") is True]
     safe_usable = [row for row in safe_rows if row.get("usable_complete") is True]
     manifest = {
         "policy": "QUARANTINE_CURRENT_ONLY_FIRST_SEEN_IDENTITIES_UNTIL_2026_08_27_EAN_PARITY_IS_PROVEN",
@@ -85,6 +86,7 @@ def build_safe_subset(summary: dict[str, Any], rows: list[dict[str, Any]]) -> tu
         "redistribution_allowed": False,
         "inventory_products": 4280,
         "input_canonical_products": len(rows),
+        "input_canonical_usable_complete": len(input_usable),
         "safe_subset_products": len(safe_rows),
         "safe_subset_pct_inventory": round(len(safe_rows) * 100 / 4280, 4),
         "safe_subset_status_counts": dict(sorted(Counter(str(row.get("status") or "UNKNOWN") for row in safe_rows).items())),
