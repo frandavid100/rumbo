@@ -1,0 +1,33 @@
+{
+  "kind": "MERCADONA_RAW_LIVE_OCR_RESCUE_CUT",
+  "observed_date": "2026-09-13",
+  "workflow_run_id": 34749255421,
+  "workflow_artifact": "mercadona-neural-ocr-p9-no-ingredients-v1418-rescue-merged",
+  "workflow_commit": "f88004c38aaa95f415b5fd3b580bfba2f37e11b7",
+  "product_id": "21649",
+  "ean": "8402001054686",
+  "name": "Empanada de carne",
+  "perspective": 9,
+  "image_url": "https://prod-mercadona.imgix.net/images/1b085f5f14d821129d2d72b0d71138c3.jpg?fit=crop&h=3600&w=3600",
+  "status": "DECLARED",
+  "nutrition": {
+    "calories": 240.0,
+    "protein_g": 6.7,
+    "carbohydrate_g": 26.0,
+    "fat_g": 12.0
+  },
+  "basis": "100_g",
+  "parser_version": "1.4.18",
+  "independent_engine_families": 2,
+  "corroborated_fields": 4,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "identity_policy": "EXACT_PRODUCT_ID_PLUS_EAN_PLUS_FIRST_PARTY_P9_IMAGE",
+  "canonical_additions_applied": 0,
+  "canonical_reconciliation": "PENDING_CURRENT_OCR_RESIDUAL_AUDIT",
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
