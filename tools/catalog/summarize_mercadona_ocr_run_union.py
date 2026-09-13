@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 from collections import Counter, defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -35,6 +36,48 @@ def load_run_names(tsv: Path) -> dict[str, set[str]]:
         parts = line.split("\t")
         if len(parts) >= 2:
             out[parts[0]].add(parts[1])
+    return out
+
+
+def _parse_evidence_created_at(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    if raw.endswith("Z"):
+        raw = raw[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _format_evidence_created_at(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def load_artifact_created_at(tsv: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    if not tsv.exists():
+        return out
+    for line in tsv.read_text(encoding="utf-8").splitlines():
+        parts = line.split("\t")
+        if len(parts) < 5:
+            continue
+        run_id, _run_name, artifact_id, _artifact_name, created_at = parts[:5]
+        parsed = _parse_evidence_created_at(created_at)
+        if not run_id.isdigit() or not artifact_id.isdigit() or parsed is None:
+            raise ValueError(f"invalid artifact chronology row: {line!r}")
+        key = f"{run_id}-{artifact_id}"
+        normalized = _format_evidence_created_at(parsed)
+        prior = out.get(key)
+        if prior is not None and prior != normalized:
+            raise ValueError(f"conflicting artifact chronology for {key}: {prior} vs {normalized}")
+        out[key] = normalized or created_at
     return out
 
 
@@ -255,6 +298,7 @@ Observation = (
     tuple[int, str, str, Any]
     | tuple[int, str, str, Any, bool]
     | tuple[int, str, str, Any, bool, Any]
+    | tuple[int, str, str, Any, bool, Any, Any]
 )
 
 
@@ -281,17 +325,17 @@ def reconcile_latest_observations(
 ) -> dict[str, dict[str, Any]]:
     """Return one conservative latest persisted live OCR state per product.
 
-    Four/five-item observations remain a legacy test/caller mode with no identity
-    enforcement. Production passes six items including the raw row EAN. For that
-    mode, the earliest raw-live run must expose exactly one non-empty EAN for the
-    product; that EAN becomes the immutable reconciliation anchor. Later rows with
-    a different or missing EAN are retained only as identity diagnostics and can
-    never replace the anchored product's canonical status or nutrition.
+    Legacy four/five/six-item observations use numeric run-id ordering so existing
+    callers remain deterministic. Production passes seven items, adding the GitHub
+    artifact ``created_at`` timestamp. That persisted evidence timestamp is the
+    canonical chronology because a rerun keeps its original workflow run id while
+    producing a genuinely newer artifact. Product identity is anchored to the EAN
+    in the earliest persisted evidence batch under the same chronology.
     """
     grouped: dict[
         str,
-        dict[int, list[tuple[str, Any, bool, str | None, bool]]],
-    ] = defaultdict(lambda: defaultdict(list))
+        list[tuple[int, str, Any, bool, str | None, bool, datetime | None, bool]],
+    ] = defaultdict(list)
 
     for observation in observations:
         if len(observation) == 4:
@@ -299,42 +343,93 @@ def reconcile_latest_observations(
             strict_provenance = True
             ean = None
             identity_enforced = False
+            evidence_created_at = None
+            chronology_enforced = False
         elif len(observation) == 5:
             run_id, product_id, status, nutrition, strict_provenance = observation
             ean = None
             identity_enforced = False
+            evidence_created_at = None
+            chronology_enforced = False
         elif len(observation) == 6:
             run_id, product_id, status, nutrition, strict_provenance, raw_ean = observation
             ean = normalize_ean(raw_ean)
             identity_enforced = True
+            evidence_created_at = None
+            chronology_enforced = False
+        elif len(observation) == 7:
+            run_id, product_id, status, nutrition, strict_provenance, raw_ean, raw_created_at = observation
+            ean = normalize_ean(raw_ean)
+            identity_enforced = True
+            evidence_created_at = _parse_evidence_created_at(raw_created_at)
+            if evidence_created_at is None:
+                raise ValueError(
+                    f"invalid persisted evidence created_at for product {product_id}: {raw_created_at!r}"
+                )
+            chronology_enforced = True
         else:
-            raise ValueError("observations must contain 4, 5 or 6 values")
+            raise ValueError("observations must contain 4, 5, 6 or 7 values")
         if status not in VALID:
             continue
-        grouped[str(product_id)][int(run_id)].append(
-            (status, nutrition, bool(strict_provenance), ean, identity_enforced)
+        grouped[str(product_id)].append(
+            (
+                int(run_id), status, nutrition, bool(strict_provenance), ean,
+                identity_enforced, evidence_created_at, chronology_enforced,
+            )
         )
 
     result: dict[str, dict[str, Any]] = {}
-    for product_id, raw_by_run in grouped.items():
-        identity_enforced = any(
-            enforced
-            for values in raw_by_run.values()
-            for _status, _nutrition, _strict, _ean, enforced in values
-        )
-        by_run = raw_by_run
+    for product_id, records in grouped.items():
+        chronology_modes = {record[7] for record in records}
+        if len(chronology_modes) != 1:
+            result[product_id] = {
+                "latest_run_id": max(record[0] for record in records),
+                "latest_evidence_created_at": None,
+                "status": "IDENTITY_UNRESOLVED",
+                "latest_run_statuses": sorted({record[1] for record in records}),
+                "usable_complete": False,
+                "nutrition": None,
+                "nutrition_issue": "MIXED_EVIDENCE_CHRONOLOGY",
+                **_identity_meta(enforced=any(record[5] for record in records), ean=None),
+            }
+            continue
+
+        chronology_enforced = next(iter(chronology_modes))
+        by_batch: dict[
+            Any,
+            list[tuple[int, str, Any, bool, str | None, bool, datetime | None, bool]],
+        ] = defaultdict(list)
+        for record in records:
+            batch = record[6] if chronology_enforced else record[0]
+            by_batch[batch].append(record)
+
+        def batch_meta(
+            batch: Any,
+            values: list[tuple[int, str, Any, bool, str | None, bool, datetime | None, bool]],
+        ) -> tuple[int, str | None]:
+            return (
+                max(value[0] for value in values),
+                _format_evidence_created_at(batch) if chronology_enforced else None,
+            )
+
+        identity_enforced = any(record[5] for record in records)
+        filtered_by_batch = by_batch
         identity = _identity_meta(enforced=False, ean=None)
 
         if identity_enforced:
-            earliest_run = min(raw_by_run)
-            earliest_values = [value for value in raw_by_run[earliest_run] if value[4]]
-            earliest_eans = {value[3] for value in earliest_values if value[3] is not None}
-            earliest_has_unverified = any(value[3] is None for value in earliest_values)
+            earliest_batch = min(by_batch)
+            earliest_values = [value for value in by_batch[earliest_batch] if value[5]]
+            earliest_eans = {value[4] for value in earliest_values if value[4] is not None}
+            earliest_has_unverified = any(value[4] is None for value in earliest_values)
             if earliest_has_unverified or len(earliest_eans) != 1:
+                earliest_run_id, earliest_created_at = batch_meta(
+                    earliest_batch, earliest_values or by_batch[earliest_batch]
+                )
                 result[product_id] = {
-                    "latest_run_id": earliest_run,
+                    "latest_run_id": earliest_run_id,
+                    "latest_evidence_created_at": earliest_created_at,
                     "status": "IDENTITY_UNRESOLVED",
-                    "latest_run_statuses": sorted({value[0] for value in earliest_values}),
+                    "latest_run_statuses": sorted({value[1] for value in earliest_values}),
                     "usable_complete": False,
                     "nutrition": None,
                     "nutrition_issue": "AMBIGUOUS_EARLIEST_EAN_ANCHOR",
@@ -346,10 +441,13 @@ def reconcile_latest_observations(
             conflict_runs: set[int] = set()
             conflict_eans: set[str] = set()
             unverified_runs: set[int] = set()
-            filtered: dict[int, list[tuple[str, Any, bool, str | None, bool]]] = defaultdict(list)
-            for run_id, values in raw_by_run.items():
+            filtered: dict[
+                Any,
+                list[tuple[int, str, Any, bool, str | None, bool, datetime | None, bool]],
+            ] = defaultdict(list)
+            for batch, values in by_batch.items():
                 for value in values:
-                    _status, _nutrition, _strict, ean, enforced = value
+                    run_id, _status, _nutrition, _strict, ean, enforced, _created_at, _chrono = value
                     if not enforced or ean is None:
                         unverified_runs.add(run_id)
                         continue
@@ -357,8 +455,8 @@ def reconcile_latest_observations(
                         conflict_runs.add(run_id)
                         conflict_eans.add(ean)
                         continue
-                    filtered[run_id].append(value)
-            by_run = dict(filtered)
+                    filtered[batch].append(value)
+            filtered_by_batch = dict(filtered)
             identity = _identity_meta(
                 enforced=True,
                 ean=anchor_ean,
@@ -367,9 +465,12 @@ def reconcile_latest_observations(
                 unverified_runs=unverified_runs,
             )
 
-        if not by_run:
+        if not filtered_by_batch:
+            earliest_batch = min(by_batch)
+            earliest_run_id, earliest_created_at = batch_meta(earliest_batch, by_batch[earliest_batch])
             result[product_id] = {
-                "latest_run_id": min(raw_by_run),
+                "latest_run_id": earliest_run_id,
+                "latest_evidence_created_at": earliest_created_at,
                 "status": "IDENTITY_UNRESOLVED",
                 "latest_run_statuses": [],
                 "usable_complete": False,
@@ -379,12 +480,14 @@ def reconcile_latest_observations(
             }
             continue
 
-        latest_run = max(by_run)
-        values = by_run[latest_run]
-        statuses = {status for status, _, _, _, _ in values}
+        latest_batch = max(filtered_by_batch)
+        values = filtered_by_batch[latest_batch]
+        latest_run_id, latest_created_at = batch_meta(latest_batch, values)
+        statuses = {value[1] for value in values}
         if len(statuses) != 1:
             result[product_id] = {
-                "latest_run_id": latest_run,
+                "latest_run_id": latest_run_id,
+                "latest_evidence_created_at": latest_created_at,
                 "status": "MULTIPLE_STATUSES_LATEST_RUN",
                 "latest_run_statuses": sorted(statuses),
                 "usable_complete": False,
@@ -397,7 +500,8 @@ def reconcile_latest_observations(
         status = next(iter(statuses))
         if status != "DECLARED":
             result[product_id] = {
-                "latest_run_id": latest_run,
+                "latest_run_id": latest_run_id,
+                "latest_evidence_created_at": latest_created_at,
                 "status": status,
                 "latest_run_statuses": [status],
                 "usable_complete": False,
@@ -407,9 +511,10 @@ def reconcile_latest_observations(
             }
             continue
 
-        if any(not strict_provenance for _, _, strict_provenance, _, _ in values):
+        if any(not value[3] for value in values):
             result[product_id] = {
-                "latest_run_id": latest_run,
+                "latest_run_id": latest_run_id,
+                "latest_evidence_created_at": latest_created_at,
                 "status": "DECLARED",
                 "latest_run_statuses": ["DECLARED"],
                 "usable_complete": False,
@@ -419,10 +524,11 @@ def reconcile_latest_observations(
             }
             continue
 
-        normalized = [complete_nutrition(nutrition) for _, nutrition, _, _, _ in values]
+        normalized = [complete_nutrition(value[2]) for value in values]
         if any(item is None for item in normalized):
             result[product_id] = {
-                "latest_run_id": latest_run,
+                "latest_run_id": latest_run_id,
+                "latest_evidence_created_at": latest_created_at,
                 "status": "DECLARED",
                 "latest_run_statuses": ["DECLARED"],
                 "usable_complete": False,
@@ -434,7 +540,8 @@ def reconcile_latest_observations(
         complete_values = [item for item in normalized if item is not None]
         if len({nutrition_key(item) for item in complete_values}) != 1:
             result[product_id] = {
-                "latest_run_id": latest_run,
+                "latest_run_id": latest_run_id,
+                "latest_evidence_created_at": latest_created_at,
                 "status": "DECLARED",
                 "latest_run_statuses": ["DECLARED"],
                 "usable_complete": False,
@@ -444,7 +551,8 @@ def reconcile_latest_observations(
             }
             continue
         result[product_id] = {
-            "latest_run_id": latest_run,
+            "latest_run_id": latest_run_id,
+            "latest_evidence_created_at": latest_created_at,
             "status": "DECLARED",
             "latest_run_statuses": ["DECLARED"],
             "usable_complete": True,
@@ -465,16 +573,18 @@ def main() -> int:
     by_run: dict[str, set[str]] = defaultdict(set)
     by_run_status: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     files_by_run: dict[str, set[str]] = defaultdict(set)
-    observations: list[tuple[int, str, str, Any, bool, Any]] = []
+    observations: list[tuple[int, str, str, Any, bool, Any, Any]] = []
     raw_live_history: dict[str, list[tuple[int, str, list[str], str | None]]] = defaultdict(list)
     canonical_excluded_rows: Counter[str] = Counter()
     canonical_excluded_runs: set[int] = set()
     strict_provenance_failures: Counter[str] = Counter()
+    artifact_created_at = load_artifact_created_at(Path(args.artifacts_tsv))
 
     for path in sorted(Path(args.root).rglob("*.jsonl")):
         rel = path.relative_to(args.root)
         first = rel.parts[0] if rel.parts else ""
         run_id = first.split("-", 1)[0]
+        evidence_created_at = artifact_created_at.get(first)
         if not run_id.isdigit():
             continue
         try:
@@ -501,7 +611,11 @@ def main() -> int:
             if is_canonical_status_row(row):
                 strict = has_strict_raw_provenance(row)
                 ean = normalize_ean(row.get("ean"))
-                observations.append((int(run_id), product_id, status, row.get("nutrition"), strict, ean))
+                if evidence_created_at is None:
+                    raise SystemExit(f"Missing artifact created_at chronology for {first}")
+                observations.append((
+                    int(run_id), product_id, status, row.get("nutrition"), strict, ean, evidence_created_at
+                ))
                 raw_live_history[product_id].append(
                     (int(run_id), status, classify_review_reason_families(row), ean)
                 )
@@ -563,6 +677,7 @@ def main() -> int:
             "product_id": product_id,
             "ean": item.get("identity_ean"),
             "latest_run_id": item["latest_run_id"],
+            "latest_evidence_created_at": item.get("latest_evidence_created_at"),
             "nutrition": item["nutrition"],
         }
         for product_id, item in sorted(usable.items())
@@ -616,7 +731,9 @@ def main() -> int:
         "policy": (
             "Chronological exact-evidence processed union with latest-live canonical reconciliation. "
             "Raw-live product identity is anchored to the unique EAN in the earliest persisted raw-live "
-            "OCR run for each product_id. Later rows with a missing or different EAN remain auditable "
+            "OCR artifact by GitHub artifact creation time for each product_id; numeric workflow run id is "
+            "not used as freshness because reruns retain the original run id. Later rows with a missing or "
+            "different EAN remain auditable "
             "identity diagnostics but never replace the anchored product's canonical status or nutrition; "
             "an ambiguous earliest EAN fails closed as IDENTITY_UNRESOLVED. Diagnostic replay wrappers and "
             "prior derived canonical materializations remain in processed coverage but never update canonical "
