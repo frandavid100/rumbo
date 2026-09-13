@@ -1,0 +1,43 @@
+{
+  "cut_type": "MERCADONA_OCR_TYPO_RECOVERY_E2E_VALIDATION",
+  "cut_date": "2026-09-13",
+  "workflow_run_id": 34759657036,
+  "reader_version": "nutrition_label_reader-1.4.19",
+  "mode": "LIVE_END_TO_END_VALIDATION_OF_ISOLATED_OCR_TYPO_RECOVERIES",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "processed": 4,
+  "status_counts": {
+    "DECLARED": 1,
+    "REVIEW": 3
+  },
+  "safe_for_trusted_addition": [
+    {
+      "product_id": "80515",
+      "ean": "8480000805157",
+      "name_at_live_observation": "Cereales estrellas de maíz Stars Hacendado con miel",
+      "status": "DECLARED",
+      "nutrition_per_100g": {
+        "calories": 403.0,
+        "fat_g": 4.7,
+        "carbohydrate_g": 80.0,
+        "protein_g": 7.9
+      },
+      "image_url": "https://prod-mercadona.imgix.net/images/40b82fe7cc55937d3ec4dddc8a7a6555.jpg?fit=crop&h=3600&w=3600",
+      "identity_policy": "EXACT_PRODUCT_ID_AND_EAN_WITH_LIVE_FIRST_PARTY_PERSPECTIVE_9_IMAGE",
+      "corroborated_fields": 4
+    }
+  ],
+  "review_product_ids": [
+    "12946",
+    "15589",
+    "67660"
+  ],
+  "canonical_additions_applied_by_this_cut": 0,
+  "notes": "Audit-only persisted checkpoint of the successful live first-party typo-recovery E2E run. Canonical promotion remains the responsibility of LATEST_RAW_LIVE_OCR_WINS reconciliation."
+}
