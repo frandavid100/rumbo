@@ -56,9 +56,20 @@ class CurrentOnlyIdentityQuarantineTests(unittest.TestCase):
             [row("1", "DECLARED", True), row("2", "REVIEW", False), row("3", "DECLARED", True), row("4", "REVIEW", False)],
         )
         self.assertEqual([item["product_id"] for item in safe], ["1", "2"])
+        self.assertEqual(manifest["input_canonical_products"], 4)
+        self.assertEqual(manifest["input_canonical_usable_complete"], 2)
         self.assertEqual(manifest["quarantined_current_only_product_ids"], ["3", "4"])
         self.assertEqual(manifest["quarantined_usable_product_ids"], ["3"])
+        self.assertEqual(manifest["safe_subset_products"], 2)
         self.assertEqual(manifest["safe_subset_usable_complete"], 1)
+        self.assertEqual(
+            manifest["safe_subset_products"],
+            manifest["input_canonical_products"] - manifest["quarantined_current_only_products"],
+        )
+        self.assertEqual(
+            manifest["safe_subset_usable_complete"],
+            manifest["input_canonical_usable_complete"] - len(manifest["quarantined_usable_product_ids"]),
+        )
         self.assertFalse(manifest["historical_snapshot_full_parity_verified"])
 
     def test_later_current_delta_observation_does_not_quarantine_historical_id(self) -> None:
@@ -76,7 +87,9 @@ class CurrentOnlyIdentityQuarantineTests(unittest.TestCase):
         self.assertEqual(current_only_introductions(summary), {})
         safe, manifest = build_safe_subset(summary, [row("1", "DECLARED", True)])
         self.assertEqual(len(safe), 1)
+        self.assertEqual(manifest["input_canonical_usable_complete"], 1)
         self.assertEqual(manifest["quarantined_current_only_products"], 0)
+        self.assertEqual(manifest["safe_subset_usable_complete"], 1)
 
     def test_provenance_drift_fails_closed(self) -> None:
         summary = {"runs": [{"run_id": 10, "workflow_names": ["Historical OCR"], "new_product_ids": ["1"]}]}
