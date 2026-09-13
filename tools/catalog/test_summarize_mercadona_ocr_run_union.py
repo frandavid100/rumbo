@@ -102,6 +102,27 @@ class LatestObservationReconciliationTests(unittest.TestCase):
         self.assertEqual(result["A"]["status"], "REVIEW")
         self.assertFalse(result["A"]["usable_complete"])
 
+    def test_rerun_artifact_time_beats_original_run_id_for_latest_live_state(self):
+        result = reconcile_latest_observations([
+            (30, "A", "REVIEW", None, True, "1111111111111", "2026-09-13T12:00:00Z"),
+            (20, "A", "DECLARED", N1, True, "1111111111111", "2026-09-13T18:46:50Z"),
+        ])
+        self.assertEqual(result["A"]["latest_run_id"], 20)
+        self.assertEqual(result["A"]["latest_evidence_created_at"], "2026-09-13T18:46:50Z")
+        self.assertEqual(result["A"]["status"], "DECLARED")
+        self.assertTrue(result["A"]["usable_complete"])
+        self.assertEqual(result["A"]["nutrition"], N1)
+
+    def test_identity_anchor_uses_artifact_time_not_numeric_run_id(self):
+        result = reconcile_latest_observations([
+            (30, "A", "DECLARED", N1, True, "1111111111111", "2026-09-13T10:00:00Z"),
+            (20, "A", "REVIEW", None, True, "2222222222222", "2026-09-13T18:00:00Z"),
+        ])
+        self.assertEqual(result["A"]["identity_ean"], "1111111111111")
+        self.assertEqual(result["A"]["status"], "DECLARED")
+        self.assertEqual(result["A"]["latest_run_id"], 30)
+        self.assertEqual(result["A"]["identity_conflict_run_ids"], [20])
+
     def test_ambiguous_earliest_ean_anchor_fails_closed(self):
         result = reconcile_latest_observations([
             (10, "A", "DECLARED", N1, True, "1111111111111"),
