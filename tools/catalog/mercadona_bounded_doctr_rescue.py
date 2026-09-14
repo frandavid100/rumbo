@@ -17,6 +17,7 @@ import mercadona_near_safe_doctr_retry as retry
 
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 MIN_PRESENT_CORE_FIELDS = 2
+MIN_POST_DOCTR_CORROBORATED_FIELDS_FOR_EASYOCR = 2
 EASYOCR_VARIANT_NAMES = (
     "full_autocontrast",
     "crop_center",
@@ -60,12 +61,16 @@ def should_run_bounded_doctr_rescue(ensemble) -> bool:
 
 
 def should_run_post_doctr_easyocr_rescue(ensemble) -> bool:
-    """Spend EasyOCR only on a clean complete 3/4 tuple after docTR.
+    """Spend EasyOCR on a clean complete tuple that docTR left under-corroborated.
 
-    A bounded docTR pass can recover the previously missing macro while leaving
-    that one field supported by docTR alone. In that exact state EasyOCR is useful
-    as a genuinely independent fourth OCR family. This predicate does not change
-    acceptance: the ordinary ensemble must still corroborate all four fields.
+    A bounded docTR pass can recover all four core values while leaving one or
+    more of them supported by too few independent OCR families. In that exact
+    state EasyOCR is useful as a genuinely independent fourth OCR family. Route
+    only complete tuples with an explicit per-100 basis, at least three existing
+    engine families, at least two already-corroborated core fields, and no hard
+    blocker. This still does not change acceptance: the ordinary ensemble must
+    independently corroborate all four fields before the observation can become
+    DECLARED.
     """
     if ensemble.status != "REVIEW" or ensemble.declared_usable:
         return False
@@ -76,7 +81,8 @@ def should_run_post_doctr_easyocr_rescue(ensemble) -> bool:
         return False
     if int(ensemble.independent_engine_families or 0) < 3:
         return False
-    if int(ensemble.corroborated_fields or 0) != len(CORE) - 1:
+    corroborated = int(ensemble.corroborated_fields or 0)
+    if not (MIN_POST_DOCTR_CORROBORATED_FIELDS_FOR_EASYOCR <= corroborated < len(CORE)):
         return False
     reasons = [str(reason) for reason in ensemble.reasons]
     if "UNCORROBORATED_CORE_FIELDS" not in reasons:
@@ -135,8 +141,8 @@ def _extract_region_with_post_doctr_easyocr(evidence, region_path: Path, target_
 
 def main() -> int:
     # First widen only docTR routing for this explicitly bounded historical
-    # regression cohort. Then layer an EasyOCR fourth-family pass solely on the
-    # clean complete 3/4 state produced by that audited docTR route.
+    # regression cohort. Then layer an EasyOCR fourth-family pass solely on a
+    # clean complete under-corroborated state produced by that audited route.
     retry.should_run_doctr_rescue = should_run_bounded_doctr_rescue
     retry._extract_region = _extract_region_with_post_doctr_easyocr
     return retry.main()
