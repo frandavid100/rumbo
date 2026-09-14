@@ -17,6 +17,7 @@ import mercadona_near_safe_doctr_retry as retry
 
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 MIN_PRESENT_CORE_FIELDS = 2
+MIN_POST_DOCTR_ENGINE_FAMILIES_FOR_EASYOCR = 2
 MIN_POST_DOCTR_CORROBORATED_FIELDS_FOR_EASYOCR = 2
 EASYOCR_VARIANT_NAMES = (
     "full_autocontrast",
@@ -37,9 +38,9 @@ def should_run_bounded_doctr_rescue(ensemble) -> bool:
 
     The ordinary near-safe retry is intentionally restricted to complete 4-field
     candidates. This bounded rescue is for products that were previously
-    DECLARED and later regressed to a non-contradictory REVIEW. It may spend a
-    fourth OCR family on a current extraction with at least two core fields, but
-    it cannot make that extraction usable unless the unchanged downstream
+    DECLARED and later regressed to a non-contradictory REVIEW. It may spend an
+    additional OCR family on a current extraction with at least two core fields,
+    but it cannot make that extraction usable unless the unchanged downstream
     ensemble independently satisfies the normal DECLARED contract.
     """
     if ensemble.status != "REVIEW" or ensemble.declared_usable:
@@ -65,12 +66,12 @@ def should_run_post_doctr_easyocr_rescue(ensemble) -> bool:
 
     A bounded docTR pass can recover all four core values while leaving one or
     more of them supported by too few independent OCR families. In that exact
-    state EasyOCR is useful as a genuinely independent fourth OCR family. Route
-    only complete tuples with an explicit per-100 basis, at least three existing
-    engine families, at least two already-corroborated core fields, and no hard
-    blocker. This still does not change acceptance: the ordinary ensemble must
-    independently corroborate all four fields before the observation can become
-    DECLARED.
+    state EasyOCR is useful as a genuinely independent third or fourth OCR
+    family. Route only complete tuples with an explicit per-100 basis, at least
+    two existing engine families, at least two already-corroborated core fields,
+    and no hard blocker. This still does not change acceptance: the ordinary
+    ensemble must independently corroborate all four fields before the
+    observation can become DECLARED.
     """
     if ensemble.status != "REVIEW" or ensemble.declared_usable:
         return False
@@ -79,7 +80,7 @@ def should_run_post_doctr_easyocr_rescue(ensemble) -> bool:
     nutrition = ensemble.nutrition if isinstance(ensemble.nutrition, dict) else {}
     if any(nutrition.get(field) is None for field in CORE):
         return False
-    if int(ensemble.independent_engine_families or 0) < 3:
+    if int(ensemble.independent_engine_families or 0) < MIN_POST_DOCTR_ENGINE_FAMILIES_FOR_EASYOCR:
         return False
     corroborated = int(ensemble.corroborated_fields or 0)
     if not (MIN_POST_DOCTR_CORROBORATED_FIELDS_FOR_EASYOCR <= corroborated < len(CORE)):
@@ -141,8 +142,8 @@ def _extract_region_with_post_doctr_easyocr(evidence, region_path: Path, target_
 
 def main() -> int:
     # First widen only docTR routing for this explicitly bounded historical
-    # regression cohort. Then layer an EasyOCR fourth-family pass solely on a
-    # clean complete under-corroborated state produced by that audited route.
+    # regression cohort. Then layer an EasyOCR independent-family pass solely on
+    # a clean complete under-corroborated state produced by that audited route.
     retry.should_run_doctr_rescue = should_run_bounded_doctr_rescue
     retry._extract_region = _extract_region_with_post_doctr_easyocr
     return retry.main()
