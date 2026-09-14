@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.0.0",
+  "purpose": "Persist exact first-party identity and perspective=9 label-image anchors for the bounded raw-meat OCR pilot after the original 2026-08-27 first-party inventory artifact expired.",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "ROUTING_ANCHOR_ONLY",
+  "redistribution_allowed": false,
+  "source_artifacts": [
+    {
+      "workflow_run_id": 33278134827,
+      "artifact_id": 9722458299,
+      "artifact_name": "mercadona-neural-ocr-food-signal-expansion-pilot-merged",
+      "artifact_sha256": "131f6f87ac8880a378418fdae51c2ec9e9531c74065fbcfb48660b7769663e7f",
+      "covers_product_ids": ["13046", "2796", "2861", "3680", "3682", "4915", "86395"]
+    },
+    {
+      "workflow_run_id": 33282798370,
+      "artifact_id": 9723876462,
+      "artifact_name": "mercadona-neural-ocr-food-signal-expansion-full-merged",
+      "artifact_sha256": "04be21baca3c89af03f1030a1e6487440fa32a88b99bb29cb1e50a1efdaac8b1",
+      "covers_product_ids": ["2779"]
+    }
+  ],
+  "selection_policy": "Exact eight ids from the previously audited deterministic raw-meat pilot. Re-OCR is permitted only while the strict historical canonical state remains REVIEW and current official first-party detail preserves both the exact anchor EAN and exact perspective=9 image URL. Routing only; no semantic classification and no nutrition inference.",
+  "expected_product_ids": ["13046", "2779", "2796", "2861", "3680", "3682", "4915", "86395"],
+  "anchors": [
+    {
+      "product_id": "13046",
+      "ean": "8402001034091",
+      "name": "Secreto de cerdo",
+      "brand": null,
+      "category_name": "Cerdo",
+      "image_url": "https://prod-mercadona.imgix.net/images/81ee3996ea93cd07dbe780ae04915c16.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source_run_id": 33278134827
+    },
+    {
+      "product_id": "2779",
+      "ean": "2105100027792",
+      "name": "Medio pollo troceado",
+      "brand": null,
+      "category_name": "Pollo",
+      "image_url": "https://prod-mercadona.imgix.net/images/7bfc9b19706ec372de90eb24163b78cc.jpeg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source_run_id": 33282798370
+    },
+    {
+      "product_id": "2796",
+      "ean": "2105100027969",
+      "name": "Codornices",
+      "brand": null,
+      "category_name": "Pavo y otras aves",
+      "image_url": "https://prod-mercadona.imgix.net/images/044a362f0978ffe9dac43113330ccefe.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source_run_id": 33278134827
+    },
+    {
+      "product_id": "2861",
+      "ean": "2105100028614",
+      "name": "Filetes hígado de vacuno",
+      "brand": null,
+      "category_name": "Vacuno",
+      "image_url": "https://prod-mercadona.imgix.net/images/05b0ff720da40d8af3ce2b3735a21fbf.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source_run_id": 33278134827
+    },
+    {
+      "product_id": "3680",
+      "ean": "2105100036800",
+      "name": "Cuartos traseros familiar de pollo",
+      "brand": null,
+      "category_name": "Pollo",
+      "image_url": "https://prod-mercadona.imgix.net/images/b73712c12287848e5e6393f27ae6c835.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source_run_id": 33278134827
+    },
+    {
+      "product_id": "3682",
+      "ean": "2105100036824",
+      "name": "Pechugas enteras familiar de pollo",
+      "brand": null,
+      "category_name": "Pollo",
+      "image_url": "https://prod-mercadona.imgix.net/images/6a29eff244d79f383eabf3d87707e451.jpeg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source_run_id": 33278134827
+    },
+    {
+      "product_id": "4915",
+      "ean": "2105100049152",
+      "name": "Presa de cerdo ibérico",
+      "brand": null,
+      "category_name": "Cerdo",
+      "image_url": "https://prod-mercadona.imgix.net/images/129a35a0fa8632cba1390bf5739dd4a2.jpeg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source_run_id": 33278134827
+    },
+    {
+      "product_id": "86395",
+      "ean": "8402001047039",
+      "name": "Filetes lomo de cerdo corte fino",
+      "brand": null,
+      "category_name": "Cerdo",
+      "image_url": "https://prod-mercadona.imgix.net/images/bdc3ece27c0fe7224fd5be97b7c02fc6.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source_run_id": 33278134827
+    }
+  ],
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
