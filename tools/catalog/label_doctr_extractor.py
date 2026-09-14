@@ -112,3 +112,5 @@ def extract_with_doctr(
         engine_version=package_version,
         language="multilingual-latin",
     )
+
+# No-op workflow touch: rerun bounded near-safe 3-of-4 verification against the latest strict historical canonical.
