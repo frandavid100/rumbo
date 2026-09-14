@@ -65,6 +65,44 @@ class MercadonaReviewRegressionInputTest(unittest.TestCase):
         self.assertFalse(selected["cross_run_value_fusion"])
         self.assertFalse(selected["acceptance_policy_changed"])
 
+    def test_select_targets_keeps_multiple_current_non_contradictory_regressions(self) -> None:
+        summary = {
+            "latest_status_product_ids": {
+                "DECLARED": ["6063"],
+                "REVIEW": ["13250", "58298", "safety-blocked"],
+            },
+            "declared_to_review_transition_audit": {
+                "non_contradictory_review_product_ids": ["13250", "58298"]
+            },
+            "canonical_excluded_run_ids": [900],
+            "runs": [
+                {
+                    "run_id": 800,
+                    "new_product_ids": ["13250", "58298"],
+                    "overlap_product_ids": [],
+                },
+                {
+                    "run_id": 850,
+                    "new_product_ids": [],
+                    "overlap_product_ids": ["13250", "58298", "safety-blocked"],
+                },
+                {
+                    "run_id": 900,
+                    "new_product_ids": [],
+                    "overlap_product_ids": ["13250", "58298"],
+                },
+            ],
+        }
+        selected = select_targets(summary)
+        self.assertEqual(selected["product_ids"], ["13250", "58298"])
+        self.assertEqual(
+            selected["latest_raw_run_by_product"],
+            {"13250": 850, "58298": 850},
+        )
+        self.assertNotIn("6063", selected["latest_raw_run_by_product"])
+        self.assertNotIn("safety-blocked", selected["latest_raw_run_by_product"])
+        self.assertTrue(selected["safety_blocking_products_excluded"])
+
     def test_recover_anchors_uses_only_expected_raw_run(self) -> None:
         selection = {
             "latest_raw_run_by_product": {"p1": 100},
