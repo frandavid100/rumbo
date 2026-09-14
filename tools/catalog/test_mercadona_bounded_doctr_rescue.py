@@ -126,6 +126,20 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
         )
         self.assertTrue(should_run_post_doctr_easyocr_rescue(candidate))
 
+    def test_post_doctr_easyocr_refuses_single_existing_family(self) -> None:
+        candidate = ensemble(
+            nutrition={
+                "calories": 519.0,
+                "fat_g": 39.0,
+                "carbohydrate_g": 35.0,
+                "protein_g": 13.0,
+            },
+            families=1,
+            corroborated_fields=3,
+            reasons=["UNCORROBORATED_CORE_FIELDS"],
+        )
+        self.assertFalse(should_run_post_doctr_easyocr_rescue(candidate))
+
     def test_post_doctr_easyocr_refuses_below_two_corroborated_fields(self) -> None:
         candidate = ensemble(
             nutrition={
@@ -160,6 +174,41 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
         )
         self.assertFalse(should_run_post_doctr_easyocr_rescue(incomplete))
         self.assertFalse(should_run_post_doctr_easyocr_rescue(blocked))
+
+    def test_easyocr_third_family_can_corroborate_only_missing_field_under_existing_contract(self) -> None:
+        baseline = (
+            ParsedOCRReading(
+                "tesseract",
+                partial({"calories": 519, "fat_g": 39, "carbohydrate_g": 35}),
+                .95,
+                "tesseract",
+            ),
+            ParsedOCRReading(
+                "doctr",
+                partial({"calories": 519, "fat_g": 39, "carbohydrate_g": 35, "protein_g": 13}),
+                .95,
+                "doctr",
+            ),
+        )
+        before = fuse_ocr_readings(baseline)
+        self.assertEqual(before.status, "REVIEW")
+        self.assertEqual(before.corroborated_fields, 3)
+        self.assertEqual(before.independent_engine_families, 2)
+        self.assertTrue(should_run_post_doctr_easyocr_rescue(before))
+
+        after = fuse_ocr_readings((
+            *baseline,
+            ParsedOCRReading(
+                "easyocr",
+                partial({"protein_g": 13}),
+                .95,
+                "easyocr",
+            ),
+        ))
+        self.assertTrue(after.declared_usable)
+        self.assertEqual(after.corroborated_fields, 4)
+        protein = next(field for field in after.fields if field.name == "protein_g")
+        self.assertEqual(set(protein.engine_families), {"doctr", "easyocr"})
 
     def test_easyocr_fourth_family_can_corroborate_only_missing_field_under_existing_contract(self) -> None:
         baseline = (
