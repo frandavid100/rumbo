@@ -37,6 +37,34 @@ class MercadonaReviewRegressionInputTest(unittest.TestCase):
         self.assertEqual(selected["latest_raw_run_by_product"], {"p1": 100})
         self.assertTrue(selected["derived_or_replay_runs_excluded"])
 
+    def test_select_targets_routes_late_non_contradictory_review_regression(self) -> None:
+        summary = {
+            "latest_status_product_ids": {"DECLARED": ["stable"], "REVIEW": ["13250"]},
+            "declared_to_review_transition_audit": {
+                "non_contradictory_review_product_ids": ["13250"]
+            },
+            "canonical_excluded_run_ids": [],
+            "runs": [
+                {
+                    "run_id": 34753408288,
+                    "new_product_ids": ["13250"],
+                    "overlap_product_ids": [],
+                },
+                {
+                    "run_id": 34801039895,
+                    "new_product_ids": [],
+                    "overlap_product_ids": ["13250"],
+                },
+            ],
+        }
+        selected = select_targets(summary)
+        self.assertEqual(selected["product_ids"], ["13250"])
+        self.assertEqual(
+            selected["latest_raw_run_by_product"], {"13250": 34801039895}
+        )
+        self.assertFalse(selected["cross_run_value_fusion"])
+        self.assertFalse(selected["acceptance_policy_changed"])
+
     def test_recover_anchors_uses_only_expected_raw_run(self) -> None:
         selection = {
             "latest_raw_run_by_product": {"p1": 100},
