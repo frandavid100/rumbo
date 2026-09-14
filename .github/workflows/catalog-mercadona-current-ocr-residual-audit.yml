@@ -75,6 +75,32 @@ jobs:
           python -m unittest -v test_audit_mercadona_current_ocr_residual.py test_audit_mercadona_current_review_failure_modes.py test_summarize_mercadona_ocr_run_union.py test_materialize_mercadona_ocr_canonical.py
           python -m py_compile audit_mercadona_current_ocr_residual.py audit_mercadona_current_review_failure_modes.py diagnose_mercadona_ocr_union.py summarize_mercadona_ocr_run_union.py materialize_mercadona_ocr_canonical.py
 
+      - name: Wait for pre-existing Mercadona runs to settle
+        shell: bash
+        run: |
+          set -euo pipefail
+          self_created_at=$(gh api -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${GITHUB_RUN_ID}" --jq '.created_at')
+          deadline=$((SECONDS + 600))
+          while :; do
+            mapfile -t active_runs < <(
+              gh api -H 'Accept: application/vnd.github+json' \
+                '/repos/frandavid100/rumbo/actions/runs?branch=agent%2Fcatalog-phase1&per_page=100' \
+                --jq ".workflow_runs[] | select(.id != ${GITHUB_RUN_ID}) | select(.created_at <= \"${self_created_at}\") | select(.status != \"completed\") | select(.name | ascii_downcase | contains(\"mercadona\")) | [.id, .name, .status, .created_at] | @tsv"
+            )
+            if (( ${#active_runs[@]} == 0 )); then
+              echo 'No pre-existing Mercadona workflow runs are still active; canonical enumeration is stable.'
+              break
+            fi
+            printf 'Waiting for %d pre-existing Mercadona run(s) before canonical enumeration:\n' "${#active_runs[@]}"
+            printf '  %s\n' "${active_runs[@]}"
+            if (( SECONDS >= deadline )); then
+              echo 'Timed out waiting for pre-existing Mercadona workflows; refusing to publish a potentially stale canonical cut.' >&2
+              exit 1
+            fi
+            sleep 15
+          done
+
       - name: Reconstruct successful Mercadona OCR artifact union
         shell: bash
         run: |
