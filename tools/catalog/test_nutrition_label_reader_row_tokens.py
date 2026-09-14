@@ -106,6 +106,27 @@ class RowTokenRegressionTest(unittest.TestCase):
         self.assertEqual(r.status, 'REVIEW', r)
         self.assertIn('MISSING_CORE:protein_g', r.reasons)
 
+    def test_reversed_protein_row_does_not_borrow_following_salt_cell(self):
+        # Observed on Mercadona 24541: OCR linearises the printed sugar/protein
+        # values before the Proteínas row label, then places the salt value after
+        # it. The forward parser must never bind 0.02 g (salt) to protein; the
+        # immediately preceding 2.1 g remains REVIEW evidence until another OCR
+        # family corroborates it independently.
+        text = (
+            'INFORMACIÓN NUTRICIONAL\npor 100 g\n'
+            'Valor energético 1458 kJ / 369 kcal\n'
+            'Grasas 1.5 g\nHidratos de carbono 85 g\n'
+            '69 g\n2.1 g\nProteínas\n0.02 g\nSal\n'
+        )
+        r = read_nutrition_label(text, extraction_confidence=.96)
+        self.assertEqual(r.status, 'REVIEW', r)
+        self.assertEqual(r.nutrition['energy_kcal_per_100'], 369.0)
+        self.assertEqual(r.nutrition['fat_g'], 1.5)
+        self.assertEqual(r.nutrition['carbohydrate_g'], 85.0)
+        self.assertEqual(r.nutrition['protein_g'], 2.1)
+        self.assertNotEqual(r.nutrition['protein_g'], 0.02)
+        self.assertIn('SINGLE_REVERSED_MACRO_CANDIDATE:protein_g', r.reasons)
+
     def test_impossible_forward_number_does_not_hide_coherent_reversed_protein_cell(self):
         # Observed on Mercadona 61416: OCR linearises the real protein cell
         # immediately before the row label, then a manufacturer/address number
