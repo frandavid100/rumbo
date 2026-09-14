@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0.0",
+  "scope": "MERCADONA_FIRST_PARTY_2026-08-27_HISTORICAL_CUT_CONSERVATIVE_OCR",
+  "generated_from_audit_run_id": 34875863977,
+  "inventory_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "canonical": {
+    "processed_products": 2969,
+    "processed_pct_inventory": 69.3692,
+    "status_counts": {
+      "DECLARED": 340,
+      "REVIEW": 2629
+    },
+    "usable_complete": 340,
+    "usable_complete_pct_inventory": 7.9439,
+    "usable_field_counts": {
+      "calories": 340,
+      "fat_g": 340,
+      "carbohydrate_g": 340,
+      "protein_g": 340
+    },
+    "identity_reconciliation": {
+      "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
+      "identity_anchored_products": 2969,
+      "identity_conflict_products": 0,
+      "identity_unverified_products": 0,
+      "identity_unresolved_products": 0
+    }
+  },
+  "newly_canonicalized_observation": {
+    "product_id": "20709",
+    "ean": "8410500012861",
+    "name": "Bebida láctea natural Actimel 0% MG 0% azúcares añadidos",
+    "perspective": 9,
+    "basis": "100_g",
+    "nutrition": {
+      "calories": 31.0,
+      "fat_g": 0.4,
+      "carbohydrate_g": 4.0,
+      "protein_g": 2.8
+    },
+    "independent_engine_families": 3,
+    "corroborated_fields": 4,
+    "source_workflow_run_id": 34784205075,
+    "source_artifacts": [
+      {
+        "id": 10360652128,
+        "name": "mercadona-complete-review-doctr-pilot-1",
+        "sha256": "ca2d60b528b858672cccf92771b4b80f7c7d18d08844487abc9741a6db8b534e"
+      }
+    ],
+    "cross_run_value_fusion": false,
+    "current_observation_satisfies_declared_contract_independently": true
+  },
+  "review_safety": {
+    "near_safe_complete_review": 5,
+    "near_safe_complete_by_corroborated_fields": {
+      "0": 2,
+      "1": 2,
+      "2": 1
+    },
+    "near_safe_complete_by_engine_families": {
+      "2": 4,
+      "3": 1
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 46,
+    "hard_ocr_conflict": 226,
+    "energy_macro_incoherence": 104,
+    "ambiguous_table": 87,
+    "no_visual_region_without_ocr_signal": 0,
+    "REVIEW_promoted_by_audit": 0,
+    "next_frontier_product_ids": [
+      "24541",
+      "58166",
+      "6063",
+      "64436",
+      "9887"
+    ]
+  },
+  "audit": {
+    "workflow_run_id": 34875863977,
+    "artifact_id": 10360249081,
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_sha256": "3d5b3d6b8bf9fd9efc51b441353756452138756728f199568257647cdf77776b",
+    "workflow_run_conclusion": "success",
+    "latest_raw_live_ocr_artifacts": 278,
+    "all_source_artifacts": 665,
+    "eligible_source_artifacts": 614,
+    "consumed_source_artifacts": 605,
+    "skipped_source_artifacts": 60
+  },
+  "historical_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "caveat": "The expired original 4,280-product artifact prevents a complete independent parity proof for the whole historical identity map; it does not block reconstruction of the current conservative OCR canonical cut."
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
