@@ -96,7 +96,23 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
         )
         self.assertFalse(should_run_bounded_doctr_rescue(candidate))
 
-    def test_routes_post_doctr_easyocr_only_for_clean_complete_three_of_four(self) -> None:
+    def test_routes_post_doctr_easyocr_for_clean_complete_two_or_more_of_four(self) -> None:
+        for corroborated_fields in (2, 3):
+            with self.subTest(corroborated_fields=corroborated_fields):
+                candidate = ensemble(
+                    nutrition={
+                        "calories": 165.0,
+                        "fat_g": 10.0,
+                        "carbohydrate_g": 12.0,
+                        "protein_g": 5.9,
+                    },
+                    families=3,
+                    corroborated_fields=corroborated_fields,
+                    reasons=["UNCORROBORATED_CORE_FIELDS", "LOW_EXTRACTION_CONFIDENCE"],
+                )
+                self.assertTrue(should_run_post_doctr_easyocr_rescue(candidate))
+
+    def test_post_doctr_easyocr_refuses_below_two_corroborated_fields(self) -> None:
         candidate = ensemble(
             nutrition={
                 "calories": 165.0,
@@ -105,10 +121,10 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
                 "protein_g": 5.9,
             },
             families=3,
-            corroborated_fields=3,
-            reasons=["UNCORROBORATED_CORE_FIELDS", "LOW_EXTRACTION_CONFIDENCE"],
+            corroborated_fields=1,
+            reasons=["UNCORROBORATED_CORE_FIELDS"],
         )
-        self.assertTrue(should_run_post_doctr_easyocr_rescue(candidate))
+        self.assertFalse(should_run_post_doctr_easyocr_rescue(candidate))
 
     def test_post_doctr_easyocr_refuses_incomplete_or_hard_blocked_tuple(self) -> None:
         incomplete = ensemble(
