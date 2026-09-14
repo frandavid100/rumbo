@@ -15,7 +15,7 @@ from mercadona_nutrition_label_reader import (
 )
 from nutrition_label_reader import _fold, _number_immediately_before, _nutrition_block
 
-READER_VERSION = "1.0.2"
+READER_VERSION = "1.0.3"
 
 _FAT_PATTERNS = (
     r"(?:^|\n)\s*grasas?(?:\s*/\s*lipidos?)?\b",
@@ -44,6 +44,7 @@ _HARD_REASON_PREFIXES = (
 # resulting tuple is near-exactly energy coherent. Other impossible values remain
 # hard blockers.
 _ALLOWED_FORWARD_NOISE_REASONS = frozenset({"IMPOSSIBLE_CARBOHYDRATE_G"})
+_SINGLE_REVERSED_PREFIX = "SINGLE_REVERSED_MACRO_CANDIDATE:"
 
 
 def _repair_observed_row_label_typos(text: str) -> str:
@@ -121,22 +122,23 @@ def _single_macro_two_cell_value_before_label_evidence(
     *,
     extraction_confidence: float,
 ) -> LabelReadResult | None:
-    """Expose one uniquely coherent per-100 macro from a two-cell reversed row.
+    """Expose only a uniquely coherent per-100 macro from a two-cell reversed row.
 
-    This never makes a single OCR reading usable. It only turns an otherwise
-    missing macro into REVIEW evidence when exactly two dedicated gram cells sit
-    immediately before the one missing macro label and exactly one of those two
-    values yields a near-exact energy-coherent complete tuple. A later independent
-    OCR family must still corroborate the field before ensemble promotion.
+    The generic parser safely exposes a single immediately-preceding cell as REVIEW
+    evidence when it completes an energy-coherent tuple. A Mercadona two-column
+    label can instead emit *two* consecutive cells before the row label: per-100
+    first, whole-pack second. In that layout the nearest-cell rule is insufficient.
+
+    This repair never makes one OCR reading usable. It requires exactly two
+    contiguous dedicated gram cells and keeps a value only when exactly one of the
+    two yields a near-exact energy-coherent tuple. If the generic parser had already
+    exposed the nearest cell but both candidates remain plausible, the field is
+    removed again rather than manufacturing ambiguous evidence. Independent OCR
+    corroboration remains mandatory for ensemble promotion.
     """
     if result.status != "REVIEW":
         return None
     if result.basis not in {"100_g", "100_ml"} or extraction_confidence < .85:
-        return None
-    if any(
-        not str(reason).startswith("MISSING_CORE:")
-        for reason in result.reasons
-    ):
         return None
 
     nutrition = dict(result.nutrition or {})
@@ -144,10 +146,34 @@ def _single_macro_two_cell_value_before_label_evidence(
     if not isinstance(calories, (int, float)):
         return None
 
-    missing = [key for key in _MACRO_PATTERNS if key not in nutrition]
-    if len(missing) != 1:
+    reversed_keys = [
+        str(reason)[len(_SINGLE_REVERSED_PREFIX):]
+        for reason in result.reasons
+        if str(reason).startswith(_SINGLE_REVERSED_PREFIX)
+    ]
+    missing_keys = [key for key in _MACRO_PATTERNS if key not in nutrition]
+    already_exposed = False
+    if len(reversed_keys) == 1 and reversed_keys[0] in _MACRO_PATTERNS:
+        key = reversed_keys[0]
+        nutrition.pop(key, None)
+        already_exposed = True
+    elif not reversed_keys and len(missing_keys) == 1:
+        key = missing_keys[0]
+    else:
         return None
-    key = missing[0]
+
+    # Do not use the two-cell repair to bypass any unrelated parser warning.
+    if any(
+        not (
+            str(reason).startswith("MISSING_CORE:")
+            or str(reason).startswith(_SINGLE_REVERSED_PREFIX)
+        )
+        for reason in result.reasons
+    ):
+        return None
+
+    if any(field not in nutrition for field in ("calories", "fat_g", "carbohydrate_g", "protein_g") if field != key):
+        return None
 
     block = _nutrition_block(result.normalized_text)
     cells = _contiguous_preceding_gram_cells(_MACRO_PATTERNS[key], block, max_cells=2)
@@ -158,8 +184,6 @@ def _single_macro_two_cell_value_before_label_evidence(
     for value in cells:
         complete = dict(nutrition)
         complete[key] = value
-        if any(field not in complete for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")):
-            continue
         complete_nutrition = {
             field: float(complete[field])
             for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")
@@ -168,14 +192,29 @@ def _single_macro_two_cell_value_before_label_evidence(
             coherent_values.append(value)
 
     unique = sorted(set(coherent_values))
-    if len(unique) != 1:
-        return None
-
-    nutrition[key] = unique[0]
     cleaned_reasons = tuple(
         reason for reason in result.reasons
-        if not str(reason).startswith("MISSING_CORE:")
+        if not (
+            str(reason).startswith("MISSING_CORE:")
+            or str(reason).startswith(_SINGLE_REVERSED_PREFIX)
+        )
     )
+    if len(unique) != 1:
+        if not already_exposed:
+            return None
+        return LabelReadResult(
+            status="REVIEW",
+            basis=result.basis,
+            nutrition=nutrition or None,
+            confidence=min(result.confidence, extraction_confidence, .60),
+            reasons=cleaned_reasons + (
+                f"MISSING_CORE:{key}",
+                f"MERCADONA_AMBIGUOUS_TWO_CELL_VALUE_BEFORE_LABEL:{key}",
+            ),
+            normalized_text=result.normalized_text,
+        )
+
+    nutrition[key] = unique[0]
     return LabelReadResult(
         status="REVIEW",
         basis=result.basis,
@@ -185,7 +224,7 @@ def _single_macro_two_cell_value_before_label_evidence(
         },
         confidence=min(extraction_confidence, .84),
         reasons=cleaned_reasons + (
-            f"SINGLE_REVERSED_MACRO_CANDIDATE:{key}",
+            f"{_SINGLE_REVERSED_PREFIX}{key}",
             f"MERCADONA_TWO_CELL_VALUE_BEFORE_LABEL_EVIDENCE:{key}",
         ),
         normalized_text=result.normalized_text,
