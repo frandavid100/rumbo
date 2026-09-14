@@ -112,6 +112,20 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
                 )
                 self.assertTrue(should_run_post_doctr_easyocr_rescue(candidate))
 
+    def test_routes_post_doctr_easyocr_as_third_family_for_three_of_four(self) -> None:
+        candidate = ensemble(
+            nutrition={
+                "calories": 519.0,
+                "fat_g": 39.0,
+                "carbohydrate_g": 35.0,
+                "protein_g": 13.0,
+            },
+            families=2,
+            corroborated_fields=3,
+            reasons=["UNCORROBORATED_CORE_FIELDS", "LOW_EXTRACTION_CONFIDENCE"],
+        )
+        self.assertTrue(should_run_post_doctr_easyocr_rescue(candidate))
+
     def test_post_doctr_easyocr_refuses_below_two_corroborated_fields(self) -> None:
         candidate = ensemble(
             nutrition={
