@@ -69,6 +69,60 @@ Sal 0.1 g
         self.assertEqual(result.status, "REVIEW", result)
         self.assertNotIn("protein_g", result.nutrition or {})
 
+    def test_two_reversed_protein_cells_expose_only_unique_energy_coherent_value(self):
+        # Real PP-OCRv6 ordering for product 4491. The visual table has per-100-g
+        # and whole-pack columns; OCR emitted both protein cells immediately before
+        # the row label. 5.9 g is coherent with the already-read 100-g tuple while
+        # 21 g is the 350-g pack value and is not. Keep the recovered field REVIEW
+        # evidence so a separate OCR family must corroborate it before promotion.
+        observed = """100 g
+Valor Energético/Energía 686 kJ 165 kcal
+Grasas/Lípidos
+10g
+de las cuales Saturadas
+4.4g
+Hidratos de Carbono
+12g
+de los cuales Azúcares
+2.8g
+Fibra alimentaria/Fibra
+1.5g
+5.3g
+5.9g
+21g
+Proteínas
+Sal
+0.8g
+2.8g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertEqual(result.basis, "100_g")
+        self.assertEqual(result.nutrition, {
+            "calories": 165.0,
+            "fat_g": 10.0,
+            "carbohydrate_g": 12.0,
+            "protein_g": 5.9,
+        })
+        self.assertIn("SINGLE_REVERSED_MACRO_CANDIDATE:protein_g", result.reasons)
+        self.assertIn("MERCADONA_TWO_CELL_VALUE_BEFORE_LABEL_EVIDENCE:protein_g", result.reasons)
+
+    def test_two_reversed_cells_are_not_chosen_when_energy_cannot_disambiguate(self):
+        observed = """Información nutricional por 100 g
+Valor energético 100 kcal
+Grasas 5 g
+Hidratos de Carbono 10 g
+3 g
+4 g
+Proteínas
+Sal 0.2 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.99)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertNotIn("protein_g", result.nutrition or {})
+        self.assertIn("MISSING_CORE:protein_g", result.reasons)
+        self.assertNotIn("MERCADONA_TWO_CELL_VALUE_BEFORE_LABEL_EVIDENCE:protein_g", result.reasons)
+
     def test_normal_forward_rows_are_unchanged(self):
         observed = """Información nutricional por 100 g
 Valor energético 711 kJ / 170 kcal

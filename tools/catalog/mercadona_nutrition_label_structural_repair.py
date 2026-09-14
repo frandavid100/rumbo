@@ -13,9 +13,9 @@ from mercadona_nutrition_label_reader import (
     LabelReadResult,
     read_nutrition_label as _read_nutrition_label,
 )
-from nutrition_label_reader import _number_immediately_before, _nutrition_block
+from nutrition_label_reader import _fold, _number_immediately_before, _nutrition_block
 
-READER_VERSION = "1.0.1"
+READER_VERSION = "1.0.2"
 
 _FAT_PATTERNS = (
     r"(?:^|\n)\s*grasas?(?:\s*/\s*lipidos?)?\b",
@@ -73,6 +73,123 @@ def _energy_residual(nutrition: dict[str, float]) -> float:
         + 4.0 * nutrition["protein_g"]
     )
     return abs(estimated - nutrition["calories"])
+
+
+def _contiguous_preceding_gram_cells(
+    label_patterns: tuple[str, ...],
+    text: str,
+    *,
+    max_cells: int = 2,
+) -> tuple[float, ...]:
+    """Return only contiguous dedicated gram-like cells before a row label.
+
+    Product 4491 exposed a two-column OCR ordering where the per-100-g protein
+    cell and the whole-pack protein cell were emitted as two consecutive lines
+    immediately before `Proteínas`. The generic single-cell helper necessarily
+    sees only the nearest (whole-pack) value. This helper is deliberately bounded
+    to at most two contiguous numeric cells and never skips prose or another row.
+    """
+    folded = _fold(text)
+    for label in label_patterns:
+        for label_match in re.finditer(label, folded, flags=re.I):
+            head = folded[max(0, label_match.start() - 120):label_match.start()].rstrip()
+            lines = head.splitlines()
+            values: list[float] = []
+            for line in reversed(lines):
+                if len(values) >= max_cells:
+                    break
+                cell = re.fullmatch(
+                    r"\s*([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|q|yg|y)\s*",
+                    line,
+                    flags=re.I,
+                )
+                if cell is None:
+                    break
+                if cell.group(1) in ("<", ">"):
+                    return tuple()
+                value = float(cell.group(2))
+                if not 0.0 <= value <= 100.0:
+                    return tuple()
+                values.append(value)
+            if values:
+                return tuple(values)
+    return tuple()
+
+
+def _single_macro_two_cell_value_before_label_evidence(
+    result: LabelReadResult,
+    *,
+    extraction_confidence: float,
+) -> LabelReadResult | None:
+    """Expose one uniquely coherent per-100 macro from a two-cell reversed row.
+
+    This never makes a single OCR reading usable. It only turns an otherwise
+    missing macro into REVIEW evidence when exactly two dedicated gram cells sit
+    immediately before the one missing macro label and exactly one of those two
+    values yields a near-exact energy-coherent complete tuple. A later independent
+    OCR family must still corroborate the field before ensemble promotion.
+    """
+    if result.status != "REVIEW":
+        return None
+    if result.basis not in {"100_g", "100_ml"} or extraction_confidence < .85:
+        return None
+    if any(
+        not str(reason).startswith("MISSING_CORE:")
+        for reason in result.reasons
+    ):
+        return None
+
+    nutrition = dict(result.nutrition or {})
+    calories = nutrition.get("calories")
+    if not isinstance(calories, (int, float)):
+        return None
+
+    missing = [key for key in _MACRO_PATTERNS if key not in nutrition]
+    if len(missing) != 1:
+        return None
+    key = missing[0]
+
+    block = _nutrition_block(result.normalized_text)
+    cells = _contiguous_preceding_gram_cells(_MACRO_PATTERNS[key], block, max_cells=2)
+    if len(cells) != 2:
+        return None
+
+    coherent_values: list[float] = []
+    for value in cells:
+        complete = dict(nutrition)
+        complete[key] = value
+        if any(field not in complete for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")):
+            continue
+        complete_nutrition = {
+            field: float(complete[field])
+            for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")
+        }
+        if _energy_residual(complete_nutrition) <= max(6.0, complete_nutrition["calories"] * .03):
+            coherent_values.append(value)
+
+    unique = sorted(set(coherent_values))
+    if len(unique) != 1:
+        return None
+
+    nutrition[key] = unique[0]
+    cleaned_reasons = tuple(
+        reason for reason in result.reasons
+        if not str(reason).startswith("MISSING_CORE:")
+    )
+    return LabelReadResult(
+        status="REVIEW",
+        basis=result.basis,
+        nutrition={
+            field: float(nutrition[field])
+            for field in ("calories", "fat_g", "carbohydrate_g", "protein_g")
+        },
+        confidence=min(extraction_confidence, .84),
+        reasons=cleaned_reasons + (
+            f"SINGLE_REVERSED_MACRO_CANDIDATE:{key}",
+            f"MERCADONA_TWO_CELL_VALUE_BEFORE_LABEL_EVIDENCE:{key}",
+        ),
+        normalized_text=result.normalized_text,
+    )
 
 
 def _full_value_before_label_evidence(
@@ -174,4 +291,10 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
         result,
         extraction_confidence=extraction_confidence,
     )
-    return structural if structural is not None else result
+    if structural is not None:
+        return structural
+    two_cell = _single_macro_two_cell_value_before_label_evidence(
+        result,
+        extraction_confidence=extraction_confidence,
+    )
+    return two_cell if two_cell is not None else result
