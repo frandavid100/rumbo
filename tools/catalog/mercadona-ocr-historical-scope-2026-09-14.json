@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0.1",
+  "schema_version": "1.0.2",
   "scope": "MERCADONA_FIRST_PARTY_2026-08-27_HISTORICAL_CUT_CONSERVATIVE_OCR",
-  "generated_at": "2026-09-14T10:40:57Z",
+  "generated_at": "2026-09-14T15:11:15Z",
   "inventory_products": 4280,
   "source": "MERCADONA_FIRST_PARTY/label image",
   "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
@@ -13,16 +13,16 @@
     "processed_products": 2969,
     "processed_pct_inventory": 69.3692,
     "status_counts": {
-      "DECLARED": 340,
-      "REVIEW": 2629
+      "DECLARED": 339,
+      "REVIEW": 2630
     },
-    "usable_complete": 340,
-    "usable_complete_pct_inventory": 7.9439,
+    "usable_complete": 339,
+    "usable_complete_pct_inventory": 7.9206,
     "usable_field_counts": {
-      "calories": 340,
-      "fat_g": 340,
-      "carbohydrate_g": 340,
-      "protein_g": 340
+      "calories": 339,
+      "fat_g": 339,
+      "carbohydrate_g": 339,
+      "protein_g": 339
     },
     "identity_reconciliation": {
       "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
@@ -258,12 +258,17 @@
     "caveat": "The conservative scope gate removes evidence known to originate only from a later current snapshot, but the expired original 4,280-product artifact still prevents a complete independent parity proof for the whole historical identity map."
   },
   "audit": {
-    "workflow_run_id": 34833233339,
-    "artifact_id": 10343393224,
-    "artifact_sha256": "df38416ecbac2bb15d53831437c7d509a3a3ad4fb7cf9f3d6d00de469e08a0d3",
-    "head_sha": "d93711f047a409fdf9025919b6a55d27bdb6b9f0",
+    "workflow_run_id": 34858881853,
+    "artifact_id": 10354922749,
+    "artifact_sha256": "c22cf3f99980492f37405d19beb1578e27286d3774e77a58132620aa1a643715",
+    "head_sha": "363367fa3fc5a144994fc80b2a7bab9287f29148",
     "tests_passed": 36,
-    "workflow_run_conclusion": "success"
+    "workflow_run_conclusion": "success",
+    "mercadona_workflow_definitions_discovered": 210,
+    "successful_mercadona_workflow_runs_discovered": 570,
+    "mercadona_artifacts_downloaded": 664,
+    "enumeration_policy": "Enumerate Mercadona workflow definitions first, then paginate successful runs per workflow since 2026-08-27. This replaces repository-wide Actions pagination, which can silently expose only a bounded recent horizon after the branch accumulates more than 1,000 runs.",
+    "canonical_correction": "The previously persisted 340 DECLARED cut was an overestimate produced from incomplete repository-wide Actions evidence enumeration. Full per-workflow pagination reconstructs the stable canonical cut as 339 DECLARED / 2630 REVIEW / 2969 processed."
   },
   "CLASSIFIED": 0,
   "MENU_ELIGIBLE": 0
