@@ -1,0 +1,173 @@
+{
+  "schema_version": "1.0.1",
+  "scope": "MERCADONA_FIRST_PARTY_2026-08-27_HISTORICAL_CUT_CONSERVATIVE_OCR",
+  "generated_from_audit_run_id": 34900748479,
+  "inventory_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "canonical": {
+    "processed_products": 2969,
+    "processed_pct_inventory": 69.3692,
+    "status_counts": {
+      "DECLARED": 342,
+      "REVIEW": 2627
+    },
+    "usable_complete": 342,
+    "usable_complete_pct_inventory": 7.9907,
+    "usable_field_counts": {
+      "calories": 342,
+      "fat_g": 342,
+      "carbohydrate_g": 342,
+      "protein_g": 342
+    },
+    "identity_reconciliation": {
+      "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
+      "identity_anchored_products": 2969,
+      "identity_conflict_products": 0,
+      "identity_unverified_products": 0,
+      "identity_unresolved_products": 0
+    }
+  },
+  "delta_from_run_34875863977": {
+    "declared_delta": 2,
+    "review_delta": -2,
+    "processed_delta": 0,
+    "newly_canonicalized_product_ids": [
+      "6063",
+      "15589"
+    ],
+    "latest_live_value_corrections": [
+      {
+        "product_id": "22879",
+        "field": "carbohydrate_g",
+        "previous_value": 0.7,
+        "current_value": 1.0,
+        "reason": "Latest independent PaddleOCR+Tesseract observation resolves 1.00 g as total carbohydrate and 0.70 g as sugars; canonical latest-live reconciliation replaces the older row association."
+      }
+    ]
+  },
+  "newly_canonicalized_observations": [
+    {
+      "product_id": "6063",
+      "ean": "8480000060631",
+      "name": "Tarta Cookies & Cream Hacendado congelada",
+      "perspective": 9,
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 326.0,
+        "fat_g": 17.0,
+        "carbohydrate_g": 39.0,
+        "protein_g": 3.5
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source_workflow_run_id": 34893440281,
+      "source_artifacts": [
+        {
+          "id": 10367373066,
+          "name": "mercadona-two-of-four-fourth-family-pilot",
+          "sha256": "8b6e131359e6eaf13fe53216a057f6a6219316c100bf60c8c880fe76af0e7e33"
+        }
+      ],
+      "cross_run_value_fusion": false,
+      "current_observation_satisfies_declared_contract_independently": true
+    },
+    {
+      "product_id": "15589",
+      "ean": "8480000155894",
+      "name": "Patatas fritas corte ondulado Hacendado",
+      "perspective": 9,
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 550.0,
+        "fat_g": 34.0,
+        "carbohydrate_g": 53.0,
+        "protein_g": 5.7
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source_workflow_run_id": 34893440380,
+      "source_artifacts": [
+        {
+          "id": 10368152296,
+          "name": "mercadona-review-regression-doctr-pilot-1",
+          "sha256": "3a00a9a0a8fe3ee34523b745915fcf29bb15a99dc4f9088c4b3adf3227a6d009"
+        }
+      ],
+      "cross_run_value_fusion": false,
+      "current_observation_satisfies_declared_contract_independently": true
+    }
+  ],
+  "latest_live_value_corrections": [
+    {
+      "product_id": "22879",
+      "ean": "2105600228798",
+      "name": "Jamón de cebo ibérico cortado a máquina",
+      "perspective": 9,
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 295.8,
+        "fat_g": 16.2,
+        "carbohydrate_g": 1.0,
+        "protein_g": 36.5
+      },
+      "previous_canonical_carbohydrate_g": 0.7,
+      "source_workflow_run_id": 34893376576,
+      "source_artifact": {
+        "id": 10367989610,
+        "name": "mercadona-neural-ocr-p9-no-ingredients-processed-wave2-merged",
+        "sha256": "4ab430b1413647baaed218264bb03c8dc7f96c18b9123bee5691541928542370"
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4,
+      "cross_run_value_fusion": false,
+      "current_observation_satisfies_declared_contract_independently": true
+    }
+  ],
+  "review_safety": {
+    "near_safe_complete_review": 4,
+    "near_safe_complete_by_corroborated_fields": {
+      "0": 2,
+      "1": 2
+    },
+    "near_safe_complete_by_engine_families": {
+      "2": 4
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 46,
+    "hard_ocr_conflict": 227,
+    "energy_macro_incoherence": 104,
+    "ambiguous_table": 86,
+    "no_visual_region_without_ocr_signal": 0,
+    "REVIEW_promoted_by_audit": 0
+  },
+  "audit": {
+    "workflow_run_id": 34900748479,
+    "artifact_id": 10371082737,
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_sha256": "ccf62c691436a6fce6c56369801ba0385d107d9a2eed347bb0497eacafac2eb8",
+    "workflow_run_conclusion": "success",
+    "runs_with_strict_ocr_rows": 486,
+    "final_distinct_union": 2971,
+    "canonical_status_products": 2969,
+    "coverage_without_canonical_state": 2,
+    "coverage_without_canonical_state_product_ids": [
+      "17719",
+      "17996"
+    ]
+  },
+  "historical_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "caveat": "The expired original 4,280-product artifact prevents a complete independent parity proof for the whole historical identity map; it does not block reconstruction of the current conservative OCR canonical cut."
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
