@@ -1,0 +1,35 @@
+name: Catalog Mercadona OCR parser regressions
+
+# Keep conservative parser safety tests runnable even when historical data artifacts expire.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_label_reader_ocr_typos.py'
+      - 'tools/catalog/test_nutrition_label_reader_row_tokens.py'
+      - '.github/workflows/catalog-mercadona-ocr-parser-regressions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parser-regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run conservative nutrition parser regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py
