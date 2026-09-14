@@ -7,6 +7,7 @@ from mercadona_bounded_doctr_rescue import (
     should_run_bounded_doctr_rescue,
     should_run_post_doctr_easyocr_rescue,
 )
+from mercadona_nutrition_label_structural_repair import read_nutrition_label as read_mercadona_label
 from nutrition_label_reader import LabelReadResult
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
@@ -250,6 +251,46 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
         self.assertEqual(after.corroborated_fields, 4)
         protein = next(field for field in after.fields if field.name == "protein_g")
         self.assertEqual(set(protein.engine_families), {"doctr", "easyocr"})
+
+    def test_interleaved_doctr_review_can_only_promote_after_independent_paddle_corroboration(self) -> None:
+        observed = """INFORMACIÓN NUTRICIONAL
+Valores medios / médios
+Por 100g
+Porción / Porção
+texto de ingredientes Grasas / Lípidos
+179
+15g
+texto de ingredientes Hidratos de carbono
+399
+33g
+texto de ingredientes Proteínas
+3.5g
+Sal
+0.38g
+Valor energético / Energia 1364 kJ / 326 kcal
+"""
+        doctr = read_mercadona_label(observed, extraction_confidence=.83)
+        self.assertEqual(doctr.status, "REVIEW", doctr)
+        self.assertEqual(doctr.nutrition, {
+            "calories": 326.0,
+            "fat_g": 17.0,
+            "carbohydrate_g": 39.0,
+            "protein_g": 3.5,
+        })
+        before = fuse_ocr_readings((
+            ParsedOCRReading("doctr", doctr, .83, "doctr"),
+        ))
+        self.assertEqual(before.status, "REVIEW")
+        self.assertEqual(before.independent_engine_families, 1)
+
+        paddle = partial({"calories": 326, "fat_g": 17, "carbohydrate_g": 39, "protein_g": 3.5})
+        after = fuse_ocr_readings((
+            ParsedOCRReading("doctr", doctr, .83, "doctr"),
+            ParsedOCRReading("paddle", paddle, .97, "paddleocr"),
+        ))
+        self.assertTrue(after.declared_usable)
+        self.assertEqual(after.corroborated_fields, 4)
+        self.assertEqual(after.independent_engine_families, 2)
 
 
 if __name__ == "__main__":
