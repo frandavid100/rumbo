@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "scope": "MERCADONA_FIRST_PARTY_2026-08-27_HISTORICAL_CUT_CONSERVATIVE_OCR",
-  "generated_at": "2026-09-13T21:55:43Z",
+  "generated_at": "2026-09-14T02:09:31Z",
   "inventory_products": 4280,
   "source": "MERCADONA_FIRST_PARTY/label image",
   "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
@@ -13,16 +13,16 @@
     "processed_products": 2969,
     "processed_pct_inventory": 69.3692,
     "status_counts": {
-      "DECLARED": 330,
-      "REVIEW": 2639
+      "DECLARED": 334,
+      "REVIEW": 2635
     },
-    "usable_complete": 330,
-    "usable_complete_pct_inventory": 7.7103,
+    "usable_complete": 334,
+    "usable_complete_pct_inventory": 7.8037,
     "usable_field_counts": {
-      "calories": 330,
-      "fat_g": 330,
-      "carbohydrate_g": 330,
-      "protein_g": 330
+      "calories": 334,
+      "fat_g": 334,
+      "carbohydrate_g": 334,
+      "protein_g": 334
     },
     "identity_reconciliation": {
       "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
@@ -54,6 +54,81 @@
       }
     ]
   },
+  "non_contradictory_review_doctr_pilot": {
+    "workflow_run_id": 34796899503,
+    "head_sha": "63eb3e473a3fce979d2cb7262dc590040dc695e1",
+    "selected": 15,
+    "selected_with_structured_ingredients": 14,
+    "selected_without_structured_ingredients": 1,
+    "declared": 4,
+    "review": 11,
+    "errors": 0,
+    "declared_rate_pct": 26.6667,
+    "acceptance_policy_changed": false,
+    "cross_run_value_fusion": false,
+    "declared_products": [
+      {
+        "product_id": "67660",
+        "ean": "8480000676603",
+        "name": "Café soluble cappuccino caramelo Hacendado",
+        "basis": "100_g",
+        "nutrition": {
+          "calories": 395.0,
+          "fat_g": 6.3,
+          "carbohydrate_g": 76.0,
+          "protein_g": 7.4
+        }
+      },
+      {
+        "product_id": "4570",
+        "ean": "2105100045703",
+        "name": "Solomillo de cerdo",
+        "basis": "100_g",
+        "nutrition": {
+          "calories": 131.0,
+          "fat_g": 5.1,
+          "carbohydrate_g": 0.0,
+          "protein_g": 21.0
+        }
+      },
+      {
+        "product_id": "24023",
+        "ean": "8436542052061",
+        "name": "Migas de bacalao sin piel MareDeus ultracongeladas",
+        "basis": "100_g",
+        "nutrition": {
+          "calories": 57.0,
+          "fat_g": 0.5,
+          "carbohydrate_g": 0.3,
+          "protein_g": 13.0
+        }
+      },
+      {
+        "product_id": "15101",
+        "ean": "8402001041471",
+        "name": "Chocolate con leche classic Hacendado extrafino",
+        "basis": "100_g",
+        "nutrition": {
+          "calories": 556.0,
+          "fat_g": 35.0,
+          "carbohydrate_g": 50.0,
+          "protein_g": 9.3
+        }
+      }
+    ],
+    "artifacts": [
+      {
+        "id": 10330336727,
+        "name": "mercadona-review-regression-doctr-pilot-0",
+        "sha256": "35692569538ba524300b6c17ca1b0433d0c9c8544c3c9aa9ca4e7844732e1ed0"
+      },
+      {
+        "id": 10330231665,
+        "name": "mercadona-review-regression-doctr-pilot-1",
+        "sha256": "141d3dfa831d09d5ce26967cb81c3043e462465cbe364e98baf9c355306f0832"
+      }
+    ]
+  },
   "scope_quarantine": {
     "policy": "Exclude complete workflows explicitly defined as post-cut current-delta discovery instead of hard-coding product IDs into canonical reconciliation.",
     "workflow_path_pattern": ".github/workflows/catalog-mercadona-*-current-delta.yml",
@@ -66,12 +141,18 @@
     "products_without_historical_cut_canonical_state": 2
   },
   "review_safety": {
-    "near_safe_complete_review": 5,
+    "near_safe_complete_review": 7,
+    "near_safe_complete_by_corroborated_fields": {
+      "0": 2,
+      "1": 2,
+      "2": 2,
+      "3": 1
+    },
     "fully_corroborated_but_still_review": 0,
-    "complete_but_safety_blocked": 49,
+    "complete_but_safety_blocked": 50,
     "hard_ocr_conflict": 227,
     "energy_macro_incoherence": 106,
-    "ambiguous_table": 91,
+    "ambiguous_table": 90,
     "no_visual_region_without_ocr_signal": 0,
     "REVIEW_promoted_by_audit": 0
   },
@@ -84,10 +165,10 @@
     "caveat": "The conservative scope gate removes evidence known to originate only from a later current snapshot, but the expired original 4,280-product artifact still prevents a complete independent parity proof for the whole historical identity map."
   },
   "audit": {
-    "workflow_run_id": 34784623936,
-    "artifact_id": 10325714489,
-    "artifact_sha256": "fba9e4e63aa0ddac54546263a91ec5166928f396e08f794069bddc59e36d082b",
-    "head_sha": "c8b392d593368a5a0d92ac5757a5d163643f241b",
+    "workflow_run_id": 34797496041,
+    "artifact_id": 10330367775,
+    "artifact_sha256": "ea70c8c791f99c652c3b189bc5aa04313896ab02b6fede7c7a91d96a97bac943",
+    "head_sha": "63eb3e473a3fce979d2cb7262dc590040dc695e1",
     "tests_passed": 36,
     "workflow_run_conclusion": "success"
   },
