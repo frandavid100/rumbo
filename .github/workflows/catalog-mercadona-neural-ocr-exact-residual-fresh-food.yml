@@ -5,15 +5,21 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-neural-ocr-exact-residual-fresh-food.yml'
-      - 'tools/catalog/audit_mercadona_exact_residual_fresh_food_candidates.py'
-      - 'tools/catalog/test_audit_mercadona_exact_residual_fresh_food_candidates.py'
+      - 'tools/catalog/mercadona-exact-residual-fresh-food-anchors-2026-09-14.json'
+      - 'tools/catalog/mercadona_first_party_details.py'
       - 'tools/catalog/mercadona_neural_ocr_wave.py'
       - 'tools/catalog/nutrition_label_reader.py'
       - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/nutrition_visual_table_detector.py'
+      - 'tools/catalog/mercadona_label_pipeline.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - 'tools/catalog/label_neural_extractor.py'
+      - 'tools/catalog/label_easyocr_extractor.py'
+      - 'tools/catalog/label_text_extractor.py'
   workflow_dispatch:
 
 permissions:
-  actions: read
+  actions: write
   contents: read
 
 concurrency:
@@ -21,15 +27,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ocr:
+  pilot:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        shard: [0, 1]
+    timeout-minutes: 90
     env:
+      GH_TOKEN: ${{ github.token }}
       PADDLE_PDX_MODEL_SOURCE: BOS
     steps:
       - uses: actions/checkout@v4
@@ -40,114 +42,289 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Download consolidated Mercadona first-party cut
-        uses: actions/download-artifact@v4
-        with:
-          name: mercadona-first-party-final
-          path: tools/catalog/mercadona-first-party-final
-          repository: frandavid100/rumbo
-          github-token: ${{ github.token }}
-          run-id: 33046950149
+      - name: Resolve latest successful strict historical OCR audit
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=30' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo 'No successful strict historical audit found' >&2; exit 1; }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using strict historical audit run $run_id"
 
-      - name: Download exact current OCR residual audit
+      - name: Download strict historical canonical audit
         uses: actions/download-artifact@v4
         with:
           name: mercadona-current-ocr-residual-audit
-          path: tools/catalog/mercadona-current-ocr-residual-audit
-          repository: frandavid100/rumbo
+          path: tools/catalog/fresh-food-strict-audit
           github-token: ${{ github.token }}
-          run-id: 34028348397
+          run-id: ${{ steps.audit.outputs.run_id }}
+
+      - name: Select exact historical anchors still canonical REVIEW
+        id: targets
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          anchor_path = Path('mercadona-exact-residual-fresh-food-anchors-2026-09-14.json')
+          manifest = json.loads(anchor_path.read_text(encoding='utf-8'))
+          expected = {str(value) for value in manifest.get('expected_product_ids') or []}
+          anchors = {
+              str(row.get('product_id') or ''): row
+              for row in manifest.get('anchors') or []
+              if str(row.get('product_id') or '')
+          }
+          if len(expected) != 8 or set(anchors) != expected:
+              raise SystemExit(f'fresh-food anchor manifest drifted: expected={sorted(expected)} anchors={sorted(anchors)}')
+          source = manifest.get('source_artifact') or {}
+          if (
+              int(source.get('workflow_run_id') or 0) != 34028348397
+              or source.get('artifact_sha256') != '6c4dd129a70e1db0ea44352ad1cc5b65e1e161bd39691b08ca1b72ad80c20a6a'
+          ):
+              raise SystemExit('fresh-food anchor provenance drifted')
+
+          statuses = {}
+          for line in Path('fresh-food-strict-audit/canonical-ocr.jsonl').read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              pid = str(row.get('product_id') or '')
+              if pid in expected:
+                  statuses[pid] = str(row.get('status') or '')
+
+          missing_from_canonical = sorted(expected - set(statuses))
+          if missing_from_canonical:
+              raise SystemExit(f'historical anchors missing from canonical OCR audit: {missing_from_canonical}')
+
+          selected = [anchors[pid] for pid in sorted(expected) if statuses.get(pid) == 'REVIEW']
+          skipped_non_review = {pid: statuses[pid] for pid in sorted(expected) if statuses.get(pid) != 'REVIEW'}
+          Path('fresh-food-targets.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          Path('fresh-food-inventory.jsonl').write_text(
+              ''.join(json.dumps({'product_id': str(row['product_id'])}, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          summary = {
+              'strict_audit_run_id': '${{ steps.audit.outputs.run_id }}',
+              'anchor_count': len(expected),
+              'selected_review_count': len(selected),
+              'selected_review_product_ids': [str(row['product_id']) for row in selected],
+              'skipped_non_review': skipped_non_review,
+              'source_artifact_run_id': source.get('workflow_run_id'),
+              'source_artifact_sha256': source.get('artifact_sha256'),
+              'cross_run_value_fusion': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('fresh-food-target-selection.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+          count=$(python - <<'PY'
+          import json
+          print(json.load(open('fresh-food-target-selection.json', encoding='utf-8'))['selected_review_count'])
+          PY
+          )
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [[ "$count" == "0" ]]; then
+            echo 'No exact fresh-food historical anchors remain REVIEW; nothing to re-OCR.'
+          fi
+
+      - name: Rehydrate current official first-party details
+        if: steps.targets.outputs.count != '0'
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-first-party-fresh-food-live
+          python mercadona_first_party_details.py \
+            --inventory fresh-food-inventory.jsonl \
+            --out mercadona-first-party-fresh-food-live \
+            --shard-index 0 \
+            --shard-count 1 \
+            --timeout 20 \
+            --delay 0.2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('mercadona-first-party-fresh-food-live')
+          summary = json.loads((root / 'summary-00.json').read_text(encoding='utf-8'))
+          errors = [
+              json.loads(line)
+              for line in (root / 'errors-00.jsonl').read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          if errors or summary.get('fetched') != summary.get('requested'):
+              raise SystemExit(f'Targeted first-party rehydration incomplete: summary={summary} errors={errors}')
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Require exact current EAN and exact current first-party perspective=9 image
+        id: live
+        if: steps.targets.outputs.count != '0'
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-fresh-food-input
+          mkdir -p mercadona-fresh-food-input
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          targets = {
+              str(row['product_id']): row
+              for row in (
+                  json.loads(line)
+                  for line in Path('fresh-food-targets.jsonl').read_text(encoding='utf-8').splitlines()
+                  if line.strip()
+              )
+          }
+          selected = []
+          missing_current_ean = []
+          reassigned = []
+          unmatched_p9 = []
+          for line in Path('mercadona-first-party-fresh-food-live/details-00.jsonl').read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              product = json.loads(line)
+              pid = str(product.get('product_id') or '').strip()
+              target = targets.get(pid)
+              if target is None:
+                  continue
+              anchor_ean = str(target.get('ean') or '').strip()
+              current_ean = str(product.get('ean') or '').strip()
+              if not current_ean:
+                  missing_current_ean.append(pid)
+                  continue
+              if current_ean != anchor_ean:
+                  reassigned.append(pid)
+                  continue
+              anchor_url = str(target.get('p9_url') or '').strip()
+              photos = product.get('photos') if isinstance(product.get('photos'), list) else []
+              matches = [
+                  (idx, photo)
+                  for idx, photo in enumerate(photos)
+                  if isinstance(photo, dict)
+                  and str(photo.get('perspective') or '') == '9'
+                  and str(photo.get('zoom') or '') == anchor_url
+              ]
+              if len(matches) != 1:
+                  unmatched_p9.append(pid)
+                  continue
+              image_index, photo = matches[0]
+              candidate = dict(product)
+              candidate['photos'] = [dict(photo)]
+              candidate['ingredients'] = None
+              candidate['_fresh_food_anchor_meta'] = {
+                  'anchor_ean': anchor_ean,
+                  'current_ean': current_ean,
+                  'anchor_image_url': anchor_url,
+                  'current_image_index': image_index,
+                  'perspective': 9,
+                  'identity_basis': 'EXACT_CURRENT_EAN_MATCH',
+                  'image_basis': 'EXACT_HISTORICAL_ANCHOR_URL_EQUALS_CURRENT_FIRST_PARTY_PERSPECTIVE_9_URL',
+                  'anchor_artifact_run_id': 34028348397,
+              }
+              selected.append(candidate)
+
+          selected.sort(key=lambda row: str(row.get('product_id') or ''))
+          out = Path('mercadona-fresh-food-input')
+          (out / 'candidates.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          summary = {
+              'target_count': len(targets),
+              'live_validated_count': len(selected),
+              'live_validated_product_ids': [str(row.get('product_id') or '') for row in selected],
+              'missing_current_ean': sorted(missing_current_ean),
+              'reassigned_ean': sorted(reassigned),
+              'unmatched_exact_p9_url': sorted(unmatched_p9),
+              'identity_policy': 'EXACT_CURRENT_EAN_MATCH',
+              'image_policy': 'EXACT_HISTORICAL_ANCHOR_URL_EQUALS_CURRENT_FIRST_PARTY_PERSPECTIVE_9_URL',
+              'images_persisted': False,
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          (out / 'live-validation-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if not selected:
+              raise SystemExit('No historical fresh-food anchor survived exact current EAN + perspective=9 URL validation')
+          PY
+          count=$(python - <<'PY'
+          import json
+          print(json.load(open('mercadona-fresh-food-input/live-validation-summary.json', encoding='utf-8'))['live_validated_count'])
+          PY
+          )
+          echo "count=$count" >> "$GITHUB_OUTPUT"
 
       - name: Install independent OCR engines and visual detector dependencies
+        if: steps.targets.outputs.count != '0'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
           python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
           python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
 
-      - name: Run routing and conservative parser regressions
+      - name: Run conservative parser and OCR safety regressions
+        if: steps.targets.outputs.count != '0'
         working-directory: tools/catalog
         run: |
           python -m unittest -v \
-            test_audit_mercadona_exact_residual_fresh_food_candidates.py \
             test_label_easyocr_extractor.py \
             test_nutrition_label_reader.py \
             test_nutrition_ocr_ensemble.py \
             test_mercadona_label_pipeline.py \
             test_mercadona_ocr_safety_regressions.py
-          python -m py_compile \
-            audit_mercadona_exact_residual_fresh_food_candidates.py \
-            mercadona_neural_ocr_wave.py
+          python -m py_compile mercadona_neural_ocr_wave.py
 
-      - name: Materialize exact current fresh-food residual
+      - name: OCR exact live-validated fresh-food REVIEW residual
+        if: steps.targets.outputs.count != '0'
         working-directory: tools/catalog
         run: |
-          python audit_mercadona_exact_residual_fresh_food_candidates.py \
-            --products mercadona-first-party-final/products.jsonl \
-            --residual-p9 mercadona-current-ocr-residual-audit/residual-p9.jsonl \
-            --out mercadona-exact-residual-fresh-food-audit
-
-      - name: OCR exact fresh-food residual shard
-        working-directory: tools/catalog
-        run: |
+          rm -rf mercadona-neural-ocr-exact-residual-fresh-food
           python mercadona_neural_ocr_wave.py \
-            --products mercadona-exact-residual-fresh-food-audit/candidates.jsonl \
+            --products mercadona-fresh-food-input/candidates.jsonl \
             --out mercadona-neural-ocr-exact-residual-fresh-food \
             --eligibility-mode p9-no-ingredients-all \
-            --shard-index ${{ matrix.shard }} \
-            --shard-count 2 \
+            --shard-index 0 \
+            --shard-count 1 \
             --limit 0 \
             --delay 0.5
 
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mercadona-neural-ocr-exact-residual-fresh-food-${{ matrix.shard }}
-          path: |
-            tools/catalog/mercadona-neural-ocr-exact-residual-fresh-food/
-            tools/catalog/mercadona-exact-residual-fresh-food-audit/summary.json
-          retention-days: 30
-          if-no-files-found: warn
-
-  merge:
-    runs-on: ubuntu-24.04
-    needs: ocr
-    if: ${{ always() && needs.ocr.result == 'success' }}
-    timeout-minutes: 15
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: mercadona-neural-ocr-exact-residual-fresh-food-*
-          path: input
-          merge-multiple: true
-
-      - name: Merge, persist staging, and enforce conservative contract
+      - name: Persist auditable staging and enforce conservative DECLARED contract
+        id: persist
+        if: steps.targets.outputs.count != '0'
+        working-directory: tools/catalog
+        shell: bash
         run: |
+          set -euo pipefail
           python - <<'PY'
           from collections import Counter
-          import glob
           import json
           import sqlite3
           from pathlib import Path
 
-          expected_ids = {'17564', '81416', '81422', '87196', '87254', '68462', '69287', '69495'}
-          rows = []
-          for path in sorted(glob.glob('input/**/results-*.jsonl', recursive=True)):
-              for line in Path(path).read_text(encoding='utf-8').splitlines():
-                  if line.strip():
-                      rows.append(json.loads(line))
-
-          audit_paths = sorted(glob.glob('input/**/summary.json', recursive=True))
-          audit_summaries = []
-          for path in audit_paths:
-              value = json.loads(Path(path).read_text(encoding='utf-8'))
-              if value.get('audit_policy_version') == '1.0.0' and value.get('candidate_universe') == 8:
-                  audit_summaries.append(value)
-          if not audit_summaries:
-              raise SystemExit('missing exact fresh-food routing summary')
-          if any(set(str(value) for value in s.get('candidate_product_ids') or []) != expected_ids for s in audit_summaries):
-              raise SystemExit('exact fresh-food routing summaries disagree')
-
+          result_path = Path('mercadona-neural-ocr-exact-residual-fresh-food/results-00.jsonl')
+          rows = [json.loads(line) for line in result_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          live_summary = json.loads(Path('mercadona-fresh-food-input/live-validation-summary.json').read_text(encoding='utf-8'))
+          selection = json.loads(Path('fresh-food-target-selection.json').read_text(encoding='utf-8'))
+          expected_ids = set(live_summary.get('live_validated_product_ids') or [])
           ids = [str(row.get('product_id') or '') for row in rows]
           duplicate_ids = sorted(pid for pid, count in Counter(ids).items() if pid and count > 1)
           provenance_errors = []
@@ -157,12 +334,16 @@ jobs:
           def disqualifying_attempt(attempt):
               ensemble = (attempt or {}).get('ensemble') or {}
               reasons = [str(reason) for reason in (ensemble.get('reasons') or [])]
-              return (
-                  bool(ensemble.get('values_conflict'))
-                  or any(reason.startswith('OCR_FIELD_CONFLICT') for reason in reasons)
-                  or any(reason.startswith('OCR_SAME_ENGINE_CONFLICT') for reason in reasons)
-                  or any(reason.startswith('ENERGY_MACRO_MISMATCH') for reason in reasons)
-                  or any(reason.startswith('MULTIPLE_NUTRITION_COLUMNS') for reason in reasons)
+              prefixes = (
+                  'OCR_FIELD_CONFLICT',
+                  'OCR_SAME_ENGINE_CONFLICT',
+                  'OCR_BASIS_CONFLICT',
+                  'ENERGY_MACRO_MISMATCH',
+                  'MULTIPLE_NUTRITION_COLUMNS',
+                  'IMPOSSIBLE_',
+              )
+              return bool(ensemble.get('values_conflict')) or any(
+                  reason.startswith(prefix) for reason in reasons for prefix in prefixes
               )
 
           declared_products = []
@@ -181,7 +362,10 @@ jobs:
 
               if row.get('status') != 'DECLARED':
                   continue
-              accepted = next((attempt for attempt in (row.get('attempts') or []) if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+              accepted = next(
+                  (attempt for attempt in (row.get('attempts') or []) if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'),
+                  None,
+              )
               ensemble = (accepted or {}).get('ensemble') or {}
               nutrition = row.get('nutrition') or {}
               required = ('calories', 'protein_g', 'carbohydrate_g', 'fat_g')
@@ -206,9 +390,9 @@ jobs:
 
           counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
           safety_assessment = 'VALIDATED' if (
-              len(rows) == 8
-              and set(ids) == expected_ids
-              and len(set(ids)) == 8
+              set(ids) == expected_ids
+              and len(rows) == len(expected_ids)
+              and len(set(ids)) == len(expected_ids)
               and not invalid_declared
               and not duplicate_ids
               and not provenance_errors
@@ -218,9 +402,13 @@ jobs:
               'source': 'MERCADONA_FIRST_PARTY/label image',
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
               'redistribution_allowed': False,
-              'routing_policy': 'exact artifact-derived current perspective=9 residual restricted to fresh-food top-level categories and no structured ingredients/legal/allergen signal; routing only, no semantic classification',
-              'candidate_universe': 8,
-              'candidate_product_ids': sorted(expected_ids),
+              'routing_policy': 'persisted exact historical fresh-food p9 anchors; only current canonical REVIEW rows; exact live EAN equality and exact live perspective=9 URL equality required before OCR',
+              'anchor_source_artifact_run_id': 34028348397,
+              'strict_audit_run_id': selection.get('strict_audit_run_id'),
+              'historical_anchor_count': selection.get('anchor_count'),
+              'canonical_review_targets': selection.get('selected_review_count'),
+              'live_validated_targets': len(expected_ids),
+              'live_validation': live_summary,
               'processed': len(rows),
               'distinct_products_processed': len(set(ids)),
               'status_counts': dict(sorted(counts.items())),
@@ -232,39 +420,52 @@ jobs:
               'images_persisted': False,
               'missing_values_inferred': False,
               'structured_api_macros_claimed': False,
+              'cross_run_value_fusion': False,
               'CLASSIFIED': 0,
               'MENU_ELIGIBLE': 0,
-              'current_residual_audit_baseline': {
-                  'inventory_total': 4280,
-                  'artifact_reconstructed_distinct_processed': 2928,
-                  'residual_before_wave': 1352,
-              },
               'safety_assessment': safety_assessment,
           }
 
-          out = Path('merged')
+          out = Path('mercadona-neural-ocr-exact-residual-fresh-food-merged')
           out.mkdir(exist_ok=True)
-          (out / 'results.jsonl').write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows), encoding='utf-8')
+          (out / 'results.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
           (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (out / 'live-validation-summary.json').write_text(json.dumps(live_summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
           db = sqlite3.connect(out / 'staging.sqlite')
           db.execute('CREATE TABLE ocr_results (product_id TEXT PRIMARY KEY, status TEXT NOT NULL, evidence_level TEXT NOT NULL, source TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, payload_json TEXT NOT NULL)')
           for row in rows:
               db.execute('INSERT INTO ocr_results VALUES (?, ?, ?, ?, ?, ?)', (
-                  str(row.get('product_id') or ''), str(row.get('status') or 'UNKNOWN'), str(row.get('evidence_level') or ''),
-                  'MERCADONA_FIRST_PARTY/label image', 0, json.dumps(row, ensure_ascii=False, sort_keys=True)))
+                  str(row.get('product_id') or ''),
+                  str(row.get('status') or 'UNKNOWN'),
+                  str(row.get('evidence_level') or ''),
+                  'MERCADONA_FIRST_PARTY/label image',
+                  0,
+                  json.dumps(row, ensure_ascii=False, sort_keys=True),
+              ))
           db.commit()
           db.close()
 
+          Path('fresh-food-declared-count.txt').write_text(str(counts.get('DECLARED', 0)), encoding='utf-8')
           print(json.dumps(summary, ensure_ascii=False, indent=2))
           if safety_assessment != 'VALIDATED':
               raise SystemExit('exact fresh-food safety/coverage checks failed; do not promote nutrition')
           PY
+          declared=$(cat fresh-food-declared-count.txt)
+          echo "declared=$declared" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.targets.outputs.count != '0'
         with:
           name: mercadona-neural-ocr-exact-residual-fresh-food-merged
-          path: merged/
-          retention-days: 30
+          path: tools/catalog/mercadona-neural-ocr-exact-residual-fresh-food-merged/
+          retention-days: 90
           if-no-files-found: warn
+
+      - name: Reconcile strict historical canonical union after a usable rescue
+        if: steps.persist.outputs.declared != '' && steps.persist.outputs.declared != '0'
+        run: |
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
