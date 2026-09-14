@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.0.1",
   "scope": "MERCADONA_FIRST_PARTY_2026-08-27_HISTORICAL_CUT_CONSERVATIVE_OCR",
-  "generated_at": "2026-09-14T02:09:31Z",
+  "generated_at": "2026-09-14T03:21:32Z",
   "inventory_products": 4280,
   "source": "MERCADONA_FIRST_PARTY/label image",
   "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
@@ -13,16 +13,16 @@
     "processed_products": 2969,
     "processed_pct_inventory": 69.3692,
     "status_counts": {
-      "DECLARED": 334,
-      "REVIEW": 2635
+      "DECLARED": 335,
+      "REVIEW": 2634
     },
-    "usable_complete": 334,
-    "usable_complete_pct_inventory": 7.8037,
+    "usable_complete": 335,
+    "usable_complete_pct_inventory": 7.8271,
     "usable_field_counts": {
-      "calories": 334,
-      "fat_g": 334,
-      "carbohydrate_g": 334,
-      "protein_g": 334
+      "calories": 335,
+      "fat_g": 335,
+      "carbohydrate_g": 335,
+      "protein_g": 335
     },
     "identity_reconciliation": {
       "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
@@ -129,6 +129,56 @@
       }
     ]
   },
+  "reversed_ambiguity_guard_review_doctr_rerun": {
+    "workflow_run_id": 34801048041,
+    "head_sha": "583ce2fef034d088171bb1f0cd95a38688cf3150",
+    "selected": 8,
+    "selected_with_structured_ingredients": 7,
+    "selected_without_structured_ingredients": 1,
+    "declared": 1,
+    "review": 7,
+    "errors": 0,
+    "declared_rate_pct": 12.5,
+    "tests_passed": 77,
+    "acceptance_policy_changed": false,
+    "cross_run_value_fusion": false,
+    "current_observation_must_satisfy_declared_contract_independently": true,
+    "selection_policy": "CURRENT_HISTORICAL_DECLARED_TO_REVIEW_NON_CONTRADICTORY; CANONICAL_EXCLUDED_RUNS_IGNORED; EXACT_LATEST_RAW_EAN; EXACT_CURRENT_FIRST_PARTY_EAN; EXACT_SAME_PERSPECTIVE_9_IMAGE_URL",
+    "declared_products": [
+      {
+        "product_id": "58298",
+        "ean": "2105600582982",
+        "name": "Jamón de bellota ibérico 100% cortado a tapas",
+        "perspective": 9,
+        "basis": "100_g",
+        "independent_engine_families": 2,
+        "corroborated_fields": 4,
+        "nutrition": {
+          "calories": 360.0,
+          "fat_g": 24.0,
+          "carbohydrate_g": 4.0,
+          "protein_g": 32.0
+        }
+      }
+    ],
+    "artifacts": [
+      {
+        "id": 10330907992,
+        "name": "mercadona-review-regression-doctr-input",
+        "sha256": "10e94ee5b50518965b56c9d59ecf942951da22c0303f4112bbb52e8fc514abb1"
+      },
+      {
+        "id": 10331123079,
+        "name": "mercadona-review-regression-doctr-pilot-0",
+        "sha256": "43fa4b82527fe3e8b7ba128990305faca901776b787cce88170f1d2116b00728"
+      },
+      {
+        "id": 10331243888,
+        "name": "mercadona-review-regression-doctr-pilot-1",
+        "sha256": "7e64838869aea9620b80df5d35b2623bf94b0f04bc56be800e6c91e127d82e6e"
+      }
+    ]
+  },
   "scope_quarantine": {
     "policy": "Exclude complete workflows explicitly defined as post-cut current-delta discovery instead of hard-coding product IDs into canonical reconciliation.",
     "workflow_path_pattern": ".github/workflows/catalog-mercadona-*-current-delta.yml",
@@ -150,8 +200,8 @@
     },
     "fully_corroborated_but_still_review": 0,
     "complete_but_safety_blocked": 50,
-    "hard_ocr_conflict": 227,
-    "energy_macro_incoherence": 106,
+    "hard_ocr_conflict": 226,
+    "energy_macro_incoherence": 105,
     "ambiguous_table": 90,
     "no_visual_region_without_ocr_signal": 0,
     "REVIEW_promoted_by_audit": 0
@@ -165,10 +215,10 @@
     "caveat": "The conservative scope gate removes evidence known to originate only from a later current snapshot, but the expired original 4,280-product artifact still prevents a complete independent parity proof for the whole historical identity map."
   },
   "audit": {
-    "workflow_run_id": 34797496041,
-    "artifact_id": 10330367775,
-    "artifact_sha256": "ea70c8c791f99c652c3b189bc5aa04313896ab02b6fede7c7a91d96a97bac943",
-    "head_sha": "63eb3e473a3fce979d2cb7262dc590040dc695e1",
+    "workflow_run_id": 34801540704,
+    "artifact_id": 10331419415,
+    "artifact_sha256": "47ffb44ce645691710ecb0193bd42843d26a5102702c36479eccc801e7419e9b",
+    "head_sha": "583ce2fef034d088171bb1f0cd95a38688cf3150",
     "tests_passed": 36,
     "workflow_run_conclusion": "success"
   },
