@@ -15,7 +15,7 @@ from mercadona_nutrition_label_reader import (
 )
 from nutrition_label_reader import _fold, _number_immediately_before, _nutrition_block
 
-READER_VERSION = "1.0.3"
+READER_VERSION = "1.0.4"
 
 _FAT_PATTERNS = (
     r"(?:^|\n)\s*grasas?(?:\s*/\s*lipidos?)?\b",
@@ -45,6 +45,16 @@ _HARD_REASON_PREFIXES = (
 # hard blockers.
 _ALLOWED_FORWARD_NOISE_REASONS = frozenset({"IMPOSSIBLE_CARBOHYDRATE_G"})
 _SINGLE_REVERSED_PREFIX = "SINGLE_REVERSED_MACRO_CANDIDATE:"
+_TRAILING_INTERLEAVED_REASON = "MERCADONA_TRAILING_INTERLEAVED_MACRO_LABEL_EVIDENCE"
+_DEDICATED_MACRO_CELL = re.compile(
+    r"\s*[<>]?\s*\d{1,3}(?:[.,]\d{1,2})?\s*(?:g|9|q|yg|y)?\s*",
+    flags=re.I,
+)
+_TRAILING_MACRO_LABELS = {
+    "fat_g": re.compile(r"\bgrasas?\s*/\s*l[ií]pidos?\s*$", flags=re.I),
+    "carbohydrate_g": re.compile(r"\bhidratos?\s+de\s+carbono\s*$", flags=re.I),
+    "protein_g": re.compile(r"\bprote[ií]nas?\s*$", flags=re.I),
+}
 
 
 def _repair_observed_row_label_typos(text: str) -> str:
@@ -65,6 +75,62 @@ def _repair_observed_row_label_typos(text: str) -> str:
         text,
     )
     return text
+
+
+def _repair_interleaved_trailing_macro_labels(text: str) -> tuple[str, bool]:
+    """Split only the observed all-three trailing-row-label OCR structure.
+
+    Product 6063 docTR interleaves the package-text column before each nutrition
+    row label on the same OCR line, while the printed numeric cells remain on the
+    immediately following dedicated lines. A generic inline-label repair would be
+    unsafe because ingredient prose can itself mention fat/carbohydrate/protein.
+
+    This Mercadona-only repair therefore requires all three core macro labels to
+    occur at the *end* of non-empty prose lines, each immediately followed by a
+    dedicated numeric cell, plus an explicit per-100 basis and a kcal observation.
+    It inserts row boundaries only; it never changes a digit or supplies a value.
+    The caller keeps any resulting complete tuple in REVIEW so an independent OCR
+    family must still corroborate it before ensemble promotion.
+    """
+    original = text or ""
+    folded = _fold(original)
+    if "kcal" not in folded:
+        return original, False
+    if not re.search(r"\b100\s*(?:g|9|q|yg|y|m(?:l|i|1))\b", folded, flags=re.I):
+        return original, False
+
+    lines = original.splitlines()
+    if len(lines) < 2:
+        return original, False
+
+    hits: dict[str, tuple[int, re.Match[str]]] = {}
+    for key, pattern in _TRAILING_MACRO_LABELS.items():
+        for index, line in enumerate(lines[:-1]):
+            match = pattern.search(line)
+            if match is None:
+                continue
+            if not line[:match.start()].strip():
+                continue
+            if _DEDICATED_MACRO_CELL.fullmatch(lines[index + 1]) is None:
+                continue
+            hits[key] = (index, match)
+            break
+
+    if set(hits) != set(_TRAILING_MACRO_LABELS):
+        return original, False
+
+    by_index = {index: match for index, match in hits.values()}
+    repaired: list[str] = []
+    for index, line in enumerate(lines):
+        match = by_index.get(index)
+        if match is None:
+            repaired.append(line)
+            continue
+        prefix = line[:match.start()].rstrip()
+        label = line[match.start():].strip()
+        repaired.append(prefix)
+        repaired.append(label)
+    return "\n".join(repaired), True
 
 
 def _energy_residual(nutrition: dict[str, float]) -> float:
@@ -320,8 +386,27 @@ def _full_value_before_label_evidence(
     )
 
 
+def _keep_trailing_interleaved_evidence_review(
+    result: LabelReadResult,
+    *,
+    extraction_confidence: float,
+) -> LabelReadResult:
+    reasons = tuple(result.reasons)
+    if _TRAILING_INTERLEAVED_REASON not in reasons:
+        reasons = reasons + (_TRAILING_INTERLEAVED_REASON,)
+    return LabelReadResult(
+        status="REVIEW",
+        basis=result.basis,
+        nutrition=result.nutrition,
+        confidence=min(result.confidence, extraction_confidence, .84),
+        reasons=reasons,
+        normalized_text=result.normalized_text,
+    )
+
+
 def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> LabelReadResult:
     repaired_text = _repair_observed_row_label_typos(text)
+    repaired_text, trailing_interleaved = _repair_interleaved_trailing_macro_labels(repaired_text)
     result = _read_nutrition_label(
         repaired_text,
         extraction_confidence=extraction_confidence,
@@ -331,9 +416,16 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
         extraction_confidence=extraction_confidence,
     )
     if structural is not None:
-        return structural
-    two_cell = _single_macro_two_cell_value_before_label_evidence(
-        result,
-        extraction_confidence=extraction_confidence,
-    )
-    return two_cell if two_cell is not None else result
+        final = structural
+    else:
+        two_cell = _single_macro_two_cell_value_before_label_evidence(
+            result,
+            extraction_confidence=extraction_confidence,
+        )
+        final = two_cell if two_cell is not None else result
+    if trailing_interleaved and final.status != "NOT_NUTRITION_LABEL":
+        return _keep_trailing_interleaved_evidence_review(
+            final,
+            extraction_confidence=extraction_confidence,
+        )
+    return final

@@ -123,6 +123,54 @@ Sal 0.2 g
         self.assertIn("MISSING_CORE:protein_g", result.reasons)
         self.assertNotIn("MERCADONA_TWO_CELL_VALUE_BEFORE_LABEL_EVIDENCE:protein_g", result.reasons)
 
+    def test_interleaved_trailing_macro_labels_expose_only_observed_cells_as_review_evidence(self):
+        # Product 6063 docTR ordering: the package-text column is emitted first,
+        # then the nutrition row label at the end of the same OCR line. Numeric
+        # cells remain on their own following lines. Splitting only those three
+        # observed row labels must not invent or alter a numeric value; this
+        # structural repair stays REVIEW so another OCR family must corroborate it.
+        observed = """INFORMACIÓN NUTRICIONAL
+Valores medios / médios
+Por 100g
+Porción / Porção
+texto de ingredientes Grasas / Lípidos
+179
+15g
+texto de ingredientes Hidratos de carbono
+399
+33g
+texto de ingredientes Proteínas
+3.5g
+Sal
+0.38g
+Valor energético / Energia 1364 kJ / 326 kcal
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.96)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertEqual(result.basis, "100_g")
+        self.assertEqual(result.nutrition, {
+            "calories": 326.0,
+            "fat_g": 17.0,
+            "carbohydrate_g": 39.0,
+            "protein_g": 3.5,
+        })
+        self.assertIn("MERCADONA_TRAILING_INTERLEAVED_MACRO_LABEL_EVIDENCE", result.reasons)
+
+    def test_one_trailing_nutrient_word_in_ingredient_prose_is_not_rewritten(self):
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 1364 kJ / 326 kcal
+Grasas 17 g
+Hidratos de carbono 39 g
+ingredientes con proteínas
+3.5g
+Sal 0.38 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.96)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertNotIn("protein_g", result.nutrition or {})
+        self.assertNotIn("MERCADONA_TRAILING_INTERLEAVED_MACRO_LABEL_EVIDENCE", result.reasons)
+
     def test_normal_forward_rows_are_unchanged(self):
         observed = """Información nutricional por 100 g
 Valor energético 711 kJ / 170 kcal
