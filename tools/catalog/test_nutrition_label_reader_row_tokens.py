@@ -120,7 +120,7 @@ class RowTokenRegressionTest(unittest.TestCase):
         )
         r = read_nutrition_label(text, extraction_confidence=.96)
         self.assertEqual(r.status, 'REVIEW', r)
-        self.assertEqual(r.nutrition['energy_kcal_per_100'], 369.0)
+        self.assertEqual(r.nutrition['calories'], 369.0)
         self.assertEqual(r.nutrition['fat_g'], 1.5)
         self.assertEqual(r.nutrition['carbohydrate_g'], 85.0)
         self.assertEqual(r.nutrition['protein_g'], 2.1)
