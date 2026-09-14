@@ -1,0 +1,48 @@
+name: Catalog Mercadona historical artifact recovery probe
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-historical-artifact-recovery-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Recover exact 2026-08-27 inventory blob
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://productionresultssa9.blob.core.windows.net/actions-results/2efd33d3-d84a-40a4-a600-119f3f4498cc/workflow-job-run-bc46f981-cbb6-5276-981b-5df8a99640e2/artifacts/95cde17adebeec30ba68a2305d48cb401307f47f98e17dc79b568a6ca5d7f03a.zip'
+          expected='7e7a24bc5e8b468f3bf0fd620ad744b7050ab115be4e89e539bef5b757eaf88c'
+          curl --fail --location --retry 2 --retry-all-errors --output inventory.zip "$url"
+          actual=$(sha256sum inventory.zip | awk '{print $1}')
+          test "$actual" = "$expected"
+          mkdir recovered
+          unzip -q inventory.zip -d recovered
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('recovered/products.jsonl')
+          if not path.exists():
+              raise SystemExit('Recovered inventory lacks products.jsonl')
+          rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if len(rows) != 4280:
+              raise SystemExit(f'Expected 4280 products, got {len(rows)}')
+          ids = [str(row.get('product_id') or '') for row in rows]
+          if any(not value for value in ids) or len(set(ids)) != 4280:
+              raise SystemExit('Recovered inventory product IDs are missing or non-unique')
+          print(json.dumps({'recovered_products': len(rows), 'unique_product_ids': len(set(ids))}, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-first-party-inventory-recovered-2026-08-27
+          path: recovered/
+          retention-days: 14
+          if-no-files-found: error
