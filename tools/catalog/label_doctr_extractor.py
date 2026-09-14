@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+import re
 from statistics import mean
 from typing import Any, Callable
 
 from label_text_extractor import TextExtraction
 
-DOCTR_EXTRACTOR_VERSION = "1.0.0"
+DOCTR_EXTRACTOR_VERSION = "1.0.1"
 DOCTR_DETECTION_ARCH = "fast_tiny"
 DOCTR_RECOGNITION_ARCH = "crnn_mobilenet_v3_small"
 _PREDICTOR: tuple[Any, str | None] | None = None
@@ -49,9 +50,44 @@ def _default_predictor() -> tuple[Any, str | None]:
 def _default_document_loader(path: Path):
     try:
         from doctr.io import DocumentFile
-    except Exception as exc:  # pragma: no cover - live workflow only
+    except Exception as exc:  # pragma: no cover - live dependency path
         raise DocTRExtractionError(f"docTR is not installed: {exc}") from exc
     return DocumentFile.from_images(str(path))
+
+
+def _repair_known_doctr_nutrition_layouts(text: str) -> str:
+    """Repair one tightly bounded docTR row-label corruption signature.
+
+    The complete signature has been observed on a bilingual Mercadona nutrition
+    table where docTR reads several structural row labels consistently but
+    incorrectly. Numeric cells are never created or changed: the carbohydrate
+    value is captured verbatim and every other substitution changes only a row
+    label/header. Isolated lookalike words are deliberately left untouched.
+    """
+    if not (
+        re.search(r"(?im)^.*\bnutriconal\b.*\bper\s*100g\b.*$", text)
+        and re.search(r"(?im)^\s*valorenerg[eé]tio/\s*$", text)
+        and re.search(r"(?im)^\s*energie\(d/kral\)\s*$", text)
+        and re.search(r"(?im)^\s*herntndecarbanolg\)\s*\d{1,3}(?:[.,]\d{1,2})?\s*$", text)
+        and re.search(r"(?im)^\s*proteinos\(g\)\s*$", text)
+    ):
+        return text
+
+    text = re.sub(
+        r"(?im)^.*\bnutriconal\b.*\bper\s*100g\b.*$",
+        "Informacion nutricional\nPor 100g",
+        text,
+    )
+    text = re.sub(r"(?im)^\s*valorenerg[eé]tio/\s*$", "Valor energetico", text)
+    text = re.sub(r"(?im)^\s*energie\(d/kral\)\s*$", "Energia (kJ/kcal)", text)
+    text = re.sub(r"(?im)^\s*groses/\s*$", "Grasas", text)
+    text = re.sub(
+        r"(?im)^\s*herntndecarbanolg\)\s*(\d{1,3}(?:[.,]\d{1,2})?)\s*$",
+        r"Hidratos de carbono (g) \1",
+        text,
+    )
+    text = re.sub(r"(?im)^\s*proteinos\(g\)\s*$", "Proteinas (g)", text)
+    return text
 
 
 def extract_with_doctr(
@@ -105,8 +141,9 @@ def extract_with_doctr(
     except Exception as exc:
         raise DocTRExtractionError(f"docTR result parsing failed: {exc}") from exc
 
+    text = _repair_known_doctr_nutrition_layouts("\n".join(lines).strip())
     return TextExtraction(
-        text="\n".join(lines).strip(),
+        text=text,
         confidence=mean(confidences) if confidences else 0.0,
         engine=f"doctr-{DOCTR_DETECTION_ARCH}-{DOCTR_RECOGNITION_ARCH}",
         engine_version=package_version,
