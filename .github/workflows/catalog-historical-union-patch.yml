@@ -1,0 +1,101 @@
+name: Catalog historical OCR union patch
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-historical-union-patch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Patch processed-union semantics and regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path('tools/catalog/summarize_mercadona_ocr_run_union.py')
+          text = source.read_text(encoding='utf-8')
+
+          old_doc = '''    Replay wrappers and rows materialized by a prior canonical audit are derived\n    evidence. They can prove that the product occurred in the processed union, but\n    they must never become a newer live status merely because their workflow ran\n    later than the OCR producer that they summarize.\n'''
+          new_doc = '''    Replay wrappers and rows materialized by a prior canonical audit are derived\n    evidence. They must not establish historical-cut processed coverage or become a\n    newer live status: an older canonical materialization may itself contain later\n    current-delta products and would otherwise leak them back into the fixed cut.\n'''
+          if old_doc not in text:
+              raise SystemExit('expected canonical exclusion docstring not found')
+          text = text.replace(old_doc, new_doc, 1)
+
+          old_helper = '''def is_canonical_status_row(row: dict[str, Any]) -> bool:\n    \"\"\"Only raw live OCR rows may replace canonical product status.\"\"\"\n    return canonical_exclusion_reason(row) is None\n\n\n'''
+          new_helper = '''def is_canonical_status_row(row: dict[str, Any]) -> bool:\n    \"\"\"Only raw live OCR rows may replace canonical product status.\"\"\"\n    return canonical_exclusion_reason(row) is None\n\n\ndef is_processed_union_row(row: dict[str, Any]) -> bool:\n    \"\"\"Only raw live OCR evidence may establish fixed-cut processed coverage.\"\"\"\n    return canonical_exclusion_reason(row) is None\n\n\n'''
+          if old_helper not in text:
+              raise SystemExit('expected canonical helper block not found')
+          text = text.replace(old_helper, new_helper, 1)
+
+          old_main = '''            by_run[run_id].add(product_id)\n            by_run_status[run_id][status].add(product_id)\n            files_by_run[run_id].add(str(rel))\n            if is_canonical_status_row(row):\n                strict = has_strict_raw_provenance(row)\n'''
+          new_main = '''            if is_processed_union_row(row):\n                by_run[run_id].add(product_id)\n                by_run_status[run_id][status].add(product_id)\n                files_by_run[run_id].add(str(rel))\n            if is_canonical_status_row(row):\n                strict = has_strict_raw_provenance(row)\n'''
+          if old_main not in text:
+              raise SystemExit('expected processed-union block not found')
+          text = text.replace(old_main, new_main, 1)
+          source.write_text(text, encoding='utf-8')
+
+          tests = Path('tools/catalog/test_summarize_mercadona_ocr_run_union.py')
+          text = tests.read_text(encoding='utf-8')
+          old_import = '''    classify_review_reason_families,\n    is_canonical_status_row,\n    reconcile_latest_observations,\n'''
+          new_import = '''    classify_review_reason_families,\n    is_canonical_status_row,\n    is_processed_union_row,\n    reconcile_latest_observations,\n'''
+          if old_import not in text:
+              raise SystemExit('expected test import block not found')
+          text = text.replace(old_import, new_import, 1)
+
+          old_replay_assert = '''        self.assertTrue(is_canonical_status_row(live_row))\n        self.assertFalse(is_canonical_status_row(replay_wrapper))\n'''
+          new_replay_assert = '''        self.assertTrue(is_canonical_status_row(live_row))\n        self.assertTrue(is_processed_union_row(live_row))\n        self.assertFalse(is_canonical_status_row(replay_wrapper))\n        self.assertFalse(is_processed_union_row(replay_wrapper))\n'''
+          if old_replay_assert not in text:
+              raise SystemExit('expected replay assertions not found')
+          text = text.replace(old_replay_assert, new_replay_assert, 1)
+
+          old_materialized_assert = '''        self.assertTrue(is_canonical_status_row(raw_live_row))\n        self.assertFalse(is_canonical_status_row(materialized_summary_row))\n'''
+          new_materialized_assert = '''        self.assertTrue(is_canonical_status_row(raw_live_row))\n        self.assertTrue(is_processed_union_row(raw_live_row))\n        self.assertFalse(is_canonical_status_row(materialized_summary_row))\n        self.assertFalse(is_processed_union_row(materialized_summary_row))\n'''
+          if old_materialized_assert not in text:
+              raise SystemExit('expected materialized assertions not found')
+          text = text.replace(old_materialized_assert, new_materialized_assert, 1)
+          tests.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Run conservative union tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_summarize_mercadona_ocr_run_union.py \
+            test_materialize_mercadona_ocr_canonical.py \
+            test_audit_mercadona_current_ocr_residual.py \
+            test_audit_mercadona_current_review_failure_modes.py
+          python -m py_compile \
+            summarize_mercadona_ocr_run_union.py \
+            materialize_mercadona_ocr_canonical.py \
+            audit_mercadona_current_ocr_residual.py \
+            audit_mercadona_current_review_failure_modes.py
+
+      - name: Commit verified patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/catalog/summarize_mercadona_ocr_run_union.py tools/catalog/test_summarize_mercadona_ocr_run_union.py
+          git diff --cached --check
+          git commit -m 'fix(catalog): exclude derived OCR rows from processed union'
+          git push origin HEAD:agent/catalog-phase1
