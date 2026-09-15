@@ -1,0 +1,22 @@
+name: Catalog Mercadona REVIEW regression current-head trigger
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-review-regression-current-head-trigger.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Dispatch REVIEW regression docTR pilot on current branch head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-review-regression-doctr-pilot.yml --repo frandavid100/rumbo --ref agent/catalog-phase1
