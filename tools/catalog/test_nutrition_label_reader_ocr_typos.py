@@ -152,6 +152,29 @@ Proteínas 18 g 21 g
         self.assertEqual(r.status, "REVIEW", r)
         self.assertIn("MULTIPLE_NUTRITION_COLUMNS", r.reasons)
 
+    def test_bilingual_salt_row_does_not_trigger_reversed_protein_guard(self):
+        observed = """INFORMACIÓN NUTRICIONAL/NUTRITION DECLARATION
+Por/Per 100 ml
+Valor energético /Energy
+111 kJ/26 kcal
+Grasas / Fat
+0 g
+De las cuales saturadas / of which saturates
+0 g
+Hidratos de carbono/Carbohydrate
+6.2 g
+De los cuales azúcares / of which sugars
+3.4 g
+Proteínas / Protein
+0.3 g
+Sal / Salt
+0 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition["protein_g"], 0.3)
+        self.assertFalse(any(reason.startswith("SINGLE_REVERSED_MACRO_CANDIDATE") for reason in r.reasons), r)
+
 
 if __name__ == "__main__":
     unittest.main()
