@@ -19,7 +19,7 @@ CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 MIN_PRESENT_CORE_FIELDS = 2
 MIN_BOUNDED_HISTORICAL_PRESENT_CORE_FIELDS = 1
 MIN_POST_DOCTR_ENGINE_FAMILIES_FOR_EASYOCR = 2
-MIN_POST_DOCTR_CORROBORATED_FIELDS_FOR_EASYOCR = 2
+MIN_POST_DOCTR_CORROBORATED_FIELDS_FOR_EASYOCR = 1
 EASYOCR_VARIANT_NAMES = (
     "full_autocontrast",
     "crop_center",
@@ -75,7 +75,7 @@ def should_run_post_doctr_easyocr_rescue(ensemble) -> bool:
     more of them supported by too few independent OCR families. In that exact
     state EasyOCR is useful as a genuinely independent third or fourth OCR
     family. Route only complete tuples with an explicit per-100 basis, at least
-    two existing engine families, at least two already-corroborated core fields,
+    two existing engine families, at least one already-corroborated core field,
     and no hard blocker. This still does not change acceptance: the ordinary
     ensemble must independently corroborate all four fields before the
     observation can become DECLARED.
