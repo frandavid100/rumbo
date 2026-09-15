@@ -5,6 +5,8 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-9887-energy-guard-rerun.yml'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_label_reader_ocr_typos.py'
   workflow_dispatch:
 
 permissions:
