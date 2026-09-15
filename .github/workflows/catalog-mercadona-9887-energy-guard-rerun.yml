@@ -1,0 +1,194 @@
+name: Catalog Mercadona 9887 energy guard rerun
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-9887-energy-guard-rerun.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build exact historical anchor inventory
+        working-directory: tools/catalog
+        run: |
+          printf '%s\n' '{"product_id":"9887"}' > mercadona-9887-inventory.jsonl
+
+      - name: Rehydrate current official first-party detail
+        working-directory: tools/catalog
+        run: |
+          rm -rf mercadona-first-party-9887-live
+          python mercadona_first_party_details.py \
+            --inventory mercadona-9887-inventory.jsonl \
+            --out mercadona-first-party-9887-live \
+            --shard-index 0 --shard-count 1 --timeout 20 --delay 0.2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('mercadona-first-party-9887-live')
+          summary = json.loads((root/'summary-00.json').read_text(encoding='utf-8'))
+          errors = [json.loads(x) for x in (root/'errors-00.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
+          if errors or summary.get('fetched') != 1 or summary.get('requested') != 1:
+              raise SystemExit(f'incomplete first-party rehydration: summary={summary} errors={errors}')
+          PY
+
+      - name: Require exact EAN and exact same first-party perspective=9 image
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected_ean = '5449000330123'
+          expected_url = 'https://prod-mercadona.imgix.net/images/54ec0181f148d6622ea6c81e389ad066.jpg?fit=crop&h=3600&w=3600'
+          rows = [json.loads(x) for x in Path('mercadona-first-party-9887-live/details-00.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
+          if len(rows) != 1 or str(rows[0].get('product_id')) != '9887':
+              raise SystemExit(f'unexpected live product rows: {rows}')
+          product = rows[0]
+          if str(product.get('ean') or '') != expected_ean:
+              raise SystemExit(f'EAN reassignment: {product.get("ean")} != {expected_ean}')
+          photos = product.get('photos') if isinstance(product.get('photos'), list) else []
+          matches = [p for p in photos if isinstance(p, dict) and str(p.get('perspective') or '') == '9' and str(p.get('zoom') or '') == expected_url]
+          if len(matches) != 1:
+              raise SystemExit(f'exact historical P9 image not present exactly once: matches={len(matches)}')
+          product['photos'] = [dict(matches[0])]
+          product['_energy_guard_rerun'] = {
+              'anchor_ean': expected_ean,
+              'image_url': expected_url,
+              'perspective': 9,
+              'historical_inventory_products': 4280,
+              'cross_run_value_fusion': False,
+              'acceptance_policy_changed': False,
+          }
+          Path('mercadona-9887-input.jsonl').write_text(json.dumps(product, ensure_ascii=False, sort_keys=True)+'\n', encoding='utf-8')
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' 'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run regression and conservative OCR safety suite
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_bounded_doctr_rescue.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Rerun exact label under unchanged acceptance contract
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-9887-energy-guard-rerun
+          set +e
+          python mercadona_bounded_doctr_rescue.py \
+            --products mercadona-9887-input.jsonl \
+            --out mercadona-9887-energy-guard-rerun \
+            --shard-index 0 --shard-count 1 --limit 0 \
+            --eligibility-mode priority
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]] || exit "$rc"
+
+      - name: Require conservative REVIEW and persist audit summary
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import glob, json, sqlite3
+          from pathlib import Path
+          paths = sorted(glob.glob('mercadona-9887-energy-guard-rerun/results-*.jsonl'))
+          rows = []
+          for path in paths:
+              rows.extend(json.loads(x) for x in Path(path).read_text(encoding='utf-8').splitlines() if x.strip())
+          if len(rows) != 1 or str(rows[0].get('product_id')) != '9887':
+              raise SystemExit(f'unexpected OCR result rows: {len(rows)}')
+          row = rows[0]
+          if row.get('status') != 'REVIEW':
+              raise SystemExit(f'9887 must remain REVIEW under ambiguous-energy guard, got {row.get("status")}')
+          if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image' or row.get('redistribution_allowed') is not False:
+              raise SystemExit('provenance contract mismatch')
+          seen_guard = False
+          bad_two_kcal = False
+          for attempt in row.get('attempts', []):
+              for engine in (attempt.get('engines') or {}).values():
+                  reasons = engine.get('reasons') or []
+                  text = str(engine.get('normalized_ocr_text') or '')
+                  nutrition = engine.get('nutrition') or {}
+                  if '02kcal' in text.replace(' ', '').lower():
+                      if 'AMBIGUOUS_OCR_ENERGY_DECIMAL' in reasons:
+                          seen_guard = True
+                      if nutrition.get('calories') == 2.0:
+                          bad_two_kcal = True
+          if not seen_guard:
+              raise SystemExit('observed 02kcal OCR ambiguity did not exercise the new guard')
+          if bad_two_kcal:
+              raise SystemExit('ambiguous 02kcal still leaked a 2.0 kcal field candidate')
+          out = Path('mercadona-9887-energy-guard-rerun/audit')
+          out.mkdir(parents=True, exist_ok=True)
+          (out/'result.jsonl').write_text(json.dumps(row, ensure_ascii=False, sort_keys=True)+'\n', encoding='utf-8')
+          summary = {
+              'historical_inventory_products': 4280,
+              'product_id': '9887',
+              'ean': '5449000330123',
+              'status': 'REVIEW',
+              'ambiguous_ocr_energy_decimal_guard_observed': True,
+              'ambiguous_2_kcal_candidate_suppressed': True,
+              'cross_run_value_fusion': False,
+              'acceptance_policy_changed': False,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          (out/'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          db = sqlite3.connect(out/'staging.sqlite')
+          db.execute('CREATE TABLE result (product_id TEXT PRIMARY KEY, status TEXT, evidence_level TEXT, source TEXT, redistribution_allowed INTEGER, raw_json TEXT)')
+          db.execute('INSERT INTO result VALUES (?,?,?,?,?,?)', ('9887','REVIEW','OCR_DERIVED_FROM_MERCADONA_IMAGE','MERCADONA_FIRST_PARTY/label image',0,json.dumps(row, ensure_ascii=False, sort_keys=True)))
+          db.commit(); db.close()
+          forbidden = [str(p) for p in out.rglob('*') if p.is_file() and p.suffix.lower() in {'.jpg','.jpeg','.png','.webp','.avif','.gif'}]
+          if forbidden:
+              raise SystemExit(f'image files must not be persisted: {forbidden}')
+          print(json.dumps(summary, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-9887-energy-guard-rerun
+          path: tools/catalog/mercadona-9887-energy-guard-rerun/audit/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Reconcile strict historical canonical OCR after corrected observation
+        run: |
+          gh api --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/dispatches' \
+            -f ref='agent/catalog-phase1'
