@@ -66,9 +66,17 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
         )
         self.assertFalse(should_run_bounded_doctr_rescue(candidate))
 
-    def test_requires_at_least_two_core_fields(self) -> None:
+    def test_single_core_field_without_explicit_missing_core_reason_is_not_routed(self) -> None:
         candidate = ensemble(nutrition={"calories": 220.0})
         self.assertFalse(should_run_bounded_doctr_rescue(candidate))
+
+    def test_routes_single_clean_core_field_for_bounded_historical_regression(self) -> None:
+        candidate = ensemble(
+            nutrition={"carbohydrate_g": 19.0},
+            families=1,
+            reasons=["MISSING_CORE:calories,fat_g,protein_g"],
+        )
+        self.assertTrue(should_run_bounded_doctr_rescue(candidate))
 
     def test_refuses_hard_conflict(self) -> None:
         candidate = ensemble(
