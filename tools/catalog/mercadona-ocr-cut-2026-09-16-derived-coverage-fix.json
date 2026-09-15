@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "kind": "MERCADONA_OCR_HISTORICAL_CUT_AUDIT_TRIGGER",
+  "date": "2026-09-16",
+  "inventory_products": 4280,
+  "previous_canonical_declared": 342,
+  "previous_canonical_review": 2627,
+  "previous_canonical_status_products": 2969,
+  "previous_processed_reconstructed": 2971,
+  "previous_coverage_without_canonical_state": ["17719", "17996"],
+  "issue": "Prior derived canonical materializations could contribute product IDs to processed-union coverage even though they were already excluded from latest-live canonical status. This allowed later current-delta products summarized by an older audit artifact to leak into the fixed 2026-08-27 cut coverage count.",
+  "fix_commit": "c99c49bf9948838853ed4620b1d65f2fcbe6fefc",
+  "expected_policy": "Only raw live OCR evidence may establish historical-cut processed coverage; diagnostic replay wrappers and derived canonical materializations remain auditable but do not add product IDs to the fixed-cut processed union.",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "status": "AUDIT_PENDING"
+}
