@@ -43,6 +43,17 @@ Sal
 0.05 g
 """
 
+INTERLEAVED_UNSAFE_PRECEDING_PROTEIN = """Información nutricional por 100 g
+Valor energético 1543 kJ / 369 kcal
+Grasas 1.5 g
+Hidratos de carbono 85 g
+21g
+enção das
+Proteínas
+0.02g
+Sal
+"""
+
 
 class SingleReversedMacroCandidateTest(unittest.TestCase):
     def test_single_reversed_macro_is_exposed_only_as_review_evidence(self):
@@ -78,6 +89,13 @@ class SingleReversedMacroCandidateTest(unittest.TestCase):
         self.assertEqual((r.nutrition or {}).get("protein_g"), 2.1)
         self.assertNotEqual((r.nutrition or {}).get("protein_g"), 0.02)
         self.assertIn("SINGLE_REVERSED_MACRO_CANDIDATE:protein_g", r.reasons)
+
+    def test_interleaved_text_before_protein_never_turns_following_salt_into_protein(self):
+        r = read_nutrition_label(INTERLEAVED_UNSAFE_PRECEDING_PROTEIN, extraction_confidence=.97)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertIsNone((r.nutrition or {}).get("protein_g"), r)
+        self.assertIn("MISSING_CORE:protein_g", r.reasons)
+        self.assertFalse(any(x.startswith("SINGLE_REVERSED_MACRO_CANDIDATE") for x in r.reasons), r)
 
     def test_explicit_value_after_salt_preserves_forward_protein(self):
         r = read_nutrition_label(ORDINARY_PROTEIN_AND_SALT, extraction_confidence=.97)
