@@ -106,6 +106,26 @@ Sal 0.02g
         self.assertIsNotNone(r.nutrition)
         self.assertNotIn("calories", r.nutrition)
 
+    def test_zero_prefixed_compact_kcal_split_from_energy_row_is_also_ambiguous(self):
+        # Real whole-label OCR can put the unit/value token on the next line.
+        # The generic kcal fallback must not reinterpret printed 0.2 kcal read as
+        # `02kcal` as an exact 2 kcal observation merely because of that layout.
+        observed = """INFORMACIÓN NUTRICIONAL
+Por 100 g
+Valor energético 840 kJ
+02kcal
+Grasas 0g
+Hidratos de carbono 0g
+Proteínas 0g
+Sal 0.02g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertIn("AMBIGUOUS_OCR_ENERGY_DECIMAL", r.reasons)
+        self.assertIn("MISSING_CORE:calories", r.reasons)
+        self.assertIsNotNone(r.nutrition)
+        self.assertNotIn("calories", r.nutrition)
+
     def test_typo_support_does_not_bypass_energy_macro_coherence(self):
         observed = """Información nutricional por 100 g
 Valor energético 503 kJ / 420 Keal
