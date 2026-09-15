@@ -5,6 +5,7 @@ import unittest
 from summarize_mercadona_ocr_run_union import (
     classify_review_reason_families,
     is_canonical_status_row,
+    is_processed_union_row,
     reconcile_latest_observations,
     summarize_declared_to_review_transitions,
 )
@@ -150,7 +151,9 @@ class LatestObservationReconciliationTests(unittest.TestCase):
             },
         }
         self.assertTrue(is_canonical_status_row(live_row))
+        self.assertTrue(is_processed_union_row(live_row))
         self.assertFalse(is_canonical_status_row(replay_wrapper))
+        self.assertFalse(is_processed_union_row(replay_wrapper))
 
     def test_materialized_canonical_summary_never_updates_live_status(self):
         raw_live_row = {
@@ -175,7 +178,9 @@ class LatestObservationReconciliationTests(unittest.TestCase):
             "schema_version": "1.0.1",
         }
         self.assertTrue(is_canonical_status_row(raw_live_row))
+        self.assertTrue(is_processed_union_row(raw_live_row))
         self.assertFalse(is_canonical_status_row(materialized_summary_row))
+        self.assertFalse(is_processed_union_row(materialized_summary_row))
 
 
 class ReviewTransitionDiagnosticTests(unittest.TestCase):

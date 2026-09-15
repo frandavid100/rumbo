@@ -121,9 +121,9 @@ def canonical_exclusion_reason(row: dict[str, Any]) -> str | None:
     """Return why an exact-evidence row is not a raw live OCR observation.
 
     Replay wrappers and rows materialized by a prior canonical audit are derived
-    evidence. They can prove that the product occurred in the processed union, but
-    they must never become a newer live status merely because their workflow ran
-    later than the OCR producer that they summarize.
+    evidence. They must not establish historical-cut processed coverage or become a
+    newer live status: an older canonical materialization may itself contain later
+    current-delta products and would otherwise leak them back into the fixed cut.
     """
     if isinstance(row.get("replay"), dict):
         return "DIAGNOSTIC_REPLAY_WRAPPER"
@@ -134,6 +134,11 @@ def canonical_exclusion_reason(row: dict[str, Any]) -> str | None:
 
 def is_canonical_status_row(row: dict[str, Any]) -> bool:
     """Only raw live OCR rows may replace canonical product status."""
+    return canonical_exclusion_reason(row) is None
+
+
+def is_processed_union_row(row: dict[str, Any]) -> bool:
+    """Only raw live OCR evidence may establish fixed-cut processed coverage."""
     return canonical_exclusion_reason(row) is None
 
 
@@ -605,9 +610,10 @@ def main() -> int:
             if not product_id or status not in VALID or row.get("evidence_level") != EVIDENCE:
                 continue
 
-            by_run[run_id].add(product_id)
-            by_run_status[run_id][status].add(product_id)
-            files_by_run[run_id].add(str(rel))
+            if is_processed_union_row(row):
+                by_run[run_id].add(product_id)
+                by_run_status[run_id][status].add(product_id)
+                files_by_run[run_id].add(str(rel))
             if is_canonical_status_row(row):
                 strict = has_strict_raw_provenance(row)
                 ean = normalize_ean(row.get("ean"))
