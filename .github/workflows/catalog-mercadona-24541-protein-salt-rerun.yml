@@ -108,7 +108,7 @@ jobs:
             --products mercadona-24541-input.jsonl \
             --out mercadona-24541-protein-salt-rerun \
             --shard-index 0 --shard-count 1 --limit 0 \
-            --eligibility-mode priority
+            --eligibility-mode p9-no-ingredients-all
           rc=$?
           set -e
           [[ $rc -eq 0 || $rc -eq 2 ]] || exit "$rc"
