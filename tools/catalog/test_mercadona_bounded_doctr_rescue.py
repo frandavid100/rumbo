@@ -105,8 +105,8 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
         )
         self.assertFalse(should_run_bounded_doctr_rescue(candidate))
 
-    def test_routes_post_doctr_easyocr_for_clean_complete_two_or_more_of_four(self) -> None:
-        for corroborated_fields in (2, 3):
+    def test_routes_post_doctr_easyocr_for_clean_complete_one_or_more_of_four(self) -> None:
+        for corroborated_fields in (1, 2, 3):
             with self.subTest(corroborated_fields=corroborated_fields):
                 candidate = ensemble(
                     nutrition={
@@ -149,7 +149,7 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
         )
         self.assertFalse(should_run_post_doctr_easyocr_rescue(candidate))
 
-    def test_post_doctr_easyocr_refuses_below_two_corroborated_fields(self) -> None:
+    def test_post_doctr_easyocr_refuses_zero_corroborated_fields(self) -> None:
         candidate = ensemble(
             nutrition={
                 "calories": 165.0,
@@ -158,7 +158,7 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
                 "protein_g": 5.9,
             },
             families=3,
-            corroborated_fields=1,
+            corroborated_fields=0,
             reasons=["UNCORROBORATED_CORE_FIELDS"],
         )
         self.assertFalse(should_run_post_doctr_easyocr_rescue(candidate))
@@ -183,6 +183,39 @@ class BoundedDoctrRescueRoutingTest(unittest.TestCase):
         )
         self.assertFalse(should_run_post_doctr_easyocr_rescue(incomplete))
         self.assertFalse(should_run_post_doctr_easyocr_rescue(blocked))
+
+    def test_single_corroborated_complete_tuple_can_only_promote_after_easyocr_matches_all_fields(self) -> None:
+        baseline = (
+            ParsedOCRReading(
+                "doctr",
+                partial({"calories": 246, "fat_g": 13, "carbohydrate_g": 19, "protein_g": 12}),
+                .95,
+                "doctr",
+            ),
+            ParsedOCRReading(
+                "tesseract",
+                partial({"carbohydrate_g": 19}),
+                .95,
+                "tesseract",
+            ),
+        )
+        before = fuse_ocr_readings(baseline)
+        self.assertEqual(before.status, "REVIEW")
+        self.assertEqual(before.corroborated_fields, 1)
+        self.assertEqual(before.independent_engine_families, 2)
+        self.assertTrue(should_run_post_doctr_easyocr_rescue(before))
+
+        after = fuse_ocr_readings((
+            *baseline,
+            ParsedOCRReading(
+                "easyocr",
+                partial({"calories": 246, "fat_g": 13, "carbohydrate_g": 19, "protein_g": 12}),
+                .95,
+                "easyocr",
+            ),
+        ))
+        self.assertTrue(after.declared_usable)
+        self.assertEqual(after.corroborated_fields, 4)
 
     def test_easyocr_third_family_can_corroborate_only_missing_field_under_existing_contract(self) -> None:
         baseline = (
