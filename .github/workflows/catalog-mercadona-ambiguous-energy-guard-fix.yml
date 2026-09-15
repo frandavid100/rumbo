@@ -51,6 +51,9 @@ jobs:
           path.write_text(text, encoding='utf-8')
           PY
 
+      - name: Install conservative test dependencies
+        run: python -m pip install --disable-pip-version-check numpy opencv-python-headless Pillow
+
       - name: Run regression first and conservative parser suite
         working-directory: tools/catalog
         run: |
