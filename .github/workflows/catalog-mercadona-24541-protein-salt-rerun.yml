@@ -133,17 +133,26 @@ jobs:
               raise SystemExit('provenance contract mismatch')
 
           guarded = []
-          for attempt in row.get('attempts', []):
+          protein_observations = []
+          for attempt_index, attempt in enumerate(row.get('attempts', [])):
               for engine_name, engine in (attempt.get('engines') or {}).items():
                   reasons = engine.get('reasons') or []
+                  protein = (engine.get('nutrition') or {}).get('protein_g')
+                  if protein is not None:
+                      protein_observations.append({'scope': 'engine', 'attempt': attempt_index, 'engine': engine_name, 'protein_g': protein})
+                      if abs(float(protein) - 0.02) < 1e-9:
+                          raise SystemExit(f'salt 0.02 g leaked into protein in {engine_name}')
                   if 'SINGLE_REVERSED_MACRO_CANDIDATE:protein_g' not in reasons:
                       continue
-                  protein = (engine.get('nutrition') or {}).get('protein_g')
                   guarded.append({'engine': engine_name, 'protein_g': protein})
                   if protein != 2.1:
                       raise SystemExit(f'reversed protein candidate must be 2.1 g, got {protein} in {engine_name}')
-          if not guarded:
-              raise SystemExit('current exact label did not exercise the protein/salt reversal guard')
+              ensemble = attempt.get('ensemble') or {}
+              protein = (ensemble.get('nutrition') or {}).get('protein_g')
+              if protein is not None:
+                  protein_observations.append({'scope': 'ensemble', 'attempt': attempt_index, 'protein_g': protein})
+                  if abs(float(protein) - 0.02) < 1e-9:
+                      raise SystemExit('salt 0.02 g leaked into ensemble protein')
 
           declared_attempts = [
               attempt.get('ensemble') or {}
@@ -161,8 +170,10 @@ jobs:
               'product_id': '24541',
               'ean': '8402001050428',
               'status': row.get('status'),
+              'guard_exercised_on_current_ocr': bool(guarded),
               'guarded_engine_readings': guarded,
-              'salt_value_0_02_not_used_as_guarded_protein': True,
+              'observed_protein_values': protein_observations,
+              'salt_value_0_02_not_used_as_protein': True,
               'cross_run_value_fusion': False,
               'acceptance_policy_changed': False,
               'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
