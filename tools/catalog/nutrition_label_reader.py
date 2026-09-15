@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.20"
+READER_VERSION = "1.4.21"
 
 
 @dataclass(frozen=True)
@@ -369,6 +369,26 @@ def _interleaved_carbohydrate(text: str) -> float | None:
     return _repair_ocr_number(m.group(2))
 
 
+def _ambiguous_compact_energy_decimal(text: str) -> bool:
+    """Reject OCR energy tokens where a decimal point may have disappeared.
+
+    Mercadona label OCR has emitted printed `0.2 kcal` as the compact token
+    `02kcal`. Treating that as 2 kcal can be corroborated spuriously when
+    several OCR engines lose the same punctuation. Do not guess the decimal
+    position: withhold calories so the observation remains REVIEW. The guard
+    is deliberately limited to a leading-zero multi-digit kcal token on the
+    explicit energy row; ordinary `0 kcal`, `20 kcal` and decimal tokens are
+    unaffected.
+    """
+    folded = _fold(text)
+    for line in folded.splitlines():
+        if not re.search(r"(?:valor energetico|energia)", line, flags=re.I):
+            continue
+        if re.search(r"(?<![\d.])0\d{1,3}\s*kcal\b", line, flags=re.I):
+            return True
+    return False
+
+
 def _energy_kcal(text: str) -> float | None:
     folded = _fold(text)
     # Some labels put the units in the heading and the values on the next line:
@@ -488,7 +508,10 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
         r"(?:^|\n)\s*[\[|]?\s*(?:proteinas?|prote_nas?)(?:\s*/\s*(?:protein|proteines?))?(?=[\s._:;|]|$)",
     )
 
-    calories = _energy_kcal(block)
+    ambiguous_energy_decimal = _ambiguous_compact_energy_decimal(block)
+    if ambiguous_energy_decimal:
+        reasons.append("AMBIGUOUS_OCR_ENERGY_DECIMAL")
+    calories = None if ambiguous_energy_decimal else _energy_kcal(block)
     fat = _fat_value(fat_patterns, block)
     carbs = _interleaved_carbohydrate(block)
     if carbs is None:
