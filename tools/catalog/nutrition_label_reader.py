@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.21"
+READER_VERSION = "1.4.22"
 
 
 @dataclass(frozen=True)
@@ -375,18 +375,14 @@ def _ambiguous_compact_energy_decimal(text: str) -> bool:
     Mercadona label OCR has emitted printed `0.2 kcal` as the compact token
     `02kcal`. Treating that as 2 kcal can be corroborated spuriously when
     several OCR engines lose the same punctuation. Do not guess the decimal
-    position: withhold calories so the observation remains REVIEW. The guard
-    is deliberately limited to a leading-zero multi-digit kcal token on the
-    explicit energy row; ordinary `0 kcal`, `20 kcal` and decimal tokens are
+    position: withhold calories so the observation remains REVIEW. Because OCR
+    can linearise the value onto a separate line from the energy row, reject a
+    leading-zero multi-digit kcal token anywhere inside the already bounded
+    nutrition block. Ordinary `0 kcal`, `20 kcal` and decimal tokens are
     unaffected.
     """
     folded = _fold(text)
-    for line in folded.splitlines():
-        if not re.search(r"(?:valor energetico|energia)", line, flags=re.I):
-            continue
-        if re.search(r"(?<![\d.])0\d{1,3}\s*kcal\b", line, flags=re.I):
-            return True
-    return False
+    return bool(re.search(r"(?<![\d.])0\d{1,3}\s*kcal\b", folded, flags=re.I))
 
 
 def _energy_kcal(text: str) -> float | None:
