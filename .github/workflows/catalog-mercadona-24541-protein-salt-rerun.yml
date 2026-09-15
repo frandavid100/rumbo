@@ -141,6 +141,7 @@ jobs:
                   if protein is not None:
                       protein_observations.append({'scope': 'engine', 'attempt': attempt_index, 'engine': engine_name, 'protein_g': protein})
                       if abs(float(protein) - 0.02) < 1e-9:
+                          print('DIAGNOSTIC_ENGINE_JSON=' + json.dumps({'attempt': attempt_index, 'engine_name': engine_name, 'engine': engine}, ensure_ascii=False, sort_keys=True))
                           raise SystemExit(f'salt 0.02 g leaked into protein in {engine_name}')
                   if 'SINGLE_REVERSED_MACRO_CANDIDATE:protein_g' not in reasons:
                       continue
@@ -152,6 +153,7 @@ jobs:
               if protein is not None:
                   protein_observations.append({'scope': 'ensemble', 'attempt': attempt_index, 'protein_g': protein})
                   if abs(float(protein) - 0.02) < 1e-9:
+                      print('DIAGNOSTIC_ENSEMBLE_JSON=' + json.dumps({'attempt': attempt_index, 'ensemble': ensemble}, ensure_ascii=False, sort_keys=True))
                       raise SystemExit('salt 0.02 g leaked into ensemble protein')
 
           declared_attempts = [
