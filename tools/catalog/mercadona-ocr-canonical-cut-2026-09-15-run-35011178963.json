@@ -1,0 +1,218 @@
+{
+  "schema_version": "1.0.2",
+  "scope": "MERCADONA_FIRST_PARTY_2026-08-27_HISTORICAL_CUT_CONSERVATIVE_OCR",
+  "generated_from_audit_run_id": 35011178963,
+  "inventory_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "canonical": {
+    "processed_products": 2969,
+    "processed_pct_inventory": 69.3692,
+    "status_counts": {
+      "DECLARED": 342,
+      "REVIEW": 2627,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "usable_complete": 342,
+    "usable_complete_pct_inventory": 7.9907,
+    "usable_field_counts": {
+      "calories": 342,
+      "fat_g": 342,
+      "carbohydrate_g": 342,
+      "protein_g": 342
+    },
+    "identity_reconciliation": {
+      "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
+      "identity_anchored_products": 2969,
+      "identity_conflict_products": 0,
+      "identity_unverified_products": 0,
+      "identity_unresolved_products": 0
+    }
+  },
+  "delta_from_run_34926212315": {
+    "declared_delta": 4,
+    "review_delta": -4,
+    "processed_delta": 0,
+    "newly_declared_product_ids": [
+      "12946",
+      "13250",
+      "15589",
+      "67660"
+    ],
+    "source_workflow_run_id": 35009689849,
+    "source_workflow": "Catalog Mercadona non-contradictory REVIEW docTR pilot",
+    "safety_tests_passed_per_shard": 95,
+    "cross_run_value_fusion": false
+  },
+  "newly_declared_observations": [
+    {
+      "product_id": "12946",
+      "ean": "8402001033902",
+      "name": "Chocolate extrafino con leche Hacendado 0% azúcares añadidos",
+      "perspective": 9,
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 465.0,
+        "fat_g": 31.0,
+        "carbohydrate_g": 47.0,
+        "protein_g": 9.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source_workflow_run_id": 35009689849,
+      "source_artifact": {
+        "id": 10413343936,
+        "name": "mercadona-review-regression-doctr-pilot-1",
+        "sha256": "7ea96cc1fc7540bc5d72561a1f2b1d820a1cdc89e8b455fd454a0f4168117f00"
+      },
+      "cross_run_value_fusion": false,
+      "current_observation_satisfies_declared_contract_independently": true
+    },
+    {
+      "product_id": "13250",
+      "ean": "8480000130877",
+      "name": "Ensaladilla de marisco Listo para Comer",
+      "perspective": 9,
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 255.0,
+        "fat_g": 22.0,
+        "carbohydrate_g": 7.3,
+        "protein_g": 7.4
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source_workflow_run_id": 35009689849,
+      "source_artifact": {
+        "id": 10414010317,
+        "name": "mercadona-review-regression-doctr-pilot-0",
+        "sha256": "f6d5ec3de1a40156d04b7cf828bf48cee3d3cffeff187d6d1bf2a418cd9e9eeb"
+      },
+      "cross_run_value_fusion": false,
+      "current_observation_satisfies_declared_contract_independently": true
+    },
+    {
+      "product_id": "15589",
+      "ean": "8480000155894",
+      "name": "Patatas fritas corte ondulado Hacendado",
+      "perspective": 9,
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 550.0,
+        "fat_g": 34.0,
+        "carbohydrate_g": 53.0,
+        "protein_g": 5.7
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source_workflow_run_id": 35009689849,
+      "source_artifact": {
+        "id": 10413343936,
+        "name": "mercadona-review-regression-doctr-pilot-1",
+        "sha256": "7ea96cc1fc7540bc5d72561a1f2b1d820a1cdc89e8b455fd454a0f4168117f00"
+      },
+      "cross_run_value_fusion": false,
+      "current_observation_satisfies_declared_contract_independently": true
+    },
+    {
+      "product_id": "67660",
+      "ean": "8480000676603",
+      "name": "Café soluble cappuccino caramelo Hacendado",
+      "perspective": 9,
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 395.0,
+        "fat_g": 6.3,
+        "carbohydrate_g": 76.0,
+        "protein_g": 7.4
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "source_workflow_run_id": 35009689849,
+      "source_artifact": {
+        "id": 10414010317,
+        "name": "mercadona-review-regression-doctr-pilot-0",
+        "sha256": "f6d5ec3de1a40156d04b7cf828bf48cee3d3cffeff187d6d1bf2a418cd9e9eeb"
+      },
+      "cross_run_value_fusion": false,
+      "current_observation_satisfies_declared_contract_independently": true
+    }
+  ],
+  "review_safety": {
+    "near_safe_complete_review": 2,
+    "near_safe_complete_by_corroborated_fields": {
+      "1": 1,
+      "3": 1
+    },
+    "near_safe_complete_by_engine_families": {
+      "2": 2
+    },
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 45,
+    "hard_ocr_conflict": 230,
+    "energy_macro_incoherence": 101,
+    "ambiguous_table": 87,
+    "no_visual_region_without_ocr_signal": 0,
+    "REVIEW_promoted_by_audit": 0
+  },
+  "near_safe_review_examples": [
+    {
+      "product_id": "84638",
+      "ean": "8480000846389",
+      "name": "Pizza jamón y queso Hacendado ultracongelada",
+      "nutrition_observed": {
+        "calories": 273.0,
+        "fat_g": 9.0,
+        "carbohydrate_g": 29.0,
+        "protein_g": 13.0
+      },
+      "corroborated_fields": 3,
+      "reason_kept_review": "carbohydrate_g lacks two agreeing independent OCR engine families; PaddleOCR reads 29 g while a credible Tesseract observation reads 28 g. No threshold was relaxed."
+    },
+    {
+      "product_id": "58166",
+      "ean": "8480000581662",
+      "name": "Bebida isotónica aloe vera Hacendado",
+      "nutrition_observed": {
+        "calories": 36.0,
+        "fat_g": 0.0,
+        "carbohydrate_g": 8.5,
+        "protein_g": 0.0
+      },
+      "corroborated_fields": 1,
+      "reason_kept_review": "Only one of four core fields is independently corroborated under the current contract."
+    }
+  ],
+  "audit": {
+    "workflow_run_id": 35011178963,
+    "artifact_id": 10414590239,
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_sha256": "9fae250152cab7633117a57238f5049d7d079df8931debcffd592d7e4a615757",
+    "workflow_run_conclusion": "success",
+    "runs_discovered_successful": 570,
+    "artifacts_discovered": 664,
+    "runs_with_strict_ocr_rows": 510,
+    "final_distinct_union": 2971,
+    "canonical_status_products": 2969,
+    "coverage_without_canonical_state": 2,
+    "coverage_without_canonical_state_product_ids": [
+      "17719",
+      "17996"
+    ]
+  },
+  "historical_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "caveat": "The expired original 4,280-product artifact prevents a complete independent parity proof for the whole historical identity map; it does not block reconstruction of the current conservative OCR canonical cut."
+  },
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
