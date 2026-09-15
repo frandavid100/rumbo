@@ -89,6 +89,23 @@ Sal
             "protein_g": 21.0,
         })
 
+    def test_zero_prefixed_compact_kcal_token_is_ambiguous_not_declared(self):
+        observed = """INFORMACIÓN NUTRICIONAL
+Por:
+100ml
+Valor energético 09kJ/02kcal 23kJ/1kcal
+Grasas 0g
+Hidratos de carbono 0g
+Proteínas 0g
+Sal 0.02g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertIn("AMBIGUOUS_OCR_ENERGY_DECIMAL", r.reasons)
+        self.assertIn("MISSING_CORE:calories", r.reasons)
+        self.assertIsNotNone(r.nutrition)
+        self.assertNotIn("calories", r.nutrition)
+
     def test_typo_support_does_not_bypass_energy_macro_coherence(self):
         observed = """Información nutricional por 100 g
 Valor energético 503 kJ / 420 Keal
