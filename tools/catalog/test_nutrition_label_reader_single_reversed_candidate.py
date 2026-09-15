@@ -22,6 +22,27 @@ Proteínas
 Sal 0.05 g
 """
 
+PROTEIN_THEN_REVERSED_SALT = """Información nutricional por 100 g
+Valor energético 1558 kJ / 369 kcal
+Grasas 1.5 g
+Hidratos de carbono 85 g
+2.1 g
+Proteínas
+0.02 g
+Sal
+"""
+
+ORDINARY_PROTEIN_AND_SALT = """Información nutricional por 100 g
+Valor energético 1558 kJ / 369 kcal
+Grasas 1.5 g
+Hidratos de carbono 85 g
+2.1 g
+Proteínas
+0.02 g
+Sal
+0.05 g
+"""
+
 
 class SingleReversedMacroCandidateTest(unittest.TestCase):
     def test_single_reversed_macro_is_exposed_only_as_review_evidence(self):
@@ -50,6 +71,18 @@ class SingleReversedMacroCandidateTest(unittest.TestCase):
         self.assertEqual(ensemble.status, "DECLARED", ensemble)
         self.assertEqual(ensemble.corroborated_fields, 4)
         self.assertEqual(ensemble.nutrition["protein_g"], 24.5)
+
+    def test_reversed_salt_cell_after_protein_is_not_borrowed_as_protein(self):
+        r = read_nutrition_label(PROTEIN_THEN_REVERSED_SALT, extraction_confidence=.97)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertEqual((r.nutrition or {}).get("protein_g"), 2.1)
+        self.assertNotEqual((r.nutrition or {}).get("protein_g"), 0.02)
+        self.assertIn("SINGLE_REVERSED_MACRO_CANDIDATE:protein_g", r.reasons)
+
+    def test_explicit_value_after_salt_preserves_forward_protein(self):
+        r = read_nutrition_label(ORDINARY_PROTEIN_AND_SALT, extraction_confidence=.97)
+        self.assertEqual((r.nutrition or {}).get("protein_g"), 0.02, r)
+        self.assertFalse(any(x.startswith("SINGLE_REVERSED_MACRO_CANDIDATE") for x in r.reasons), r)
 
 
 if __name__ == "__main__":

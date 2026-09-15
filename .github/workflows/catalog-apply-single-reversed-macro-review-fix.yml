@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/catalog-apply-single-reversed-macro-review-fix.yml'
       - 'tools/catalog/apply_single_reversed_macro_review_fix.py'
+      - 'tools/catalog/test_nutrition_label_reader_single_reversed_candidate.py'
   workflow_dispatch:
 
 permissions:
@@ -33,6 +34,7 @@ jobs:
           python -m unittest -v
           test_nutrition_label_reader_single_reversed_candidate.py
           test_nutrition_label_reader.py
+          test_nutrition_label_reader_ocr_typos.py
           test_nutrition_row_order_ambiguity.py
           test_nutrition_ocr_ensemble.py
           test_mercadona_ocr_safety_regressions.py
@@ -40,7 +42,11 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add tools/catalog/nutrition_label_reader.py tools/catalog/mercadona_nutrition_label_reader.py
+          git add tools/catalog/nutrition_label_reader.py
+          if git diff --cached --quiet; then
+            echo 'Parser already contains the narrow fix.'
+            exit 0
+          fi
           git diff --cached --check
-          git commit -m 'fix(catalog): preserve complete reversed-table rescue'
+          git commit -m 'fix(catalog): disambiguate reversed protein and salt'
           git push origin HEAD:agent/catalog-phase1
