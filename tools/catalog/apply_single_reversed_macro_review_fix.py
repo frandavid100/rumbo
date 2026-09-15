@@ -56,7 +56,7 @@ new_block = """def _protein_value(label_patterns: tuple[str, ...], text: str) ->
                 continue
             tail = folded[label_match.end():label_match.end() + 120]
             forward_then_salt = re.match(
-                rf"\\s*{cell}\\s*\\n\\s*sal\\b",
+                rf"\\s*{cell}\\s*\\n\\s*sal[ \\t]*(?=\\n|$)",
                 tail,
                 flags=re.I,
             )
