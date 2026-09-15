@@ -1,0 +1,75 @@
+name: Catalog Mercadona ambiguous energy guard fix
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ambiguous-energy-guard-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Apply narrow ambiguous-energy guard
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('nutrition_label_reader.py')
+          text = path.read_text(encoding='utf-8')
+          old_version = 'READER_VERSION = "1.4.20"'
+          new_version = 'READER_VERSION = "1.4.21"'
+          if old_version not in text:
+              raise SystemExit('expected reader version anchor not found')
+          text = text.replace(old_version, new_version, 1)
+
+          anchor = '''def _energy_kcal(text: str) -> float | None:\n'''
+          helper = '''def _ambiguous_compact_energy_decimal(text: str) -> bool:\n    """Reject OCR energy tokens where a decimal point may have disappeared.\n\n    Mercadona label OCR has emitted printed `0.2 kcal` as the compact token\n    `02kcal`. Treating that as 2 kcal can be corroborated spuriously when\n    several OCR engines lose the same punctuation. Do not guess the decimal\n    position: withhold calories so the observation remains REVIEW. The guard\n    is deliberately limited to a leading-zero multi-digit kcal token on the\n    explicit energy row; ordinary `0 kcal`, `20 kcal` and decimal tokens are\n    unaffected.\n    """\n    folded = _fold(text)\n    for line in folded.splitlines():\n        if not re.search(r"(?:valor energetico|energia)", line, flags=re.I):\n            continue\n        if re.search(r"(?<![\\d.])0\\d{1,3}\\s*kcal\\b", line, flags=re.I):\n            return True\n    return False\n\n\n'''
+          if anchor not in text:
+              raise SystemExit('energy parser anchor not found')
+          text = text.replace(anchor, helper + anchor, 1)
+
+          old = '    calories = _energy_kcal(block)\n'
+          new = '''    ambiguous_energy_decimal = _ambiguous_compact_energy_decimal(block)\n    if ambiguous_energy_decimal:\n        reasons.append("AMBIGUOUS_OCR_ENERGY_DECIMAL")\n    calories = None if ambiguous_energy_decimal else _energy_kcal(block)\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one calories assignment anchor, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Run regression first and conservative parser suite
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Commit guarded parser
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- tools/catalog/nutrition_label_reader.py; then
+            echo 'No parser change to commit'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/catalog/nutrition_label_reader.py
+          git commit -m 'catalog: reject ambiguous zero-prefixed OCR energy'
+          git push origin HEAD:agent/catalog-phase1
