@@ -17,6 +17,7 @@ import mercadona_near_safe_doctr_retry as retry
 
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 MIN_PRESENT_CORE_FIELDS = 2
+MIN_BOUNDED_HISTORICAL_PRESENT_CORE_FIELDS = 1
 MIN_POST_DOCTR_ENGINE_FAMILIES_FOR_EASYOCR = 2
 MIN_POST_DOCTR_CORROBORATED_FIELDS_FOR_EASYOCR = 2
 EASYOCR_VARIANT_NAMES = (
@@ -39,9 +40,12 @@ def should_run_bounded_doctr_rescue(ensemble) -> bool:
     The ordinary near-safe retry is intentionally restricted to complete 4-field
     candidates. This bounded rescue is for products that were previously
     DECLARED and later regressed to a non-contradictory REVIEW. It may spend an
-    additional OCR family on a current extraction with at least two core fields,
-    but it cannot make that extraction usable unless the unchanged downstream
-    ensemble independently satisfies the normal DECLARED contract.
+    additional OCR family on a current extraction with at least two core fields.
+    For this already identity/image-bounded historical cohort, a one-field
+    extraction is also eligible only when the ensemble explicitly reports the
+    remaining fields as MISSING_CORE. That widens OCR routing, not acceptance:
+    the unchanged downstream ensemble must still satisfy the normal DECLARED
+    contract independently.
     """
     if ensemble.status != "REVIEW" or ensemble.declared_usable:
         return False
@@ -49,11 +53,14 @@ def should_run_bounded_doctr_rescue(ensemble) -> bool:
         return False
     nutrition = ensemble.nutrition if isinstance(ensemble.nutrition, dict) else {}
     present = sum(nutrition.get(field) is not None for field in CORE)
+    reasons = [str(reason) for reason in ensemble.reasons]
     if present < MIN_PRESENT_CORE_FIELDS:
-        return False
+        if present < MIN_BOUNDED_HISTORICAL_PRESENT_CORE_FIELDS:
+            return False
+        if not any(reason.startswith("MISSING_CORE:") for reason in reasons):
+            return False
     if int(ensemble.independent_engine_families or 0) < 1:
         return False
-    reasons = [str(reason) for reason in ensemble.reasons]
     return not any(
         reason.startswith(prefix)
         for reason in reasons
