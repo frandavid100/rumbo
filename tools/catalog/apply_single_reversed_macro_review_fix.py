@@ -4,12 +4,12 @@ from pathlib import Path
 path = Path(__file__).with_name("nutrition_label_reader.py")
 text = path.read_text(encoding="utf-8")
 
-old_version = 'READER_VERSION = "1.4.22"'
-new_version = 'READER_VERSION = "1.4.23"'
-new_marker = "When a dedicated gram cell sits immediately before `Proteínas`"
+old_version = 'READER_VERSION = "1.4.23"'
+new_version = 'READER_VERSION = "1.4.24"'
+new_marker = "Even when no dedicated gram cell is visible before `Proteínas`"
 
 if new_version in text and new_marker in text:
-    print("narrow protein/salt reversal fix already applied")
+    print("conservative protein/salt ambiguity fix already applied")
     raise SystemExit(0)
 
 if text.count(old_version) != 1:
@@ -24,36 +24,37 @@ start = text.index(start_marker)
 end = text.index(end_marker, start)
 old_block = text[start:end]
 required_old_fragments = (
-    "Do not borrow a salt cell as protein after a two-row OCR reversal.",
-    "two consecutive",
-    "head = folded[max(0, label_match.start() - 100):label_match.start()]",
+    "When a dedicated gram cell sits immediately before `Proteínas`",
+    "before = _number_immediately_before((label,), text)",
+    "if before is None:\n                continue",
 )
 if not all(fragment in old_block for fragment in required_old_fragments):
     raise SystemExit("protein/salt reversal block drift")
 
 new_block = """def _protein_value(label_patterns: tuple[str, ...], text: str) -> float | None:
-    \"\"\"Do not borrow a reversed salt cell as protein.
+    \"\"\"Do not borrow an unpaired salt cell as protein.
 
-    When a dedicated gram cell sits immediately before `Proteínas`, another
-    dedicated gram cell sits immediately after it, and that forward cell is
-    immediately followed by the standalone `Sal` row *without* its own following
-    gram cell, the forward cell is structurally the reversed salt value rather
-    than safe protein evidence. Returning None lets the existing single-reversed
-    macro path expose the pre-label value only as REVIEW evidence, subject to
-    whole-tuple energy coherence and later independent OCR-family corroboration.
+    OCR can linearise the tail of a nutrition table as `Proteínas / 0.02 g /
+    Sal` while omitting or moving the actual protein cell. If `Sal` has no own
+    following gram cell, the value immediately after `Proteínas` is structurally
+    ambiguous and is withheld rather than assigned to protein.
+
+    Even when no dedicated gram cell is visible before `Proteínas`, this remains
+    ambiguous: interleaved package text can separate the real protein value from
+    its label. Returning None keeps the observation in REVIEW. When a dedicated
+    pre-label protein cell is present, the existing single-reversed-macro path may
+    expose that value only after whole-tuple energy coherence checks; this helper
+    itself never rewrites or infers a number.
 
     A conventional `... / Proteínas / 0.02 g / Sal / 0.05 g` layout is kept
     unchanged because the explicit value after `Sal` proves that 0.02 g belongs
-    to protein. No numeric value is rewritten or inferred here.
+    to protein.
     \"\"\"
     ordinary = _number_after(label_patterns, text)
     folded = _strip_ocr_unit_parentheses(_fold(text))
     cell = r"[<>]?\\s*\\d{1,3}(?:\\.\\d{1,2})?\\s*(?:g|9|q|yg|y)"
     for label in label_patterns:
         for label_match in re.finditer(label, folded, flags=re.I):
-            before = _number_immediately_before((label,), text)
-            if before is None:
-                continue
             tail = folded[label_match.end():label_match.end() + 120]
             forward_then_salt = re.match(
                 rf"\\s*{cell}\\s*\\n\\s*sal[ \\t]*(?=\\n|$)",
