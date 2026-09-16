@@ -5,6 +5,8 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-carbohydrate-bracket-fix.yml'
+      - 'tools/catalog/apply_mercadona_carbohydrate_bracket_fix.py'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -28,44 +30,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Add regression first and prove the old parser fails it
+      - name: Add regression before parser change
+        run: python tools/catalog/apply_mercadona_carbohydrate_bracket_fix.py insert-test
+
+      - name: Prove current parser fails the new regression
         working-directory: tools/catalog
         shell: bash
         run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('test_nutrition_label_reader_row_tokens.py')
-          text = path.read_text(encoding='utf-8')
-          sentinel = "    def test_interleaved_carbohydrate_allows_observed_conservation_heading(self):\n"
-          if text.count(sentinel) != 1:
-              raise SystemExit('row-token regression insertion sentinel changed')
-          test = '''    def test_observed_easyocr_bracketed_split_carbohydrate_label(self):
-        # Observed on Mercadona 11609: EasyOCR emits stray bracket glyphs before
-        # both halves of the printed `Hidratos de Carbono` row while preserving
-        # the dedicated 80 g cell between them. Accept only those one-character
-        # OCR punctuation glyphs; arbitrary intervening prose remains blocked.
-        text = (
-            'INFORMACIÓN NUTRICIONAL\\npor 100 g\\n'
-            'Valor energético 1601 kJ / 378 kcal\\n'
-            'Grasas 2.6 g\\n'
-            '[Hidratos de\\n80 g\\n(Carbono\\n'
-            'Proteínas 5.6 g\\nSal 0.01 g\\n'
-        )
-        r = read_nutrition_label(text, extraction_confidence=.96)
-        self.assertEqual(r.status, 'DECLARED', r)
-        self.assertEqual(r.nutrition['carbohydrate_g'], 80.0)
-
-'''
-          text = text.replace(sentinel, test + sentinel, 1)
-          path.write_text(text, encoding='utf-8')
-          PY
-
           set +e
-          python -m unittest -v \
-            test_nutrition_label_reader_row_tokens.RowTokenRegressionTest.test_observed_easyocr_bracketed_split_carbohydrate_label \
-            >/tmp/prepatch.log 2>&1
+          python -m unittest -v test_nutrition_label_reader_row_tokens.RowTokenRegressionTest.test_observed_easyocr_bracketed_split_carbohydrate_label > /tmp/prepatch.log 2>&1
           rc=$?
           set -e
           cat /tmp/prepatch.log
@@ -73,81 +46,25 @@ jobs:
             echo 'Regression unexpectedly passed before parser patch' >&2
             exit 1
           fi
-          grep -q 'FAIL: test_observed_easyocr_bracketed_split_carbohydrate_label' /tmp/prepatch.log || {
-            echo 'Regression failed for an unexpected reason before parser patch' >&2
-            exit 1
-          }
+          grep -q 'FAIL: test_observed_easyocr_bracketed_split_carbohydrate_label' /tmp/prepatch.log
 
-      - name: Apply the narrow parser fix and point the near-safe pilot at the latest immutable audit
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-
-          parser = Path('tools/catalog/nutrition_label_reader.py')
-          text = parser.read_text(encoding='utf-8')
-          if text.count('READER_VERSION = "1.4.24"') != 1:
-              raise SystemExit('unexpected nutrition reader version')
-          text = text.replace('READER_VERSION = "1.4.24"', 'READER_VERSION = "1.4.25"', 1)
-
-          old_doc = '''    whole-package ordering additionally inserts the standalone `CONSERVACION`
-    heading between the numeric cell and `Carbono`; no arbitrary prose is skipped.
-    Observed OCR unit glyphs include g, 9, y, q and the two-character `yg`.
-'''
-          new_doc = '''    whole-package ordering additionally inserts the standalone `CONSERVACION`
-    heading between the numeric cell and `Carbono`; no arbitrary prose is skipped.
-    EasyOCR can also prefix either half of the split row label with a stray `[` or
-    `(` glyph. Accept only those observed one-character OCR punctuation glyphs.
-    Observed OCR unit glyphs include g, 9, y, q and the two-character `yg`.
-'''
-          if text.count(old_doc) != 1:
-              raise SystemExit('interleaved carbohydrate docstring sentinel changed')
-          text = text.replace(old_doc, new_doc, 1)
-
-          old_regex = '''        r"(?:^|\\n)\\s*hidratos?\\s+de\\s+([<>]?)\\s*(\\d{1,3}(?:\\.\\d{1,2})?)\\s*(?:g|9|yg|y|q)?"
-        r"(?:\\s*\\n\\s*conservacion\\s*)?\\s+carbono\\b",
-'''
-          new_regex = '''        r"(?:^|\\n)\\s*[\\[(|]?\\s*hidratos?\\s+de\\s+([<>]?)\\s*(\\d{1,3}(?:\\.\\d{1,2})?)\\s*(?:g|9|yg|y|q)?"
-        r"(?:\\s*\\n\\s*conservacion)?\\s+[\\[(|]?\\s*carbono\\b",
-'''
-          if text.count(old_regex) != 1:
-              raise SystemExit('interleaved carbohydrate regex sentinel changed')
-          text = text.replace(old_regex, new_regex, 1)
-          parser.write_text(text, encoding='utf-8')
-
-          workflow = Path('.github/workflows/catalog-mercadona-near-safe-doctr-pilot.yml')
-          wf = workflow.read_text(encoding='utf-8')
-          if wf.count('35100259145') != 2:
-              raise SystemExit('near-safe source audit run sentinel changed')
-          wf = wf.replace('35100259145', '35139148569')
-          workflow.write_text(wf, encoding='utf-8')
-          PY
+      - name: Apply narrow parser fix
+        run: python tools/catalog/apply_mercadona_carbohydrate_bracket_fix.py apply
 
       - name: Run conservative parser regressions
         working-directory: tools/catalog
         run: |
-          set -euo pipefail
-          python -m unittest -v \
-            test_nutrition_label_reader.py \
-            test_nutrition_label_reader_ocr_typos.py \
-            test_nutrition_label_reader_row_tokens.py \
-            test_mercadona_ocr_safety_regressions.py \
-            test_nutrition_ocr_ensemble.py \
-            test_mercadona_near_safe_doctr_input.py
+          python -m unittest -v test_nutrition_label_reader.py test_nutrition_label_reader_ocr_typos.py test_nutrition_label_reader_row_tokens.py test_mercadona_ocr_safety_regressions.py test_nutrition_ocr_ensemble.py test_mercadona_near_safe_doctr_input.py
           python -m py_compile nutrition_label_reader.py
 
-      - name: Commit tested fix atomically and remove this temporary workflow
+      - name: Commit tested fix and remove temporary helpers
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/workflows/catalog-mercadona-carbohydrate-bracket-fix.yml
+          git rm .github/workflows/catalog-mercadona-carbohydrate-bracket-fix.yml tools/catalog/apply_mercadona_carbohydrate_bracket_fix.py
           git config user.name 'David Prieto'
           git config user.email 'frandavid100@gmail.com'
-          git add \
-            tools/catalog/nutrition_label_reader.py \
-            tools/catalog/test_nutrition_label_reader_row_tokens.py \
-            .github/workflows/catalog-mercadona-near-safe-doctr-pilot.yml
+          git add tools/catalog/nutrition_label_reader.py tools/catalog/test_nutrition_label_reader_row_tokens.py .github/workflows/catalog-mercadona-near-safe-doctr-pilot.yml
           git diff --cached --check
           git commit -m 'fix(catalog): parse bracketed split carbohydrate row'
           git push origin HEAD:agent/catalog-phase1
