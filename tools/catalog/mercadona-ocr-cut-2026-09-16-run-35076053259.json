@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.1",
+  "kind": "MERCADONA_OCR_CURRENT_CANONICAL_CUT_AUDIT",
+  "date": "2026-09-16",
+  "inventory_products": 4280,
+  "previous_verified_run_id": 35036658610,
+  "previous_canonical_declared": 342,
+  "previous_canonical_review": 2627,
+  "previous_processed_reconstructed": 2969,
+  "deterministic_review_replay": {
+    "run_id": 35072898437,
+    "head_sha": "4dfb9fbe8f69ec5ccac8be19c6b0cf261b89e41f",
+    "artifact_id": 10438211682,
+    "artifact_sha256": "733660ef392febedcc78f0052799fddb655cbbd082724d2a76e2f13f9c97c167",
+    "status": "success",
+    "checkout_policy": "all preparation, tests, and OCR shards pinned to the triggering github.sha"
+  },
+  "verification_run_id": 35076053259,
+  "verification_artifact_id": 10439245608,
+  "verification_artifact_sha256": "099a1b496d5633db3416289a721c3a66e7ad4ac8bc7e2bdb68b01d1f6636b128",
+  "processed_reconstructed": 2969,
+  "canonical_status_products": 2969,
+  "canonical_declared": 344,
+  "canonical_review": 2625,
+  "canonical_no_visual_region": 0,
+  "canonical_error": 0,
+  "usable_complete": 344,
+  "processed_pct_inventory": 69.3692,
+  "usable_complete_pct_inventory": 8.0374,
+  "usable_field_counts": {
+    "calories": 344,
+    "protein_g": 344,
+    "carbohydrate_g": 344,
+    "fat_g": 344
+  },
+  "identity_conflict_products": 0,
+  "identity_unverified_products": 0,
+  "identity_unresolved_products": 0,
+  "status_changes_vs_previous_verified_cut": {
+    "review_to_declared": ["2860", "12960", "34031", "60699"],
+    "declared_to_review": ["13250", "58298"],
+    "net_declared_change": 2
+  },
+  "current_review_audit": {
+    "latest_review_products": 2625,
+    "near_safe_complete_review": 8,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 41,
+    "review_promoted_by_audit": 0
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "historical_first_party_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute the current live Mercadona API for the fixed 2026-08-27 historical 4,280-product snapshot. Continue only exact-identity targeted reruns where immutable historical OCR evidence survives."
+  },
+  "status": "VERIFIED_CANONICAL_WITH_HISTORICAL_RESIDUAL_BLOCKED"
+}
