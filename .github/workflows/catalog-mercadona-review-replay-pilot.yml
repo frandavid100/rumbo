@@ -66,14 +66,77 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ steps.audit.outputs.run_id }}
 
-      - name: Rehydrate only the raw OCR artifacts used by that audit
+      - name: Rehydrate strict OCR artifacts referenced by canonical audit
         shell: bash
         run: |
           set -euo pipefail
           test -s audit/artifacts.tsv
           test -s audit/run-union-summary.json
           mkdir -p /tmp/mercadona-review-replay-raw
-          total=$(wc -l < audit/artifacts.tsv | tr -d ' ')
+
+          # artifacts.tsv also contains diagnostic/materialized artifacts that the
+          # canonical audit inspected but excluded from strict OCR state. Some of
+          # those intentionally short-lived artifacts can expire without removing
+          # any canonical raw OCR evidence. Download only artifact batches that are
+          # explicitly referenced by run-union-summary.json as containing strict
+          # OCR rows; fail closed if any referenced batch cannot be mapped/downloaded.
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          summary = json.loads(Path('audit/run-union-summary.json').read_text(encoding='utf-8'))
+          strict_keys = set()
+          for run in summary.get('runs', []):
+              for artifact_file in run.get('artifact_files', []):
+                  key = str(artifact_file).split('/', 1)[0]
+                  if not re.fullmatch(r'\d+-\d+', key):
+                      raise SystemExit(f'invalid strict artifact reference: {artifact_file!r}')
+                  strict_keys.add(key)
+          if not strict_keys:
+              raise SystemExit('canonical audit contains no strict OCR artifact references')
+
+          rows = {}
+          for line in Path('audit/artifacts.tsv').read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              parts = line.split('\t')
+              if len(parts) < 5 or not parts[0].isdigit() or not parts[2].isdigit():
+                  raise SystemExit(f'invalid artifacts.tsv row: {line!r}')
+              key = f'{parts[0]}-{parts[2]}'
+              if key not in strict_keys:
+                  continue
+              prior = rows.get(key)
+              if prior is not None and prior != line:
+                  raise SystemExit(f'conflicting artifacts.tsv rows for {key}')
+              rows[key] = line
+
+          missing = sorted(strict_keys - set(rows))
+          if missing:
+              raise SystemExit(
+                  f'{len(missing)} strict OCR artifact references are absent from artifacts.tsv: {missing[:10]}'
+              )
+
+          ordered = sorted(
+              rows.values(),
+              key=lambda line: (
+                  line.split('\t')[4],
+                  int(line.split('\t')[0]),
+                  int(line.split('\t')[2]),
+              ),
+          )
+          Path('/tmp/strict-ocr-artifacts.tsv').write_text(
+              ''.join(line + '\n' for line in ordered),
+              encoding='utf-8',
+          )
+          print(
+              f'Strict canonical OCR artifact batches: {len(ordered)}; '
+              f'audit artifact rows excluded from rehydration: '
+              f'{sum(1 for line in Path("audit/artifacts.tsv").read_text(encoding="utf-8").splitlines() if line.strip()) - len(ordered)}'
+          )
+          PY
+
+          total=$(wc -l < /tmp/strict-ocr-artifacts.tsv | tr -d ' ')
           done_count=0
           while IFS=$'\t' read -r run_id run_name artifact_id artifact_name created_at; do
             [[ -n "$artifact_id" ]] || continue
@@ -86,10 +149,10 @@ jobs:
             rm "$dest/artifact.zip"
             done_count=$((done_count + 1))
             if (( done_count % 50 == 0 )); then
-              echo "Rehydrated $done_count/$total audit artifacts"
+              echo "Rehydrated $done_count/$total strict OCR artifacts"
             fi
-          done < audit/artifacts.tsv
-          echo "Rehydrated $done_count/$total audit artifacts"
+          done < /tmp/strict-ocr-artifacts.tsv
+          echo "Rehydrated $done_count/$total strict OCR artifacts"
           test "$done_count" -eq "$total"
 
       - name: Build strict historical-label REVIEW replay seeds
