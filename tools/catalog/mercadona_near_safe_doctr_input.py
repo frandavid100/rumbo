@@ -43,8 +43,8 @@ def select_near_safe_rows(rows: list[dict[str, Any]], *, limit: int = 8) -> tupl
             reasons.append("NOT_REVIEW")
         if not isinstance(values, dict) or any(values.get(field) is None for field in CORE):
             reasons.append("INCOMPLETE_CORE_VALUES")
-        if corroborated not in {2, 3}:
-            reasons.append("NOT_TWO_OR_THREE_OF_FOUR")
+        if corroborated not in {1, 2, 3}:
+            reasons.append("NOT_ONE_TO_THREE_OF_FOUR")
         if families < 2:
             reasons.append("INSUFFICIENT_ENGINE_FAMILIES")
         if row.get("basis") not in VALID_BASIS:
@@ -74,7 +74,7 @@ def select_near_safe_rows(rows: list[dict[str, Any]], *, limit: int = 8) -> tupl
     )
     selected = eligible[: max(0, limit)]
     summary = {
-        "selection_policy": "CURRENT_COMPLETE_CLEAN_REVIEW_WITH_EXPLICIT_PER_100_BASIS_AND_EXACT_EAN_IMAGE_ANCHORS; PRIORITIZE_3_OF_4_THEN_2_OF_4; ACCEPTANCE_THRESHOLDS_UNCHANGED",
+        "selection_policy": "CURRENT_COMPLETE_CLEAN_REVIEW_WITH_EXPLICIT_PER_100_BASIS_AND_EXACT_EAN_IMAGE_ANCHORS; PRIORITIZE_3_OF_4_THEN_2_OF_4_THEN_1_OF_4; ACCEPTANCE_THRESHOLDS_UNCHANGED",
         "input_rows": len(rows),
         "eligible": len(eligible),
         "selected": len(selected),

@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SOURCE_AUDIT_RUN_ID: '35090395863'
+  SOURCE_AUDIT_RUN_ID: '35100259145'
   SOURCE_AUDIT_ARTIFACT: mercadona-current-ocr-residual-audit
   TARGET_LIMIT: '8'
 
@@ -46,7 +46,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ env.SOURCE_AUDIT_RUN_ID }}
 
-      - name: Test and select clean 3-of-4 then 2-of-4 REVIEW targets
+      - name: Test and select clean 3-of-4 then 2-of-4 then 1-of-4 REVIEW targets
         working-directory: tools/catalog
         run: |
           set -euo pipefail
@@ -97,7 +97,7 @@ jobs:
           selection = json.loads((root / 'selection-summary.json').read_text(encoding='utf-8'))
           live = json.loads((root / 'live-summary.json').read_text(encoding='utf-8'))
           metadata = {
-              'source_audit_run_id': int('35090395863'),
+              'source_audit_run_id': int('35100259145'),
               'source_audit_artifact': 'mercadona-current-ocr-residual-audit',
               'source_branch_sha': '${{ github.sha }}',
               'selection': selection,

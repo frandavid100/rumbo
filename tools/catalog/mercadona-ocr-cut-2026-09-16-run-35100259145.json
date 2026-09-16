@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0.1",
+  "kind": "MERCADONA_OCR_CURRENT_CANONICAL_CUT_AUDIT",
+  "date": "2026-09-16",
+  "inventory_products": 4280,
+  "previous_verified_run_id": 35076053259,
+  "previous_canonical_declared": 344,
+  "previous_canonical_review": 2625,
+  "previous_processed_reconstructed": 2969,
+  "near_safe_doctr_pilot": {
+    "run_id": 35099343186,
+    "head_sha": "846d788e090dedfe8c675417f86abe24df2071e7",
+    "source_audit_run_id": 35090395863,
+    "input_artifact_id": 10447497606,
+    "input_artifact_sha256": "fca8d3e94aa0b77c385faa0ac1aa8da2231ec8e31cd61952584fcf031d16cc09",
+    "shard_artifacts": [
+      {
+        "shard": 0,
+        "artifact_id": 10448200934,
+        "artifact_sha256": "ba4cefe11de20955b8db01d205681782d6009770651a4b1fac86e06581c26197"
+      },
+      {
+        "shard": 1,
+        "artifact_id": 10447936847,
+        "artifact_sha256": "84845760b035cb2079204dee83e936a7ac9cf63506ed53924699b9f6f13ac53f"
+      }
+    ],
+    "regression_tests_per_shard": 92,
+    "selected": 5,
+    "selected_product_ids": ["23912", "13250", "15604", "84638", "13709"],
+    "accepted_exact_current_identity_and_image": 5,
+    "declared": 4,
+    "review": 1,
+    "declared_product_ids": ["13250", "15604", "23912", "84638"],
+    "review_product_ids": ["13709"],
+    "acceptance_policy_changed": false,
+    "images_persisted": false,
+    "redistribution_allowed": false
+  },
+  "verification_run_id": 35100259145,
+  "verification_artifact_id": 10447893838,
+  "verification_artifact_sha256": "ffabe20ae209df77c31cb8308470f44a624dbf1754ace0eb3d69a6c7cbc43c0a",
+  "processed_reconstructed": 2969,
+  "canonical_status_products": 2969,
+  "canonical_declared": 348,
+  "canonical_review": 2621,
+  "canonical_no_visual_region": 0,
+  "canonical_error": 0,
+  "usable_complete": 348,
+  "processed_pct_inventory": 69.3692,
+  "usable_complete_pct_inventory": 8.1308,
+  "usable_field_counts": {
+    "calories": 348,
+    "protein_g": 348,
+    "carbohydrate_g": 348,
+    "fat_g": 348
+  },
+  "identity_conflict_products": 0,
+  "identity_unverified_products": 0,
+  "identity_unresolved_products": 0,
+  "coverage_without_canonical_state": 0,
+  "status_changes_vs_previous_verified_cut": {
+    "review_to_declared": ["13250", "15604", "23912", "84638"],
+    "declared_to_review": [],
+    "net_declared_change": 4
+  },
+  "current_review_audit": {
+    "latest_review_products": 2621,
+    "near_safe_complete_review": 3,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 41,
+    "review_promoted_by_audit": 0
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "historical_first_party_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute the current live Mercadona API for the fixed 2026-08-27 historical 4,280-product snapshot. Continue only exact-identity targeted reruns where immutable historical OCR evidence survives."
+  },
+  "status": "VERIFIED_CANONICAL_WITH_HISTORICAL_RESIDUAL_BLOCKED"
+}
