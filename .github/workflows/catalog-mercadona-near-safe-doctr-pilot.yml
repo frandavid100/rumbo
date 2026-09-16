@@ -8,6 +8,7 @@ on:
       - 'tools/catalog/mercadona_near_safe_doctr_input.py'
       - 'tools/catalog/test_mercadona_near_safe_doctr_input.py'
       - 'tools/catalog/mercadona_bounded_doctr_rescue.py'
+      - 'tools/catalog/test_mercadona_bounded_primary_column_variants.py'
       - 'tools/catalog/mercadona_near_safe_doctr_retry.py'
       - 'tools/catalog/test_mercadona_near_safe_doctr_retry.py'
   workflow_dispatch:
@@ -21,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SOURCE_AUDIT_RUN_ID: '35139148569'
+  SOURCE_AUDIT_RUN_ID: '35154862990'
   SOURCE_AUDIT_ARTIFACT: mercadona-current-ocr-residual-audit
   TARGET_LIMIT: '8'
 
@@ -97,7 +98,7 @@ jobs:
           selection = json.loads((root / 'selection-summary.json').read_text(encoding='utf-8'))
           live = json.loads((root / 'live-summary.json').read_text(encoding='utf-8'))
           metadata = {
-              'source_audit_run_id': int('35139148569'),
+              'source_audit_run_id': int('${{ env.SOURCE_AUDIT_RUN_ID }}'),
               'source_audit_artifact': 'mercadona-current-ocr-residual-audit',
               'source_branch_sha': '${{ github.sha }}',
               'selection': selection,
@@ -162,6 +163,7 @@ jobs:
           python -m unittest -v \
             test_mercadona_near_safe_doctr_input.py \
             test_mercadona_bounded_doctr_rescue.py \
+            test_mercadona_bounded_primary_column_variants.py \
             test_label_doctr_extractor.py \
             test_mercadona_near_safe_doctr_retry.py \
             test_mercadona_ocr_safety_regressions.py \
