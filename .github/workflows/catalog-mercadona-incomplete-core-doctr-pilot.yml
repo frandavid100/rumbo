@@ -1,0 +1,312 @@
+name: Catalog Mercadona incomplete-core docTR pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-incomplete-core-doctr-pilot.yml'
+      - 'tools/catalog/mercadona_incomplete_review_doctr_input.py'
+      - 'tools/catalog/test_mercadona_incomplete_review_doctr_input.py'
+      - 'tools/catalog/mercadona_near_safe_doctr_input.py'
+      - 'tools/catalog/mercadona_bounded_doctr_rescue.py'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-incomplete-core-doctr-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SOURCE_AUDIT_RUN_ID: '35120535299'
+  SOURCE_AUDIT_ARTIFACT: mercadona-current-ocr-residual-audit
+  FRONTIER_LIMIT: '24'
+  TARGET_LIMIT: '8'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download immutable current REVIEW audit
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.SOURCE_AUDIT_ARTIFACT }}
+          path: tools/catalog/incomplete-source-audit
+          github-token: ${{ github.token }}
+          run-id: ${{ env.SOURCE_AUDIT_RUN_ID }}
+
+      - name: Run incomplete-frontier selection regressions
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          python -m unittest -v \
+            test_mercadona_incomplete_review_doctr_input.py \
+            test_audit_mercadona_current_review_failure_modes.py \
+            test_mercadona_near_safe_doctr_input.py
+          python -m py_compile mercadona_incomplete_review_doctr_input.py
+
+      - name: Reconstruct immutable raw-live OCR evidence referenced by source audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/mercadona-incomplete-raw
+          mkdir -p /tmp/mercadona-incomplete-raw
+          while IFS=$'\t' read -r run_id run_name artifact_id artifact_name artifact_created_at; do
+            [[ -n "$artifact_id" ]] || continue
+            dest="/tmp/mercadona-incomplete-raw/${run_id}-${artifact_id}"
+            mkdir -p "$dest"
+            gh api -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" \
+              > "$dest/artifact.zip"
+            unzip -q "$dest/artifact.zip" -d "$dest/unpacked"
+            rm "$dest/artifact.zip"
+          done < tools/catalog/incomplete-source-audit/artifacts.tsv
+
+      - name: Select clean incomplete 3-of-4 REVIEW frontier
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf incomplete-selection
+          python mercadona_incomplete_review_doctr_input.py \
+            --root /tmp/mercadona-incomplete-raw \
+            --run-union-summary incomplete-source-audit/run-union-summary.json \
+            --out incomplete-selection \
+            --limit "$FRONTIER_LIMIT"
+
+      - name: Rehydrate only selected products from official first-party API
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-first-party-incomplete-live
+          python mercadona_first_party_details.py \
+            --inventory incomplete-selection/inventory.jsonl \
+            --out mercadona-first-party-incomplete-live \
+            --shard-index 0 \
+            --shard-count 1 \
+            --timeout 20 \
+            --delay 0.2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('mercadona-first-party-incomplete-live')
+          summary = json.loads((root / 'summary-00.json').read_text(encoding='utf-8'))
+          errors = [json.loads(line) for line in (root / 'errors-00.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors or summary.get('fetched') != summary.get('requested'):
+              raise SystemExit(f'Targeted first-party rehydration incomplete: summary={summary} errors={errors}')
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Require exact current EAN, exact first-party image URL and perspective 9
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf incomplete-doctr-input
+          python mercadona_near_safe_doctr_input.py live \
+            --selected incomplete-selection/selected.jsonl \
+            --details mercadona-first-party-incomplete-live/details-00.jsonl \
+            --out incomplete-doctr-input
+          cp incomplete-selection/selection-summary.json incomplete-doctr-input/selection-summary.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('incomplete-doctr-input')
+          selected = []
+          for name in ('with-ingredients.jsonl', 'without-ingredients.jsonl'):
+              path = root / name
+              selected.extend(json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip())
+
+          p9 = []
+          excluded_non_p9 = []
+          for row in selected:
+              anchor = row.get('_near_safe_anchor') or {}
+              if str(anchor.get('current_image_perspective')) == '9':
+                  p9.append(row)
+              else:
+                  excluded_non_p9.append(str(row.get('product_id') or ''))
+
+          p9.sort(key=lambda row: (
+              0 if row.get('ingredients') else 1,
+              -int((row.get('_near_safe_anchor') or {}).get('canonical_corroborated_fields') or 0),
+              str(row.get('product_id') or ''),
+          ))
+          chosen = p9[:int('${{ env.TARGET_LIMIT }}')]
+          with_ingredients = [row for row in chosen if row.get('ingredients')]
+          without_ingredients = [row for row in chosen if not row.get('ingredients')]
+
+          def write_jsonl(path, rows):
+              path.write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows), encoding='utf-8')
+
+          write_jsonl(root / 'with-ingredients.jsonl', with_ingredients)
+          write_jsonl(root / 'without-ingredients.jsonl', without_ingredients)
+          live = json.loads((root / 'live-summary.json').read_text(encoding='utf-8'))
+          live.update({
+              'perspective_9_required': True,
+              'excluded_non_perspective_9_product_ids': sorted(set(excluded_non_p9)),
+              'perspective_9_candidates': len(p9),
+              'target_limit_after_live_validation': int('${{ env.TARGET_LIMIT }}'),
+              'accepted_for_ocr': len(chosen),
+              'accepted_for_ocr_product_ids': [str(row.get('product_id') or '') for row in chosen],
+              'accepted_with_structured_ingredients': len(with_ingredients),
+              'accepted_without_structured_ingredients': len(without_ingredients),
+              'ingredient_priority_applied': True,
+              'acceptance_policy_changed': False,
+          })
+          (root / 'live-summary.json').write_text(json.dumps(live, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          if not chosen:
+              raise SystemExit('No exact-EAN, exact-image, perspective=9 incomplete frontier candidates remain')
+          print(json.dumps(live, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Record immutable pilot metadata
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('incomplete-doctr-input')
+          selection = json.loads((root / 'selection-summary.json').read_text(encoding='utf-8'))
+          live = json.loads((root / 'live-summary.json').read_text(encoding='utf-8'))
+          metadata = {
+              'source_audit_run_id': int('${{ env.SOURCE_AUDIT_RUN_ID }}'),
+              'source_audit_artifact': '${{ env.SOURCE_AUDIT_ARTIFACT }}',
+              'source_branch_sha': '${{ github.sha }}',
+              'frontier': 'INCOMPLETE_EXACTLY_THREE_CORE_FIELDS_WITH_THREE_CORROBORATED',
+              'selection': selection,
+              'live_validation': live,
+              'new_independent_ocr_family': 'doctr',
+              'acceptance_policy_changed': False,
+              'cross_run_value_fusion_allowed': False,
+              'missing_values_inferred': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+          }
+          (root / 'pilot-metadata.json').write_text(
+              json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-incomplete-core-doctr-input
+          path: tools/catalog/incomplete-doctr-input/
+          retention-days: 30
+          if-no-files-found: error
+
+  ocr:
+    runs-on: ubuntu-24.04
+    needs: prepare
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-incomplete-core-doctr-input
+          path: tools/catalog/retry-input
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative OCR regressions before images
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_incomplete_review_doctr_input.py \
+            test_mercadona_near_safe_doctr_input.py \
+            test_mercadona_bounded_doctr_rescue.py \
+            test_label_doctr_extractor.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: Run bounded docTR rescue with unchanged acceptance contract
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-incomplete-core-doctr-pilot/with-ingredients
+          mkdir -p mercadona-incomplete-core-doctr-pilot/without-ingredients
+
+          run_group() {
+            local products="$1"
+            local out="$2"
+            local mode="$3"
+            [[ -s "$products" ]] || return 0
+            set +e
+            python mercadona_bounded_doctr_rescue.py \
+              --products "$products" \
+              --out "$out" \
+              --shard-index ${{ matrix.shard }} \
+              --shard-count 2 \
+              --limit 0 \
+              --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            [[ $rc -eq 0 || $rc -eq 2 ]] || return "$rc"
+          }
+
+          cp retry-input/pilot-metadata.json mercadona-incomplete-core-doctr-pilot/pilot-metadata.json
+          cp retry-input/selection-summary.json mercadona-incomplete-core-doctr-pilot/selection-summary.json
+          cp retry-input/live-summary.json mercadona-incomplete-core-doctr-pilot/live-summary.json
+          run_group retry-input/with-ingredients.jsonl mercadona-incomplete-core-doctr-pilot/with-ingredients priority
+          run_group retry-input/without-ingredients.jsonl mercadona-incomplete-core-doctr-pilot/without-ingredients p9-no-ingredients-all
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-incomplete-core-doctr-pilot-${{ matrix.shard }}
+          path: tools/catalog/mercadona-incomplete-core-doctr-pilot/
+          retention-days: 90
+          if-no-files-found: error
+
+  reconcile:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ needs.ocr.result == 'success' }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Trigger strict canonical reconciliation after pilot
+        run: |
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
