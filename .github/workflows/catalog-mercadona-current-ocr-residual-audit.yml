@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/catalog-phase1
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-python@v5
         with:
@@ -106,13 +106,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/mercadona-ocr-artifacts tools/catalog/mercadona-current-ocr-residual-audit
+          self_created_at=$(gh api -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${GITHUB_RUN_ID}" --jq '.created_at')
 
           # Enumerate Mercadona workflow definitions first and paginate runs per workflow. The
           # repository-wide Actions endpoint can silently expose only a bounded recent horizon
           # once the branch has accumulated >1,000 runs; filtering Mercadona only after that
           # pagination dropped older still-valid OCR evidence. Per-workflow pagination preserves
           # the complete first-party OCR history since the cut while keeping the same run-name
-          # scope. No product image is downloaded here.
+          # scope. Only runs created no later than this audit run are eligible, so a later branch
+          # push cannot change the evidence union mid-run. No product image is downloaded here.
           gh api --paginate \
             -H 'Accept: application/vnd.github+json' \
             '/repos/frandavid100/rumbo/actions/workflows?per_page=100' \
@@ -153,7 +156,7 @@ jobs:
             gh api --paginate \
               -H 'Accept: application/vnd.github+json' \
               "/repos/frandavid100/rumbo/actions/workflows/${workflow_id}/runs?branch=agent%2Fcatalog-phase1&created=%3E%3D2026-08-27T00%3A00%3A00Z&per_page=100" \
-              --jq '.workflow_runs[] | select(.conclusion == "success") | [.id, .name, .path] | @tsv' \
+              --jq ".workflow_runs[] | select(.conclusion == \"success\") | select(.created_at <= \"${self_created_at}\") | [.id, .name, .path] | @tsv" \
               >> /tmp/mercadona-ocr-runs.tsv
           done < /tmp/mercadona-workflows.tsv
           sort -u -o /tmp/mercadona-ocr-runs.tsv /tmp/mercadona-ocr-runs.tsv
