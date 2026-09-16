@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/catalog-phase1
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-python@v5
         with:
@@ -188,7 +188,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/catalog-phase1
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-python@v5
         with:
@@ -228,7 +228,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/catalog-phase1
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-python@v5
         with:
