@@ -406,4 +406,4 @@ jobs:
 
       - name: Request strict canonical reconciliation after replay settles
         run: |
-          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --repo frandavid100/rumbo --ref agent/catalog-phase1
