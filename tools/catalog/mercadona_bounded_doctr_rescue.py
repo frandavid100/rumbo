@@ -11,8 +11,10 @@ first-party image have already been revalidated exactly.
 from pathlib import Path
 import tempfile
 
+from PIL import Image, ImageEnhance, ImageOps
+
 from label_easyocr_extractor import extract_with_easyocr
-from label_image_preprocess import build_fallback_variants
+from label_image_preprocess import ImageVariant, build_fallback_variants
 import mercadona_near_safe_doctr_retry as retry
 
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
@@ -28,6 +30,8 @@ EASYOCR_VARIANT_NAMES = (
     "crop_top",
     "crop_bottom",
 )
+PRIMARY_COLUMN_WIDTH_RATIOS = (0.42, 0.50)
+PRIMARY_COLUMN_SCALE = 2.0
 
 # Keep a stable handle to the audited docTR extraction path before main() swaps
 # the production extractor to the wrapper below.
@@ -102,6 +106,53 @@ def should_run_post_doctr_easyocr_rescue(ensemble) -> bool:
     )
 
 
+def _save_primary_column_variant(source: Image.Image, path: Path) -> None:
+    gray = ImageOps.grayscale(source)
+    gray = ImageOps.autocontrast(gray, cutoff=1)
+    gray = ImageEnhance.Contrast(gray).enhance(1.35)
+    gray.save(path, quality=95)
+
+
+def build_bounded_primary_column_variants(
+    image_path: str | Path,
+    output_dir: str | Path,
+) -> list[ImageVariant]:
+    """Create deterministic left-column crops for an already-bounded label region.
+
+    Some Mercadona labels print a primary per-100-g column beside a prepared-
+    serving column. Whole-region OCR can interleave both numeric cells and leave
+    one macro under-corroborated even though the primary value is visible. These
+    temporary crops isolate only the left portion of the same first-party label;
+    they do not infer which value is correct and do not alter parser or ensemble
+    acceptance. The crop observations remain EasyOCR-family evidence and must
+    still agree independently with another OCR family.
+    """
+    source_path = Path(image_path)
+    if not source_path.is_file():
+        raise FileNotFoundError(source_path)
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    variants: list[ImageVariant] = []
+    with Image.open(source_path) as image:
+        image = ImageOps.exif_transpose(image).convert("RGB")
+        width, height = image.size
+        for ratio in PRIMARY_COLUMN_WIDTH_RATIOS:
+            crop_width = max(1, min(width, int(width * ratio)))
+            crop = image.crop((0, 0, crop_width, height))
+            target = crop.resize(
+                (
+                    max(1, int(crop.width * PRIMARY_COLUMN_SCALE)),
+                    max(1, int(crop.height * PRIMARY_COLUMN_SCALE)),
+                ),
+                Image.Resampling.LANCZOS,
+            )
+            ratio_pct = int(round(ratio * 100))
+            path = out / f"primary-left-{ratio_pct}.jpg"
+            _save_primary_column_variant(target, path)
+            variants.append(ImageVariant(f"primary_left_{ratio_pct}", path))
+    return variants
+
+
 def _extract_easyocr(evidence, image_path: Path, strategy: str, readings, engine_errors) -> None:
     try:
         extracted = extract_with_easyocr(image_path)
@@ -127,6 +178,22 @@ def _extract_region_with_post_doctr_easyocr(evidence, region_path: Path, target_
             return readings, engine_errors, candidate
 
     with tempfile.TemporaryDirectory(prefix="rumbo-mercadona-post-doctr-easyocr-") as td:
+        # Try the primary-column isolation first. If it supplies the one missing
+        # corroboration, return before broad crops can introduce correlated
+        # secondary-column noise from the same EasyOCR family.
+        primary_dir = Path(td) / "primary-column"
+        for variant in build_bounded_primary_column_variants(region_path, primary_dir):
+            _extract_easyocr(
+                evidence,
+                variant.path,
+                f"easyocr-{variant.name}",
+                readings,
+                engine_errors,
+            )
+            candidate = retry._fuse(readings, target_kind)
+            if candidate.declared_usable:
+                return readings, engine_errors, candidate
+
         variants = {variant.name: variant for variant in build_fallback_variants(region_path, td)}
         for variant_name in EASYOCR_VARIANT_NAMES:
             variant = variants.get(variant_name)
