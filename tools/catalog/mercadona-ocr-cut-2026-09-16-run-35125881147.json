@@ -1,0 +1,139 @@
+{
+  "schema_version": "1.0.1",
+  "kind": "MERCADONA_OCR_CURRENT_CANONICAL_CUT_AUDIT",
+  "date": "2026-09-16",
+  "inventory_products": 4280,
+  "previous_verified_run_id": 35112723024,
+  "previous_canonical_declared": 349,
+  "previous_canonical_review": 2620,
+  "previous_processed_reconstructed": 2969,
+  "incomplete_core_doctr_pilot": {
+    "run_id": 35124674197,
+    "head_sha": "8ad47036ee665629a38cfa38a352e69c7a925c73",
+    "source_audit_run_id": 35120535299,
+    "input_artifact_id": 10459006785,
+    "input_artifact_sha256": "00f443f6c9a511aa0ab8f43cc72f1d8e0ba15250e239ce2dbe5d02c90f621e5b",
+    "shard_artifacts": [
+      {
+        "shard": 0,
+        "artifact_id": 10458968068,
+        "artifact_sha256": "66feed7e419e93842dff44e739673d22f29b46e950a0a27f4eed2eda251364a4"
+      },
+      {
+        "shard": 1,
+        "artifact_id": 10459307804,
+        "artifact_sha256": "c010907247c1e1c932256a4f3bb00158c2a880309c07ae4afcd60a448c710172"
+      }
+    ],
+    "regression_tests_per_shard": 91,
+    "eligible_incomplete_frontier": 27,
+    "selected_frontier": 24,
+    "accepted_exact_current_identity_and_image": 23,
+    "accepted_for_ocr": 8,
+    "accepted_for_ocr_product_ids": ["11609", "11687", "20727", "20908", "20991", "21256", "21628", "21713"],
+    "declared": 2,
+    "review": 6,
+    "declared_product_ids": ["20727", "21628"],
+    "review_product_ids": ["11609", "11687", "20908", "20991", "21256", "21713"],
+    "unmatched_current_first_party_photo": ["60671"],
+    "acceptance_policy_changed": false,
+    "cross_run_value_fusion_allowed": false,
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "redistribution_allowed": false
+  },
+  "verification_run_id": 35125881147,
+  "verification_artifact_id": 10459572494,
+  "verification_artifact_sha256": "441c01aa64ca78b28a7ac7132baeb022302060667c47cc98f7a7af064a017dd6",
+  "successful_mercadona_runs_reconstructed": 645,
+  "mercadona_artifacts_reconstructed": 738,
+  "processed_reconstructed": 2969,
+  "canonical_status_products": 2969,
+  "canonical_declared": 351,
+  "canonical_review": 2618,
+  "canonical_no_visual_region": 0,
+  "canonical_error": 0,
+  "usable_complete": 351,
+  "processed_pct_inventory": 69.3692,
+  "usable_complete_pct_inventory": 8.2009,
+  "usable_field_counts": {
+    "calories": 351,
+    "protein_g": 351,
+    "carbohydrate_g": 351,
+    "fat_g": 351
+  },
+  "identity_conflict_products": 0,
+  "identity_unverified_products": 0,
+  "identity_unresolved_products": 0,
+  "coverage_without_canonical_state": 0,
+  "status_changes_vs_previous_verified_cut": {
+    "review_to_declared": ["20727", "21628"],
+    "declared_to_review": [],
+    "net_declared_change": 2
+  },
+  "new_declared_products": [
+    {
+      "product_id": "20727",
+      "ean": "8480000207272",
+      "name": "Mantequilla con sal Hacendado",
+      "nutrition_per_100_g": {
+        "calories": 734.0,
+        "protein_g": 0.5,
+        "carbohydrate_g": 0.8,
+        "fat_g": 81.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "latest_run_id": 35124674197,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+    },
+    {
+      "product_id": "21628",
+      "ean": "8410973643418",
+      "name": "Bacón ahumado La Selva lonchas",
+      "nutrition_per_100_g": {
+        "calories": 353.0,
+        "protein_g": 15.0,
+        "carbohydrate_g": 1.0,
+        "fat_g": 32.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "latest_run_id": 35124674197,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+    }
+  ],
+  "current_review_audit": {
+    "latest_review_products": 2618,
+    "core_field_coverage_counts": {
+      "0": 2017,
+      "1": 107,
+      "2": 150,
+      "3": 269,
+      "4": 75
+    },
+    "near_safe_complete_review": 1,
+    "near_safe_complete_by_corroborated_fields": {"3": 1},
+    "near_safe_complete_by_engine_families": {"4": 1},
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 41,
+    "review_promoted_by_audit": 0
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "historical_first_party_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute the current live Mercadona API for the fixed 2026-08-27 historical 4,280-product snapshot. Continue only exact-identity targeted reruns where immutable historical OCR evidence survives."
+  },
+  "status": "VERIFIED_CANONICAL_WITH_HISTORICAL_RESIDUAL_BLOCKED"
+}
