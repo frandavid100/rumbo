@@ -1,0 +1,208 @@
+{
+  "schema_version": "1.0.1",
+  "kind": "MERCADONA_OCR_CURRENT_CANONICAL_CUT_AUDIT",
+  "date": "2026-09-16",
+  "inventory_products": 4280,
+  "previous_verified_run_id": 35125881147,
+  "previous_canonical_declared": 351,
+  "previous_canonical_review": 2618,
+  "previous_processed_reconstructed": 2969,
+  "targeted_doctr_retry": {
+    "run_id": 35154234120,
+    "head_sha": "791b67c948b4f8307233d2c141211ee2d25133ed",
+    "source_audit_run_id": 35146559157,
+    "input_artifact_id": 10470761037,
+    "input_artifact_sha256": "f923fbc681d6fd687f30c01aacd3d9f95dddd9ea8a868fbea95f3f37a01830f7",
+    "shard_artifacts": [
+      {
+        "shard": 0,
+        "artifact_id": 10469804096,
+        "artifact_sha256": "630d422a7d81c986e27f7197fa065dd43c03986dfad651718e47d4d49f360964"
+      },
+      {
+        "shard": 1,
+        "artifact_id": 10470742012,
+        "artifact_sha256": "878c6347a07d8e6ad3a0be9e25c50a5c383175d42fe996f408a74b4815054fff"
+      }
+    ],
+    "accepted_exact_current_identity_and_image": 7,
+    "accepted_for_ocr_product_ids": [
+      "10054",
+      "13705",
+      "21556",
+      "4176",
+      "82328",
+      "8308",
+      "84597"
+    ],
+    "declared": 4,
+    "review": 3,
+    "declared_product_ids": ["13705", "21556", "8308", "84597"],
+    "review_product_ids": ["10054", "4176", "82328"],
+    "acceptance_policy_changed": false,
+    "cross_run_value_fusion_allowed": false,
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "redistribution_allowed": false
+  },
+  "verification_run_id": 35154862990,
+  "verification_artifact_id": 10471525440,
+  "verification_artifact_sha256": "4666446b9d665e39b20f9bc8a558bd2a77fc5438f14f46b27a59ecd099797cdc",
+  "successful_mercadona_runs_discovered": 651,
+  "mercadona_artifacts_reconstructed": 747,
+  "runs_with_strict_ocr_rows": 414,
+  "processed_reconstructed": 2969,
+  "canonical_status_products": 2969,
+  "canonical_declared": 355,
+  "canonical_review": 2614,
+  "canonical_no_visual_region": 0,
+  "canonical_error": 0,
+  "usable_complete": 355,
+  "processed_pct_inventory": 69.3692,
+  "usable_complete_pct_inventory": 8.2944,
+  "usable_field_counts": {
+    "calories": 355,
+    "protein_g": 355,
+    "carbohydrate_g": 355,
+    "fat_g": 355
+  },
+  "identity_conflict_products": 0,
+  "identity_unverified_products": 0,
+  "identity_unresolved_products": 0,
+  "coverage_without_canonical_state": 0,
+  "status_changes_vs_previous_verified_cut": {
+    "review_to_declared": ["13705", "21556", "8308", "84597"],
+    "declared_to_review": [],
+    "net_declared_change": 4
+  },
+  "new_declared_products": [
+    {
+      "product_id": "13705",
+      "ean": "2105171137055",
+      "name": "Alitas de pollo asadas Hacendado",
+      "nutrition_per_100_g": {
+        "calories": 240.0,
+        "protein_g": 17.0,
+        "carbohydrate_g": 2.1,
+        "fat_g": 18.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "latest_run_id": 35154234120,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+    },
+    {
+      "product_id": "21556",
+      "ean": "8402001046407",
+      "name": "Bebida láctea de fresa L-casei 0% MG 0% azúcares añadidos",
+      "nutrition_per_100_g": {
+        "calories": 27.0,
+        "protein_g": 2.8,
+        "carbohydrate_g": 3.8,
+        "fat_g": 0.0
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4,
+      "latest_run_id": 35154234120,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+    },
+    {
+      "product_id": "8308",
+      "ean": "8436569263198",
+      "name": "Steak Tartar de vacuno marinado",
+      "nutrition_per_100_g": {
+        "calories": 111.0,
+        "protein_g": 16.0,
+        "carbohydrate_g": 2.8,
+        "fat_g": 4.0
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "latest_run_id": 35154234120,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+    },
+    {
+      "product_id": "84597",
+      "ean": "2105900845978",
+      "name": "24 Mini saladas surtidas",
+      "nutrition_per_100_g": {
+        "calories": 325.0,
+        "protein_g": 8.9,
+        "carbohydrate_g": 29.0,
+        "fat_g": 19.0
+      },
+      "independent_engine_families": 4,
+      "corroborated_fields": 4,
+      "latest_run_id": 35154234120,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+    }
+  ],
+  "current_review_audit": {
+    "latest_review_products": 2614,
+    "latest_raw_review_rows": 2776,
+    "core_field_coverage_counts": {
+      "0": 2017,
+      "1": 108,
+      "2": 150,
+      "3": 271,
+      "4": 68
+    },
+    "corroborated_field_counts": {
+      "0": 2303,
+      "1": 110,
+      "2": 124,
+      "3": 77
+    },
+    "independent_engine_family_counts": {
+      "0": 2015,
+      "1": 265,
+      "2": 213,
+      "3": 117,
+      "4": 4
+    },
+    "near_safe_complete_review": 1,
+    "near_safe_complete_by_corroborated_fields": {"3": 1},
+    "near_safe_complete_by_engine_families": {"4": 1},
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 34,
+    "review_promoted_by_audit": 0
+  },
+  "near_safe_residual": {
+    "product_id": "11609",
+    "ean": "8402001025617",
+    "name": "Cacao en polvo a la taza Hacendado",
+    "canonical_status": "REVIEW",
+    "basis": "100_g",
+    "diagnostic_candidate_values_per_100_g": {
+      "calories": 378.0,
+      "protein_g": 5.6,
+      "carbohydrate_g": 80.0,
+      "fat_g": 2.6
+    },
+    "corroborated_fields": 3,
+    "independent_engine_families": 4,
+    "latest_raw_run_id": 35145564143,
+    "promotion_allowed": false,
+    "usable_nutrition": null,
+    "note": "Diagnostic values only. Carbohydrate remains under-corroborated after OCR row linearisation of a two-column nutrition label; do not promote without the unchanged 4/4 independent-family contract."
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "historical_first_party_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "artifact_id": 9636465626,
+    "artifact_sha256": "5a8c89661afe09fe1c05d1f67e8ed608edf25b8363530db42959ec8413fef648",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute the current live Mercadona API for the fixed 2026-08-27 historical 4,280-product snapshot. Continue only exact-identity targeted reruns where immutable historical OCR evidence survives."
+  },
+  "status": "VERIFIED_CANONICAL_WITH_HISTORICAL_RESIDUAL_BLOCKED"
+}
