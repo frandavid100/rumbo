@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0.1",
+  "kind": "MERCADONA_OCR_CURRENT_CANONICAL_CUT_AUDIT",
+  "date": "2026-09-16",
+  "inventory_products": 4280,
+  "previous_verified_run_id": 35100259145,
+  "previous_canonical_declared": 348,
+  "previous_canonical_review": 2621,
+  "previous_processed_reconstructed": 2969,
+  "near_safe_doctr_pilot": {
+    "run_id": 35111956038,
+    "head_sha": "d6d0630779e588ee3fe0b6c653e39c17c64ac49f",
+    "source_audit_run_id": 35100259145,
+    "input_artifact_id": 10453185138,
+    "input_artifact_sha256": "6682a4993b02aefcab1732ba9ab5b03a3604da1f8fbca4468c7db9085e77f0ef",
+    "shard_artifacts": [
+      {
+        "shard": 0,
+        "artifact_id": 10452951842,
+        "artifact_sha256": "b1f1de778c7720dfa4dbfbd5834f2f2ee8971d1c99b8c1851fde89edce7b5788"
+      },
+      {
+        "shard": 1,
+        "artifact_id": 10452299882,
+        "artifact_sha256": "bb197f7e252dabc06de3cad24c892a015788fcabb52e90ba5826b8e6c7f0e570"
+      }
+    ],
+    "regression_tests_per_shard": 93,
+    "selected": 3,
+    "selected_product_ids": ["24541", "35183", "58166"],
+    "accepted_exact_current_identity_and_image": 3,
+    "declared": 1,
+    "review": 2,
+    "declared_product_ids": ["58166"],
+    "review_product_ids": ["24541", "35183"],
+    "acceptance_policy_changed": false,
+    "images_persisted": false,
+    "redistribution_allowed": false
+  },
+  "verification_run_id": 35112723024,
+  "verification_artifact_id": 10453692877,
+  "verification_artifact_sha256": "e6638996c6861b3e48c6d4f2668a314d04efd886326794ed36fe060fd1d5872d",
+  "processed_reconstructed": 2969,
+  "canonical_status_products": 2969,
+  "canonical_declared": 349,
+  "canonical_review": 2620,
+  "canonical_no_visual_region": 0,
+  "canonical_error": 0,
+  "usable_complete": 349,
+  "processed_pct_inventory": 69.3692,
+  "usable_complete_pct_inventory": 8.1542,
+  "usable_field_counts": {
+    "calories": 349,
+    "protein_g": 349,
+    "carbohydrate_g": 349,
+    "fat_g": 349
+  },
+  "identity_conflict_products": 0,
+  "identity_unverified_products": 0,
+  "identity_unresolved_products": 0,
+  "coverage_without_canonical_state": 0,
+  "status_changes_vs_previous_verified_cut": {
+    "review_to_declared": ["58166"],
+    "declared_to_review": [],
+    "net_declared_change": 1
+  },
+  "new_declared_products": [
+    {
+      "product_id": "58166",
+      "ean": "2105600581664",
+      "name": "Caña de lomo cebo ibérico La Hacienda del ibérico",
+      "nutrition_per_100_g": {
+        "calories": 298.35,
+        "protein_g": 39.1,
+        "carbohydrate_g": 0.7,
+        "fat_g": 15.5
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4,
+      "latest_run_id": 35111956038,
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE"
+    }
+  ],
+  "current_review_audit": {
+    "latest_review_products": 2620,
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 41,
+    "review_promoted_by_audit": 0
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "historical_first_party_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute the current live Mercadona API for the fixed 2026-08-27 historical 4,280-product snapshot. Continue only exact-identity targeted reruns where immutable historical OCR evidence survives."
+  },
+  "status": "VERIFIED_CANONICAL_WITH_HISTORICAL_RESIDUAL_BLOCKED"
+}
