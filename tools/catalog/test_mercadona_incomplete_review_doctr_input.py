@@ -54,12 +54,18 @@ class MercadonaIncompleteReviewDocTRInputTest(unittest.TestCase):
         two = {"calories": 100, "protein_g": 8, "carbohydrate_g": None, "fat_g": None}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self.write_rows(root, 100, [row("p1", three)])
-            self.write_rows(root, 100, [row("p2", three, reasons=["OCR_FIELD_CONFLICT:fat_g"])])
-            self.write_rows(root, 100, [row("p3", complete, corroborated=3)])
-            self.write_rows(root, 100, [row("p4", two, corroborated=3)])
-            self.write_rows(root, 100, [row("p5", three, corroborated=2)])
-            self.write_rows(root, 100, [row("p6", three, families=1)])
+            self.write_rows(
+                root,
+                100,
+                [
+                    row("p1", three),
+                    row("p2", three, reasons=["OCR_FIELD_CONFLICT:fat_g"]),
+                    row("p3", complete, corroborated=3),
+                    row("p4", two, corroborated=3),
+                    row("p5", three, corroborated=2),
+                    row("p6", three, families=1),
+                ],
+            )
             summary = {
                 "latest_status_counts": {"REVIEW": 6},
                 "latest_status_product_ids": {"REVIEW": ["p1", "p2", "p3", "p4", "p5", "p6"]},
