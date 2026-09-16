@@ -1,4 +1,4 @@
-name: Catalog Mercadona carbohydrate bracket parser fix v3
+name: Catalog Mercadona carbohydrate bracket parser fix v4
 
 on:
   push:
@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: catalog-mercadona-carbohydrate-bracket-fix-${{ github.ref }}
@@ -51,7 +50,7 @@ jobs:
           fi
           grep -q 'FAIL: test_observed_easyocr_bracketed_split_carbohydrate_label' /tmp/prepatch.log
 
-      - name: Apply narrow parser fix
+      - name: Apply narrow parser fix in working tree
         run: python tools/catalog/apply_mercadona_carbohydrate_bracket_fix.py apply
 
       - name: Run conservative parser regressions
@@ -60,14 +59,14 @@ jobs:
           python -m unittest -v test_nutrition_label_reader.py test_nutrition_label_reader_ocr_typos.py test_nutrition_label_reader_row_tokens.py test_mercadona_ocr_safety_regressions.py test_nutrition_ocr_ensemble.py test_mercadona_near_safe_doctr_input.py
           python -m py_compile nutrition_label_reader.py
 
-      - name: Commit tested fix and remove temporary helpers
+      - name: Commit only tested parser and regression
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/workflows/catalog-mercadona-carbohydrate-bracket-fix.yml tools/catalog/apply_mercadona_carbohydrate_bracket_fix.py
+          git restore .github/workflows/catalog-mercadona-near-safe-doctr-pilot.yml
           git config user.name 'David Prieto'
           git config user.email 'frandavid100@gmail.com'
-          git add tools/catalog/nutrition_label_reader.py tools/catalog/test_nutrition_label_reader_row_tokens.py .github/workflows/catalog-mercadona-near-safe-doctr-pilot.yml
+          git add tools/catalog/nutrition_label_reader.py tools/catalog/test_nutrition_label_reader_row_tokens.py
           git diff --cached --check
           git commit -m 'fix(catalog): parse bracketed split carbohydrate row'
           git push origin HEAD:agent/catalog-phase1
