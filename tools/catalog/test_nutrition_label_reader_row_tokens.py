@@ -64,6 +64,22 @@ class RowTokenRegressionTest(unittest.TestCase):
         self.assertEqual(rb.status, 'REVIEW', rb)
         self.assertIn('MISSING_CORE:carbohydrate_g', rb.reasons)
 
+    def test_observed_easyocr_bracketed_split_carbohydrate_label(self):
+        # Observed on Mercadona 11609: EasyOCR emits stray bracket glyphs before
+        # both halves of the printed `Hidratos de Carbono` row while preserving
+        # the dedicated 80 g cell between them. Accept only those one-character
+        # OCR punctuation glyphs; arbitrary intervening prose remains blocked.
+        text = (
+            'INFORMACIÓN NUTRICIONAL\npor 100 g\n'
+            'Valor energético 1601 kJ / 378 kcal\n'
+            'Grasas 2.6 g\n'
+            '[Hidratos de\n80 g\n(Carbono\n'
+            'Proteínas 5.6 g\nSal 0.01 g\n'
+        )
+        r = read_nutrition_label(text, extraction_confidence=.96)
+        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.nutrition['carbohydrate_g'], 80.0)
+
     def test_interleaved_carbohydrate_allows_observed_conservation_heading(self):
         # Observed on Mercadona 14031: independent OCR families linearise the
         # printed `Hidratos de Carbono | 1,0 g` row as `Hidratos de / 1,0 g /

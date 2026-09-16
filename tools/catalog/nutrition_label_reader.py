@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.24"
+READER_VERSION = "1.4.25"
 
 
 @dataclass(frozen=True)
@@ -364,12 +364,14 @@ def _interleaved_carbohydrate(text: str) -> float | None:
     only when it is bracketed by the two halves of that same label. One observed
     whole-package ordering additionally inserts the standalone `CONSERVACION`
     heading between the numeric cell and `Carbono`; no arbitrary prose is skipped.
+    EasyOCR can also prefix either half of the split row label with a stray `[` or
+    `(` glyph. Accept only those observed one-character OCR punctuation glyphs.
     Observed OCR unit glyphs include g, 9, y, q and the two-character `yg`.
     """
     folded = _strip_ocr_unit_parentheses(_fold(text))
     m = re.search(
-        r"(?:^|\n)\s*hidratos?\s+de\s+([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|yg|y|q)?"
-        r"(?:\s*\n\s*conservacion\s*)?\s+carbono\b",
+        r"(?:^|\n)\s*[\[(|]?\s*hidratos?\s+de\s+([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:g|9|yg|y|q)?"
+        r"(?:\s*\n\s*conservacion)?\s+[\[(|]?\s*carbono\b",
         folded,
         flags=re.I,
     )
