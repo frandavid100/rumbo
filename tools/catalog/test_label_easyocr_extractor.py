@@ -15,6 +15,15 @@ class _FakeReader:
         ]
 
 
+class _ObservedCarbohydrateTypoReader:
+    def readtext(self, _path, *, detail, paragraph):
+        self.args = (detail, paragraph)
+        return [
+            ([[100, 50], [300, 50], [300, 80], [100, 80]], "Hidratos de (arbono", 0.97),
+            ([[100, 90], [520, 90], [520, 120], [100, 120]], "Texto hidratos de (arbono artesanal", 0.95),
+        ]
+
+
 class EasyOCRExtractorTest(unittest.TestCase):
     def test_extracts_ordered_text_and_confidence_with_injected_reader(self):
         reader = _FakeReader()
@@ -34,6 +43,21 @@ class EasyOCRExtractorTest(unittest.TestCase):
         self.assertEqual(result.engine, "easyocr")
         self.assertEqual(result.engine_version, "fixture-1")
         self.assertEqual(result.language, "es+en")
+
+    def test_repairs_only_exact_observed_carbohydrate_row_label_typo(self):
+        reader = _ObservedCarbohydrateTypoReader()
+        with tempfile.TemporaryDirectory() as td:
+            image = Path(td) / "label.jpg"
+            image.write_bytes(b"fixture")
+            result = extract_with_easyocr(
+                image,
+                reader_factory=lambda languages: (reader, "fixture-2"),
+            )
+        self.assertEqual(reader.args, (1, False))
+        self.assertEqual(
+            result.text.splitlines(),
+            ["Hidratos de Carbono", "Texto hidratos de (arbono artesanal"],
+        )
 
     def test_requires_existing_image(self):
         with self.assertRaises(EasyOCRExtractionError):

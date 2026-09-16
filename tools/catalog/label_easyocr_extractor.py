@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 from statistics import mean
 from typing import Any, Callable
 
 from label_text_extractor import TextExtraction
 
-EASYOCR_EXTRACTOR_VERSION = "1.0.0"
+EASYOCR_EXTRACTOR_VERSION = "1.0.1"
 DEFAULT_LANGUAGES = ("es", "en")
 _READERS: dict[tuple[str, ...], tuple[Any, str | None]] = {}
 
@@ -39,6 +40,21 @@ def _box_anchor(box: Any, fallback: int) -> tuple[float, float]:
         return min(ys), min(xs)
     except Exception:
         return float(fallback), 0.0
+
+
+def _repair_observed_row_label_typos(text: str) -> str:
+    """Repair only exact, non-numeric EasyOCR row-label failures.
+
+    A Mercadona nutrition table was repeatedly read as the standalone row label
+    `Hidratos de (arbono`. Correcting the dropped/open `C` is safe only when the
+    entire OCR row has that shape; prose containing the same characters remains
+    untouched. Numeric cells are never changed here.
+    """
+    return re.sub(
+        r"(?im)^([ \t]*)hidratos?\s+de\s+\(arbono([ \t]*[:;]?[ \t]*)$",
+        r"\1Hidratos de Carbono\2",
+        text,
+    )
 
 
 def extract_with_easyocr(
@@ -90,8 +106,9 @@ def extract_with_easyocr(
     # Preserve approximate reading order. Packaging tables often have several
     # cells on one horizontal band, so coarsen y before sorting left-to-right.
     rows.sort(key=lambda row: (round(row[0] / 12.0), row[1], row[0]))
+    text = _repair_observed_row_label_typos("\n".join(row[2] for row in rows).strip())
     return TextExtraction(
-        text="\n".join(row[2] for row in rows).strip(),
+        text=text,
         confidence=mean(row[3] for row in rows) if rows else 0.0,
         engine="easyocr",
         engine_version=package_version,
