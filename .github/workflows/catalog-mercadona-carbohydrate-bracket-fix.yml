@@ -1,4 +1,4 @@
-name: Catalog Mercadona carbohydrate bracket parser fix v2
+name: Catalog Mercadona carbohydrate bracket parser fix v3
 
 on:
   push:
@@ -23,12 +23,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/catalog-phase1
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install regression dependencies
+        run: python -m pip install --disable-pip-version-check numpy opencv-python-headless Pillow
 
       - name: Add regression before parser change
         run: python tools/catalog/apply_mercadona_carbohydrate_bracket_fix.py insert-test
