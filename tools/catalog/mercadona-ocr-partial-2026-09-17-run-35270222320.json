@@ -12,7 +12,7 @@
   "product": {
     "product_id": "7879",
     "name": "Patatas fritas horno y air fryer Hacendado ultracongeladas",
-    "ean": "8480000078791",
+    "ean": "8402001017223",
     "perspective": 9,
     "status": "DECLARED",
     "basis": "100_g",
@@ -22,6 +22,9 @@
       "carbohydrate_g": 23.0,
       "protein_g": 2.3
     },
+    "fresh_corroborated_fields": 4,
+    "fresh_independent_engine_families": 3,
+    "successful_target_kind": "expanded_visual_region_top_45",
     "historical_status": "REVIEW",
     "historical_basis": null,
     "historical_corroborated_fields": 3,
@@ -36,8 +39,6 @@
     "exact_current_first_party_perspective_9_image_match": true,
     "fresh_expanded_crop_declared_independently": true,
     "explicit_100g_100ml_basis_recovered": true,
-    "minimum_independent_engine_families": 2,
-    "minimum_corroborated_core_fields": 4,
     "regression_tests_passed_before_ocr": 106,
     "acceptance_policy_changed": false,
     "historical_values_promotion_allowed": false,
