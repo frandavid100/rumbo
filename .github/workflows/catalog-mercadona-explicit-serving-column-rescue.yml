@@ -1,0 +1,110 @@
+name: Catalog Mercadona explicit serving-column rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-explicit-serving-column-rescue.yml'
+      - 'tools/catalog/mercadona_explicit_serving_column_rescue.py'
+      - 'tools/catalog/mercadona_serving_column_rescue_wave.py'
+      - 'tools/catalog/run_mercadona_explicit_serving_column_pilot.py'
+      - 'tools/catalog/test_mercadona_explicit_serving_column_rescue.py'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-explicit-serving-column-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve latest successful strict OCR audit
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=30' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo 'No successful strict OCR audit found' >&2; exit 1; }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download strict canonical audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: /tmp/mercadona-audit
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.audit.outputs.run_id }}
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            opencv-python-headless Pillow
+
+      - name: Run safety regressions before OCR
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_explicit_serving_column_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py
+          python -m py_compile \
+            mercadona_explicit_serving_column_rescue.py \
+            mercadona_serving_column_rescue_wave.py \
+            run_mercadona_explicit_serving_column_pilot.py
+
+      - name: Run bounded live pilot and materialize auditable output
+        working-directory: tools/catalog
+        run: |
+          rm -rf mercadona-explicit-serving-column-rescue
+          python run_mercadona_explicit_serving_column_pilot.py \
+            --audit-dir /tmp/mercadona-audit \
+            --out mercadona-explicit-serving-column-rescue \
+            --canonical-audit-run-id '${{ steps.audit.outputs.run_id }}'
+
+      - name: Upload auditable merged rescue artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-explicit-serving-column-rescue-merged
+          path: |
+            tools/catalog/mercadona-explicit-serving-column-rescue/results-merged.jsonl
+            tools/catalog/mercadona-explicit-serving-column-rescue/summary.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Trigger strict residual reconciliation only after fresh DECLARED
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          if [[ "$(jq -r '.status' mercadona-explicit-serving-column-rescue/summary.json)" == 'DECLARED' ]]; then
+            gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
+          else
+            echo 'Fresh observation remains REVIEW; strict reconciliation intentionally not triggered.'
+          fi
