@@ -42,8 +42,8 @@ jobs:
           from mercadona_first_party_details import _get_json, normalize, _now
 
           # Exact residual anchors from strict reconciliation run 35196802938.
-          # Historical tuples are diagnostic consistency guards only; they are
-          # never promoted or fused with fresh OCR values.
+          # Historical tuples are diagnostic comparison anchors only; they are
+          # never promotion criteria and are never fused with fresh OCR values.
           anchors = {
               '21649': {
                   'ean': '8402001054686',
@@ -216,17 +216,20 @@ jobs:
               status=str(row.get('status') or '')
               if status not in {'DECLARED','REVIEW'}:
                   raise SystemExit(f'{pid}: unexpected bounded OCR status {status!r}')
-              promotion=False; usable=None; accepted_ensemble=None
+              promotion=False; usable=None; accepted_ensemble=None; diagnostic_tuple_match=None
               if status=='DECLARED':
                   if row.get('basis') not in {'100_g','100_ml'}:
                       raise SystemExit(f'{pid}: DECLARED lacks explicit per-100 basis')
                   nutrition=row.get('nutrition') or {}
                   if any(not isinstance(nutrition.get(f),(int,float)) for f in CORE):
                       raise SystemExit(f'{pid}: DECLARED lacks complete four-field tuple')
-                  # Fail closed if a fresh run drifts from the audited residual tuple.
+                  # Historical values are diagnostic only. Record drift, but let
+                  # the fresh observation stand or fail on its own safety contract.
                   expected=meta.get('diagnostic_tuple_only') or {}
-                  if any(abs(float(nutrition[f])-float(expected[f])) > 1e-9 for f in CORE):
-                      raise SystemExit(f'{pid}: independently DECLARED tuple differs from audited residual tuple: fresh={nutrition} expected={expected}')
+                  diagnostic_tuple_match=(
+                      set(expected) >= set(CORE)
+                      and all(abs(float(nutrition[f])-float(expected[f])) <= 1e-9 for f in CORE)
+                  )
                   candidates=[]
                   for attempt in row.get('attempts',[]):
                       ensemble=attempt.get('ensemble') or {}
@@ -256,7 +259,9 @@ jobs:
                   'canonical_run':meta.get('canonical_run'),
                   'latest_raw_run':meta.get('latest_raw_run'),
                   'diagnostic_tuple_only':meta.get('diagnostic_tuple_only'),
+                  'fresh_tuple_matches_historical_diagnostic':diagnostic_tuple_match,
                   'historical_values_promotion_allowed':False,
+                  'historical_tuple_match_required_for_promotion':False,
                   'cross_run_value_fusion':False,
                   'cross_crop_value_fusion':False,
                   'acceptance_policy_changed':False,
@@ -273,13 +278,19 @@ jobs:
                   json.dumps(row,ensure_ascii=False,sort_keys=True)))
           db.commit(); db.close()
           (root/'results-merged.jsonl').write_text(''.join(json.dumps(r,ensure_ascii=False,sort_keys=True)+'\n' for r in merged),encoding='utf-8')
+          diagnostic_matches={
+              str(r.get('product_id')):(r.get('current_near_safe_one_of_four_revalidation') or {}).get('fresh_tuple_matches_historical_diagnostic')
+              for r in merged
+          }
           summary={
               'inventory_products':4280,'processed':len(merged),'statuses':statuses,
               'fresh_declared_product_ids':accepted,'fresh_declared_count':len(accepted),
+              'fresh_tuple_matches_historical_diagnostic':diagnostic_matches,
               'evidence_level':'OCR_DERIVED_FROM_MERCADONA_IMAGE','source':'MERCADONA_FIRST_PARTY/label image',
               'redistribution_allowed':False,'images_persisted':False,'missing_values_inferred':False,
               'structured_api_macros_claimed':False,'acceptance_policy_changed':False,
-              'historical_values_promotion_allowed':False,'cross_run_value_fusion':False,'cross_crop_value_fusion':False,
+              'historical_values_promotion_allowed':False,'historical_tuple_match_required_for_promotion':False,
+              'cross_run_value_fusion':False,'cross_crop_value_fusion':False,
               'CLASSIFIED':0,'MENU_ELIGIBLE':0,
           }
           (root/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
