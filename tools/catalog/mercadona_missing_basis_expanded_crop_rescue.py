@@ -11,17 +11,14 @@ values, basis, or votes are never fused across crops or across historical runs.
 The ordinary parser, energy/macro coherence checks, independent OCR-family
 corroboration and DECLARED acceptance contract remain unchanged. Historical
 candidate values are diagnostic only and can never be promoted by this module.
+
+Heavy OCR/image dependencies are imported lazily so the dependency-free target
+selector can run before a workflow installs the OCR stack.
 """
 
 from math import ceil
 from pathlib import Path
 from types import SimpleNamespace
-
-from PIL import Image, ImageOps
-
-import mercadona_bounded_doctr_rescue as bounded
-import mercadona_near_safe_doctr_retry as retry
-import mercadona_neural_ocr_wave as base
 
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 MISSING_BASIS_REASON = "MISSING_100G_100ML_BASIS"
@@ -29,10 +26,11 @@ TOP_EXPANSION_RATIOS = (0.45, 0.80)
 SIDE_EXPANSION_RATIO = 0.08
 BOTTOM_EXPANSION_RATIO = 0.05
 MIN_CURRENT_CORE_FIELDS_FOR_BASIS_DOCTR = 3
+MAX_REGIONS_PER_PRODUCT = 2
 
-# Preserve the audited ordinary docTR routing predicate before main() widens
-# routing for this one bounded missing-basis cohort.
-_ORIGINAL_SHOULD_RUN_DOCTR = retry.should_run_doctr_rescue
+# Set by main() before the docTR predicate is installed. Leaving this unset keeps
+# pure unit tests and dependency-free cohort selection importable.
+_ORIGINAL_SHOULD_RUN_DOCTR = None
 
 
 def select_missing_basis_targets(rows) -> list[dict]:
@@ -102,11 +100,13 @@ def expanded_basis_ocr_targets(image_path: Path, regions) -> list[tuple[str, Pat
     if not regions:
         return [("full_back_image", image_path, None)]
 
+    from PIL import Image, ImageOps
+
     targets: list[tuple[str, Path, object]] = []
     with Image.open(image_path) as opened:
         image = ImageOps.exif_transpose(opened).convert("RGB")
         image_size = image.size
-        for region_index, region in enumerate(regions[: base.MAX_REGIONS_PER_PRODUCT]):
+        for region_index, region in enumerate(regions[:MAX_REGIONS_PER_PRODUCT]):
             for top_ratio in TOP_EXPANSION_RATIOS:
                 crop_box = expanded_box(region.box, image_size, top_ratio=top_ratio)
                 crop = image.crop(crop_box)
@@ -132,7 +132,7 @@ def should_run_missing_basis_doctr_rescue(ensemble) -> bool:
     observations. It does not make them usable: the final fused observation still
     must satisfy the unmodified parser and DECLARED contract.
     """
-    if _ORIGINAL_SHOULD_RUN_DOCTR(ensemble):
+    if _ORIGINAL_SHOULD_RUN_DOCTR is not None and _ORIGINAL_SHOULD_RUN_DOCTR(ensemble):
         return True
     if ensemble.status != "REVIEW" or ensemble.declared_usable:
         return False
@@ -152,6 +152,13 @@ def main() -> int:
     # The base loop still downloads the exact first-party image into a temporary
     # directory. Only target geometry and bounded independent-family OCR routing
     # are changed. No image bytes survive the run.
+    global _ORIGINAL_SHOULD_RUN_DOCTR
+
+    import mercadona_bounded_doctr_rescue as bounded
+    import mercadona_near_safe_doctr_retry as retry
+    import mercadona_neural_ocr_wave as base
+
+    _ORIGINAL_SHOULD_RUN_DOCTR = retry.should_run_doctr_rescue
     base._ORIGINAL_EXTRACT_REGION = base._extract_region
     retry.should_run_doctr_rescue = should_run_missing_basis_doctr_rescue
     base._extract_region = bounded._extract_region_with_post_doctr_easyocr
