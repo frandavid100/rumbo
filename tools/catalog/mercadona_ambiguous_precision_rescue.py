@@ -9,9 +9,10 @@ historical run or fused across crops.
 
 When MERCADONA_PRECISION_DIAGNOSTICS is set, each suppressed crop observation is
 also written as diagnostic JSON. Diagnostics may additionally probe docTR and
-EasyOCR on that same single crop and may add a slightly wider temporary crop.
-Those probe readings are observability only: they are never appended to the
-production extraction result and are never fed back into production fusion.
+EasyOCR on that same single crop and may add wider temporary crops, including a
+full-width lossless upscale of the already-bounded OCR region. Those probe
+readings are observability only: they are never appended to the production
+extraction result and are never fed back into production fusion.
 """
 
 import json
@@ -25,7 +26,11 @@ from mercadona_primary_precision_variants import build_precision_primary_column_
 
 
 _CROP_DIAGNOSTICS: list[dict] = []
-DIAGNOSTIC_PRIMARY_COLUMN_WIDTH_RATIOS = (0.42, 0.50, 0.56)
+# 1.0 is diagnostic-only. It preserves the entire already-detected nutrition
+# region while applying the same lossless 3x rasterization, so an OCR family can
+# recover tiny decimal glyphs without losing the row labels/value column. The
+# production bounded rescue defaults remain unchanged at 0.42/0.50.
+DIAGNOSTIC_PRIMARY_COLUMN_WIDTH_RATIOS = (0.42, 0.50, 0.56, 1.0)
 
 
 def _diagnostics_enabled() -> bool:
