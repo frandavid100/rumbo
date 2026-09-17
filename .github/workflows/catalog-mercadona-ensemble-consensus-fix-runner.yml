@@ -1,0 +1,49 @@
+name: Catalog Mercadona OCR exact-consensus fix runner
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ensemble-consensus-fix-runner.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Add regression from staged patch payload
+        working-directory: tools/catalog
+        run: python -c "import re,base64,pathlib; t=pathlib.Path('../../.github/workflows/catalog-mercadona-ensemble-consensus-fix.yml').read_text(); b=re.findall(r\"b64decode\\('([^']+)'\\)\",t); assert len(b)==2; exec(base64.b64decode(b[0]))"
+      - name: Prove regression fails before source patch
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set +e
+          python -m unittest -v test_nutrition_ocr_ensemble.OCREnsembleTest.test_exact_cross_family_consensus_beats_higher_confidence_nearby_layout_value
+          rc=$?
+          set -e
+          test "$rc" -ne 0
+      - name: Apply staged source patch
+        working-directory: tools/catalog
+        run: python -c "import re,base64,pathlib; t=pathlib.Path('../../.github/workflows/catalog-mercadona-ensemble-consensus-fix.yml').read_text(); b=re.findall(r\"b64decode\\('([^']+)'\\)\",t); assert len(b)==2; exec(base64.b64decode(b[1]))"
+      - name: Run parser and ensemble regressions
+        working-directory: tools/catalog
+        run: python -m unittest -v test_nutrition_ocr_ensemble.py test_nutrition_label_reader.py test_nutrition_label_reader_ocr_typos.py test_nutrition_label_reader_row_tokens.py
+      - name: Commit tested patch and remove temporary workflows
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/catalog-mercadona-ensemble-consensus-fix.yml .github/workflows/catalog-mercadona-ensemble-consensus-fix-runner.yml
+          git add tools/catalog/nutrition_ocr_ensemble.py tools/catalog/test_nutrition_ocr_ensemble.py
+          git commit -m 'catalog: prefer exact cross-family OCR value consensus'
+          git push origin HEAD:agent/catalog-phase1
