@@ -23,10 +23,48 @@ class MercadonaPrimaryPrecisionVariantsTest(unittest.TestCase):
                 ["primary_precision_left_42", "primary_precision_left_50"],
             )
             self.assertTrue(all(variant.path.suffix == ".png" for variant in variants))
-            self.assertEqual(Image.open(variants[0].path).size, (126, 180))
-            self.assertEqual(Image.open(variants[1].path).size, (150, 180))
-            self.assertEqual(Image.open(variants[0].path).format, "PNG")
-            self.assertEqual(Image.open(variants[1].path).format, "PNG")
+            with Image.open(variants[0].path) as first:
+                self.assertEqual(first.size, (126, 180))
+                self.assertEqual(first.format, "PNG")
+            with Image.open(variants[1].path) as second:
+                self.assertEqual(second.size, (150, 180))
+                self.assertEqual(second.format, "PNG")
+
+    def test_custom_width_ratio_is_independent_and_does_not_change_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "source.jpg"
+            Image.new("RGB", (100, 60), "white").save(source, quality=90)
+
+            diagnostic = build_precision_primary_column_variants(
+                source,
+                root / "diagnostic",
+                width_ratios=(0.56,),
+            )
+            defaults = build_precision_primary_column_variants(source, root / "defaults")
+
+            self.assertEqual([variant.name for variant in diagnostic], ["primary_precision_left_56"])
+            with Image.open(diagnostic[0].path) as image:
+                self.assertEqual(image.size, (168, 180))
+                self.assertEqual(image.format, "PNG")
+            self.assertEqual(
+                [variant.name for variant in defaults],
+                ["primary_precision_left_42", "primary_precision_left_50"],
+            )
+
+    def test_invalid_width_ratio_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "source.jpg"
+            Image.new("RGB", (100, 60), "white").save(source, quality=90)
+            for ratios in ((), (0.0,), (1.01,)):
+                with self.subTest(ratios=ratios):
+                    with self.assertRaises(ValueError):
+                        build_precision_primary_column_variants(
+                            source,
+                            root / "out",
+                            width_ratios=ratios,
+                        )
 
     def test_missing_source_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as td:
