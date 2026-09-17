@@ -5,6 +5,10 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-24541-precision-diagnostic.yml'
+      - 'tools/catalog/mercadona_ambiguous_precision_rescue.py'
+      - 'tools/catalog/mercadona_primary_precision_variants.py'
+      - 'tools/catalog/test_mercadona_ambiguous_precision_rescue.py'
+      - 'tools/catalog/test_mercadona_primary_precision_variants.py'
   workflow_dispatch:
 
 permissions:
