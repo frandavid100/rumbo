@@ -1,0 +1,103 @@
+{
+  "state_kind": "MERCADONA_OCR_CANONICAL_RECONCILIATION",
+  "inventory_products": 4280,
+  "audit_run_id": 35270743874,
+  "audit_run_attempt": 1,
+  "audit_head_sha": "2535319d3240fe9627a81611ab28779d2688fdb8",
+  "audit_artifact": {
+    "artifact_id": 10518522331,
+    "name": "mercadona-current-ocr-residual-audit",
+    "sha256": "a6306a5bb164579219ae1e489a2ae83ba5117328004d7133298817399f26125f",
+    "github_digest": "sha256:58feac6575ef3e9597ffe46994b711a2edc8adcc18f2bf0832341741aca041ee",
+    "created_at": "2026-09-17T20:13:27Z"
+  },
+  "previous_canonical_audit_run_id": 35260640840,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 363,
+    "REVIEW": 2606,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "usable_complete": 363,
+  "usable_complete_pct_inventory": 8.4813,
+  "usable_field_counts": {
+    "calories": 363,
+    "protein_g": 363,
+    "carbohydrate_g": 363,
+    "fat_g": 363
+  },
+  "canonical_delta_vs_previous": {
+    "DECLARED": 1,
+    "REVIEW": -1,
+    "processed": 0,
+    "review_to_declared": [
+      {
+        "product_id": "7879",
+        "name": "Verduras rebozadas en tempura Hacendado ultracongeladas",
+        "ean": "8411886100706",
+        "basis": "100_g",
+        "nutrition": {
+          "calories": 151.0,
+          "fat_g": 5.8,
+          "carbohydrate_g": 23.0,
+          "protein_g": 2.3
+        },
+        "latest_live_run_id": 35270222320,
+        "fresh_corroborated_fields": 4,
+        "fresh_independent_engine_families": 3,
+        "fresh_engine_families": [
+          "doctr",
+          "easyocr",
+          "paddleocr"
+        ],
+        "historical_values_promotion_allowed": false,
+        "cross_run_value_fusion": false,
+        "cross_crop_value_fusion": false
+      }
+    ],
+    "acceptance_policy_changed": false,
+    "historical_values_promotion_allowed": false,
+    "cross_run_value_fusion": false,
+    "cross_crop_value_fusion": false
+  },
+  "identity_reconciliation": {
+    "current_index_products": 2969,
+    "verified_current_products": 2969,
+    "unverified_current_products": 0,
+    "identity_conflicts": 0,
+    "unresolved_identity_status": 0,
+    "processed_without_canonical_status": 0
+  },
+  "review_residual": {
+    "latest_review_products": 2606,
+    "products_with_ocr_signal": 2606,
+    "products_without_ocr_signal": 0,
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 27,
+    "reasonless_review_products": 0,
+    "usable_products_created_by_diagnostic_audit": 0,
+    "review_promoted_by_diagnostic_audit": 0,
+    "next_diagnostic_candidates_not_promoted": []
+  },
+  "historical_inventory_parity": {
+    "exact_historical_first_party_snapshot_available": false,
+    "source_run_id": 33046950149,
+    "source_artifact_name": "mercadona-first-party-final",
+    "snapshot_status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute a later live inventory for the fixed 2026-08-27 4,280-product cut. Canonical OCR reconciliation remains materializable from persisted raw-live evidence, but exact parity against the original first-party product_id/EAN snapshot cannot be re-proven while that artifact is unavailable."
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
