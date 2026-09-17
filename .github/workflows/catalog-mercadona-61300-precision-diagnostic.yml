@@ -85,7 +85,7 @@ jobs:
           python mercadona_ambiguous_precision_rescue.py \
             --products target-61300-precision-diagnostic.jsonl \
             --out /tmp/mercadona-61300-precision-diagnostic \
-            --shard-index 0 --shard-count 1 --limit 0 --eligibility-mode p9-no-ingredients-all
+            --shard-index 0 --shard-count 1 --limit 0 --eligibility-mode priority
           rc=$?
           set -e
           [[ $rc -eq 0 || $rc -eq 2 ]]
