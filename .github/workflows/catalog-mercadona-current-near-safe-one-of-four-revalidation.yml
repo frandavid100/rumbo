@@ -1,0 +1,307 @@
+name: Catalog Mercadona current near-safe 1-of-4 revalidation
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-near-safe-one-of-four-revalidation.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-near-safe-one-of-four-revalidation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Rehydrate exact current first-party identities and p9 images
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          # Exact residual anchors from strict reconciliation run 35196802938.
+          # Historical tuples are diagnostic consistency guards only; they are
+          # never promoted or fused with fresh OCR values.
+          anchors = {
+              '21649': {
+                  'ean': '8402001054686',
+                  'image_url': 'https://prod-mercadona.imgix.net/images/1b085f5f14d821129d2d72b0d71138c3.jpg?fit=crop&h=3600&w=3600',
+                  'canonical_run': 35196802938,
+                  'latest_raw_run': 35183043454,
+                  'diagnostic_tuple': {'calories': 240.0, 'fat_g': 12.0, 'carbohydrate_g': 26.0, 'protein_g': 6.1},
+              },
+              '24541': {
+                  'ean': '8402001050428',
+                  'image_url': 'https://prod-mercadona.imgix.net/images/778d340daab64031f191ec5cac1b87ab.jpg?fit=crop&h=3600&w=3600',
+                  'canonical_run': 35196802938,
+                  'latest_raw_run': 35183043344,
+                  'diagnostic_tuple': {'calories': 369.0, 'fat_g': 1.5, 'carbohydrate_g': 85.0, 'protein_g': 2.1},
+              },
+          }
+          out = []
+          audit = []
+          for pid, anchor in anchors.items():
+              observed_at = _now()
+              payload, source_url = _get_json(pid, timeout=20.0)
+              current = normalize(payload, source_url=source_url, observed_at=observed_at)
+              current_ean = str(current.get('ean') or '').strip()
+              if current_ean != anchor['ean']:
+                  raise SystemExit(f'Current EAN mismatch for {pid}: current={current_ean!r} anchor={anchor["ean"]!r}')
+              photos = current.get('photos') if isinstance(current.get('photos'), list) else []
+              matches = [
+                  (index, photo) for index, photo in enumerate(photos)
+                  if isinstance(photo, dict)
+                  and str(photo.get('perspective') or '') == '9'
+                  and str(photo.get('zoom') or '') == anchor['image_url']
+              ]
+              if len(matches) != 1:
+                  raise SystemExit(f'Exact anchored first-party p9 image is not uniquely current for {pid}: {len(matches)} matches')
+              image_index, photo = matches[0]
+              routed = dict(photo)
+              routed['perspective'] = 9
+              current['photos'] = [routed]
+              current['_targeted_revalidation_meta'] = {
+                  'canonical_ean': anchor['ean'],
+                  'image_url': anchor['image_url'],
+                  'image_index': image_index,
+                  'canonical_run': anchor['canonical_run'],
+                  'latest_raw_run': anchor['latest_raw_run'],
+                  'diagnostic_tuple_only': anchor['diagnostic_tuple'],
+                  'historical_values_promotion_allowed': False,
+                  'cross_run_value_fusion': False,
+                  'cross_crop_value_fusion': False,
+                  'live_detail_source_url': source_url,
+                  'live_detail_observed_at': observed_at,
+              }
+              out.append(current)
+              audit.append({
+                  'product_id': pid,
+                  'ean_exact': True,
+                  'image_exact_unique_p9': True,
+                  'image_index': image_index,
+                  'image_url': anchor['image_url'],
+                  'images_persisted': False,
+                  'redistribution_allowed': False,
+              })
+          Path('current-near-safe-products.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in out),
+              encoding='utf-8',
+          )
+          Path('current-near-safe-identity.json').write_text(
+              json.dumps(audit, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(audit, sort_keys=True))
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative regressions before OCR
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_nutrition_label_percentage_guard.py \
+            test_mercadona_ambiguous_primary_column_rescue.py \
+            test_mercadona_bounded_doctr_rescue.py \
+            test_mercadona_near_safe_doctr_retry.py \
+            test_label_doctr_extractor.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: Run fresh exact-image bounded ensemble plus docTR rescue
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-current-near-safe-one-of-four-revalidation
+          mkdir -p mercadona-current-near-safe-one-of-four-revalidation/raw
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[json.loads(x) for x in Path('current-near-safe-products.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
+          for row in rows:
+              Path(f'target-{row["product_id"]}.jsonl').write_text(json.dumps(row, ensure_ascii=False, sort_keys=True)+'\n', encoding='utf-8')
+          PY
+          for pid in 21649 24541; do
+            mode=$(python - "$pid" <<'PY'
+          import json,sys
+          row=json.loads(open(f'target-{sys.argv[1]}.jsonl',encoding='utf-8').read())
+          print('priority' if row.get('ingredients') else 'p9-no-ingredients-all')
+          PY
+            )
+            mkdir -p "mercadona-current-near-safe-one-of-four-revalidation/raw/$pid"
+            set +e
+            python mercadona_near_safe_doctr_retry.py \
+              --products "target-$pid.jsonl" \
+              --out "mercadona-current-near-safe-one-of-four-revalidation/raw/$pid" \
+              --shard-index 0 --shard-count 1 --limit 0 --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            [[ $rc -eq 0 || $rc -eq 2 ]]
+          done
+
+      - name: Validate fresh observations and materialize auditable bundle
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob, json, sqlite3
+          from pathlib import Path
+
+          CORE=('calories','fat_g','carbohydrate_g','protein_g')
+          HARD=('OCR_FIELD_CONFLICT','OCR_SAME_ENGINE_CONFLICT','OCR_BASIS_CONFLICT',
+                'ENERGY_MACRO_MISMATCH','MULTIPLE_NUTRITION_COLUMNS',
+                'UNCORROBORATED_CORE_FIELDS','UNCORROBORATED_BASIS')
+          root=Path('mercadona-current-near-safe-one-of-four-revalidation')
+          current={str(r['product_id']):r for r in (json.loads(x) for x in Path('current-near-safe-products.jsonl').read_text(encoding='utf-8').splitlines() if x.strip())}
+          rows=[]
+          for path in sorted(glob.glob(str(root/'raw'/'*'/'results-*.jsonl'))):
+              rows.extend(json.loads(x) for x in Path(path).read_text(encoding='utf-8').splitlines() if x.strip())
+          by_id={str(r.get('product_id') or ''):r for r in rows}
+          if set(by_id) != set(current) or len(rows) != len(current):
+              raise SystemExit(f'Unexpected result coverage: {[(r.get("product_id"),r.get("status")) for r in rows]}')
+
+          accepted=[]
+          statuses={}
+          db=sqlite3.connect(root/'staging.sqlite')
+          db.execute('CREATE TABLE IF NOT EXISTS ocr_rows (product_id TEXT PRIMARY KEY, ean TEXT, status TEXT, basis TEXT, calories REAL, fat_g REAL, carbohydrate_g REAL, protein_g REAL, evidence_level TEXT, source TEXT, source_record_kind TEXT, image_url TEXT, redistribution_allowed INTEGER, raw_json TEXT NOT NULL)')
+          merged=[]
+          for pid in sorted(by_id, key=lambda x:(len(x),x)):
+              row=by_id[pid]
+              meta=current[pid].get('_targeted_revalidation_meta') or {}
+              if str(row.get('ean') or '') != str(meta.get('canonical_ean') or ''):
+                  raise SystemExit(f'{pid}: fresh OCR EAN differs from exact current anchor')
+              if str(row.get('image_url') or '') != str(meta.get('image_url') or ''):
+                  raise SystemExit(f'{pid}: fresh OCR image differs from exact current p9 anchor')
+              if row.get('source')!='MERCADONA_FIRST_PARTY' or row.get('source_record_kind')!='label image':
+                  raise SystemExit(f'{pid}: source provenance changed unexpectedly')
+              if row.get('evidence_level')!='OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
+                  raise SystemExit(f'{pid}: evidence/redistribution contract changed unexpectedly')
+
+              status=str(row.get('status') or '')
+              if status not in {'DECLARED','REVIEW'}:
+                  raise SystemExit(f'{pid}: unexpected bounded OCR status {status!r}')
+              promotion=False; usable=None; accepted_ensemble=None
+              if status=='DECLARED':
+                  if row.get('basis') not in {'100_g','100_ml'}:
+                      raise SystemExit(f'{pid}: DECLARED lacks explicit per-100 basis')
+                  nutrition=row.get('nutrition') or {}
+                  if any(not isinstance(nutrition.get(f),(int,float)) for f in CORE):
+                      raise SystemExit(f'{pid}: DECLARED lacks complete four-field tuple')
+                  # Fail closed if a fresh run drifts from the audited residual tuple.
+                  expected=meta.get('diagnostic_tuple_only') or {}
+                  if any(abs(float(nutrition[f])-float(expected[f])) > 1e-9 for f in CORE):
+                      raise SystemExit(f'{pid}: independently DECLARED tuple differs from audited residual tuple: fresh={nutrition} expected={expected}')
+                  candidates=[]
+                  for attempt in row.get('attempts',[]):
+                      ensemble=attempt.get('ensemble') or {}
+                      reasons=tuple(str(x) for x in ensemble.get('reasons') or [])
+                      hard=[r for r in reasons if r.startswith(HARD)]
+                      corr=ensemble.get('field_corroboration') or {}
+                      per_field_ok=all(len(set(corr.get(f) or [])) >= 2 for f in CORE)
+                      if (ensemble.get('status')=='DECLARED'
+                          and ensemble.get('basis') in {'100_g','100_ml'}
+                          and int(ensemble.get('independent_engine_families') or 0)>=2
+                          and int(ensemble.get('corroborated_fields') or 0)>=4
+                          and per_field_ok
+                          and (ensemble.get('nutrition') or {})==nutrition
+                          and not hard):
+                          candidates.append(ensemble)
+                  if not candidates:
+                      raise SystemExit(f'{pid}: fresh DECLARED does not independently satisfy unchanged 4/4 >=2-family safety contract')
+                  accepted_ensemble=candidates[0]; promotion=True
+                  usable={f:float(nutrition[f]) for f in CORE}
+                  accepted.append(pid)
+
+              row['image_index']=meta.get('image_index')
+              row['perspective']=9
+              row['live_detail_source_url']=meta.get('live_detail_source_url')
+              row['live_detail_observed_at']=meta.get('live_detail_observed_at')
+              row['current_near_safe_one_of_four_revalidation']={
+                  'canonical_run':meta.get('canonical_run'),
+                  'latest_raw_run':meta.get('latest_raw_run'),
+                  'diagnostic_tuple_only':meta.get('diagnostic_tuple_only'),
+                  'historical_values_promotion_allowed':False,
+                  'cross_run_value_fusion':False,
+                  'cross_crop_value_fusion':False,
+                  'acceptance_policy_changed':False,
+                  'promotion_allowed':promotion,
+                  'fresh_corroborated_fields':int((accepted_ensemble or {}).get('corroborated_fields') or 0),
+                  'fresh_independent_engine_families':int((accepted_ensemble or {}).get('independent_engine_families') or 0),
+              }
+              merged.append(row); statuses[pid]=status
+              values=usable or {f:None for f in CORE}
+              db.execute('INSERT OR REPLACE INTO ocr_rows VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(
+                  pid,row.get('ean'),status,row.get('basis') if promotion else None,
+                  values['calories'],values['fat_g'],values['carbohydrate_g'],values['protein_g'],
+                  row.get('evidence_level'),row.get('source'),row.get('source_record_kind'),row.get('image_url'),0,
+                  json.dumps(row,ensure_ascii=False,sort_keys=True)))
+          db.commit(); db.close()
+          (root/'results-merged.jsonl').write_text(''.join(json.dumps(r,ensure_ascii=False,sort_keys=True)+'\n' for r in merged),encoding='utf-8')
+          summary={
+              'inventory_products':4280,'processed':len(merged),'statuses':statuses,
+              'fresh_declared_product_ids':accepted,'fresh_declared_count':len(accepted),
+              'evidence_level':'OCR_DERIVED_FROM_MERCADONA_IMAGE','source':'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed':False,'images_persisted':False,'missing_values_inferred':False,
+              'structured_api_macros_claimed':False,'acceptance_policy_changed':False,
+              'historical_values_promotion_allowed':False,'cross_run_value_fusion':False,'cross_crop_value_fusion':False,
+              'CLASSIFIED':0,'MENU_ELIGIBLE':0,
+          }
+          (root/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps(summary,sort_keys=True))
+          PY
+
+      - name: Upload auditable targeted revalidation
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-current-near-safe-one-of-four-revalidation
+          path: |
+            tools/catalog/mercadona-current-near-safe-one-of-four-revalidation/results-merged.jsonl
+            tools/catalog/mercadona-current-near-safe-one-of-four-revalidation/summary.json
+            tools/catalog/mercadona-current-near-safe-one-of-four-revalidation/staging.sqlite
+            tools/catalog/mercadona-current-near-safe-one-of-four-revalidation/raw/**/*.jsonl
+            tools/catalog/mercadona-current-near-safe-one-of-four-revalidation/raw/**/*.json
+            tools/catalog/current-near-safe-identity.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Trigger strict residual reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
