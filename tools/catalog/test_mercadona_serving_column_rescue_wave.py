@@ -40,6 +40,39 @@ class MercadonaServingColumnRescueWaveTest(unittest.TestCase):
             for reason in rescued.parsed.reasons
         ))
 
+    def test_parser_normalized_nonnumeric_label_repair_can_feed_projection(self):
+        # The ordinary Mercadona reader already permits a narrowly observed,
+        # nonnumeric standalone row-label repair (Crasas -> Grasas). The serving
+        # projector must be allowed to consume that audited normalized OCR text
+        # when the unnormalized extraction cannot identify the row. No numeric
+        # token is changed and low-confidence evidence still remains REVIEW.
+        raw = CANDIDATE_64499.replace("Grasas/Lípidos", "Crasas;", 1)
+        parsed = read_nutrition_label(raw, extraction_confidence=0.79425)
+        self.assertIn("Grasas", parsed.normalized_text)
+        self.assertNotIn("Crasas", parsed.normalized_text)
+        reading = MercadonaLabelReading(
+            evidence=None,
+            extraction=VisionExtraction(
+                text=raw,
+                confidence=0.79425,
+                engine="easyocr",
+                engine_version="test",
+            ),
+            parsed=parsed,
+        )
+
+        rescued = _project_if_safe(reading)
+        self.assertEqual(rescued.parsed.status, "REVIEW")
+        self.assertEqual(rescued.parsed.basis, "100_g")
+        self.assertEqual(rescued.parsed.nutrition, {
+            "calories": 403.0,
+            "fat_g": 27.1,
+            "carbohydrate_g": 35.3,
+            "protein_g": 4.1,
+        })
+        self.assertIn("NORMALIZED_OCR_TEXT_PROJECTION", rescued.parsed.reasons)
+        self.assertIn("STRUCTURAL_PROJECTION_RETAINED_AS_REVIEW", rescued.parsed.reasons)
+
     def test_review_projection_can_only_promote_through_independent_ensemble_corroboration(self):
         paddle = project_explicit_serving_column(CANDIDATE_64499, extraction_confidence=.98)
         self.assertIsNotNone(paddle)
