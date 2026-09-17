@@ -1,0 +1,105 @@
+{
+  "state_kind": "MERCADONA_OCR_CANONICAL_RECONCILIATION",
+  "inventory_products": 4280,
+  "audit_run_id": 35212241528,
+  "audit_run_attempt": 1,
+  "audit_head_sha": "e4e74e315d426d83e41152151c23da6602f2bfc8",
+  "audit_artifact": {
+    "artifact_id": 10493507011,
+    "name": "mercadona-current-ocr-residual-audit",
+    "sha256": "10e0c60cec908d1e95d659a3d52b419463ce461abf8ad11bad6c4f4ff4cd9b60",
+    "created_at": "2026-09-17T10:59:34Z"
+  },
+  "previous_canonical_audit_run_id": 35196802938,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 361,
+    "REVIEW": 2608,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "usable_complete": 361,
+  "usable_complete_pct_inventory": 8.4346,
+  "usable_field_counts": {
+    "calories": 361,
+    "protein_g": 361,
+    "carbohydrate_g": 361,
+    "fat_g": 361
+  },
+  "canonical_delta_vs_previous": {
+    "DECLARED": 1,
+    "REVIEW": -1,
+    "processed": 0,
+    "review_to_declared": [
+      {
+        "product_id": "21649",
+        "nutrition": {
+          "calories": 240.0,
+          "fat_g": 12.0,
+          "carbohydrate_g": 26.0,
+          "protein_g": 6.7
+        },
+        "latest_live_run_id": 35211755688,
+        "fresh_corroborated_fields": 4,
+        "fresh_independent_engine_families": 3,
+        "historical_diagnostic_protein_g": 6.1,
+        "historical_tuple_match_required_for_promotion": false
+      }
+    ],
+    "acceptance_policy_changed": false,
+    "historical_values_promotion_allowed": false,
+    "cross_run_value_fusion": false,
+    "cross_crop_value_fusion": false
+  },
+  "identity_reconciliation": {
+    "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
+    "identity_enforced_products": 2969,
+    "identity_anchored_products": 2969,
+    "identity_conflict_products": 0,
+    "identity_unverified_products": 0,
+    "identity_unresolved_products": 0,
+    "coverage_without_canonical_state": 0
+  },
+  "review_residual": {
+    "latest_review_products": 2608,
+    "products_with_ocr_signal": 2608,
+    "products_without_ocr_signal": 0,
+    "no_visual_region_without_ocr_signal": 0,
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 30,
+    "reasonless_review_products": 0,
+    "usable_products_created_by_diagnostic_audit": 0,
+    "review_promoted_by_diagnostic_audit": 0
+  },
+  "strict_evidence_census": {
+    "runs_with_strict_ocr_rows": 432,
+    "strict_distinct_ocr_shaped_products": 2969,
+    "strict_provenance_failure_counts": {
+      "SOURCE_RECORD_KIND": 137
+    },
+    "derived_rows_excluded_from_canonical": {
+      "DERIVED_CANONICAL_MATERIALIZATION": 293965,
+      "DIAGNOSTIC_REPLAY_WRAPPER": 66839
+    }
+  },
+  "historical_inventory_parity": {
+    "exact_historical_first_party_snapshot_available": false,
+    "source_run_id": 33046950149,
+    "source_artifact_name": "mercadona-first-party-final",
+    "snapshot_status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute a later live inventory for the fixed 2026-08-27 4,280-product cut. Canonical OCR reconciliation remains materializable from persisted raw-live evidence, but exact parity against the original first-party product_id/EAN snapshot cannot be re-proven while that artifact is unavailable."
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
