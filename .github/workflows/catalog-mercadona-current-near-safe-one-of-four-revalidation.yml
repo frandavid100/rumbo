@@ -235,8 +235,19 @@ jobs:
                       ensemble=attempt.get('ensemble') or {}
                       reasons=tuple(str(x) for x in ensemble.get('reasons') or [])
                       hard=[r for r in reasons if r.startswith(HARD)]
-                      corr=ensemble.get('field_corroboration') or {}
-                      per_field_ok=all(len(set(corr.get(f) or [])) >= 2 for f in CORE)
+                      # mercadona_neural_ocr_wave serializes corroboration per field
+                      # under fields[].engine_families; do not expect a synthetic
+                      # field_corroboration key that is absent from the audit payload.
+                      serialized_fields={
+                          str(field.get('name') or ''): field
+                          for field in (ensemble.get('fields') or [])
+                          if isinstance(field, dict)
+                      }
+                      per_field_ok=all(
+                          bool((serialized_fields.get(f) or {}).get('corroborated'))
+                          and len(set((serialized_fields.get(f) or {}).get('engine_families') or [])) >= 2
+                          for f in CORE
+                      )
                       if (ensemble.get('status')=='DECLARED'
                           and ensemble.get('basis') in {'100_g','100_ml'}
                           and int(ensemble.get('independent_engine_families') or 0)>=2
