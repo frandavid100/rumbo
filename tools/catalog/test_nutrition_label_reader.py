@@ -275,6 +275,31 @@ Sal 0.03
         self.assertEqual(r.nutrition["fat_g"], 42.0)
         self.assertEqual(r.nutrition["carbohydrate_g"], 32.0)
 
+    def test_dotted_e_number_is_not_truncated_into_terminal_nine_gram_repair(self):
+        # Observed PaddleOCR ordering for Mercadona product 24541. Ingredient
+        # noise `129. E129:` follows the total-fat label; matching a numeric
+        # prefix here makes the terminal-nine repair invent 12 g of fat and
+        # hides the real reversed row (`1.5 g` immediately before `Grasas`).
+        observed = """Información nutricional por 100 g
+1543 kJ
+369 kcal
+1.5 g
+Grasas/Lípidos
+129. E129:
+de las cuales saturadas
+1.1 g
+Hidratos de Carbono 85 g
+2.1 g
+Proteínas
+Sal 0.02 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertEqual(r.nutrition, {
+            "calories": 369.0, "fat_g": 1.5,
+            "carbohydrate_g": 85.0, "protein_g": 2.1,
+        })
+
     def test_bad_terminal_9_repair_is_still_blocked_by_energy(self):
         noisy = """100 g
 Energético 132 kcal
@@ -383,7 +408,7 @@ Sal
     def test_energy_macro_mismatch_goes_to_review(self):
         bad = GOOD.replace("368 kcal", "120 kcal")
         r = read_nutrition_label(bad, extraction_confidence=.99)
-        self.assertEqual(r.status, "REVIEW")
+        self.assertEqual(r.status, "REVIEW", r)
         self.assertTrue(any(x.startswith("ENERGY_MACRO_MISMATCH") for x in r.reasons))
 
     def test_bridge_preserves_image_non_redistribution(self):
