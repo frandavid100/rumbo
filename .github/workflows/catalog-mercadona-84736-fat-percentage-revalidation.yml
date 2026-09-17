@@ -1,4 +1,5 @@
 name: Catalog Mercadona 84736 ingredient-fat percentage revalidation
+# This second commit ensures the newly-added workflow is present on the branch before its push trigger fires.
 
 on:
   push:
