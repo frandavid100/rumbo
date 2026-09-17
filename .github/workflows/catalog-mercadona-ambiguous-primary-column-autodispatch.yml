@@ -14,11 +14,11 @@ jobs:
   dispatch:
     runs-on: ubuntu-24.04
     steps:
-      - name: Dispatch strict current 3-of-4 docTR revalidation
+      - name: Dispatch bounded 64705 ambiguous-column rescue
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh workflow run catalog-mercadona-current-three-of-four-doctr-revalidation.yml \
+          gh workflow run catalog-mercadona-64705-ambiguous-primary-column-rescue.yml \
             --repo frandavid100/rumbo \
             --ref agent/catalog-phase1
