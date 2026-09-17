@@ -5,6 +5,8 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-24541-precision-diagnostic.yml'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_label_reader.py'
       - 'tools/catalog/mercadona_ambiguous_precision_rescue.py'
       - 'tools/catalog/mercadona_primary_precision_variants.py'
       - 'tools/catalog/test_mercadona_ambiguous_precision_rescue.py'
@@ -70,7 +72,7 @@ jobs:
       - name: Run diagnostics regressions first
         working-directory: tools/catalog
         run: |
-          python -m unittest -v test_mercadona_primary_precision_variants.py test_mercadona_ambiguous_precision_rescue.py test_mercadona_ambiguous_primary_column_rescue.py test_mercadona_bounded_doctr_rescue.py
+          python -m unittest -v test_nutrition_label_reader.py test_mercadona_primary_precision_variants.py test_mercadona_ambiguous_precision_rescue.py test_mercadona_ambiguous_primary_column_rescue.py test_mercadona_bounded_doctr_rescue.py
 
       - name: Capture each lossless primary-column crop independently
         working-directory: tools/catalog
