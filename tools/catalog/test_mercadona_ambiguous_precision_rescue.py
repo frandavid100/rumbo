@@ -9,6 +9,16 @@ import mercadona_ambiguous_precision_rescue as precision
 
 
 class PrecisionCropDiagnosticsTest(unittest.TestCase):
+    def test_diagnostic_ratios_include_full_region_without_changing_production_defaults(self) -> None:
+        self.assertEqual(
+            precision.DIAGNOSTIC_PRIMARY_COLUMN_WIDTH_RATIOS,
+            (0.42, 0.50, 0.56, 1.0),
+        )
+        self.assertEqual(
+            precision.bounded.PRIMARY_COLUMN_WIDTH_RATIOS,
+            (0.42, 0.50),
+        )
+
     def test_trace_preserves_extraction_result_and_records_each_crop_independently(self) -> None:
         readings = [("paddleocr", "paddleocr", object())]
         errors = {"tesseract-psm6": "fixture-error"}
