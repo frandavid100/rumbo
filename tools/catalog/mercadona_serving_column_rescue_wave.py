@@ -10,10 +10,10 @@ from mercadona_explicit_serving_column_rescue import project_explicit_serving_co
 from nutrition_ocr_ensemble import fuse_ocr_readings
 
 
-# This runner is deliberately separate from the production wave.  It always pays
+# This runner is deliberately separate from the production wave. It always pays
 # for a third OCR family, but only for a tiny explicitly selected rescue cohort.
-# Acceptance is unchanged: at least two independent OCR families must independently
-# produce a parser-DECLARED per-100 tuple before the ordinary ensemble can declare.
+# Acceptance is unchanged: at least two independent OCR families must corroborate
+# all four fields before the ordinary ensemble can declare.
 EXTRACTOR_SPECS = (
     ("paddleocr", "paddleocr", extract_with_paddleocr),
     ("tesseract-psm4", "tesseract", lambda path: extract_with_tesseract(path, language="spa", psm=4)),
@@ -24,13 +24,41 @@ EXTRACTOR_SPECS = (
 
 
 def _project_if_safe(reading):
+    confidence = float(reading.extraction.confidence)
     projection = project_explicit_serving_column(
         reading.extraction.text,
-        extraction_confidence=reading.extraction.confidence,
+        extraction_confidence=confidence,
     )
-    if projection is None:
+    if projection is not None:
+        return replace(reading, parsed=projection.result)
+
+    # The global parser intentionally refuses to DECLARE a single OCR observation
+    # below 0.85 confidence. Do not relax that rule. For this bounded rescue only,
+    # if the engine is still above the ensemble's existing 0.70 evidence floor,
+    # rerun the *structural* projector at the parser threshold to determine whether
+    # all eight numeric cells + both explicit headers form a valid scaled table.
+    # Any successful structural projection is immediately demoted back to REVIEW
+    # at the real OCR confidence. It can therefore only help if a separate engine
+    # independently corroborates the same values under the unchanged ensemble gate.
+    if confidence < 0.70:
         return reading
-    return replace(reading, parsed=projection.result)
+    structural = project_explicit_serving_column(
+        reading.extraction.text,
+        extraction_confidence=0.85,
+    )
+    if structural is None or structural.result.status != "DECLARED" or structural.result.nutrition is None:
+        return reading
+    demoted = replace(
+        structural.result,
+        status="REVIEW",
+        confidence=confidence,
+        reasons=tuple(dict.fromkeys((
+            "LOW_EXTRACTION_CONFIDENCE",
+            "STRUCTURAL_PROJECTION_RETAINED_AS_REVIEW",
+            *structural.result.reasons,
+        ))),
+    )
+    return replace(reading, parsed=demoted)
 
 
 def _extract_region(evidence, region_path, target_kind: str):
@@ -48,7 +76,7 @@ def _extract_region(evidence, region_path, target_kind: str):
     ensemble = fuse_ocr_readings(parsed)
     if not ensemble.declared_usable:
         # REVIEW observations are retained for audit but cannot veto two matching,
-        # independently parser-DECLARED projections.  Any conflicting DECLARED
+        # independently parser-DECLARED projections. Any conflicting DECLARED
         # family remains inside this strict fusion and therefore still blocks.
         strict = base._fuse_declared_only_readings(
             (
