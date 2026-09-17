@@ -1,0 +1,75 @@
+{
+  "state_kind": "MERCADONA_OCR_TARGETED_REVALIDATION_PARTIAL",
+  "inventory_products": 4280,
+  "baseline_canonical_audit_run_id": 35185758347,
+  "baseline_canonical_declared": 358,
+  "workflow_run_id": 35196164259,
+  "workflow_head_sha": "9989152a94580bcd92a91f53e665c07cd486c265",
+  "workflow_conclusion": "success",
+  "artifact": {
+    "artifact_id": 10485709955,
+    "name": "mercadona-current-three-of-four-doctr-revalidation",
+    "sha256": "4d3e819d4c01e9a1b5bfeae60fb3526ae9611e024aee506366420698f30e7f74"
+  },
+  "processed": 2,
+  "fresh_declared_count": 2,
+  "fresh_declared_product_ids": [
+    "7878",
+    "84638"
+  ],
+  "results": [
+    {
+      "product_id": "7878",
+      "ean": "8402001020568",
+      "name": "Yogur líquido natural Hacendado con azúcar de caña",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 70.0,
+        "fat_g": 1.8,
+        "carbohydrate_g": 11.5,
+        "protein_g": 1.9
+      },
+      "fresh_corroborated_fields": 4,
+      "fresh_independent_engine_families": 3,
+      "identity_revalidated": {
+        "ean_exact": true,
+        "image_exact_unique_perspective_9": true
+      },
+      "promotion_allowed_by_fresh_observation": true
+    },
+    {
+      "product_id": "84638",
+      "ean": "2105900846388",
+      "name": "12 Mini saladas surtidas",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 326.0,
+        "fat_g": 19.0,
+        "carbohydrate_g": 29.0,
+        "protein_g": 8.9
+      },
+      "fresh_corroborated_fields": 4,
+      "fresh_independent_engine_families": 3,
+      "identity_revalidated": {
+        "ean_exact": true,
+        "image_exact_unique_perspective_9": true
+      },
+      "promotion_allowed_by_fresh_observation": true
+    }
+  ],
+  "canonical_status": "PENDING_STRICT_RECONCILIATION",
+  "reconciliation_run_id": 35196802938,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "historical_values_promotion_allowed": false,
+  "cross_run_value_fusion": false,
+  "cross_crop_value_fusion": false,
+  "acceptance_policy_changed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
