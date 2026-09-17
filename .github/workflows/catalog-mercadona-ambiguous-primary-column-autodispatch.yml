@@ -1,0 +1,24 @@
+name: Catalog Mercadona ambiguous primary-column autodispatch
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-ambiguous-primary-column-autodispatch.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Dispatch strict ambiguous primary-column pilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-ambiguous-primary-column-pilot.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
