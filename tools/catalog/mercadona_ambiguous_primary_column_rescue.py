@@ -3,7 +3,7 @@ from __future__ import annotations
 """Bounded rescue for historically ambiguous multi-column Mercadona labels.
 
 The caller must preselect a tiny historical cohort whose canonical REVIEW state
-has a complete 3-of-4-corrobated tuple, at least three OCR families, and exactly
+has a complete 3-of-4-corroborated tuple, at least three OCR families, and exactly
 one normalized safety blocker: AMBIGUOUS_TABLE caused by a
 MULTIPLE_NUTRITION_COLUMNS signal. Product identity and the exact first-party
 perspective=9 image must then be revalidated against the live official API.
@@ -18,16 +18,17 @@ Image bytes remain temporary.
 from pathlib import Path
 import tempfile
 
-import mercadona_bounded_doctr_rescue as bounded
-import mercadona_near_safe_doctr_retry as retry
-
-CORE = bounded.CORE
+CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 AMBIGUOUS_TABLE_BLOCKER = "AMBIGUOUS_TABLE"
 MULTIPLE_COLUMN_REASON = "MULTIPLE_NUTRITION_COLUMNS"
 
 
 def select_ambiguous_primary_column_targets(rows) -> list[dict]:
-    """Return only the auditable complete 3-of-4 ambiguity-only REVIEW cohort."""
+    """Return only the auditable complete 3-of-4 ambiguity-only REVIEW cohort.
+
+    Kept dependency-free on purpose: workflow target selection happens before
+    heavyweight OCR packages are installed.
+    """
     selected: list[dict] = []
     for row in rows:
         values = row.get("diagnostic_candidate_values") or {}
@@ -55,6 +56,16 @@ def select_ambiguous_primary_column_targets(rows) -> list[dict]:
     return selected
 
 
+def _bounded_module():
+    import mercadona_bounded_doctr_rescue as bounded
+    return bounded
+
+
+def _retry_module():
+    import mercadona_near_safe_doctr_retry as retry
+    return retry
+
+
 def _prefixed(readings, prefix: str):
     return [
         (f"{prefix}/{strategy}", family, reading)
@@ -75,6 +86,7 @@ def _extract_region(evidence, region_path: Path, target_kind: str):
     not make the historical ambiguous values positive evidence. Only a single
     freshly observed crop that independently becomes DECLARED may be returned.
     """
+    bounded = _bounded_module()
     baseline_readings, baseline_errors, baseline = bounded._extract_region_with_post_doctr_easyocr(
         evidence, region_path, target_kind
     )
@@ -101,6 +113,8 @@ def _extract_region(evidence, region_path: Path, target_kind: str):
 def main() -> int:
     # Keep the proven bounded docTR routing for each fresh crop, but replace the
     # region wrapper with the ambiguity-specific no-cross-crop-fusion route above.
+    bounded = _bounded_module()
+    retry = _retry_module()
     retry.should_run_doctr_rescue = bounded.should_run_bounded_doctr_rescue
     retry._extract_region = _extract_region
     return retry.main()

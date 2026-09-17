@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from types import SimpleNamespace
 
 import mercadona_ambiguous_primary_column_rescue as rescue
@@ -79,23 +78,18 @@ class IndependentPrimaryColumnObservationTest(unittest.TestCase):
             SimpleNamespace(name="primary_left_42", path=Path("left42.jpg")),
             SimpleNamespace(name="primary_left_50", path=Path("left50.jpg")),
         ]
-
-        with patch.object(
-            rescue.bounded,
-            "_extract_region_with_post_doctr_easyocr",
-            return_value=(baseline_readings, {"whole": "blocked"}, baseline),
-        ), patch.object(
-            rescue.bounded,
-            "build_bounded_primary_column_variants",
-            return_value=variants,
-        ), patch.object(
-            rescue.bounded,
-            "_DOCTR_EXTRACT_REGION",
-            side_effect=[
+        bounded = SimpleNamespace(
+            _extract_region_with_post_doctr_easyocr=Mock(
+                return_value=(baseline_readings, {"whole": "blocked"}, baseline)
+            ),
+            build_bounded_primary_column_variants=Mock(return_value=variants),
+            _DOCTR_EXTRACT_REGION=Mock(side_effect=[
                 (first_crop_readings, {"first": "review"}, review_crop),
                 (second_crop_readings, {}, declared_crop),
-            ],
-        ):
+            ]),
+        )
+
+        with patch.object(rescue, "_bounded_module", return_value=bounded):
             readings, errors, ensemble = rescue._extract_region(
                 object(), Path("region.jpg"), "visual_region"
             )
@@ -114,20 +108,17 @@ class IndependentPrimaryColumnObservationTest(unittest.TestCase):
         baseline_readings = [("whole", "paddleocr", object())]
         baseline_errors = {"whole": "ambiguous"}
         variants = [SimpleNamespace(name="primary_left_42", path=Path("left42.jpg"))]
+        bounded = SimpleNamespace(
+            _extract_region_with_post_doctr_easyocr=Mock(
+                return_value=(baseline_readings, baseline_errors, baseline)
+            ),
+            build_bounded_primary_column_variants=Mock(return_value=variants),
+            _DOCTR_EXTRACT_REGION=Mock(
+                return_value=([("paddleocr", "paddleocr", object())], {}, review_crop)
+            ),
+        )
 
-        with patch.object(
-            rescue.bounded,
-            "_extract_region_with_post_doctr_easyocr",
-            return_value=(baseline_readings, baseline_errors, baseline),
-        ), patch.object(
-            rescue.bounded,
-            "build_bounded_primary_column_variants",
-            return_value=variants,
-        ), patch.object(
-            rescue.bounded,
-            "_DOCTR_EXTRACT_REGION",
-            return_value=([("paddleocr", "paddleocr", object())], {}, review_crop),
-        ):
+        with patch.object(rescue, "_bounded_module", return_value=bounded):
             readings, errors, ensemble = rescue._extract_region(
                 object(), Path("region.jpg"), "visual_region"
             )
