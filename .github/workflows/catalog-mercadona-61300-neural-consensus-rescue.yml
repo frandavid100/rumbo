@@ -1,0 +1,281 @@
+name: Catalog Mercadona 61300 neural consensus rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-61300-neural-consensus-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-61300-neural-consensus-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      MERCADONA_PRECISION_DIAGNOSTICS: mercadona-61300-neural-consensus-diagnostic.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Revalidate exact current first-party identity and p9 image
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          product_id='61300'
+          expected_ean='8480000613004'
+          expected_image='https://prod-mercadona.imgix.net/images/a3ad4e2b7575e020b3b55efd1cec07a4.jpg?fit=crop&h=3600&w=3600'
+          observed_at=_now()
+          payload, source_url=_get_json(product_id, timeout=20.0)
+          current=normalize(payload, source_url=source_url, observed_at=observed_at)
+          if str(current.get('ean') or '').strip() != expected_ean:
+              raise SystemExit('EAN changed; rescue refused')
+          photos=current.get('photos') if isinstance(current.get('photos'), list) else []
+          matches=[
+              (i,p) for i,p in enumerate(photos)
+              if isinstance(p,dict)
+              and str(p.get('perspective') or '')=='9'
+              and str(p.get('zoom') or '')==expected_image
+          ]
+          if len(matches)!=1:
+              raise SystemExit(f'Exact p9 image no longer unique/current: {len(matches)}')
+          image_index, photo=matches[0]
+          routed=dict(photo); routed['perspective']=9
+          current['photos']=[routed]
+          current['_rescue_meta']={
+              'image_index': image_index,
+              'image_url': expected_image,
+              'live_detail_source_url': source_url,
+              'live_detail_observed_at': observed_at,
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+          }
+          Path('target-61300-neural-consensus.jsonl').write_text(
+              json.dumps(current,ensure_ascii=False,sort_keys=True)+'\n',encoding='utf-8'
+          )
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative regressions before rescue
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_label_reader.py \
+            test_mercadona_primary_precision_variants.py \
+            test_mercadona_ambiguous_precision_rescue.py \
+            test_mercadona_ambiguous_primary_column_rescue.py \
+            test_mercadona_bounded_doctr_rescue.py \
+            test_mercadona_near_safe_doctr_retry.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_ocr_ensemble.py
+
+      - name: Produce fresh same-crop precision observations
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/mercadona-61300-neural-consensus
+          mkdir -p /tmp/mercadona-61300-neural-consensus
+          set +e
+          python mercadona_ambiguous_precision_rescue.py \
+            --products target-61300-neural-consensus.jsonl \
+            --out /tmp/mercadona-61300-neural-consensus \
+            --shard-index 0 --shard-count 1 --limit 0 --eligibility-mode priority
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+          test -s "$MERCADONA_PRECISION_DIAGNOSTICS"
+
+      - name: Validate strict fresh neural consensus and materialize auditable bundle
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, sqlite3
+          from pathlib import Path
+
+          CORE=('calories','fat_g','carbohydrate_g','protein_g')
+          pid='61300'
+          target=json.loads(Path('target-61300-neural-consensus.jsonl').read_text(encoding='utf-8'))
+          meta=target.get('_rescue_meta') or {}
+          diag=json.loads(Path('mercadona-61300-neural-consensus-diagnostic.json').read_text(encoding='utf-8'))
+          if diag.get('cross_crop_value_fusion') is not False or diag.get('acceptance_policy_changed') is not False:
+              raise SystemExit('Diagnostic contract changed unexpectedly')
+
+          candidates=[]
+          for obs in diag.get('crop_observations') or []:
+              if obs.get('target_kind')!='visual_region':
+                  continue
+              probe=obs.get('independent_same_crop_probe') or {}
+              if probe.get('same_crop_only') is not True or probe.get('cross_crop_value_fusion') is not False:
+                  continue
+              accepted=((probe.get('ensembles') or {}).get('paddleocr+doctr+easyocr') or {})
+              full=obs.get('ensemble') or {}
+              if accepted.get('status')!='DECLARED' or accepted.get('basis') not in {'100_g','100_ml'}:
+                  continue
+              nutrition=accepted.get('nutrition') or {}
+              if any(not isinstance(nutrition.get(f),(int,float)) for f in CORE):
+                  continue
+              if int(accepted.get('corroborated_fields') or 0) < 4 or int(accepted.get('independent_engine_families') or 0) < 3:
+                  continue
+              if accepted.get('reasons'):
+                  continue
+              fields={str(f.get('name') or ''):f for f in (accepted.get('fields') or []) if isinstance(f,dict)}
+              if any(
+                  not bool((fields.get(f) or {}).get('corroborated'))
+                  or len(set((fields.get(f) or {}).get('engine_families') or [])) < 2
+                  for f in CORE
+              ):
+                  continue
+              # The ordinary all-engine ensemble must be blocked only by a
+              # Tesseract-family precision conflict/missing field. We do not
+              # suppress arbitrary cross-family disagreements.
+              full_reasons=[str(x) for x in (full.get('reasons') or [])]
+              forbidden_prefixes=(
+                  'ENERGY_MACRO_MISMATCH','MULTIPLE_NUTRITION_COLUMNS','OCR_BASIS_CONFLICT',
+                  'OCR_FIELD_CONFLICT','AMBIGUOUS_TABLE','AMBIGUOUS_NUTRITION_COLUMNS',
+              )
+              if any(r.startswith(forbidden_prefixes) for r in full_reasons):
+                  continue
+              tesseract_conflicts=[r for r in full_reasons if r.startswith('OCR_SAME_ENGINE_CONFLICT:') and r.endswith(':tesseract')]
+              if not tesseract_conflicts:
+                  continue
+              non_tesseract_hard=[
+                  r for r in full_reasons
+                  if r.startswith('OCR_SAME_ENGINE_CONFLICT:') and not r.endswith(':tesseract')
+              ]
+              if non_tesseract_hard:
+                  continue
+              candidates.append((obs,accepted,probe))
+
+          if len(candidates)!=1:
+              raise SystemExit(f'Expected exactly one strict same-crop neural consensus candidate, got {len(candidates)}')
+          obs, accepted, probe=candidates[0]
+          nutrition={f:float((accepted.get('nutrition') or {})[f]) for f in CORE}
+          image_url=str(meta.get('image_url') or '')
+          expected_ean='8480000613004'
+          if str(target.get('ean') or '')!=expected_ean or not image_url:
+              raise SystemExit('Exact identity metadata missing at materialization')
+
+          row={
+              'product_id':pid,
+              'ean':expected_ean,
+              'name':target.get('name'),
+              'status':'DECLARED',
+              'basis':accepted.get('basis'),
+              'nutrition':nutrition,
+              'evidence_level':'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source':'MERCADONA_FIRST_PARTY',
+              'source_record_kind':'label image',
+              'image_url':image_url,
+              'redistribution_allowed':False,
+              'observed_at':meta.get('live_detail_observed_at'),
+              'attempts':[{ 
+                  'kind':'same_crop_neural_consensus_rescue',
+                  'variant':obs.get('variant'),
+                  'target_kind':obs.get('target_kind'),
+                  'ensemble':accepted,
+                  'neural_readings':probe.get('readings') or {},
+                  'full_ensemble_status':(obs.get('ensemble') or {}).get('status'),
+                  'full_ensemble_reasons':(obs.get('ensemble') or {}).get('reasons') or [],
+              }],
+              'mercadona_61300_neural_consensus_rescue':{
+                  'same_crop_only':True,
+                  'neural_families':['paddleocr','doctr','easyocr'],
+                  'fresh_corroborated_fields':int(accepted.get('corroborated_fields') or 0),
+                  'fresh_independent_engine_families':int(accepted.get('independent_engine_families') or 0),
+                  'tesseract_outlier_not_used_for_values':True,
+                  'historical_values_promotion_allowed':False,
+                  'cross_run_value_fusion':False,
+                  'cross_crop_value_fusion':False,
+                  'acceptance_policy_changed':False,
+                  'image_index':meta.get('image_index'),
+                  'live_detail_source_url':meta.get('live_detail_source_url'),
+              },
+          }
+
+          root=Path('mercadona-61300-neural-consensus-rescue')
+          root.mkdir(exist_ok=True)
+          (root/'results-merged.jsonl').write_text(json.dumps(row,ensure_ascii=False,sort_keys=True)+'\n',encoding='utf-8')
+          summary={
+              'inventory_products':4280,
+              'processed':1,
+              'statuses':{pid:'DECLARED'},
+              'fresh_declared_product_ids':[pid],
+              'fresh_declared_count':1,
+              'nutrition':nutrition,
+              'evidence_level':'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source':'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed':False,
+              'images_persisted':False,
+              'missing_values_inferred':False,
+              'structured_api_macros_claimed':False,
+              'acceptance_policy_changed':False,
+              'historical_values_promotion_allowed':False,
+              'cross_run_value_fusion':False,
+              'cross_crop_value_fusion':False,
+              'CLASSIFIED':0,
+              'MENU_ELIGIBLE':0,
+          }
+          (root/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          db=sqlite3.connect(root/'staging.sqlite')
+          db.execute('CREATE TABLE IF NOT EXISTS ocr_rows (product_id TEXT PRIMARY KEY, ean TEXT, status TEXT, basis TEXT, calories REAL, fat_g REAL, carbohydrate_g REAL, protein_g REAL, evidence_level TEXT, source TEXT, source_record_kind TEXT, image_url TEXT, redistribution_allowed INTEGER, raw_json TEXT NOT NULL)')
+          db.execute('INSERT OR REPLACE INTO ocr_rows VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(
+              pid,expected_ean,'DECLARED',row['basis'],nutrition['calories'],nutrition['fat_g'],nutrition['carbohydrate_g'],nutrition['protein_g'],
+              row['evidence_level'],row['source'],row['source_record_kind'],row['image_url'],0,json.dumps(row,ensure_ascii=False,sort_keys=True)
+          ))
+          db.commit(); db.close()
+          # Persist normalized OCR/readings but never the first-party image bytes.
+          (root/'diagnostic.json').write_text(json.dumps(diag,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps(summary,sort_keys=True))
+          PY
+
+      - name: Upload auditable rescue
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-61300-neural-consensus-rescue
+          path: |
+            tools/catalog/mercadona-61300-neural-consensus-rescue/results-merged.jsonl
+            tools/catalog/mercadona-61300-neural-consensus-rescue/summary.json
+            tools/catalog/mercadona-61300-neural-consensus-rescue/staging.sqlite
+            tools/catalog/mercadona-61300-neural-consensus-rescue/diagnostic.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Trigger strict residual reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
