@@ -1,0 +1,66 @@
+{
+  "retailer": "MERCADONA_FIRST_PARTY",
+  "cut_basis": "historical first-party inventory 2026-08-27",
+  "inventory_products": 4280,
+  "canonical_audit_run_id": 35161174222,
+  "canonical_audit_head_sha": "93c0df157f19221f5a7709f7c52267edd902c1f4",
+  "canonical_audit_artifact": {
+    "name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10473770687,
+    "sha256": "1a87ca3788bb9874c8abbceeb6ef856dc1af4c793c626384e1e25b9af234a64e"
+  },
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 356,
+    "REVIEW": 2613
+  },
+  "usable_complete": 356,
+  "usable_complete_pct_inventory": 8.3178,
+  "usable_field_counts": {
+    "calories": 356,
+    "fat_g": 356,
+    "carbohydrate_g": 356,
+    "protein_g": 356
+  },
+  "identity_reconciliation": {
+    "mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
+    "identity_enforced_products": 2969,
+    "identity_anchored_products": 2969,
+    "identity_conflict_products": 0,
+    "identity_unverified_products": 0,
+    "identity_unresolved_products": 0,
+    "coverage_without_canonical_state": 0
+  },
+  "review_failure_modes": {
+    "latest_review_products": 2613,
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 35,
+    "products_without_ocr_signal": 0,
+    "reasonless_review_products": 0,
+    "safety_blocker_counts": {
+      "HARD_OCR_CONFLICT": 218,
+      "ENERGY_MACRO_INCOHERENCE": 99,
+      "AMBIGUOUS_TABLE": 97
+    }
+  },
+  "historical_first_party_snapshot": {
+    "run_id": 33046950149,
+    "artifact_name": "mercadona-first-party-final",
+    "status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute a later live Mercadona inventory for the auditable 2026-08-27 4,280-product cut. Targeted OCR retries remain allowed only when immutable historical OCR evidence preserves product identity/image anchors and they are revalidated against the official live API."
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "note": "11609 is included in this canonical cut after the exact-EAN/exact-image bounded primary-column OCR observation independently satisfied the unchanged four-core-field corroboration contract."
+}
