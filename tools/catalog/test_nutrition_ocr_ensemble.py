@@ -190,4 +190,18 @@ class OCREnsembleTest(unittest.TestCase):
         self.assertTrue(any(x.startswith('OCR_FIELD_CONFLICT') for x in r.reasons))
 
 
+    def test_exact_cross_family_consensus_beats_higher_confidence_nearby_layout_value(self):
+        doctr = reading('DECLARED', '100_ml', {'calories': 50.0, 'fat_g': 0.0, 'carbohydrate_g': 11.3, 'protein_g': 0.5}, .88)
+        tess_nearby = reading('REVIEW', '100_ml', {'calories': 50.0, 'fat_g': 0.0, 'carbohydrate_g': 11.39, 'protein_g': 0.5}, .95, 'LOW_EXTRACTION_CONFIDENCE')
+        tess_exact = reading('DECLARED', '100_ml', {'calories': 50.0, 'fat_g': 0.0, 'carbohydrate_g': 11.3, 'protein_g': 0.5}, .90)
+        r = fuse_ocr_readings([
+            ParsedOCRReading('doctr-crop-left', doctr, engine_family='doctr'),
+            ParsedOCRReading('tesseract-psm11', tess_nearby, engine_family='tesseract'),
+            ParsedOCRReading('tesseract-psm4', tess_exact, engine_family='tesseract'),
+        ])
+        self.assertEqual(r.status, 'DECLARED', r)
+        self.assertEqual(r.corroborated_fields, 4)
+        self.assertEqual(r.nutrition['carbohydrate_g'], 11.3)
+
+
 if __name__ == '__main__': unittest.main()

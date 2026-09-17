@@ -6,7 +6,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.2"
+ENSEMBLE_VERSION = "1.3.3"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -119,6 +119,21 @@ def _family_representative(field: str, family_candidates):
     return None
 
 
+def _exact_cross_family_consensus(candidates, representative_families):
+    eligible = tuple(x for x in candidates if x[3] in representative_families)
+    support = {}
+    for candidate in eligible:
+        support.setdefault(candidate[0], set()).add(candidate[3])
+    max_families = max((len(families) for families in support.values()), default=0)
+    if max_families < 2:
+        return None
+    winners = [value for value, families in support.items() if len(families) == max_families]
+    if len(winners) != 1:
+        return None
+    matching = [candidate for candidate in eligible if candidate[0] == winners[0]]
+    return max(matching, key=lambda x: x[1])
+
+
 def _choose_field(field: str, candidates):
     if not candidates:
         return None, None
@@ -156,6 +171,10 @@ def _choose_field(field: str, candidates):
     representative_families = {x[3] for x in representatives}
     if ambiguous_families and len(representative_families) < 2:
         return None, f"OCR_SAME_ENGINE_CONFLICT:{field}:{','.join(sorted(ambiguous_families))}"
+
+    exact_consensus = _exact_cross_family_consensus(candidates, representative_families)
+    if exact_consensus is not None:
+        selected = exact_consensus
 
     agreeing = [
         x for x in candidates
