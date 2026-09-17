@@ -1,0 +1,100 @@
+name: Catalog Mercadona 61300 precision diagnostic
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-61300-precision-diagnostic.yml'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_label_reader.py'
+      - 'tools/catalog/mercadona_ambiguous_precision_rescue.py'
+      - 'tools/catalog/mercadona_primary_precision_variants.py'
+      - 'tools/catalog/test_mercadona_ambiguous_precision_rescue.py'
+      - 'tools/catalog/test_mercadona_primary_precision_variants.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-61300-precision-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      MERCADONA_PRECISION_DIAGNOSTICS: precision-crop-diagnostics.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Revalidate exact current first-party identity and p9 image
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          product_id='61300'
+          expected_ean='8480000613004'
+          expected_image='https://prod-mercadona.imgix.net/images/a3ad4e2b7575e020b3b55efd1cec07a4.jpg?fit=crop&h=3600&w=3600'
+          payload, source_url=_get_json(product_id, timeout=20.0)
+          current=normalize(payload, source_url=source_url, observed_at=_now())
+          if str(current.get('ean') or '').strip() != expected_ean:
+              raise SystemExit('EAN changed; diagnostic refused')
+          photos=current.get('photos') if isinstance(current.get('photos'), list) else []
+          matches=[p for p in photos if isinstance(p,dict) and str(p.get('perspective') or '')=='9' and str(p.get('zoom') or '')==expected_image]
+          if len(matches)!=1:
+              raise SystemExit(f'Exact p9 image no longer unique/current: {len(matches)}')
+          photo=dict(matches[0]); photo['perspective']=9
+          current['photos']=[photo]
+          Path('target-61300-precision-diagnostic.jsonl').write_text(json.dumps(current,ensure_ascii=False,sort_keys=True)+'\n',encoding='utf-8')
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' 'python-doctr==1.1.0' opencv-python-headless Pillow
+
+      - name: Run diagnostics regressions first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v test_nutrition_label_reader.py test_mercadona_primary_precision_variants.py test_mercadona_ambiguous_precision_rescue.py test_mercadona_ambiguous_primary_column_rescue.py test_mercadona_bounded_doctr_rescue.py
+
+      - name: Capture each lossless primary-column crop independently
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/mercadona-61300-precision-diagnostic
+          mkdir -p /tmp/mercadona-61300-precision-diagnostic
+          set +e
+          python mercadona_ambiguous_precision_rescue.py \
+            --products target-61300-precision-diagnostic.jsonl \
+            --out /tmp/mercadona-61300-precision-diagnostic \
+            --shard-index 0 --shard-count 1 --limit 0 --eligibility-mode p9-no-ingredients-all
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+          test -s "$MERCADONA_PRECISION_DIAGNOSTICS"
+
+      - name: Upload diagnostic JSON only
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostic-61300-precision
+          path: tools/catalog/precision-crop-diagnostics.json
+          if-no-files-found: error
+          retention-days: 14
