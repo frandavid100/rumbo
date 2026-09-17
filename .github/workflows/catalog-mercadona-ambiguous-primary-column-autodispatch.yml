@@ -1,4 +1,4 @@
-name: Catalog Mercadona ambiguous primary-column autodispatch
+name: Catalog Mercadona targeted autodispatch
 
 on:
   push:
@@ -14,11 +14,11 @@ jobs:
   dispatch:
     runs-on: ubuntu-24.04
     steps:
-      - name: Dispatch strict ambiguous primary-column pilot
+      - name: Dispatch strict current 3-of-4 docTR revalidation
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh workflow run catalog-mercadona-ambiguous-primary-column-pilot.yml \
+          gh workflow run catalog-mercadona-current-three-of-four-doctr-revalidation.yml \
             --repo frandavid100/rumbo \
             --ref agent/catalog-phase1
