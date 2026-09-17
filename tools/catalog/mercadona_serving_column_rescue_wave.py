@@ -23,14 +23,49 @@ EXTRACTOR_SPECS = (
 )
 
 
+def _projection_texts(reading):
+    """Yield raw OCR first, then the parser's audited normalized OCR text.
+
+    The ordinary Mercadona reader already performs a small set of conservative,
+    nonnumeric OCR repairs (for example a standalone `Crasas` row label). A
+    serving-column projection should not lose otherwise explicit evidence merely
+    because it is looking at the pre-normalized spelling. Numeric cells remain
+    observed OCR values; this helper never rewrites or supplies one.
+    """
+    raw = str(reading.extraction.text or "")
+    normalized = str(getattr(reading.parsed, "normalized_text", "") or "")
+    yielded = set()
+    for source, text in (("raw", raw), ("normalized", normalized)):
+        if not text or text in yielded:
+            continue
+        yielded.add(text)
+        yield source, text
+
+
+def _mark_normalized_projection(result):
+    return replace(
+        result,
+        reasons=tuple(dict.fromkeys((
+            "NORMALIZED_OCR_TEXT_PROJECTION",
+            *result.reasons,
+        ))),
+    )
+
+
 def _project_if_safe(reading):
     confidence = float(reading.extraction.confidence)
-    projection = project_explicit_serving_column(
-        reading.extraction.text,
-        extraction_confidence=confidence,
-    )
-    if projection is not None:
-        return replace(reading, parsed=projection.result)
+    candidate_texts = tuple(_projection_texts(reading))
+
+    for source, text in candidate_texts:
+        projection = project_explicit_serving_column(
+            text,
+            extraction_confidence=confidence,
+        )
+        if projection is not None:
+            parsed = projection.result
+            if source == "normalized":
+                parsed = _mark_normalized_projection(parsed)
+            return replace(reading, parsed=parsed)
 
     # The global parser intentionally refuses to DECLARE a single OCR observation
     # below 0.85 confidence. Do not relax that rule. For this bounded rescue only,
@@ -42,23 +77,31 @@ def _project_if_safe(reading):
     # independently corroborates the same values under the unchanged ensemble gate.
     if confidence < 0.70:
         return reading
-    structural = project_explicit_serving_column(
-        reading.extraction.text,
-        extraction_confidence=0.85,
-    )
-    if structural is None or structural.result.status != "DECLARED" or structural.result.nutrition is None:
-        return reading
-    demoted = replace(
-        structural.result,
-        status="REVIEW",
-        confidence=confidence,
-        reasons=tuple(dict.fromkeys((
+    for source, text in candidate_texts:
+        structural = project_explicit_serving_column(
+            text,
+            extraction_confidence=0.85,
+        )
+        if structural is None or structural.result.status != "DECLARED" or structural.result.nutrition is None:
+            continue
+        structural_result = structural.result
+        extra_reasons = [
             "LOW_EXTRACTION_CONFIDENCE",
             "STRUCTURAL_PROJECTION_RETAINED_AS_REVIEW",
-            *structural.result.reasons,
-        ))),
-    )
-    return replace(reading, parsed=demoted)
+        ]
+        if source == "normalized":
+            extra_reasons.append("NORMALIZED_OCR_TEXT_PROJECTION")
+        demoted = replace(
+            structural_result,
+            status="REVIEW",
+            confidence=confidence,
+            reasons=tuple(dict.fromkeys((
+                *extra_reasons,
+                *structural_result.reasons,
+            ))),
+        )
+        return replace(reading, parsed=demoted)
+    return reading
 
 
 def _extract_region(evidence, region_path, target_kind: str):
