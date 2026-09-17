@@ -1,0 +1,58 @@
+{
+  "state_kind": "MERCADONA_OCR_PARTIAL_VALIDATED_RESCUE",
+  "inventory_products": 4280,
+  "source_canonical_audit_run_id": 35267347586,
+  "rescue_run_id": 35270222320,
+  "rescue_head_sha": "2535319d3e625cef49aabe49c448a68484644b33",
+  "rescue_artifact": {
+    "artifact_id": 10517364991,
+    "name": "mercadona-7879-missing-basis-expanded-crop-rescue",
+    "sha256": "1705d07ad3ec62af97061dfd2de74d180ad48f4f628fd0e59f5b01f4d8cc5ac2"
+  },
+  "product": {
+    "product_id": "7879",
+    "name": "Patatas fritas horno y air fryer Hacendado ultracongeladas",
+    "ean": "8480000078791",
+    "perspective": 9,
+    "status": "DECLARED",
+    "basis": "100_g",
+    "nutrition": {
+      "calories": 151.0,
+      "fat_g": 5.8,
+      "carbohydrate_g": 23.0,
+      "protein_g": 2.3
+    },
+    "historical_status": "REVIEW",
+    "historical_basis": null,
+    "historical_corroborated_fields": 3,
+    "historical_independent_engine_families": 2,
+    "historical_safety_blockers": [
+      "ENERGY_MACRO_INCOHERENCE"
+    ]
+  },
+  "validation": {
+    "live_detail_endpoint_version": "/api/v1_1",
+    "exact_live_ean_match": true,
+    "exact_current_first_party_perspective_9_image_match": true,
+    "fresh_expanded_crop_declared_independently": true,
+    "explicit_100g_100ml_basis_recovered": true,
+    "minimum_independent_engine_families": 2,
+    "minimum_corroborated_core_fields": 4,
+    "regression_tests_passed_before_ocr": 106,
+    "acceptance_policy_changed": false,
+    "historical_values_promotion_allowed": false,
+    "cross_run_value_fusion": false,
+    "cross_crop_value_fusion": false,
+    "missing_values_inferred": false
+  },
+  "canonical_reconciliation_triggered_run_id": 35270743874,
+  "canonical_reconciliation_pending_at_partial_persist": true,
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
