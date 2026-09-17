@@ -9,6 +9,7 @@ on:
       - 'tools/catalog/mercadona_serving_column_rescue_wave.py'
       - 'tools/catalog/run_mercadona_explicit_serving_column_pilot.py'
       - 'tools/catalog/test_mercadona_explicit_serving_column_rescue.py'
+      - 'tools/catalog/test_mercadona_serving_column_rescue_wave.py'
   workflow_dispatch:
 
 permissions:
@@ -70,6 +71,7 @@ jobs:
         run: |
           python -m unittest -v \
             test_mercadona_explicit_serving_column_rescue.py \
+            test_mercadona_serving_column_rescue_wave.py \
             test_mercadona_ocr_safety_regressions.py \
             test_nutrition_label_reader.py \
             test_nutrition_label_reader_ocr_typos.py \
