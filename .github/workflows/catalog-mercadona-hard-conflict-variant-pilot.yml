@@ -1,0 +1,344 @@
+name: Catalog Mercadona hard-conflict variant pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-hard-conflict-variant-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-hard-conflict-variant-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve latest successful strict OCR audit
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=30' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo 'No successful strict OCR audit found' >&2; exit 1; }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using strict OCR audit run $run_id"
+
+      - name: Download strict canonical audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: /tmp/mercadona-audit
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.audit.outputs.run_id }}
+
+      - name: Select bounded hard-conflict candidate
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
+          src = Path('/tmp/mercadona-audit/current-review-failure-modes/complete-but-safety-blocked.jsonl')
+          rows = [json.loads(line) for line in src.read_text(encoding='utf-8').splitlines() if line.strip()]
+          matches = [row for row in rows if str(row.get('product_id') or '') == '16362']
+          if len(matches) != 1:
+              raise SystemExit(f'Expected exactly one canonical row for 16362, got {len(matches)}')
+          row = matches[0]
+          values = row.get('diagnostic_candidate_values') or {}
+          blockers = set(row.get('safety_blockers') or [])
+          reasons = set(row.get('reason_prefixes') or [])
+          checks = {
+              'canonical_review': row.get('canonical_status') == 'REVIEW',
+              'three_of_four': int(row.get('corroborated_fields') or 0) == 3,
+              'at_least_two_historical_families': int(row.get('independent_engine_families') or 0) >= 2,
+              'explicit_basis': row.get('basis') in {'100_g', '100_ml'},
+              'complete_diagnostic_tuple': all(values.get(field) is not None for field in CORE),
+              'sole_hard_conflict_blocker': blockers == {'HARD_OCR_CONFLICT'},
+              'field_conflict_signal': 'OCR_FIELD_CONFLICT' in reasons,
+              'identity_anchor_present': bool(str(row.get('ean') or '').strip()),
+              'image_anchor_present': bool(str(row.get('image_url') or '').strip()),
+          }
+          if not all(checks.values()):
+              raise SystemExit('16362 no longer matches the bounded hard-conflict cohort: ' + json.dumps(checks, sort_keys=True))
+          Path('hard-conflict-anchor.json').write_text(json.dumps(row, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps({
+              'canonical_audit_run_id': int('${{ steps.audit.outputs.run_id }}'),
+              'product_id': '16362',
+              'checks': checks,
+              'historical_values_promotion_allowed': False,
+              'current_observation_must_satisfy_declared_contract_independently': True,
+              'cross_run_value_fusion': False,
+              'cross_region_value_fusion': False,
+              'acceptance_policy_changed': False,
+          }, sort_keys=True))
+          PY
+
+      - name: Rehydrate official first-party detail and require exact historical identity/image
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          old = json.loads(Path('hard-conflict-anchor.json').read_text(encoding='utf-8'))
+          pid = '16362'
+          anchor_ean = str(old.get('ean') or '').strip()
+          anchor_url = str(old.get('image_url') or '').strip()
+          observed_at = _now()
+          payload, source_url = _get_json(pid, timeout=20.0)
+          current = normalize(payload, source_url=source_url, observed_at=observed_at)
+          current_ean = str(current.get('ean') or '').strip()
+          if current_ean != anchor_ean:
+              raise SystemExit(f'Current EAN mismatch for {pid}: current={current_ean!r} anchor={anchor_ean!r}')
+          photos = current.get('photos') if isinstance(current.get('photos'), list) else []
+          matches = [
+              (index, photo)
+              for index, photo in enumerate(photos)
+              if isinstance(photo, dict)
+              and str(photo.get('perspective') or '') == '9'
+              and str(photo.get('zoom') or '') == anchor_url
+          ]
+          if len(matches) != 1:
+              raise SystemExit(f'Exact historical first-party perspective=9 image is not uniquely current for {pid}: {len(matches)} matches')
+          image_index, photo = matches[0]
+          routed = dict(photo)
+          routed['perspective'] = 9
+          current['photos'] = [routed]
+          current['_hard_conflict_meta'] = {
+              'canonical_ean': anchor_ean,
+              'current_ean': current_ean,
+              'image_url': anchor_url,
+              'image_index': image_index,
+              'canonical_latest_raw_run_id': old.get('latest_raw_run_id'),
+              'canonical_corroborated_fields': int(old.get('corroborated_fields') or 0),
+              'canonical_engine_families': int(old.get('independent_engine_families') or 0),
+              'canonical_safety_blockers': list(old.get('safety_blockers') or []),
+              'canonical_reason_prefixes': list(old.get('reason_prefixes') or []),
+              'live_detail_source_url': source_url,
+              'live_detail_observed_at': observed_at,
+          }
+          Path('hard-conflict-product.jsonl').write_text(json.dumps(current, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps({
+              'product_id': pid,
+              'ean_exact': True,
+              'image_exact_unique_p9': True,
+              'image_index': image_index,
+              'has_structured_ingredients': bool(current.get('ingredients')),
+              'source_url': source_url,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+          }, sort_keys=True))
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative regressions before OCR
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_near_safe_variant_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: Run one-product independent variant rescue
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-hard-conflict-variant-pilot/raw
+          mode=$(python - <<'PY'
+          import json
+          from pathlib import Path
+          row = json.loads(Path('hard-conflict-product.jsonl').read_text(encoding='utf-8'))
+          print('priority' if row.get('ingredients') else 'p9-no-ingredients-all')
+          PY
+          )
+          set +e
+          python mercadona_near_safe_variant_rescue.py \
+            --products hard-conflict-product.jsonl \
+            --out mercadona-hard-conflict-variant-pilot/raw \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 \
+            --eligibility-mode "$mode"
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+
+      - name: Validate and materialize auditable output
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob
+          import json
+          from pathlib import Path
+          import sqlite3
+
+          CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
+          root = Path('mercadona-hard-conflict-variant-pilot')
+          old = json.loads(Path('hard-conflict-anchor.json').read_text(encoding='utf-8'))
+          current = json.loads(Path('hard-conflict-product.jsonl').read_text(encoding='utf-8'))
+          meta = current.get('_hard_conflict_meta') or {}
+          rows = []
+          for path in sorted(glob.glob(str(root / 'raw/results-*.jsonl'))):
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+          if len(rows) != 1 or str(rows[0].get('product_id') or '') != '16362':
+              raise SystemExit(f'Unexpected result coverage: {[(row.get("product_id"), row.get("status")) for row in rows]}')
+          row = rows[0]
+          if str(row.get('ean') or '') != str(meta.get('canonical_ean') or ''):
+              raise SystemExit('OCR result EAN does not match historical/current anchor')
+          if str(row.get('image_url') or '') != str(meta.get('image_url') or ''):
+              raise SystemExit('OCR used an unexpected image')
+          row['image_index'] = meta.get('image_index')
+          row['perspective'] = 9
+          row['live_detail_source_url'] = meta.get('live_detail_source_url')
+          row['live_detail_observed_at'] = meta.get('live_detail_observed_at')
+          row['pilot_canonical_latest_raw_run_id'] = meta.get('canonical_latest_raw_run_id')
+          row['pilot_canonical_corroborated_fields'] = meta.get('canonical_corroborated_fields')
+          row['pilot_canonical_engine_families'] = meta.get('canonical_engine_families')
+          row['pilot_canonical_safety_blockers'] = meta.get('canonical_safety_blockers')
+          row['historical_values_promotion_allowed'] = False
+          row['cross_run_value_fusion'] = False
+          row['cross_region_value_fusion'] = False
+          row['current_observation_must_satisfy_declared_contract_independently'] = True
+          row['acceptance_policy_changed'] = False
+
+          invalid = []
+          if (
+              row.get('source') != 'MERCADONA_FIRST_PARTY'
+              or row.get('source_record_kind') != 'label image'
+              or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+              or row.get('redistribution_allowed') is not False
+              or row.get('perspective') != 9
+              or row.get('pilot_canonical_corroborated_fields') != 3
+              or int(row.get('pilot_canonical_engine_families') or 0) < 2
+              or set(row.get('pilot_canonical_safety_blockers') or []) != {'HARD_OCR_CONFLICT'}
+              or not str(row.get('live_detail_source_url') or '').startswith('https://tienda.mercadona.es/api/v1_1/products/')
+          ):
+              invalid.append('provenance_or_anchor_contract')
+
+          if row.get('status') == 'DECLARED':
+              nutrition = row.get('nutrition') or {}
+              if any(nutrition.get(field) is None for field in CORE):
+                  invalid.append('missing_declared_core')
+              declared_attempts = [attempt for attempt in row.get('attempts', []) if (attempt.get('ensemble') or {}).get('status') == 'DECLARED']
+              if not declared_attempts:
+                  invalid.append('no_independently_declared_attempt')
+              else:
+                  ensemble = declared_attempts[0].get('ensemble') or {}
+                  if (
+                      ensemble.get('basis') not in {'100_g', '100_ml'}
+                      or int(ensemble.get('independent_engine_families') or 0) < 2
+                      or int(ensemble.get('corroborated_fields') or 0) < 4
+                      or ensemble.get('reasons')
+                  ):
+                      invalid.append('fresh_attempt_does_not_meet_unchanged_declared_contract')
+          if invalid:
+              raise SystemExit('Unsafe hard-conflict pilot row: ' + ','.join(invalid))
+
+          out = root / 'results-merged.jsonl'
+          out.write_text(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
+          summary = {
+              'inventory_products': 4280,
+              'canonical_audit_run_id': int('${{ steps.audit.outputs.run_id }}'),
+              'processed': 1,
+              'product_id': '16362',
+              'status': row.get('status'),
+              'nutrition': row.get('nutrition') if row.get('status') == 'DECLARED' else None,
+              'historical_corroborated_fields': 3,
+              'historical_engine_families': int(old.get('independent_engine_families') or 0),
+              'historical_safety_blockers': ['HARD_OCR_CONFLICT'],
+              'selection_policy': 'ONE-PRODUCT BOUNDED PILOT; COMPLETE 3_OF_4 HISTORICAL REVIEW; >=2 OCR FAMILIES; SOLE HARD_OCR_CONFLICT BLOCKER; EXACT LIVE EAN + SAME FIRST-PARTY P9 IMAGE',
+              'rescue_policy': 'CURRENT VISUAL-REGION OBSERVATION MUST INDEPENDENTLY SATISFY UNCHANGED DECLARED CONTRACT; HISTORICAL VALUES ARE DIAGNOSTIC ONLY; NO CROSS-REGION OR CROSS-RUN VALUE FUSION',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'acceptance_policy_changed': False,
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_region_value_fusion': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          (root / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          (root / 'historical-anchor.json').write_text(json.dumps(old, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+
+          db = sqlite3.connect(root / 'staging.sqlite')
+          db.execute('CREATE TABLE IF NOT EXISTS ocr_rows (product_id TEXT PRIMARY KEY, ean TEXT, status TEXT, basis TEXT, calories REAL, fat_g REAL, carbohydrate_g REAL, protein_g REAL, evidence_level TEXT, source TEXT, source_record_kind TEXT, image_url TEXT, redistribution_allowed INTEGER, raw_json TEXT NOT NULL)')
+          n = row.get('nutrition') or {}
+          db.execute('INSERT OR REPLACE INTO ocr_rows VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (
+              row.get('product_id'), row.get('ean'), row.get('status'), row.get('basis'),
+              n.get('calories') if row.get('status') == 'DECLARED' else None,
+              n.get('fat_g') if row.get('status') == 'DECLARED' else None,
+              n.get('carbohydrate_g') if row.get('status') == 'DECLARED' else None,
+              n.get('protein_g') if row.get('status') == 'DECLARED' else None,
+              row.get('evidence_level'), row.get('source'), row.get('source_record_kind'), row.get('image_url'),
+              0, json.dumps(row, ensure_ascii=False, sort_keys=True),
+          ))
+          db.commit()
+          db.close()
+          print(json.dumps(summary, sort_keys=True))
+          PY
+
+      - name: Upload auditable pilot
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-hard-conflict-variant-pilot
+          path: |
+            tools/catalog/mercadona-hard-conflict-variant-pilot/results-merged.jsonl
+            tools/catalog/mercadona-hard-conflict-variant-pilot/summary.json
+            tools/catalog/mercadona-hard-conflict-variant-pilot/historical-anchor.json
+            tools/catalog/mercadona-hard-conflict-variant-pilot/staging.sqlite
+            tools/catalog/mercadona-hard-conflict-variant-pilot/raw/*.jsonl
+            tools/catalog/mercadona-hard-conflict-variant-pilot/raw/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Trigger strict residual reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
