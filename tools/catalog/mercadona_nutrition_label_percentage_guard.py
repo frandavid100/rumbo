@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-"""Mercadona-only guard against ingredient percentages masquerading as fat rows.
+"""Mercadona-only guards against ingredient OCR noise masquerading as fat rows.
 
 Whole-pack OCR can interleave an ingredients column around the visible nutrition
 table. A line such as ``grasa (16%). emulgente ...`` can then start at a line
 boundary and look like a total-fat label even though the number is an ingredient
-percentage, not grams per 100 g/ml.
+percentage, not grams per 100 g/ml. Likewise an additive fragment such as
+``129 E129:`` can be emitted immediately after ``Grasas/Lípidos`` and a generic
+OCR repair can otherwise mistake ``129`` for damaged ``12 g``.
 
-This module changes no number and invents no value. It only makes a conservative
-singular ``grasa (<percent>%)`` ingredient shape ineligible as a nutrition-row
-label; the ordinary Mercadona structural reader must still recover and validate
+These guards invent no nutrition value and do not infer a missing macro. They
+only make narrowly identified ingredient shapes ineligible as nutrition-row
+values; the ordinary Mercadona structural reader must still recover and validate
 all four macros, basis and energy coherence from explicit OCR evidence.
 """
 
@@ -20,7 +22,7 @@ from mercadona_nutrition_label_structural_repair import (
     read_nutrition_label as _read_nutrition_label,
 )
 
-READER_VERSION = "1.0.1"
+READER_VERSION = "1.0.2"
 
 _NUTRITION_HEADING = re.compile(
     r"(?i)(?:informaci[oó]n\s*(?:/\s*informa[cç][aã]o)?\s+nutricional|"
@@ -34,6 +36,11 @@ _INGREDIENT_CONTINUATION = re.compile(
     r"(?i)^[ \t]*(?:[.,;:)\]}|-]+[ \t]*)*"
     r"(?:emulgente|emulsionante|lecitina|preparad[oa]|prepara[cç][aã]o|"
     r"humectante|gasificante|espesante|espessante)\b"
+)
+_INTERLEAVED_E_NUMBER_AFTER_FAT_LABEL = re.compile(
+    r"(?im)^([ \t]*[\[|]?[ \t]*(?:grasas?|l[ií]pidos)"
+    r"(?:[ \t]*/[ \t]*(?:grasas?|l[ií]pidos))?[ \t]*\n)"
+    r"([ \t]*)(\d{2,3})([ \t]+E[ \t]*\3[ \t]*:)"
 )
 
 
@@ -68,25 +75,43 @@ def _guard_strong_ingredient_context(text: str) -> tuple[str, int]:
     return _INGREDIENT_FAT_PERCENT_AT_LINE_START.sub(replace, source), changed
 
 
+def _guard_interleaved_e_number_after_fat_label(text: str) -> tuple[str, int]:
+    """Mark a mirrored additive token as prose without changing its numbers.
+
+    The narrowly observed shape is a fat label followed on the next OCR line by
+    ``NNN ENNN:``. The repeated number is characteristic of an ingredient
+    additive code, not a nutrition cell. Prefixing that line with ``ingrediente``
+    causes the downstream parser's existing prose guard to reject it. Both the
+    numeric token and the E-code remain verbatim in normalized OCR evidence.
+    """
+    return _INTERLEAVED_E_NUMBER_AFTER_FAT_LABEL.subn(
+        lambda match: (
+            f"{match.group(1)}{match.group(2)}ingrediente "
+            f"{match.group(3)}{match.group(4)}"
+        ),
+        text or "",
+    )
+
+
 def guard_interleaved_ingredient_fat_percent(text: str) -> tuple[str, bool]:
-    """Disable only a singular ingredient ``grasa (<percent>%)`` false row.
+    """Disable only narrow ingredient shapes that can imitate total-fat rows.
 
-    ``grasa`` is rewritten to ``grasa_ingrediente``. The underscore deliberately
-    removes the word boundary required by the downstream fat-row regex while
-    retaining the original percentage and surrounding OCR text for audit.
+    ``grasa (<percent>%)`` is rewritten to ``grasa_ingrediente``. The underscore
+    deliberately removes the word boundary required by the downstream fat-row
+    regex while retaining the original percentage and surrounding OCR text for
+    audit. A mirrored ``NNN ENNN:`` line after a fat label instead receives only
+    an ``ingrediente`` prose marker, preserving both numeric tokens verbatim.
 
-    The first pass handles OCR-reordered lines only when they have strong
-    ingredient continuation context. The second, older pass preserves the broader
-    post-heading protection because once the nutrition heading has already been
-    emitted, a line-start singular ``grasa (<percent>%)`` is structurally
-    impossible as a normal total-fat row. No numeric token is changed.
+    No macro is supplied by these guards. The structural reader and ordinary
+    energy/tuple checks remain solely responsible for acceptance.
     """
     original = text or ""
-    context_guarded, context_count = _guard_strong_ingredient_context(original)
+    e_number_guarded, e_number_count = _guard_interleaved_e_number_after_fat_label(original)
+    context_guarded, context_count = _guard_strong_ingredient_context(e_number_guarded)
 
     heading = _NUTRITION_HEADING.search(context_guarded)
     if heading is None:
-        return context_guarded, bool(context_count)
+        return context_guarded, bool(e_number_count or context_count)
 
     prefix = context_guarded[:heading.start()]
     tail = context_guarded[heading.start():]
@@ -94,7 +119,7 @@ def guard_interleaved_ingredient_fat_percent(text: str) -> tuple[str, bool]:
         lambda match: f"{match.group(1)}grasa_ingrediente{match.group(2)}",
         tail,
     )
-    return prefix + repaired, bool(context_count or post_heading_count)
+    return prefix + repaired, bool(e_number_count or context_count or post_heading_count)
 
 
 def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> LabelReadResult:
