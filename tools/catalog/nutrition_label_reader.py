@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.25"
+READER_VERSION = "1.4.26"
 
 
 @dataclass(frozen=True)
@@ -200,7 +200,7 @@ def _number_after(label_patterns: tuple[str, ...], text: str) -> float | None:
                 if zero_unit_glyph.group(1) in ("<", ">"):
                     return None
                 return 0.0
-            number = re.search(r"([<>]?)\s*(\d{1,4}(?:\.\d{1,2})?)\s*(?:g\b|gramos?\b)?", tail)
+            number = re.search(r"([<>]?)\s*(\d{1,4}(?:\.\d{1,2})?)(?![\d.])\s*(?:g\b|gramos?\b)?", tail)
             if not number:
                 continue
             prefix = tail[:number.start()].strip()
