@@ -1,0 +1,238 @@
+name: Catalog Mercadona current complete-blocked fresh retry
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-complete-blocked-fresh-retry.yml'
+      - 'tools/catalog/mercadona-review-complete-blocked-anchors-2026-09-18.jsonl'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-complete-blocked-fresh-retry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate current complete-blocked anchors
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('mercadona-review-complete-blocked-anchors-2026-09-18.jsonl')
+          rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          expected = {'14173','16395','19847','19876','20852','21847','23961','26033','4106','4940','4957','51079','52776','58230','80531'}
+          assert {str(r['product_id']) for r in rows} == expected, [r['product_id'] for r in rows]
+          assert len(rows) == len(expected)
+          for row in rows:
+              assert row['source_audit_run_id'] == 35321132280
+              assert row['canonical_status'] == 'REVIEW'
+              assert row['evidence_level'] == 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+              assert row['source'] == 'MERCADONA_FIRST_PARTY'
+              assert row['source_record_kind'] == 'label image'
+              assert row['redistribution_allowed'] is False
+              assert row['ean'] and row['image_url']
+              assert row['safety_blockers'], row['product_id']
+              n = row['diagnostic_candidate_values']
+              assert all(n.get(k) is not None for k in ('calories','fat_g','carbohydrate_g','protein_g'))
+          Path('complete-blocked-current-inventory.jsonl').write_text(
+              ''.join(json.dumps({'product_id': str(r['product_id'])}, sort_keys=True) + '\n' for r in rows),
+              encoding='utf-8',
+          )
+          print(json.dumps({
+              'anchors': len(rows),
+              'product_ids': sorted(expected),
+              'routing': 'FRESH_EXACT_IMAGE_RETRY_ONLY',
+              'acceptance_policy_changed': False,
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+          }, sort_keys=True))
+          PY
+
+      - name: Rehydrate exact products from official first-party API
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-first-party-complete-blocked-current
+          python mercadona_first_party_details.py \
+            --inventory complete-blocked-current-inventory.jsonl \
+            --out mercadona-first-party-complete-blocked-current \
+            --shard-index 0 \
+            --shard-count 1 \
+            --timeout 20 \
+            --delay 0.2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('mercadona-first-party-complete-blocked-current')
+          summary = json.loads((root / 'summary-00.json').read_text(encoding='utf-8'))
+          errors = [json.loads(line) for line in (root / 'errors-00.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors or summary.get('fetched') != summary.get('requested'):
+              raise SystemExit(f'Targeted first-party rehydration incomplete: summary={summary} errors={errors}')
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Require exact current EAN and exact first-party image URL
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf complete-blocked-current-input
+          python mercadona_near_safe_doctr_input.py live \
+            --selected mercadona-review-complete-blocked-anchors-2026-09-18.jsonl \
+            --details mercadona-first-party-complete-blocked-current/details-00.jsonl \
+            --out complete-blocked-current-input
+          cp mercadona-review-complete-blocked-anchors-2026-09-18.jsonl complete-blocked-current-input/retry-anchors.jsonl
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('complete-blocked-current-input')
+          live = json.loads((root / 'live-summary.json').read_text(encoding='utf-8'))
+          if live.get('accepted_exact_current_identity_and_image') != 15:
+              raise SystemExit(f'Not all anchors still match exact current EAN + first-party image URL: {live}')
+          metadata = {
+              'source_audit_run_id': 35321132280,
+              'source_branch_sha': '${{ github.sha }}',
+              'routing_policy': 'CURRENT_COMPLETE_BUT_SAFETY_BLOCKED_REVIEW; FRESH_EXACT_IMAGE_RETRY_ONLY',
+              'acceptance_policy_changed': False,
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+              'live_validation': live,
+          }
+          (root / 'pilot-metadata.json').write_text(json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-current-complete-blocked-fresh-input
+          path: tools/catalog/complete-blocked-current-input/
+          retention-days: 30
+          if-no-files-found: error
+
+  ocr:
+    runs-on: ubuntu-24.04
+    needs: prepare
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        shard: [0, 1, 2]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-complete-blocked-fresh-input
+          path: tools/catalog/retry-input
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative OCR regressions before images
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_near_safe_doctr_input.py \
+            test_mercadona_bounded_doctr_rescue.py \
+            test_label_doctr_extractor.py \
+            test_mercadona_near_safe_doctr_retry.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: Run bounded fresh exact-image retry with unchanged acceptance contract
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-complete-blocked-fresh-retry/with-ingredients
+          mkdir -p mercadona-complete-blocked-fresh-retry/without-ingredients
+
+          run_group() {
+            local products="$1"
+            local out="$2"
+            local mode="$3"
+            [[ -s "$products" ]] || return 0
+            set +e
+            python mercadona_bounded_doctr_rescue.py \
+              --products "$products" \
+              --out "$out" \
+              --shard-index ${{ matrix.shard }} \
+              --shard-count 3 \
+              --limit 0 \
+              --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            [[ $rc -eq 0 || $rc -eq 2 ]] || return "$rc"
+          }
+
+          cp retry-input/with-ingredients.jsonl .
+          cp retry-input/without-ingredients.jsonl .
+          cp retry-input/pilot-metadata.json mercadona-complete-blocked-fresh-retry/pilot-metadata.json
+          cp retry-input/live-summary.json mercadona-complete-blocked-fresh-retry/live-summary.json
+          cp retry-input/retry-anchors.jsonl mercadona-complete-blocked-fresh-retry/retry-anchors.jsonl
+          run_group with-ingredients.jsonl mercadona-complete-blocked-fresh-retry/with-ingredients priority
+          run_group without-ingredients.jsonl mercadona-complete-blocked-fresh-retry/without-ingredients p9-no-ingredients-all
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-complete-blocked-fresh-retry-${{ matrix.shard }}
+          path: tools/catalog/mercadona-complete-blocked-fresh-retry/
+          retention-days: 90
+          if-no-files-found: error
+
+  reconcile:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ needs.ocr.result == 'success' }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Trigger strict canonical reconciliation after fresh retry
+        run: |
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
