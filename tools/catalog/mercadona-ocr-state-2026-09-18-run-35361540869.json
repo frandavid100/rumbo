@@ -1,0 +1,123 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 370,
+    "REVIEW": 2599
+  },
+  "usable_complete": 370,
+  "usable_complete_pct_inventory": 8.6449,
+  "usable_field_counts": {
+    "calories": 370,
+    "fat_g": 370,
+    "carbohydrate_g": 370,
+    "protein_g": 370
+  },
+  "review_failure_modes": {
+    "core_field_coverage_counts": {
+      "0": 2024,
+      "1": 109,
+      "2": 153,
+      "3": 278,
+      "4": 35
+    },
+    "corroborated_field_counts": {
+      "0": 2290,
+      "1": 110,
+      "2": 126,
+      "3": 73
+    },
+    "independent_engine_family_counts": {
+      "0": 2022,
+      "1": 244,
+      "2": 214,
+      "3": 116,
+      "4": 3
+    },
+    "basis_counts": {
+      "100_g": 491,
+      "100_ml": 103,
+      "NONE": 2005
+    },
+    "safety_blocker_counts": {
+      "HARD_OCR_CONFLICT": 224,
+      "ENERGY_MACRO_INCOHERENCE": 86,
+      "AMBIGUOUS_TABLE": 94
+    },
+    "products_with_ocr_signal": 2599,
+    "products_without_ocr_signal": 0,
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 0,
+    "reasonless_review_products": 0,
+    "dominant_reason_prefixes": {
+      "INSUFFICIENT_NUTRITION_MARKERS": 2436,
+      "MISSING_CORE": 3781,
+      "MISSING_100G_100ML_BASIS": 388,
+      "OCR_FIELD_CONFLICT": 217,
+      "MULTIPLE_NUTRITION_COLUMNS": 94,
+      "LOW_EXTRACTION_CONFIDENCE": 72
+    }
+  },
+  "historical_residual": {
+    "historical_membership_products": 4280,
+    "historical_unprocessed_count": 1311,
+    "residual_with_perspective9": 1298,
+    "residual_out_of_scope_count": 1300,
+    "residual_deferred_bodega_count": 11,
+    "residual_actionable_count": 0,
+    "historical_membership_source": "PRE_EXPIRY_AUDIT_PRODUCT_MASTER_AND_RESIDUAL_SNAPSHOT",
+    "historical_membership_source_run_id": 35342470282,
+    "historical_membership_parity_verifiable": true,
+    "historical_full_detail_snapshot_recovered": false
+  },
+  "new_declared_product": {
+    "product_id": "4940",
+    "ean": "8480000049407",
+    "name": "Vinagre de vino blanco Hacendado",
+    "basis": "100_ml",
+    "nutrition": {
+      "calories": 20.0,
+      "fat_g": 0.0,
+      "carbohydrate_g": 0.0,
+      "protein_g": 0.0
+    },
+    "corroborated_fields": 4,
+    "independent_engine_families": 3,
+    "explicit_label_acidity_pct": 6.0,
+    "explicit_label_energy_kj": 85.0,
+    "promotion_reason": "EXPLICIT_VINEGAR_ACIDITY_ENERGY_COHERENCE:6%",
+    "regulatory_energy_factor": "EU_1169_2011_ANNEX_XIV_ORGANIC_ACID_3_KCAL_PER_G",
+    "identity_revalidated_current_first_party": true,
+    "cross_run_value_fusion": false,
+    "cross_crop_value_fusion": false,
+    "missing_values_inferred": false
+  },
+  "reconciliation": {
+    "run_id": 35361540869,
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10554588349,
+    "artifact_sha256": "fe2d4a53ef3f1de3806e7f981500c4859b556ce84d6623b0b7adb88d4ccad85f",
+    "head_sha": "e4aa478e8df608eca61ce067ccb917dcf52ba93a",
+    "identity_conflict_count": 0,
+    "identity_unresolved_count": 0,
+    "identity_unverified_count": 0,
+    "processed_without_canonical_status": 0
+  },
+  "rescue": {
+    "run_id": 35360584621,
+    "artifact_id": 10555330340,
+    "artifact_sha256": "8ae2cd1e560630bf995dac6d9f67f0b69e5d3d84f7937530964dbbcde2ac1736",
+    "acceptance_policy_change": "EXPLICIT_VINEGAR_ACIDITY_ENERGY_COHERENCE_ONLY",
+    "tests_passed": 99
+  },
+  "images_persisted": false,
+  "redistribution_allowed": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
