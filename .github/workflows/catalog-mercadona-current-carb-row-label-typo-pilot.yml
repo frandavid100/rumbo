@@ -1,0 +1,226 @@
+name: Catalog Mercadona current carb row-label typo pilot
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-carb-row-label-typo-pilot.yml'
+      - 'tools/catalog/mercadona-review-carb-row-label-typo-anchor-2026-09-18.jsonl'
+      - 'tools/catalog/mercadona_carb_row_label_typo_rescue.py'
+      - 'tools/catalog/test_mercadona_carb_row_label_typo_rescue.py'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-carb-row-label-typo-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate targeted anchor
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('mercadona-review-carb-row-label-typo-anchor-2026-09-18.jsonl')
+          rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert len(rows) == 1
+          row = rows[0]
+          assert str(row['product_id']) == '27666'
+          assert row['source_audit_run_id'] == 35313021238
+          assert row['source_retry_run_id'] == 35311873909
+          assert row['canonical_status'] == 'REVIEW'
+          assert row['evidence_level'] == 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+          assert row['source'] == 'MERCADONA_FIRST_PARTY'
+          assert row['source_record_kind'] == 'label image'
+          assert row['redistribution_allowed'] is False
+          assert row['fresh_retry_ensemble']['missing_core'] == ['carbohydrate_g']
+          assert row['fresh_retry_ensemble']['corroborated_fields'] == 3
+          assert row['fresh_retry_ensemble']['independent_engine_families'] >= 2
+          assert row['observed_non_numeric_row_label_variants'] == ['Nidratos de carbono', 'hretos de carbono']
+          Path('carb-row-label-typo-inventory.jsonl').write_text(
+              json.dumps({'product_id': '27666'}, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Rehydrate exact product from official first-party API
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-first-party-carb-row-label-typo-current
+          python mercadona_first_party_details.py \
+            --inventory carb-row-label-typo-inventory.jsonl \
+            --out mercadona-first-party-carb-row-label-typo-current \
+            --shard-index 0 \
+            --shard-count 1 \
+            --timeout 20 \
+            --delay 0.2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('mercadona-first-party-carb-row-label-typo-current')
+          summary = json.loads((root / 'summary-00.json').read_text(encoding='utf-8'))
+          errors = [json.loads(line) for line in (root / 'errors-00.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors or summary.get('fetched') != 1:
+              raise SystemExit(f'Targeted first-party rehydration incomplete: summary={summary} errors={errors}')
+          PY
+
+      - name: Require exact current EAN and exact first-party image URL
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf carb-row-label-typo-input
+          python mercadona_near_safe_doctr_input.py live \
+            --selected mercadona-review-carb-row-label-typo-anchor-2026-09-18.jsonl \
+            --details mercadona-first-party-carb-row-label-typo-current/details-00.jsonl \
+            --out carb-row-label-typo-input
+          cp mercadona-review-carb-row-label-typo-anchor-2026-09-18.jsonl carb-row-label-typo-input/retry-anchor.jsonl
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('carb-row-label-typo-input')
+          live = json.loads((root / 'live-summary.json').read_text(encoding='utf-8'))
+          if live.get('accepted_exact_current_identity_and_image') != 1:
+              raise SystemExit(f'Anchor no longer matches exact current EAN + first-party image URL: {live}')
+          metadata = {
+              'source_audit_run_id': 35313021238,
+              'source_retry_run_id': 35311873909,
+              'source_branch_sha': '${{ github.sha }}',
+              'routing_policy': 'TARGETED_NON_NUMERIC_CARBOHYDRATE_ROW_LABEL_TYPO_NORMALIZATION; EXACT_CURRENT_IMAGE_ONLY',
+              'acceptance_policy_changed': False,
+              'numeric_ocr_values_modified': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+              'live_validation': live,
+          }
+          (root / 'pilot-metadata.json').write_text(json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-current-carb-row-label-typo-input
+          path: tools/catalog/carb-row-label-typo-input/
+          retention-days: 30
+          if-no-files-found: error
+
+  ocr:
+    runs-on: ubuntu-24.04
+    needs: prepare
+    timeout-minutes: 80
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-carb-row-label-typo-input
+          path: tools/catalog/retry-input
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative OCR regressions first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_carb_row_label_typo_rescue.py \
+            test_mercadona_near_safe_doctr_input.py \
+            test_mercadona_bounded_doctr_rescue.py \
+            test_label_doctr_extractor.py \
+            test_mercadona_near_safe_doctr_retry.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: Run targeted exact-image pilot with unchanged acceptance contract
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-carb-row-label-typo-pilot
+          mkdir -p mercadona-carb-row-label-typo-pilot/with-ingredients
+          mkdir -p mercadona-carb-row-label-typo-pilot/without-ingredients
+
+          run_group() {
+            local products="$1"
+            local out="$2"
+            local mode="$3"
+            [[ -s "$products" ]] || return 0
+            set +e
+            python mercadona_carb_row_label_typo_rescue.py \
+              --products "$products" \
+              --out "$out" \
+              --shard-index 0 \
+              --shard-count 1 \
+              --limit 0 \
+              --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            [[ $rc -eq 0 || $rc -eq 2 ]] || return "$rc"
+          }
+
+          cp retry-input/with-ingredients.jsonl .
+          cp retry-input/without-ingredients.jsonl .
+          cp retry-input/pilot-metadata.json mercadona-carb-row-label-typo-pilot/pilot-metadata.json
+          cp retry-input/live-summary.json mercadona-carb-row-label-typo-pilot/live-summary.json
+          cp retry-input/retry-anchor.jsonl mercadona-carb-row-label-typo-pilot/retry-anchor.jsonl
+          run_group with-ingredients.jsonl mercadona-carb-row-label-typo-pilot/with-ingredients priority
+          run_group without-ingredients.jsonl mercadona-carb-row-label-typo-pilot/without-ingredients p9-no-ingredients-all
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-carb-row-label-typo-pilot
+          path: tools/catalog/mercadona-carb-row-label-typo-pilot/
+          retention-days: 90
+          if-no-files-found: error
+
+  reconcile:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ needs.ocr.result == 'success' }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Trigger strict canonical reconciliation after pilot
+        run: |
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
