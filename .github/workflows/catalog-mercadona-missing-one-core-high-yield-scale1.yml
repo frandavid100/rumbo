@@ -1,0 +1,478 @@
+name: Catalog Mercadona missing-one-core high-yield scale 1
+
+# First gradual scale-out after the balanced missing-one-core pilot. The pilot
+# yielded DECLARED only in the historical missing-fat and missing-protein strata
+# (2/4 each), so this run limits itself to fresh, previously untried products in
+# those two empirically productive strata. Historical partial values are routing
+# diagnostics only; a usable row must independently recover all four core macros
+# in one fresh OCR observation of the exact current first-party perspective=9 image.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-missing-one-core-high-yield-scale1.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-missing-one-core-high-yield-scale1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+      SCALE_TARGET_FIELDS: 'fat_g,protein_g'
+      SCALE_PER_FIELD: '8'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve and download latest successful canonical OCR audit
+        id: canonical
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          mkdir -p /tmp/audit
+          gh run download "$run_id" -n mercadona-current-ocr-residual-audit -D /tmp/audit
+
+      - name: Resolve prior balanced pilot attempts
+        id: prior
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-three-of-four-live-verified-variants.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          mkdir -p /tmp/prior-pilot
+          gh run download "$run_id" -n mercadona-current-three-of-four-live-verified-variants -D /tmp/prior-pilot
+
+      - name: Build fresh exact-EAN exact-image high-yield cohort
+        id: cohort
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from collections import Counter, defaultdict
+          from pathlib import Path
+
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
+          TARGET = tuple(
+              field.strip() for field in os.environ.get('SCALE_TARGET_FIELDS', 'fat_g,protein_g').split(',')
+              if field.strip()
+          )
+          LIMIT = int(os.environ.get('SCALE_PER_FIELD', '8'))
+          if not TARGET or any(field not in CORE for field in TARGET):
+              raise SystemExit(f'invalid target fields: {TARGET!r}')
+
+          diagnostic = Path(
+              '/tmp/audit/current-review-failure-modes/three-of-four-explicit-basis-unblocked-review.jsonl'
+          )
+          prior_summary = Path('/tmp/prior-pilot/selection-summary.json')
+          prior_attempted = set()
+          if prior_summary.exists():
+              prior = json.loads(prior_summary.read_text(encoding='utf-8'))
+              prior_attempted.update(str(pid) for pid in prior.get('pilot_selected_product_ids', []))
+
+          candidates = []
+          rejected_shape = []
+          excluded_prior = []
+          for line in diagnostic.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              values = row.get('diagnostic_candidate_values') or {}
+              missing = [field for field in CORE if values.get(field) is None]
+              observed = [field for field in CORE if values.get(field) is not None]
+              pid = str(row.get('product_id') or '')
+              safe_shape = (
+                  row.get('canonical_status') == 'REVIEW'
+                  and row.get('basis') in {'100_g', '100_ml'}
+                  and not (row.get('safety_blockers') or [])
+                  and len(missing) == 1
+                  and missing[0] in TARGET
+                  and len(observed) == 3
+                  and row.get('missing_core_fields') == missing
+                  and int(row.get('independent_engine_families') or 0) >= 2
+                  and int(row.get('corroborated_fields') or 0) >= 2
+                  and pid
+                  and str(row.get('ean') or '')
+                  and str(row.get('image_url') or '')
+              )
+              if not safe_shape:
+                  rejected_shape.append(pid)
+                  continue
+              if pid in prior_attempted:
+                  excluded_prior.append(pid)
+                  continue
+              candidates.append(row)
+
+          verified = []
+          identity_mismatch = []
+          no_exact_current_p9_match = []
+          live_errors = []
+          for old in candidates:
+              pid = str(old['product_id'])
+              canonical_ean = str(old['ean']).strip()
+              image_url = str(old['image_url'])
+              observed_at = _now()
+              try:
+                  payload, source_url = _get_json(pid, timeout=20.0)
+                  current = normalize(payload, source_url=source_url, observed_at=observed_at)
+              except Exception as exc:
+                  live_errors.append({'product_id': pid, 'error': f'{type(exc).__name__}:{exc}'})
+                  continue
+
+              current_ean = str(current.get('ean') or '').strip()
+              if not current_ean or current_ean != canonical_ean:
+                  identity_mismatch.append({
+                      'product_id': pid,
+                      'canonical_ean': canonical_ean,
+                      'current_ean': current_ean,
+                  })
+                  continue
+
+              photos = current.get('photos') if isinstance(current.get('photos'), list) else []
+              match = next((
+                  (index, photo)
+                  for index, photo in enumerate(photos)
+                  if isinstance(photo, dict)
+                  and str(photo.get('zoom') or '') == image_url
+                  and str(photo.get('perspective') or '') == '9'
+              ), None)
+              if match is None:
+                  no_exact_current_p9_match.append(pid)
+                  continue
+
+              image_index, photo = match
+              routed = dict(photo)
+              routed['perspective'] = 9
+              current = dict(current)
+              current['photos'] = [routed]
+              current['_near_safe_image_meta'] = {
+                  'image_url': image_url,
+                  'current_photo_index': image_index,
+                  'current_photo_perspective': photo.get('perspective'),
+                  'canonical_ean': canonical_ean,
+                  'current_ean': current_ean,
+                  'identity_basis': 'EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN',
+                  'live_detail_source_url': source_url,
+                  'live_detail_observed_at': observed_at,
+                  'canonical_latest_raw_run_id': old.get('latest_raw_run_id'),
+                  'canonical_corroborated_fields': old.get('corroborated_fields'),
+                  'canonical_engine_families': old.get('independent_engine_families'),
+                  'canonical_basis': old.get('basis'),
+                  'canonical_missing_core_fields': old.get('missing_core_fields'),
+                  'canonical_partial_values_diagnostic_only': old.get('diagnostic_candidate_values'),
+              }
+              verified.append(current)
+
+          by_missing = defaultdict(list)
+          for row in verified:
+              missing = tuple(row['_near_safe_image_meta'].get('canonical_missing_core_fields') or [])
+              if len(missing) == 1:
+                  by_missing[missing[0]].append(row)
+
+          selected = []
+          for field in TARGET:
+              group = sorted(
+                  by_missing.get(field, []),
+                  key=lambda row: (
+                      0 if row.get('ingredients') else 1,
+                      -int(row['_near_safe_image_meta'].get('canonical_engine_families') or 0),
+                      -int(row['_near_safe_image_meta'].get('canonical_corroborated_fields') or 0),
+                      str(row.get('product_id') or ''),
+                  ),
+              )
+              selected.extend(group[:LIMIT])
+          selected.sort(key=lambda row: str(row.get('product_id') or ''))
+
+          with_i = [row for row in selected if row.get('ingredients')]
+          without_i = [row for row in selected if not row.get('ingredients')]
+
+          def write(path, rows):
+              Path(path).write_text(
+                  ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+                  encoding='utf-8',
+              )
+
+          write('missing-one-scale1-with-ingredients.jsonl', with_i)
+          write('missing-one-scale1-without-ingredients.jsonl', without_i)
+          out = Path('mercadona-current-three-of-four-live-verified-variants')
+          out.mkdir(exist_ok=True)
+
+          summary = {
+              'canonical_audit_run_id': int('${{ steps.canonical.outputs.run_id }}'),
+              'prior_pilot_run_id': int('${{ steps.prior.outputs.run_id }}'),
+              'target_missing_fields': list(TARGET),
+              'scale_per_field': LIMIT,
+              'prior_attempted_count': len(prior_attempted),
+              'excluded_prior_attempted_product_ids': sorted(excluded_prior),
+              'strong_untried_candidates': len(candidates),
+              'strong_untried_missing_field_counts': dict(sorted(Counter(
+                  (row.get('missing_core_fields') or ['UNKNOWN'])[0] for row in candidates
+              ).items())),
+              'live_verified_exact_ean_exact_p9': len(verified),
+              'identity_mismatches': identity_mismatch,
+              'no_exact_current_p9_match': no_exact_current_p9_match,
+              'live_errors': live_errors,
+              'scale_selected': len(selected),
+              'scale_selected_product_ids': [str(row.get('product_id')) for row in selected],
+              'scale_selected_missing_field_counts': dict(sorted(Counter(
+                  row['_near_safe_image_meta']['canonical_missing_core_fields'][0] for row in selected
+              ).items())),
+              'scale_with_structured_ingredients': len(with_i),
+              'scale_without_structured_ingredients': len(without_i),
+              'selection_policy': 'CURRENT_REVIEW_EXACTLY_3_OBSERVED_CORE; HISTORICAL_MISSING_FIELD_IN_FAT_OR_PROTEIN; EXPLICIT_100G_100ML; NO_HARD_BLOCKER; >=2_HISTORICAL_FAMILIES; >=2_CORROBORATED; PRIOR_BALANCED_PILOT_ATTEMPTS_EXCLUDED; EXACT_EAN; EXACT_CURRENT_FIRST_PARTY_P9_IMAGE',
+              'historical_partial_values_usable': False,
+              'cross_run_value_fusion': False,
+              'fresh_observation_must_recover_all_four': True,
+              'acceptance_policy_changed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+          }
+          (out / 'selection-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if not selected:
+              raise SystemExit('No safe fresh high-yield target remains')
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative rescue tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_preselected_three_of_four_variant_rescue.py \
+            test_mercadona_near_safe_variant_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: OCR fresh high-yield cohort with bounded temporary variants
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=mercadona-current-three-of-four-live-verified-variants
+          mkdir -p "$root/with-ingredients" "$root/without-ingredients"
+
+          run_group() {
+            local products="$1" out="$2" mode="$3"
+            set +e
+            python mercadona_preselected_three_of_four_variant_rescue.py \
+              --products "$products" \
+              --out "$out" \
+              --shard-index 0 \
+              --shard-count 1 \
+              --limit 0 \
+              --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            [[ $rc -eq 0 || $rc -eq 2 ]]
+          }
+
+          run_group missing-one-scale1-with-ingredients.jsonl "$root/with-ingredients" priority
+          run_group missing-one-scale1-without-ingredients.jsonl "$root/without-ingredients" p9-no-ingredients-all
+
+          python - <<'PY'
+          import glob
+          import json
+          import sqlite3
+          from collections import Counter
+          from pathlib import Path
+
+          CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
+          root = Path('mercadona-current-three-of-four-live-verified-variants')
+          meta = {}
+          for source in ('missing-one-scale1-with-ingredients.jsonl', 'missing-one-scale1-without-ingredients.jsonl'):
+              for line in Path(source).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      row = json.loads(line)
+                      meta[str(row['product_id'])] = row['_near_safe_image_meta']
+
+          rows = []
+          for result_path in glob.glob(str(root / '**/results-*.jsonl'), recursive=True):
+              patched = []
+              for line in Path(result_path).read_text(encoding='utf-8').splitlines():
+                  if not line.strip():
+                      continue
+                  row = json.loads(line)
+                  pid = str(row.get('product_id') or '')
+                  m = meta.get(pid)
+                  if m is None:
+                      raise SystemExit(f'missing scale selection metadata for {pid}')
+                  if str(row.get('image_url') or '') != str(m.get('image_url') or ''):
+                      raise SystemExit(f'unexpected image for {pid}')
+                  if str(m.get('current_photo_perspective') or '') != '9':
+                      raise SystemExit(f'non-p9 source image for {pid}')
+
+                  row['image_index'] = m.get('current_photo_index')
+                  row['perspective'] = 9
+                  row['image_selection_basis'] = 'EXACT_HISTORICAL_REVIEW_IMAGE_URL_MATCHED_CURRENT_MERCADONA_API_PERSPECTIVE_9'
+                  row['identity_basis'] = m.get('identity_basis')
+                  row['canonical_ean'] = m.get('canonical_ean')
+                  row['current_ean'] = m.get('current_ean')
+                  row['live_detail_source_url'] = m.get('live_detail_source_url')
+                  row['live_detail_observed_at'] = m.get('live_detail_observed_at')
+                  row['pilot_historical_missing_core_fields'] = m.get('canonical_missing_core_fields')
+                  row['pilot_historical_corroborated_fields'] = m.get('canonical_corroborated_fields')
+                  row['pilot_historical_engine_families'] = m.get('canonical_engine_families')
+                  row['cross_run_value_fusion'] = False
+                  row['historical_partial_values_usable'] = False
+                  row['current_observation_must_satisfy_declared_contract_independently'] = True
+                  row['acceptance_policy_changed'] = False
+                  row['missing_values_inferred'] = False
+                  patched.append(row)
+                  rows.append(row)
+              Path(result_path).write_text(
+                  ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in patched),
+                  encoding='utf-8',
+              )
+
+          if not rows:
+              raise SystemExit('No OCR result rows produced')
+
+          counts = Counter(str(row.get('status') or 'UNKNOWN') for row in rows)
+          invalid = []
+          declared = []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              if (
+                  row.get('source') != 'MERCADONA_FIRST_PARTY'
+                  or row.get('source_record_kind') != 'label image'
+                  or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  or row.get('redistribution_allowed') is not False
+                  or row.get('identity_basis') != 'EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN'
+                  or not row.get('canonical_ean')
+                  or row.get('canonical_ean') != row.get('current_ean')
+                  or row.get('cross_run_value_fusion') is not False
+                  or row.get('historical_partial_values_usable') is not False
+                  or row.get('current_observation_must_satisfy_declared_contract_independently') is not True
+                  or row.get('acceptance_policy_changed') is not False
+                  or row.get('missing_values_inferred') is not False
+                  or len(row.get('pilot_historical_missing_core_fields') or []) != 1
+              ):
+                  invalid.append(pid)
+
+              if row.get('status') == 'DECLARED':
+                  declared.append(row)
+                  nutrition = row.get('nutrition') or {}
+                  if any(nutrition.get(field) is None for field in CORE):
+                      invalid.append(pid)
+                  if row.get('basis') not in {'100_g', '100_ml'}:
+                      invalid.append(pid)
+                  ensemble = next((
+                      (attempt.get('ensemble') or {})
+                      for attempt in row.get('attempts', [])
+                      if (attempt.get('ensemble') or {}).get('status') == 'DECLARED'
+                  ), {})
+                  if int(ensemble.get('independent_engine_families') or 0) < 2:
+                      invalid.append(pid)
+                  if int(ensemble.get('corroborated_fields') or 0) < 4:
+                      invalid.append(pid)
+
+          if invalid:
+              raise SystemExit('unsafe rows: ' + ','.join(sorted(set(invalid))))
+
+          selection = json.loads((root / 'selection-summary.json').read_text(encoding='utf-8'))
+          summary = {
+              'inventory_products': 4280,
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared_product_ids': [str(row['product_id']) for row in declared],
+              'invalid_product_ids': [],
+              'selection': selection,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'acceptance_policy_changed': False,
+              'cross_run_value_fusion': False,
+              'historical_partial_values_usable': False,
+              'fresh_observation_must_recover_all_four': True,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'classified': 0,
+              'menu_eligible': 0,
+          }
+          (root / 'summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          (root / 'results-merged.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+          db = sqlite3.connect(root / 'staging.sqlite')
+          db.execute(
+              'CREATE TABLE ocr_results ('
+              'product_id TEXT PRIMARY KEY, status TEXT NOT NULL, basis TEXT, '
+              'historical_missing_core_field TEXT NOT NULL, calories REAL, fat_g REAL, '
+              'carbohydrate_g REAL, protein_g REAL, evidence_level TEXT NOT NULL, '
+              'source TEXT NOT NULL, image_url TEXT NOT NULL, canonical_ean TEXT NOT NULL, '
+              'current_ean TEXT NOT NULL, redistribution_allowed INTEGER NOT NULL, raw_json TEXT NOT NULL)'
+          )
+          for row in rows:
+              nutrition = row.get('nutrition') or {}
+              missing = row.get('pilot_historical_missing_core_fields') or []
+              db.execute('INSERT INTO ocr_results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (
+                  str(row.get('product_id') or ''), str(row.get('status') or ''), row.get('basis'),
+                  str(missing[0]), nutrition.get('calories'), nutrition.get('fat_g'),
+                  nutrition.get('carbohydrate_g'), nutrition.get('protein_g'),
+                  str(row.get('evidence_level') or ''), 'MERCADONA_FIRST_PARTY/label image',
+                  str(row.get('image_url') or ''), str(row.get('canonical_ean') or ''),
+                  str(row.get('current_ean') or ''), 0,
+                  json.dumps(row, ensure_ascii=False, sort_keys=True),
+              ))
+          db.commit()
+          db.close()
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-three-of-four-live-verified-variants
+          path: tools/catalog/mercadona-current-three-of-four-live-verified-variants/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Reconcile canonical OCR after successful scale
+        if: success()
+        run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
