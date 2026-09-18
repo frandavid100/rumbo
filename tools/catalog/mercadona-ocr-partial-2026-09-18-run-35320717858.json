@@ -1,0 +1,54 @@
+{
+  "state_kind": "MERCADONA_OCR_TARGETED_PARTIAL",
+  "run_id": 35320717858,
+  "head_sha": "c81b2abf8004295cedc3a7f88a7d40d5d4cf83a7",
+  "artifact": {
+    "artifact_id": 10537420651,
+    "name": "mercadona-current-carb-row-label-typo-pilot",
+    "sha256": "6e4af310674184d56afd63b991f3977b4179eb603518b2100229afdd0d56f469"
+  },
+  "targeted_issue": "NON_NUMERIC_CARBOHYDRATE_ROW_LABEL_OCR_TYPO",
+  "regressions_passed": true,
+  "acceptance_policy_changed": false,
+  "numeric_ocr_values_modified": false,
+  "exact_current_identity_and_image_revalidated": true,
+  "result": {
+    "product_id": "27666",
+    "name": "Tónica original Schweppes",
+    "ean": "8414100306856",
+    "perspective": 9,
+    "image_url": "https://prod-mercadona.imgix.net/images/652a9cd9b970fc37cb328dd3e8430ef6.jpg?fit=crop&h=3600&w=3600",
+    "status": "DECLARED",
+    "basis": "100_ml",
+    "nutrition": {
+      "calories": 11.0,
+      "fat_g": 0.0,
+      "carbohydrate_g": 2.4,
+      "protein_g": 0.0
+    },
+    "corroborated_fields": 4,
+    "independent_engine_families": 2,
+    "engine_families": [
+      "doctr",
+      "tesseract"
+    ],
+    "observed_non_numeric_row_label_repairs": [
+      "Nidratos de carbono -> Hidratos de carbono",
+      "hretos de carbono -> Hidratos de carbono"
+    ],
+    "cross_run_value_fusion": false,
+    "cross_crop_value_fusion": false,
+    "historical_values_promotion_allowed": false
+  },
+  "canonical_reconciliation_run_id": 35321132280,
+  "canonical_reconciliation_status_at_persist": "IN_PROGRESS",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
