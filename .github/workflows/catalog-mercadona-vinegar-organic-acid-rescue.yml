@@ -1,0 +1,298 @@
+name: Catalog Mercadona vinegar organic-acid rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-vinegar-organic-acid-rescue.yml'
+      - 'tools/catalog/mercadona_vinegar_organic_acid_rescue.py'
+      - 'tools/catalog/test_mercadona_vinegar_organic_acid_rescue.py'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-vinegar-organic-acid-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Recover the exact current canonical vinegar blocker
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/current-audit current-vinegar-rescue-input
+          artifact_json=$(gh api -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/runs/35354451328/artifacts?per_page=100')
+          artifact_id=$(jq -r '.artifacts[] | select(.name == "mercadona-current-ocr-residual-audit" and .expired == false and .digest == "sha256:b7a9c50fa97ba4675faa47a45ac7108fb1fb8503896418ad17f36f33fa6fddf8") | .id' <<<"$artifact_json" | head -n1)
+          [[ -n "$artifact_id" ]] || { echo 'Pinned residual audit artifact unavailable' >&2; exit 1; }
+          gh api -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" \
+            > /tmp/current-audit/audit.zip
+          unzip -q /tmp/current-audit/audit.zip -d /tmp/current-audit/unpacked
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('/tmp/current-audit/unpacked/current-review-failure-modes/complete-but-safety-blocked.jsonl')
+          rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert len(rows) == 1, rows
+          row = rows[0]
+          assert str(row.get('product_id')) == '4940', row
+          assert row.get('ean') == '8480000049407', row
+          assert row.get('canonical_status') == 'REVIEW', row
+          assert row.get('basis') == '100_ml', row
+          assert row.get('diagnostic_candidate_values') == {
+              'calories': 20.0,
+              'fat_g': 0.0,
+              'carbohydrate_g': 0.0,
+              'protein_g': 0.0,
+          }, row
+          assert row.get('corroborated_fields') == 4, row
+          assert int(row.get('independent_engine_families') or 0) >= 2, row
+          assert row.get('safety_blockers') == ['ENERGY_MACRO_INCOHERENCE'], row
+          assert row.get('evidence_level') == 'OCR_DERIVED_FROM_MERCADONA_IMAGE', row
+          assert row.get('source') == 'MERCADONA_FIRST_PARTY', row
+          assert row.get('source_record_kind') == 'label image', row
+          assert row.get('redistribution_allowed') is False, row
+          assert row.get('image_url'), row
+
+          out = Path('current-vinegar-rescue-input')
+          (out / 'anchor.jsonl').write_text(
+              json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          (out / 'inventory.jsonl').write_text(
+              json.dumps({'product_id': '4940'}, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps({
+              'source_audit_run_id': 35354451328,
+              'source_audit_sha256': 'b7a9c50fa97ba4675faa47a45ac7108fb1fb8503896418ad17f36f33fa6fddf8',
+              'product_id': '4940',
+              'ean': row['ean'],
+              'policy_change': 'EXPLICIT_VINEGAR_ACIDITY_ENERGY_COHERENCE_ONLY',
+              'missing_values_inferred': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+          }, sort_keys=True))
+          PY
+
+      - name: Rehydrate exact current product from official first-party API
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-first-party-vinegar-current
+          python mercadona_first_party_details.py \
+            --inventory current-vinegar-rescue-input/inventory.jsonl \
+            --out mercadona-first-party-vinegar-current \
+            --shard-index 0 \
+            --shard-count 1 \
+            --timeout 20 \
+            --delay 0.2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('mercadona-first-party-vinegar-current')
+          summary = json.loads((root / 'summary-00.json').read_text(encoding='utf-8'))
+          errors = [json.loads(line) for line in (root / 'errors-00.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors or summary.get('fetched') != 1 or summary.get('requested') != 1:
+              raise SystemExit(f'First-party rehydration incomplete: summary={summary} errors={errors}')
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Require exact current EAN and exact first-party label image
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf current-vinegar-live-input
+          python mercadona_near_safe_doctr_input.py live \
+            --selected current-vinegar-rescue-input/anchor.jsonl \
+            --details mercadona-first-party-vinegar-current/details-00.jsonl \
+            --out current-vinegar-live-input
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('current-vinegar-live-input')
+          live = json.loads((root / 'live-summary.json').read_text(encoding='utf-8'))
+          if live.get('accepted_exact_current_identity_and_image') != 1:
+              raise SystemExit(f'Vinegar target no longer matches exact current EAN + first-party image URL: {live}')
+          metadata = {
+              'source_audit_run_id': 35354451328,
+              'source_branch_sha': '${{ github.sha }}',
+              'target_product_id': '4940',
+              'target_ean': '8480000049407',
+              'routing_policy': 'EXACT_CURRENT_EAN_AND_IMAGE; SINGLE_CANONICAL_ENERGY_BLOCKER',
+              'acceptance_policy_changed': True,
+              'acceptance_policy_change': 'EXPLICIT_VINEGAR_ACIDITY_ENERGY_COHERENCE_ONLY',
+              'regulatory_energy_factor': 'EU_1169_2011_ANNEX_XIV_ORGANIC_ACID_3_KCAL_PER_G',
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+              'missing_values_inferred': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+              'live_validation': live,
+          }
+          (root / 'pilot-metadata.json').write_text(
+              json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-vinegar-organic-acid-input
+          path: tools/catalog/current-vinegar-live-input/
+          retention-days: 30
+          if-no-files-found: error
+
+  ocr:
+    runs-on: ubuntu-24.04
+    needs: prepare
+    timeout-minutes: 120
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-vinegar-organic-acid-input
+          path: tools/catalog/retry-input
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run regression tests before fresh OCR
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_vinegar_organic_acid_rescue.py \
+            test_mercadona_safety_blocked_ocr_expansion.py \
+            test_mercadona_bounded_doctr_rescue.py \
+            test_mercadona_near_safe_doctr_retry.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: Run fresh vinegar OCR with explicit organic-acid coherence gate
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-vinegar-organic-acid-rescue/with-ingredients
+          mkdir -p mercadona-vinegar-organic-acid-rescue/without-ingredients
+          cp retry-input/pilot-metadata.json mercadona-vinegar-organic-acid-rescue/pilot-metadata.json
+          cp retry-input/live-summary.json mercadona-vinegar-organic-acid-rescue/live-summary.json
+
+          run_group() {
+            local products="$1"
+            local out="$2"
+            local mode="$3"
+            [[ -s "$products" ]] || return 0
+            set +e
+            python mercadona_vinegar_organic_acid_rescue.py \
+              --products "$products" \
+              --out "$out" \
+              --shard-index 0 \
+              --shard-count 1 \
+              --limit 0 \
+              --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            [[ $rc -eq 0 || $rc -eq 2 ]] || return "$rc"
+          }
+
+          cp retry-input/with-ingredients.jsonl .
+          cp retry-input/without-ingredients.jsonl .
+          run_group with-ingredients.jsonl mercadona-vinegar-organic-acid-rescue/with-ingredients priority
+          run_group without-ingredients.jsonl mercadona-vinegar-organic-acid-rescue/without-ingredients p9-no-ingredients-all
+
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+          root = Path('mercadona-vinegar-organic-acid-rescue')
+          rows = []
+          for path in root.glob('*/results-*.jsonl'):
+              rows.extend(json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip())
+          summary = {
+              'products': len(rows),
+              'status_counts': dict(Counter(str(row.get('status')) for row in rows)),
+              'declared_product_ids': sorted(str(row.get('product_id')) for row in rows if row.get('status') == 'DECLARED'),
+              'review_product_ids': sorted(str(row.get('product_id')) for row in rows if row.get('status') == 'REVIEW'),
+              'acceptance_policy_changed': True,
+              'acceptance_policy_change': 'EXPLICIT_VINEGAR_ACIDITY_ENERGY_COHERENCE_ONLY',
+              'missing_values_inferred': False,
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+          }
+          if len(rows) != 1 or str(rows[0].get('product_id')) != '4940':
+              raise SystemExit(f'Unexpected bounded rescue output: {summary}')
+          (root / 'rescue-summary.json').write_text(
+              json.dumps(summary, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(summary, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-vinegar-organic-acid-rescue
+          path: tools/catalog/mercadona-vinegar-organic-acid-rescue/
+          retention-days: 90
+          if-no-files-found: error
+
+  reconcile:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ needs.ocr.result == 'success' }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Trigger strict canonical reconciliation after bounded rescue
+        run: |
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
