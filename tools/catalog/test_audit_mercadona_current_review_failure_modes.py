@@ -171,6 +171,55 @@ class CurrentReviewFailureModesTest(unittest.TestCase):
             self.assertEqual(result["safety_blocker_counts"]["AMBIGUOUS_TABLE"], 1)
             self.assertEqual([row["product_id"] for row in files["complete-but-safety-blocked"]], ["p4"])
 
+    def test_three_of_four_explicit_basis_unblocked_is_retry_only(self) -> None:
+        three = {"calories": 100, "protein_g": 10, "carbohydrate_g": 10, "fat_g": None}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_rows(
+                root,
+                300,
+                [raw_row("p5", ean="123", attempts=[ensemble_attempt(nutrition=three, corroborated_fields=3, families=3)])],
+            )
+            self.write_rows(
+                root,
+                301,
+                [raw_row("p6", ean="456", attempts=[ensemble_attempt(nutrition=three, corroborated_fields=3, families=2, basis="serving")])],
+            )
+            self.write_rows(
+                root,
+                302,
+                [
+                    raw_row(
+                        "p7",
+                        ean="789",
+                        attempts=[
+                            ensemble_attempt(
+                                nutrition=three,
+                                corroborated_fields=3,
+                                families=2,
+                                reasons=["OCR_FIELD_CONFLICT:fat_g"],
+                            )
+                        ],
+                    )
+                ],
+            )
+            summary = {
+                "latest_status_counts": {"REVIEW": 3},
+                "latest_status_product_ids": {"REVIEW": ["p5", "p6", "p7"]},
+            }
+            result, files = build_audit(root, summary)
+
+            self.assertEqual(result["three_of_four_explicit_basis_unblocked_review"], 1)
+            self.assertEqual(result["three_of_four_missing_field_counts"], {"fat_g": 1})
+            self.assertEqual(result["three_of_four_engine_family_counts"], {"3": 1})
+            candidates = files["three-of-four-explicit-basis-unblocked-review"]
+            self.assertEqual([row["product_id"] for row in candidates], ["p5"])
+            self.assertEqual(candidates[0]["missing_core_fields"], ["fat_g"])
+            self.assertIsNone(candidates[0]["usable_nutrition"])
+            self.assertFalse(candidates[0]["promotion_allowed"])
+            self.assertFalse(candidates[0]["missing_values_inferred"])
+            self.assertEqual(candidates[0]["diagnostic_candidate_values"]["fat_g"], None)
+
 
 if __name__ == "__main__":
     unittest.main()
