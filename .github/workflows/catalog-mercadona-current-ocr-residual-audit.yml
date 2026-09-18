@@ -11,10 +11,12 @@ on:
       - 'tools/catalog/diagnose_mercadona_ocr_union.py'
       - 'tools/catalog/summarize_mercadona_ocr_run_union.py'
       - 'tools/catalog/materialize_mercadona_ocr_canonical.py'
+      - 'tools/catalog/recover_mercadona_historical_residual_baseline.py'
       - 'tools/catalog/test_audit_mercadona_current_ocr_residual.py'
       - 'tools/catalog/test_audit_mercadona_current_review_failure_modes.py'
       - 'tools/catalog/test_summarize_mercadona_ocr_run_union.py'
       - 'tools/catalog/test_materialize_mercadona_ocr_canonical.py'
+      - 'tools/catalog/test_recover_mercadona_historical_residual_baseline.py'
   workflow_dispatch:
 
 permissions:
@@ -46,34 +48,71 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p tools/catalog/mercadona-current-ocr-residual-audit
-          artifact_json=$(gh api -H 'Accept: application/vnd.github+json' \
+
+          original_artifacts=$(gh api -H 'Accept: application/vnd.github+json' \
             '/repos/frandavid100/rumbo/actions/runs/33046950149/artifacts?per_page=100')
-          artifact_id=$(jq -r '.artifacts[] | select(.name == "mercadona-first-party-final" and .expired == false) | .id' <<<"$artifact_json" | head -n1)
-          if [[ -n "$artifact_id" ]]; then
+          original_id=$(jq -r '.artifacts[] | select(.name == "mercadona-first-party-final" and .expired == false) | .id' <<<"$original_artifacts" | head -n1)
+          if [[ -n "$original_id" ]]; then
             mkdir -p tools/catalog/mercadona-first-party-final /tmp/mercadona-first-party-final
             gh api -H 'Accept: application/vnd.github+json' \
-              "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" \
+              "/repos/frandavid100/rumbo/actions/artifacts/${original_id}/zip" \
               > /tmp/mercadona-first-party-final/artifact.zip
             unzip -q /tmp/mercadona-first-party-final/artifact.zip \
               -d tools/catalog/mercadona-first-party-final
-            echo 'available=true' >> "$GITHUB_OUTPUT"
+            echo 'exact_source=original' >> "$GITHUB_OUTPUT"
             jq -n \
               --argjson run_id 33046950149 \
-              --argjson artifact_id "$artifact_id" \
-              '{status:"AVAILABLE", historical_inventory_products:4280, run_id:$run_id, artifact_id:$artifact_id}' \
+              --argjson artifact_id "$original_id" \
+              '{status:"AVAILABLE_ORIGINAL_SNAPSHOT", historical_inventory_products:4280, run_id:$run_id, artifact_id:$artifact_id, exact_residual_census_available:true, historical_full_detail_snapshot_recovered:true}' \
               > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
-          else
-            echo 'available=false' >> "$GITHUB_OUTPUT"
-            jq -n \
-              '{status:"EXPIRED_OR_UNAVAILABLE", historical_inventory_products:4280, run_id:33046950149, artifact_name:"mercadona-first-party-final", exact_residual_census_available:false, historical_identity_parity_verifiable:false, policy:"Do not silently substitute a later live Mercadona inventory for the auditable 2026-08-27 4,280-product cut. Canonical OCR reconciliation can still be reconstructed from persisted raw-live OCR evidence, but full parity with the historical product_id/EAN identity map cannot be proven while the original snapshot is unavailable."}' \
-              > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
+            exit 0
           fi
+
+          # The original artifact expired on 2026-09-10. A residual-audit artifact from
+          # run 34430788357 was created before that expiry and its logs prove it downloaded
+          # and verified the exact original artifact digest. Its canonical/residual partition
+          # therefore preserves the exact 4,280-product historical membership needed for an
+          # auditable residual census without substituting any later live inventory.
+          recovery_artifacts=$(gh api -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/runs/34430788357/artifacts?per_page=100')
+          recovery_id=$(jq -r '.artifacts[] | select(.name == "mercadona-current-ocr-residual-audit" and .expired == false and .digest == "sha256:ac4ef2b916fd41003675aa94c806574e6ed7c827a49c82da0d97e315b68d34db") | .id' <<<"$recovery_artifacts" | head -n1)
+          if [[ -n "$recovery_id" ]]; then
+            mkdir -p tools/catalog/mercadona-historical-residual-baseline /tmp/mercadona-historical-residual-baseline
+            gh api -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/artifacts/${recovery_id}/zip" \
+              > /tmp/mercadona-historical-residual-baseline/artifact.zip
+            unzip -q /tmp/mercadona-historical-residual-baseline/artifact.zip \
+              -d tools/catalog/mercadona-historical-residual-baseline
+            echo 'exact_source=preexpiry_audit' >> "$GITHUB_OUTPUT"
+            jq -n \
+              --argjson recovery_run_id 34430788357 \
+              --argjson recovery_artifact_id "$recovery_id" \
+              '{status:"ORIGINAL_EXPIRED_PREEXPIRY_PARTITION_AVAILABLE", historical_inventory_products:4280, original_run_id:33046950149, original_artifact_name:"mercadona-first-party-final", original_artifact_sha256:"5a8c89661afe09fe1c05d1f67e8ed608edf25b8363530db42959ec8413fef648", recovery_run_id:$recovery_run_id, recovery_artifact_id:$recovery_artifact_id, recovery_artifact_sha256:"ac4ef2b916fd41003675aa94c806574e6ed7c827a49c82da0d97e315b68d34db", exact_residual_census_available:true, historical_full_detail_snapshot_recovered:false, policy:"Recover only the exact historical membership/residual partition from the trusted pre-expiry audit. Do not substitute a later live Mercadona inventory."}' \
+              > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
+            exit 0
+          fi
+
+          echo 'exact_source=none' >> "$GITHUB_OUTPUT"
+          jq -n \
+            '{status:"EXPIRED_OR_UNAVAILABLE", historical_inventory_products:4280, run_id:33046950149, artifact_name:"mercadona-first-party-final", exact_residual_census_available:false, historical_membership_parity_verifiable:false, policy:"Do not silently substitute a later live Mercadona inventory for the auditable 2026-08-27 4,280-product cut. Canonical OCR reconciliation can still be reconstructed from persisted raw-live OCR evidence, but exact historical residual membership cannot be proven without either the original snapshot or the trusted pre-expiry partition."}' \
+            > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
 
       - name: Run residual census unit tests
         working-directory: tools/catalog
         run: |
-          python -m unittest -v test_audit_mercadona_current_ocr_residual.py test_audit_mercadona_current_review_failure_modes.py test_summarize_mercadona_ocr_run_union.py test_materialize_mercadona_ocr_canonical.py
-          python -m py_compile audit_mercadona_current_ocr_residual.py audit_mercadona_current_review_failure_modes.py diagnose_mercadona_ocr_union.py summarize_mercadona_ocr_run_union.py materialize_mercadona_ocr_canonical.py
+          python -m unittest -v \
+            test_audit_mercadona_current_ocr_residual.py \
+            test_audit_mercadona_current_review_failure_modes.py \
+            test_summarize_mercadona_ocr_run_union.py \
+            test_materialize_mercadona_ocr_canonical.py \
+            test_recover_mercadona_historical_residual_baseline.py
+          python -m py_compile \
+            audit_mercadona_current_ocr_residual.py \
+            audit_mercadona_current_review_failure_modes.py \
+            diagnose_mercadona_ocr_union.py \
+            summarize_mercadona_ocr_run_union.py \
+            materialize_mercadona_ocr_canonical.py \
+            recover_mercadona_historical_residual_baseline.py
 
       - name: Wait for pre-existing Mercadona runs to settle
         shell: bash
@@ -240,8 +279,8 @@ jobs:
             --manifest mercadona-current-ocr-residual-audit/canonical-ocr-manifest.json \
             --inventory-total 4280
 
-      - name: Audit exact historical residual universe
-        if: steps.first_party_snapshot.outputs.available == 'true'
+      - name: Audit exact historical residual universe from original snapshot
+        if: steps.first_party_snapshot.outputs.exact_source == 'original'
         working-directory: tools/catalog
         shell: bash
         run: |
@@ -257,13 +296,27 @@ jobs:
             --expected-processed "$expected_processed" \
             --out mercadona-current-ocr-residual-audit
 
+      - name: Recover exact historical residual universe from pre-expiry partition
+        if: steps.first_party_snapshot.outputs.exact_source == 'preexpiry_audit'
+        working-directory: tools/catalog
+        run: |
+          python recover_mercadona_historical_residual_baseline.py \
+            --baseline-dir mercadona-historical-residual-baseline \
+            --current-canonical mercadona-current-ocr-residual-audit/canonical-ocr.jsonl \
+            --current-union-summary mercadona-current-ocr-residual-audit/run-union-summary.json \
+            --out mercadona-current-ocr-residual-audit
+          jq -n \
+            --slurpfile recovered mercadona-current-ocr-residual-audit/summary.json \
+            '{status:$recovered[0].status, inventory_products:$recovered[0].inventory_products, processed_reconstructed:$recovered[0].processed_reconstructed, exact_residual_census_available:true, historical_membership_parity_verifiable:$recovered[0].historical_membership_parity_verifiable, historical_residual_ean_parity_verifiable:$recovered[0].historical_residual_ean_parity_verifiable, historical_processed_ean_anchors_complete:$recovered[0].historical_processed_ean_anchors_complete, historical_full_identity_map_materialized:$recovered[0].historical_full_identity_map_materialized, historical_full_detail_snapshot_recovered:false, recovery_run_id:34430788357, recovery_artifact_sha256:"ac4ef2b916fd41003675aa94c806574e6ed7c827a49c82da0d97e315b68d34db"}' \
+            > mercadona-current-ocr-residual-audit/residual-audit-status.json
+
       - name: Record unavailable exact residual census
-        if: steps.first_party_snapshot.outputs.available != 'true'
+        if: steps.first_party_snapshot.outputs.exact_source == 'none'
         working-directory: tools/catalog
         run: |
           jq -n \
             --slurpfile union mercadona-current-ocr-residual-audit/run-union-summary.json \
-            '{status:"BLOCKED_HISTORICAL_FIRST_PARTY_SNAPSHOT_EXPIRED", inventory_products:4280, processed_reconstructed:$union[0].final_distinct_union, canonical_ocr_materialized:true, exact_residual_census_available:false, historical_identity_parity_verifiable:false, images_downloaded:false, images_persisted:false, missing_values_inferred:false, structured_api_macros_claimed:false, CLASSIFIED:0, MENU_ELIGIBLE:0}' \
+            '{status:"BLOCKED_HISTORICAL_FIRST_PARTY_SNAPSHOT_AND_PREEXPIRY_PARTITION_UNAVAILABLE", inventory_products:4280, processed_reconstructed:$union[0].final_distinct_union, canonical_ocr_materialized:true, exact_residual_census_available:false, historical_membership_parity_verifiable:false, images_downloaded:false, images_persisted:false, missing_values_inferred:false, structured_api_macros_claimed:false, CLASSIFIED:0, MENU_ELIGIBLE:0}' \
             > mercadona-current-ocr-residual-audit/residual-audit-status.json
 
       - uses: actions/upload-artifact@v4
