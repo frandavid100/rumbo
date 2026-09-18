@@ -1,0 +1,124 @@
+{
+  "state_kind": "MERCADONA_OCR_CANONICAL_RECONCILIATION",
+  "inventory_products": 4280,
+  "audit_run_id": 35302935736,
+  "audit_run_attempt": 2,
+  "audit_head_sha": "99ac0851cfbda28fc904c2551782f3c8cf709dfa",
+  "audit_artifact": {
+    "artifact_id": 10531069492,
+    "name": "mercadona-current-ocr-residual-audit",
+    "sha256": "454c54b74fa156e2d9cb576c29b51afc5e279fc8f9b9cc6cf05627500d3c1977",
+    "github_digest": "sha256:454c54b74fa156e2d9cb576c29b51afc5e279fc8f9b9cc6cf05627500d3c1977",
+    "created_at": "2026-09-18T04:05:01Z"
+  },
+  "previous_canonical_audit_run_id": 35287539101,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 366,
+    "REVIEW": 2603,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "usable_complete": 366,
+  "usable_complete_pct_inventory": 8.5514,
+  "usable_field_counts": {
+    "calories": 366,
+    "protein_g": 366,
+    "carbohydrate_g": 366,
+    "fat_g": 366
+  },
+  "canonical_delta_vs_previous": {
+    "DECLARED": 2,
+    "REVIEW": -2,
+    "processed": 0,
+    "review_to_declared": [
+      {
+        "product_id": "14136",
+        "name": "Barquillos rellenos de nata Hacendado 0% azúcares añadidos",
+        "ean": "8410376047264",
+        "basis": "100_g",
+        "nutrition": {
+          "calories": 435.0,
+          "fat_g": 23.0,
+          "carbohydrate_g": 64.0,
+          "protein_g": 3.0
+        },
+        "latest_live_run_id": 35299647900,
+        "fresh_corroborated_fields": 4,
+        "fresh_independent_engine_families": 2,
+        "fresh_engine_families": [
+          "doctr",
+          "tesseract"
+        ],
+        "historical_values_promotion_allowed": false,
+        "cross_run_value_fusion": false,
+        "cross_crop_value_fusion": false
+      },
+      {
+        "product_id": "39900",
+        "name": "Gazpacho fresco Hacendado",
+        "ean": "8480000399007",
+        "basis": "100_ml",
+        "nutrition": {
+          "calories": 75.0,
+          "fat_g": 7.0,
+          "carbohydrate_g": 2.5,
+          "protein_g": 0.6
+        },
+        "latest_live_run_id": 35299647900,
+        "fresh_corroborated_fields": 4,
+        "fresh_independent_engine_families": 2,
+        "fresh_engine_families": [
+          "doctr",
+          "tesseract"
+        ],
+        "historical_values_promotion_allowed": false,
+        "cross_run_value_fusion": false,
+        "cross_crop_value_fusion": false
+      }
+    ],
+    "acceptance_policy_changed": false,
+    "historical_values_promotion_allowed": false,
+    "cross_run_value_fusion": false,
+    "cross_crop_value_fusion": false
+  },
+  "identity_reconciliation": {
+    "current_index_products": 2969,
+    "verified_current_products": 2969,
+    "unverified_current_products": 0,
+    "identity_conflicts": 0,
+    "unresolved_identity_status": 0,
+    "processed_without_canonical_status": 0
+  },
+  "review_residual": {
+    "latest_review_products": 2603,
+    "products_with_ocr_signal": 2603,
+    "products_without_ocr_signal": 0,
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 22,
+    "reasonless_review_products": 0,
+    "usable_products_created_by_diagnostic_audit": 0,
+    "review_promoted_by_diagnostic_audit": 0,
+    "next_diagnostic_candidates_not_promoted": []
+  },
+  "historical_inventory_parity": {
+    "exact_historical_first_party_snapshot_available": false,
+    "source_run_id": 33046950149,
+    "source_artifact_name": "mercadona-first-party-final",
+    "snapshot_status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute a later live inventory for the fixed 2026-08-27 4,280-product cut. Canonical OCR reconciliation remains materializable from persisted raw-live evidence, but exact parity against the original first-party product_id/EAN snapshot cannot be re-proven while that artifact is unavailable."
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
