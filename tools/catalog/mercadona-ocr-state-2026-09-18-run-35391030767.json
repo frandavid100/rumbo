@@ -1,0 +1,185 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 374,
+    "REVIEW": 2595
+  },
+  "usable_complete": 374,
+  "usable_complete_pct_inventory": 8.7383,
+  "usable_field_counts": {
+    "calories": 374,
+    "fat_g": 374,
+    "carbohydrate_g": 374,
+    "protein_g": 374
+  },
+  "review_failure_modes": {
+    "core_field_coverage_counts": {
+      "0": 2025,
+      "1": 110,
+      "2": 156,
+      "3": 266,
+      "4": 38
+    },
+    "corroborated_field_counts": {
+      "0": 2294,
+      "1": 110,
+      "2": 125,
+      "3": 66
+    },
+    "independent_engine_family_counts": {
+      "0": 2022,
+      "1": 247,
+      "2": 214,
+      "3": 109,
+      "4": 3
+    },
+    "basis_counts": {
+      "100_g": 487,
+      "100_ml": 102,
+      "NONE": 2006
+    },
+    "safety_blocker_counts": {
+      "HARD_OCR_CONFLICT": 229,
+      "ENERGY_MACRO_INCOHERENCE": 88,
+      "AMBIGUOUS_TABLE": 97
+    },
+    "products_with_ocr_signal": 2595,
+    "products_without_ocr_signal": 0,
+    "near_safe_complete_review": 1,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 2,
+    "reasonless_review_products": 0,
+    "three_of_four_explicit_basis_unblocked_review": 94,
+    "three_of_four_missing_field_counts": {
+      "calories": 10,
+      "carbohydrate_g": 36,
+      "fat_g": 24,
+      "protein_g": 24
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 45,
+      "2": 41,
+      "3": 8
+    }
+  },
+  "historical_residual": {
+    "historical_membership_products": 4280,
+    "historical_unprocessed_count": 1311,
+    "residual_with_perspective9": 1298,
+    "residual_out_of_scope_count": 1300,
+    "residual_deferred_bodega_count": 11,
+    "residual_actionable_count": 0,
+    "historical_membership_parity_verifiable": true,
+    "historical_full_detail_snapshot_recovered": false
+  },
+  "pilot": {
+    "run_id": 35385945485,
+    "artifact_id": 10565577382,
+    "artifact_sha256": "c37981a8d3fc4ea8d11c4d8403053d48c928cfbc21d1eb3701612cbe6602a0e0",
+    "processed": 16,
+    "status_counts": {
+      "DECLARED": 4,
+      "REVIEW": 12
+    },
+    "declared_rate": 0.25,
+    "declared_product_ids": [
+      "51182",
+      "24242",
+      "10781",
+      "34143"
+    ],
+    "declared_by_historical_missing_field": {
+      "calories": 0,
+      "carbohydrate_g": 0,
+      "fat_g": 2,
+      "protein_g": 2
+    },
+    "selection_strong_candidates": 41,
+    "selection_live_verified_exact_ean_exact_p9": 32,
+    "acceptance_policy_changed": false,
+    "cross_run_value_fusion": false,
+    "images_persisted": false,
+    "missing_values_inferred": false
+  },
+  "new_declared_products": [
+    {
+      "product_id": "51182",
+      "ean": "8480000511829",
+      "name": "Queso lonchas fundido suave mezcla Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 231.0,
+        "fat_g": 15.0,
+        "carbohydrate_g": 13.5,
+        "protein_g": 10.5
+      }
+    },
+    {
+      "product_id": "24242",
+      "ean": "8436048071801",
+      "name": "Calamar troceado limpio Hacendado congelado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 57.0,
+        "fat_g": 0.5,
+        "carbohydrate_g": 1.09,
+        "protein_g": 12.0
+      }
+    },
+    {
+      "product_id": "10781",
+      "ean": "8411700010121",
+      "name": "Bebida láctea con cereales crecimiento y desarrollo Puleva Max",
+      "basis": "100_ml",
+      "nutrition": {
+        "calories": 77.0,
+        "fat_g": 2.8,
+        "carbohydrate_g": 9.8,
+        "protein_g": 3.0
+      }
+    },
+    {
+      "product_id": "34143",
+      "ean": "8480000341433",
+      "name": "Cacahuete frito con miel Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 591.0,
+        "fat_g": 44.0,
+        "carbohydrate_g": 25.0,
+        "protein_g": 21.0
+      }
+    }
+  ],
+  "reconciliation": {
+    "run_id": 35391030767,
+    "artifact_name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10566154302,
+    "artifact_sha256": "e096fbeee15251782f8d7a9d618fa7e72908e25c65b17db512d9698f5260bee5",
+    "head_sha": "15ab880efda080b53bcd92a55ea03c10ef17afc0",
+    "identity_conflict_count": 0,
+    "identity_unresolved_count": 0,
+    "identity_unverified_count": 0,
+    "processed_without_canonical_status": 0
+  },
+  "next_scale_policy": {
+    "target_missing_fields": [
+      "fat_g",
+      "protein_g"
+    ],
+    "reason": "pilot yielded 2/4 DECLARED in each of these fields and 0/4 for calories/carbohydrate_g; scale only the empirically productive strata first",
+    "historical_partial_values_usable": false,
+    "fresh_observation_must_recover_all_four": true,
+    "exclude_prior_pilot_attempts": true
+  },
+  "images_persisted": false,
+  "redistribution_allowed": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
