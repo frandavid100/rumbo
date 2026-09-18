@@ -1,0 +1,102 @@
+{
+  "state_kind": "MERCADONA_OCR_CANONICAL_RECONCILIATION",
+  "inventory_products": 4280,
+  "audit_run_id": 35321132280,
+  "audit_run_attempt": 1,
+  "audit_head_sha": "c81b2abf8004295cedc3a7f88a7d40d5d4cf83a7",
+  "audit_artifact": {
+    "artifact_id": 10537367736,
+    "name": "mercadona-current-ocr-residual-audit",
+    "sha256": "998a630522bf33659594968bb02ac51f2a512879b95b75cbd4db3c93f2b0bf9d",
+    "github_digest": "sha256:998a630522bf33659594968bb02ac51f2a512879b95b75cbd4db3c93f2b0bf9d",
+    "created_at": "2026-09-18T08:00:37Z"
+  },
+  "previous_canonical_audit_run_id": 35313021238,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 368,
+    "REVIEW": 2601,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "usable_complete": 368,
+  "usable_complete_pct_inventory": 8.5981,
+  "usable_field_counts": {
+    "calories": 368,
+    "protein_g": 368,
+    "carbohydrate_g": 368,
+    "fat_g": 368
+  },
+  "canonical_delta_vs_previous": {
+    "DECLARED": 1,
+    "REVIEW": -1,
+    "processed": 0,
+    "review_to_declared": [
+      {
+        "product_id": "27666",
+        "name": "Tónica original Schweppes",
+        "ean": "8414100306856",
+        "basis": "100_ml",
+        "nutrition": {
+          "calories": 11.0,
+          "fat_g": 0.0,
+          "carbohydrate_g": 2.4,
+          "protein_g": 0.0
+        },
+        "latest_live_run_id": 35320717858,
+        "fresh_corroborated_fields": 4,
+        "fresh_independent_engine_families": 2,
+        "fresh_engine_families": [
+          "doctr",
+          "tesseract"
+        ],
+        "historical_values_promotion_allowed": false,
+        "cross_run_value_fusion": false,
+        "cross_crop_value_fusion": false
+      }
+    ],
+    "acceptance_policy_changed": false,
+    "historical_values_promotion_allowed": false,
+    "cross_run_value_fusion": false,
+    "cross_crop_value_fusion": false
+  },
+  "identity_reconciliation": {
+    "current_index_products": 2969,
+    "verified_current_products": 2969,
+    "unverified_current_products": 0,
+    "identity_conflicts": 0,
+    "unresolved_identity_status": 0,
+    "processed_without_canonical_status": 0
+  },
+  "review_residual": {
+    "latest_review_products": 2601,
+    "products_with_ocr_signal": 2601,
+    "products_without_ocr_signal": 0,
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 15,
+    "reasonless_review_products": 0,
+    "usable_products_created_by_diagnostic_audit": 0,
+    "review_promoted_by_diagnostic_audit": 0,
+    "next_diagnostic_candidates_not_promoted": []
+  },
+  "historical_inventory_parity": {
+    "exact_historical_first_party_snapshot_available": false,
+    "source_run_id": 33046950149,
+    "source_artifact_name": "mercadona-first-party-final",
+    "snapshot_status": "EXPIRED_OR_UNAVAILABLE",
+    "exact_residual_census_available": false,
+    "historical_identity_parity_verifiable": false,
+    "policy": "Do not substitute a later live inventory for the fixed 2026-08-27 4,280-product cut. Canonical OCR reconciliation remains materializable from persisted raw-live evidence, but exact parity against the original first-party product_id/EAN snapshot cannot be re-proven while that artifact is unavailable."
+  },
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "source_record_kind": "label image",
+  "redistribution_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0
+}
