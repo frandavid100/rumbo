@@ -96,6 +96,12 @@ def _core_present(nutrition: Any) -> int:
     return sum(nutrition.get(field) is not None for field in CORE_FIELDS)
 
 
+def _missing_core_fields(nutrition: Any) -> list[str]:
+    if not isinstance(nutrition, dict):
+        return list(CORE_FIELDS)
+    return [field for field in CORE_FIELDS if nutrition.get(field) is None]
+
+
 def _int_value(value: Any) -> int:
     return int(value) if isinstance(value, int) and not isinstance(value, bool) else 0
 
@@ -234,6 +240,7 @@ def _candidate_payload(
         "usable_nutrition": None,
         "promotion_allowed": False,
         "diagnostic_candidate_values": snapshot.get("nutrition"),
+        "missing_core_fields": _missing_core_fields(snapshot.get("nutrition")),
         "basis": snapshot.get("basis"),
         "corroborated_fields": _int_value(snapshot.get("corroborated_fields")),
         "independent_engine_families": _int_value(snapshot.get("independent_engine_families")),
@@ -299,6 +306,8 @@ def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str
     blocker_counts = Counter()
     safe_by_corroboration = Counter()
     safe_by_families = Counter()
+    three_of_four_missing_fields = Counter()
+    three_of_four_family_counts = Counter()
     ocr_signal = 0
     no_visual_region = 0
 
@@ -306,6 +315,7 @@ def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str
     fully_corroborated: list[dict[str, Any]] = []
     complete_blocked: list[dict[str, Any]] = []
     reasonless: list[dict[str, Any]] = []
+    three_of_four: list[dict[str, Any]] = []
 
     for product_id, (run_id, rows) in latest_review.items():
         snapshot = _best_snapshot(rows)
@@ -345,6 +355,15 @@ def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str
         elif present == 4 and blockers:
             complete_blocked.append(payload)
 
+        # Missing values are never inferred or promoted. This list is only a bounded
+        # retry queue: a future fresh OCR observation must independently recover all
+        # four fields under the unchanged acceptance contract before it can be usable.
+        if present == 3 and explicit_basis and not blockers:
+            three_of_four.append(payload)
+            for field in payload["missing_core_fields"]:
+                three_of_four_missing_fields[field] += 1
+            three_of_four_family_counts[families] += 1
+
     if len(latest_review) != expected_count:
         raise ValueError(f"expected {expected_count} latest REVIEW products, audited {len(latest_review)}")
 
@@ -352,13 +371,23 @@ def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str
     fully_corroborated.sort(key=lambda row: row["product_id"])
     complete_blocked.sort(key=lambda row: row["product_id"])
     reasonless.sort(key=lambda row: row["product_id"])
+    three_of_four.sort(
+        key=lambda row: (
+            -int(row.get("independent_engine_families") or 0),
+            -int(row.get("corroborated_fields") or 0),
+            -float(row.get("confidence") or 0.0),
+            row["product_id"],
+        )
+    )
 
     result = {
         "audit_policy": (
             "Latest raw-live exact-evidence REVIEW failure-mode census. Replay wrappers and prior canonical materializations "
             "are excluded. Diagnostic extraction values are never promoted or made usable. A near-safe diagnostic shape "
             "requires all four core values, explicit 100 g/100 ml basis, at least two independent OCR engine families, "
-            "and no hard OCR field/basis conflict, energy-macro incoherence, or ambiguous/multiple-column table signal."
+            "and no hard OCR field/basis conflict, energy-macro incoherence, or ambiguous/multiple-column table signal. "
+            "Three-of-four rows with explicit basis and no hard blocker are exposed only as fresh-retry candidates; their "
+            "missing value is never inferred and their historical partial tuple is never made usable."
         ),
         "source": f"{SOURCE}/{SOURCE_RECORD_KIND}",
         "evidence_level": EVIDENCE,
@@ -386,6 +415,10 @@ def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str
         "fully_corroborated_but_still_review": len(fully_corroborated),
         "complete_but_safety_blocked": len(complete_blocked),
         "reasonless_review_products": len(reasonless),
+        "three_of_four_explicit_basis_unblocked_review": len(three_of_four),
+        "three_of_four_missing_field_counts": dict(sorted(three_of_four_missing_fields.items())),
+        "three_of_four_engine_family_counts": {str(key): value for key, value in sorted(three_of_four_family_counts.items())},
+        "three_of_four_retry_policy": "DIAGNOSTIC_TARGET_QUEUE_ONLY; FRESH_OBSERVATION_MUST_RECOVER_AND_CORROBORATE_ALL_4_FIELDS; NO_CROSS_RUN_OR_CROSS_CROP_VALUE_FUSION",
         "usable_products_created": 0,
         "REVIEW_promoted": 0,
         "CLASSIFIED": 0,
@@ -396,6 +429,7 @@ def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str
         "fully-corroborated-still-review": fully_corroborated,
         "complete-but-safety-blocked": complete_blocked,
         "reasonless-review": reasonless,
+        "three-of-four-explicit-basis-unblocked-review": three_of_four,
     }
     return result, files
 
