@@ -1,0 +1,268 @@
+name: Catalog Mercadona final safety-blocked OCR expansion
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-final-safety-blocked-ocr-expansion.yml'
+      - 'tools/catalog/mercadona_safety_blocked_ocr_expansion.py'
+      - 'tools/catalog/test_mercadona_safety_blocked_ocr_expansion.py'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-final-safety-blocked-ocr-expansion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Pin the current three-product canonical safety residual
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          state = json.loads(Path('mercadona-ocr-state-2026-09-18-run-35325796636.json').read_text(encoding='utf-8'))
+          residual = state['review_residual']
+          expected = {'14173', '4940', '80531'}
+          actual = {str(pid) for pid in residual['next_diagnostic_candidates_not_promoted']}
+          assert state['status_counts']['DECLARED'] == 369, state['status_counts']
+          assert residual['complete_but_safety_blocked'] == 3, residual
+          assert actual == expected, (actual, expected)
+
+          source = Path('mercadona-review-complete-blocked-anchors-2026-09-18.jsonl')
+          rows = [json.loads(line) for line in source.read_text(encoding='utf-8').splitlines() if line.strip()]
+          selected = [row for row in rows if str(row.get('product_id')) in expected]
+          assert {str(row['product_id']) for row in selected} == expected
+          for row in selected:
+              assert row.get('ean') and row.get('image_url')
+              assert row.get('canonical_status') == 'REVIEW'
+              assert row.get('evidence_level') == 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+              assert row.get('source') == 'MERCADONA_FIRST_PARTY'
+              assert row.get('source_record_kind') == 'label image'
+              assert row.get('redistribution_allowed') is False
+
+          Path('final-safety-residual-anchors.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          Path('final-safety-residual-inventory.jsonl').write_text(
+              ''.join(json.dumps({'product_id': str(row['product_id'])}, sort_keys=True) + '\n' for row in selected),
+              encoding='utf-8',
+          )
+          print(json.dumps({
+              'source_audit_run_id': 35325796636,
+              'targets': sorted(expected),
+              'routing_change_only': True,
+              'acceptance_policy_changed': False,
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+          }, sort_keys=True))
+          PY
+
+      - name: Rehydrate exact current products from the official first-party API
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-first-party-final-safety-current
+          python mercadona_first_party_details.py \
+            --inventory final-safety-residual-inventory.jsonl \
+            --out mercadona-first-party-final-safety-current \
+            --shard-index 0 \
+            --shard-count 1 \
+            --timeout 20 \
+            --delay 0.2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('mercadona-first-party-final-safety-current')
+          summary = json.loads((root / 'summary-00.json').read_text(encoding='utf-8'))
+          errors = [json.loads(line) for line in (root / 'errors-00.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors or summary.get('fetched') != 3 or summary.get('requested') != 3:
+              raise SystemExit(f'First-party rehydration incomplete: summary={summary} errors={errors}')
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Require exact current EAN and exact first-party image URL
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          rm -rf final-safety-current-input
+          python mercadona_near_safe_doctr_input.py live \
+            --selected final-safety-residual-anchors.jsonl \
+            --details mercadona-first-party-final-safety-current/details-00.jsonl \
+            --out final-safety-current-input
+          cp final-safety-residual-anchors.jsonl final-safety-current-input/retry-anchors.jsonl
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('final-safety-current-input')
+          live = json.loads((root / 'live-summary.json').read_text(encoding='utf-8'))
+          if live.get('accepted_exact_current_identity_and_image') != 3:
+              raise SystemExit(f'Not all three targets still match exact current EAN + first-party image URL: {live}')
+          metadata = {
+              'source_audit_run_id': 35325796636,
+              'source_branch_sha': '${{ github.sha }}',
+              'routing_policy': 'FINAL_CURRENT_COMPLETE_BUT_SAFETY_BLOCKED; FRESH_EXACT_IMAGE_EXTRA_OCR_ROUTING_ONLY',
+              'acceptance_policy_changed': False,
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+              'live_validation': live,
+          }
+          (root / 'pilot-metadata.json').write_text(
+              json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-final-safety-blocked-input
+          path: tools/catalog/final-safety-current-input/
+          retention-days: 30
+          if-no-files-found: error
+
+  ocr:
+    runs-on: ubuntu-24.04
+    needs: prepare
+    timeout-minutes: 120
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mercadona-final-safety-blocked-input
+          path: tools/catalog/retry-input
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run safety regressions before fresh images
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_safety_blocked_ocr_expansion.py \
+            test_mercadona_bounded_doctr_rescue.py \
+            test_mercadona_near_safe_doctr_retry.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: Run fresh expanded OCR with unchanged acceptance contract
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-final-safety-blocked-expansion/with-ingredients
+          mkdir -p mercadona-final-safety-blocked-expansion/without-ingredients
+
+          run_group() {
+            local products="$1"
+            local out="$2"
+            local mode="$3"
+            [[ -s "$products" ]] || return 0
+            set +e
+            python mercadona_safety_blocked_ocr_expansion.py \
+              --products "$products" \
+              --out "$out" \
+              --shard-index 0 \
+              --shard-count 1 \
+              --limit 0 \
+              --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            [[ $rc -eq 0 || $rc -eq 2 ]] || return "$rc"
+          }
+
+          cp retry-input/with-ingredients.jsonl .
+          cp retry-input/without-ingredients.jsonl .
+          cp retry-input/pilot-metadata.json mercadona-final-safety-blocked-expansion/pilot-metadata.json
+          cp retry-input/live-summary.json mercadona-final-safety-blocked-expansion/live-summary.json
+          cp retry-input/retry-anchors.jsonl mercadona-final-safety-blocked-expansion/retry-anchors.jsonl
+          run_group with-ingredients.jsonl mercadona-final-safety-blocked-expansion/with-ingredients priority
+          run_group without-ingredients.jsonl mercadona-final-safety-blocked-expansion/without-ingredients p9-no-ingredients-all
+
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+          root = Path('mercadona-final-safety-blocked-expansion')
+          rows = []
+          for path in root.glob('*/results-*.jsonl'):
+              rows.extend(json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip())
+          summary = {
+              'products': len(rows),
+              'status_counts': dict(Counter(str(row.get('status')) for row in rows)),
+              'declared_product_ids': sorted(str(row.get('product_id')) for row in rows if row.get('status') == 'DECLARED'),
+              'review_product_ids': sorted(str(row.get('product_id')) for row in rows if row.get('status') == 'REVIEW'),
+              'acceptance_policy_changed': False,
+              'historical_values_promotion_allowed': False,
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+          }
+          (root / 'expansion-summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(summary, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-final-safety-blocked-ocr-expansion
+          path: tools/catalog/mercadona-final-safety-blocked-expansion/
+          retention-days: 90
+          if-no-files-found: error
+
+  reconcile:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: ${{ needs.ocr.result == 'success' }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Trigger strict canonical reconciliation after fresh expansion
+        run: |
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
