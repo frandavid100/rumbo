@@ -34,16 +34,52 @@ class PreselectedThreeOfFourVariantRescueTests(unittest.TestCase):
     def test_routes_clean_three_of_four_fresh_reread(self):
         self.assertTrue(target.should_run_preselected_three_of_four_variant_rescue(ensemble(corroborated=3)))
 
+    def test_routes_clean_fresh_reread_missing_exactly_one_core_field(self):
+        partial = {"calories": 46.0, "fat_g": 0.0, "carbohydrate_g": 11.0}
+        self.assertTrue(target.should_run_preselected_three_of_four_variant_rescue(ensemble(
+            nutrition=partial,
+            corroborated=3,
+            reasons=("MISSING_CORE:protein_g",),
+        )))
+
+    def test_routes_missing_one_core_field_with_two_corroborated_fields(self):
+        partial = {"calories": 46.0, "fat_g": 0.0, "carbohydrate_g": 11.0}
+        self.assertTrue(target.should_run_preselected_three_of_four_variant_rescue(ensemble(
+            nutrition=partial,
+            corroborated=2,
+            reasons=("MISSING_CORE:protein_g",),
+        )))
+
     def test_rejects_one_of_four(self):
         self.assertFalse(target.should_run_preselected_three_of_four_variant_rescue(ensemble(corroborated=1)))
 
-    def test_rejects_incomplete_tuple(self):
+    def test_rejects_tuple_missing_two_core_fields(self):
+        partial = {"calories": 46.0, "carbohydrate_g": 11.0}
+        self.assertFalse(target.should_run_preselected_three_of_four_variant_rescue(ensemble(
+            nutrition=partial,
+            corroborated=2,
+            reasons=("MISSING_CORE:fat_g,protein_g",),
+        )))
+
+    def test_rejects_missing_one_core_field_without_matching_missing_reason(self):
         partial = {"calories": 46.0, "fat_g": 0.0, "carbohydrate_g": 11.0}
-        self.assertFalse(target.should_run_preselected_three_of_four_variant_rescue(ensemble(nutrition=partial)))
+        self.assertFalse(target.should_run_preselected_three_of_four_variant_rescue(ensemble(
+            nutrition=partial,
+            corroborated=3,
+            reasons=("UNCORROBORATED_CORE_FIELDS",),
+        )))
 
     def test_rejects_hard_safety_blocker(self):
         self.assertFalse(target.should_run_preselected_three_of_four_variant_rescue(ensemble(
             reasons=("UNCORROBORATED_CORE_FIELDS", "ENERGY_MACRO_MISMATCH"),
+        )))
+
+    def test_rejects_hard_safety_blocker_on_partial_tuple(self):
+        partial = {"calories": 46.0, "fat_g": 0.0, "carbohydrate_g": 11.0}
+        self.assertFalse(target.should_run_preselected_three_of_four_variant_rescue(ensemble(
+            nutrition=partial,
+            corroborated=3,
+            reasons=("MISSING_CORE:protein_g", "OCR_FIELD_CONFLICT:protein_g"),
         )))
 
     def test_rejects_single_engine_family(self):
