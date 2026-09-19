@@ -8,7 +8,7 @@ from typing import Any, Callable
 
 from label_text_extractor import TextExtraction
 
-DOCTR_EXTRACTOR_VERSION = "1.0.1"
+DOCTR_EXTRACTOR_VERSION = "1.0.2"
 DOCTR_DETECTION_ARCH = "fast_tiny"
 DOCTR_RECOGNITION_ARCH = "crnn_mobilenet_v3_small"
 _PREDICTOR: tuple[Any, str | None] | None = None
@@ -31,7 +31,7 @@ def _default_predictor() -> tuple[Any, str | None]:
         return _PREDICTOR
     try:
         from doctr.models import ocr_predictor
-    except Exception as exc:  # pragma: no cover - live workflow only
+    except Exception as exc:  # pragma: no cover - live dependency path
         raise DocTRExtractionError(f"docTR is not installed: {exc}") from exc
     try:
         predictor = ocr_predictor(
@@ -90,6 +90,21 @@ def _repair_known_doctr_nutrition_layouts(text: str) -> str:
     return text
 
 
+def _repair_observed_standalone_row_labels(text: str) -> str:
+    """Repair only exact standalone docTR row-label glyph confusions.
+
+    `Protelnas:` is a repeatedly observed docTR rendering of the printed
+    `Proteínas:` nutrition-table row. Restrict the repair to an entire standalone
+    row (optional row punctuation), so ingredient/manufacturer prose is never
+    rewritten. Numeric cells are intentionally untouched.
+    """
+    return re.sub(
+        r"(?im)^([ \t]*)protelnas([ \t]*[:;]?[ \t]*)$",
+        r"\1Proteinas\2",
+        text,
+    )
+
+
 def extract_with_doctr(
     image_path: str | Path,
     *,
@@ -142,6 +157,7 @@ def extract_with_doctr(
         raise DocTRExtractionError(f"docTR result parsing failed: {exc}") from exc
 
     text = _repair_known_doctr_nutrition_layouts("\n".join(lines).strip())
+    text = _repair_observed_standalone_row_labels(text)
     return TextExtraction(
         text=text,
         confidence=mean(confidences) if confidences else 0.0,
