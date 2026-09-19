@@ -10,6 +10,7 @@ from label_doctr_extractor import (
     DOCTR_RECOGNITION_ARCH,
     extract_with_doctr,
 )
+from label_easyocr_extractor import extract_with_easyocr
 from label_image_preprocess import build_fallback_variants
 import mercadona_near_safe_variant_rescue as rescue
 import mercadona_neural_ocr_wave as base
@@ -24,31 +25,60 @@ DOCTR_VARIANT_NAMES = (
     "crop_top",
     "crop_bottom",
 )
+EXTRA_BLOCKING_PREFIXES = (
+    "OCR_BOUNDED_CORE_VALUE",
+)
 
 
 def _token(value) -> str:
     return str(value or "").strip()
 
 
+def _missing_core_fields(ensemble) -> list[str]:
+    nutrition = ensemble.nutrition or {}
+    return [field for field in CORE if field not in nutrition]
+
+
 def should_run_doctr_rescue(ensemble) -> bool:
-    """Route docTR only for clean complete REVIEW tuples with weak corroboration."""
+    """Route extra independent OCR only for clean bounded REVIEW observations.
+
+    Two shapes are allowed without changing acceptance thresholds:
+    * complete tuples with weak cross-family corroboration; or
+    * exactly-3/4 tuples with one genuinely missing core row.
+
+    The missing-core route only spends extra OCR work. It never fills the missing
+    value from history or arithmetic: a usable result must still recover all four
+    fields in the same fresh observation and satisfy the ordinary ensemble gate.
+    """
     if ensemble.status != "REVIEW" or ensemble.declared_usable:
         return False
     if ensemble.basis not in {"100_g", "100_ml"}:
         return False
-    if not ensemble.nutrition or any(field not in ensemble.nutrition for field in CORE):
+    if not ensemble.nutrition:
         return False
     if ensemble.independent_engine_families < 2:
         return False
-    if not (1 <= ensemble.corroborated_fields < len(CORE)):
+
+    reasons = tuple(str(reason) for reason in ensemble.reasons)
+    if any(
+        reason.startswith(prefix)
+        for reason in reasons
+        for prefix in (*rescue.HARD_BLOCKING_PREFIXES, *EXTRA_BLOCKING_PREFIXES)
+    ):
         return False
-    if "UNCORROBORATED_CORE_FIELDS" not in ensemble.reasons:
+
+    missing = _missing_core_fields(ensemble)
+    if not missing:
+        return (
+            1 <= ensemble.corroborated_fields < len(CORE)
+            and "UNCORROBORATED_CORE_FIELDS" in reasons
+        )
+
+    if len(missing) != 1:
         return False
-    return not any(
-        str(reason).startswith(prefix)
-        for reason in ensemble.reasons
-        for prefix in rescue.HARD_BLOCKING_PREFIXES
-    )
+    if not (1 <= ensemble.corroborated_fields <= len(CORE) - 1):
+        return False
+    return any(reason == "MISSING_CORE:" + missing[0] for reason in reasons)
 
 
 def build_doctr_retry_candidates(
@@ -229,12 +259,39 @@ def _extract_doctr(evidence, image_path: Path, strategy: str, readings, engine_e
         engine_errors[strategy] = f"{type(exc).__name__}:{exc}"
 
 
+def _extract_easyocr(evidence, image_path: Path, strategy: str, readings, engine_errors) -> None:
+    try:
+        extracted = extract_with_easyocr(image_path)
+        readings.append((strategy, "easyocr", base._reading(evidence, extracted)))
+    except Exception as exc:
+        engine_errors[strategy] = f"{type(exc).__name__}:{exc}"
+
+
+def _has_family(readings, family: str) -> bool:
+    return any(existing_family == family for _strategy, existing_family, _reading in readings)
+
+
 def _extract_region(evidence, region_path: Path, target_kind: str):
     readings, engine_errors, ensemble = base._ORIGINAL_EXTRACT_REGION(
         evidence, region_path, target_kind
     )
     if not should_run_doctr_rescue(ensemble):
         return readings, engine_errors, ensemble
+
+    missing_before_retry = _missing_core_fields(ensemble)
+
+    # A historical 3/4 row cannot be completed from history. When the fresh
+    # Paddle/Tesseract observation is itself a clean 3/4 tuple, run *two* extra
+    # independent OCR families on this same region. docTR alone could discover a
+    # missing value but could not independently corroborate it; EasyOCR + docTR
+    # can, while the ordinary four-field ensemble contract remains unchanged.
+    # No crop/transform values are fused in this missing-core path.
+    if len(missing_before_retry) == 1:
+        if not _has_family(readings, "easyocr"):
+            _extract_easyocr(evidence, region_path, "easyocr-missing-core", readings, engine_errors)
+        if not _has_family(readings, "doctr"):
+            _extract_doctr(evidence, region_path, "doctr-missing-core", readings, engine_errors)
+        return readings, engine_errors, _fuse(readings, target_kind)
 
     _extract_doctr(evidence, region_path, "doctr-original", readings, engine_errors)
     candidate = _fuse(readings, target_kind)
