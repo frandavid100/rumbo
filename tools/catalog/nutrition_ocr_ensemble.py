@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import combinations
+import re
+import unicodedata
 from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.3"
+ENSEMBLE_VERSION = "1.3.4"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -69,12 +71,69 @@ def _close(field: str, a: float, b: float) -> bool:
     return abs(a - b) <= tolerance
 
 
+def _fold_ocr_text(text: str) -> str:
+    folded = unicodedata.normalize("NFD", (text or "").lower())
+    return "".join(char for char in folded if unicodedata.category(char) != "Mn")
+
+
+_BOUNDED_ROW_LABELS = {
+    "calories": (r"valor\s+energetico", r"energia"),
+    "fat_g": (r"grasas?", r"lipidos?", r"grasa\s+total"),
+    "carbohydrate_g": (r"hidratos?\s+de\s+carbono", r"carbohidratos?"),
+    "protein_g": (r"proteinas?", r"prote_nas?"),
+}
+
+
+def _bounded_core_fields(reading: ParsedOCRReading) -> set[str]:
+    """Return core fields whose OCR text explicitly declares a numeric bound.
+
+    A printed `<1.0 g` is not an exact `1.0 g`. One Mercadona back label exposed
+    a subtle failure mode where one OCR family preserved the inequality while
+    another lost the `<` glyph and a reversed-row rescue then surfaced 1.0 as an
+    exact candidate. Because the project prefers precision over recall, any
+    credible family that sees an inequality anchored directly to a core row keeps
+    that field non-exact for the whole fresh ensemble observation.
+
+    Matching is deliberately narrow: the inequality must be on the same row,
+    the immediately following value row, or the immediately preceding reversed
+    value row. Bounds on saturated fat, sugars, salt, ingredients, or distant
+    prose therefore cannot veto a core macro.
+    """
+    if reading.result.status == "NOT_NUTRITION_LABEL" or reading.confidence < .70:
+        return set()
+    text = _fold_ocr_text(reading.result.normalized_text)
+    if not text:
+        return set()
+
+    number = r"[<>]\s*\d{1,4}(?:[.,]\d{1,2})?"
+    unit = r"(?:\s*(?:kcal|g|9|q|yg|y))?"
+    bounded: set[str] = set()
+    for field, labels in _BOUNDED_ROW_LABELS.items():
+        label = "(?:" + "|".join(labels) + ")"
+        same_row = rf"(?:^|\n)\s*[\[|]?\s*{label}\b[^\n]*?{number}{unit}(?=\s|$)"
+        next_row = rf"(?:^|\n)\s*[\[|]?\s*{label}\b[^\n]*\n\s*{number}{unit}(?=\s|$)"
+        reversed_row = rf"(?:^|\n)\s*{number}{unit}\s*\n\s*[\[|]?\s*{label}\b"
+        if (
+            re.search(same_row, text, flags=re.I)
+            or re.search(next_row, text, flags=re.I)
+            or re.search(reversed_row, text, flags=re.I)
+        ):
+            bounded.add(field)
+    return bounded
+
+
 def _field_candidates(readings: Iterable[ParsedOCRReading], field: str):
     out = []
     for reading in readings:
         result = reading.result
         confidence = reading.confidence
         if result.status == "NOT_NUTRITION_LABEL" or confidence < .70 or not result.nutrition:
+            continue
+        # A bound is useful evidence that the printed value is non-exact, but it
+        # is never an exact numeric candidate. This also blocks a reversed-row
+        # rescue from reintroducing the numeric part after the `<`/`>` glyph was
+        # observed elsewhere in the same OCR text.
+        if field in _bounded_core_fields(reading):
             continue
         value = result.nutrition.get(field)
         if isinstance(value, (int, float)):
@@ -219,8 +278,22 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
         and all(field in x.result.nutrition for field in FIELDS)
     }
 
+    bounded_families: dict[str, set[str]] = {field: set() for field in FIELDS}
+    for reading in readings:
+        for field in _bounded_core_fields(reading):
+            bounded_families[field].add(reading.family)
+
     fields: list[EnsembleField] = []
     for field in FIELDS:
+        if bounded_families[field]:
+            reasons.append(
+                f"OCR_BOUNDED_CORE_VALUE:{field}:{','.join(sorted(bounded_families[field]))}"
+            )
+            # Do not choose an exact value for a field for which any credible
+            # OCR family saw a printed inequality. REVIEW is intentional: a
+            # later fresh observation may resolve the glyph, but arithmetic or
+            # majority voting must never turn a bound into an exact macro.
+            continue
         chosen, error = _choose_field(field, _field_candidates(readings, field))
         if error:
             reasons.append(error)
