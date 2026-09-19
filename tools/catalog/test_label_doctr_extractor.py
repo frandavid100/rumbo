@@ -85,6 +85,73 @@ class LabelDocTRExtractorTest(unittest.TestCase):
             {"calories": 31.0, "fat_g": 0.4, "carbohydrate_g": 4.0, "protein_g": 2.8},
         )
 
+    def test_repairs_observed_standalone_protelnas_row_without_touching_number(self):
+        # Real docTR output for a Mercadona poultry label consistently reads the
+        # printed standalone `Proteínas:` row as `Protelnas:` while preserving
+        # the numeric cell `22 9`. Repair only that standalone label glyph error;
+        # no macro value may be invented or altered.
+        observed_lines = [
+            "Informacion Nutricional por 100g. de producto:",
+            "Valor Energético:",
+            "452 KJ",
+            "108 kcal",
+            "Grasas:",
+            "1.8 9",
+            "de las cuales saturadas:",
+            "0.6 9",
+            "Hidratos de carbono:",
+            "0.5 g",
+            "de los cuales azucares:",
+            "0 g",
+            "Protelnas:",
+            "22 9",
+            "Sal:",
+            "0.19 9",
+        ]
+        result = SimpleNamespace(pages=[SimpleNamespace(blocks=[SimpleNamespace(lines=[
+            SimpleNamespace(words=[SimpleNamespace(value=line, confidence=.95)])
+            for line in observed_lines
+        ])])])
+
+        class Predictor:
+            def __call__(self, document):
+                return result
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "label.jpg"
+            path.write_bytes(b"fixture")
+            extracted = extract_with_doctr(
+                path,
+                predictor_factory=lambda: (Predictor(), "1.1.0"),
+                document_loader=lambda p: [str(p)],
+            )
+
+        self.assertIn("Proteinas:\n22 9", extracted.text)
+        self.assertNotIn("Protelnas", extracted.text)
+        parsed = read_nutrition_label(extracted.text, extraction_confidence=extracted.confidence)
+        self.assertEqual(parsed.status, "DECLARED", parsed)
+        self.assertEqual(parsed.nutrition["protein_g"], 22.0)
+
+    def test_does_not_repair_protelnas_inside_prose(self):
+        result = SimpleNamespace(pages=[SimpleNamespace(blocks=[SimpleNamespace(lines=[
+            SimpleNamespace(words=[SimpleNamespace(value="Ingredientes: Protelnas de leche 22 g", confidence=.95)]),
+        ])])])
+
+        class Predictor:
+            def __call__(self, document):
+                return result
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "label.jpg"
+            path.write_bytes(b"fixture")
+            extracted = extract_with_doctr(
+                path,
+                predictor_factory=lambda: (Predictor(), "1.1.0"),
+                document_loader=lambda p: [str(p)],
+            )
+
+        self.assertEqual(extracted.text, "Ingredientes: Protelnas de leche 22 g")
+
     def test_does_not_repair_isolated_lookalike_without_complete_signature(self):
         result = SimpleNamespace(pages=[SimpleNamespace(blocks=[SimpleNamespace(lines=[
             SimpleNamespace(words=[SimpleNamespace(value="Groses/", confidence=.90)]),
