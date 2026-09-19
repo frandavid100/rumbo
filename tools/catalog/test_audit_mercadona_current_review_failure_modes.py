@@ -267,6 +267,50 @@ class CurrentReviewFailureModesTest(unittest.TestCase):
             self.assertFalse(candidates[0]["missing_values_inferred"])
             self.assertEqual(candidates[0]["diagnostic_candidate_values"]["fat_g"], None)
 
+    def test_bounded_core_value_is_not_a_retry_candidate(self) -> None:
+        """Known printed inequalities must not be retried as generic OCR omissions."""
+        three = {"calories": 327, "protein_g": 4.89, "carbohydrate_g": 76, "fat_g": None}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_rows(
+                root,
+                303,
+                [
+                    raw_row(
+                        "86288",
+                        ean="8421691803071",
+                        attempts=[
+                            ensemble_attempt(
+                                nutrition=three,
+                                corroborated_fields=3,
+                                families=3,
+                                reasons=[
+                                    "OCR_BOUNDED_CORE_VALUE:fat_g:easyocr,paddleocr,tesseract",
+                                    "MISSING_CORE:fat_g",
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            )
+            summary = {
+                "latest_status_counts": {"REVIEW": 1},
+                "latest_status_product_ids": {"REVIEW": ["86288"]},
+            }
+
+            result, files = build_audit(root, summary)
+
+            self.assertEqual(result["three_of_four_explicit_basis_unblocked_review"], 0)
+            self.assertEqual(result["three_of_four_bounded_core_review"], 1)
+            self.assertEqual(result["three_of_four_bounded_missing_field_counts"], {"fat_g": 1})
+            self.assertEqual(result["safety_blocker_counts"]["NON_EXACT_BOUNDED_CORE"], 1)
+            self.assertEqual(files["three-of-four-explicit-basis-unblocked-review"], [])
+            bounded = files["three-of-four-bounded-core-review"]
+            self.assertEqual([row["product_id"] for row in bounded], ["86288"])
+            self.assertIn("NON_EXACT_BOUNDED_CORE", bounded[0]["safety_blockers"])
+            self.assertIsNone(bounded[0]["usable_nutrition"])
+            self.assertFalse(bounded[0]["promotion_allowed"])
+
     def test_bounded_core_value_cannot_be_promoted_by_other_ocr_families(self) -> None:
         """A printed `<1.0 g` is a bound, never an exact 1.0 g observation.
 

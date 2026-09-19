@@ -229,6 +229,12 @@ def _blockers(reasons: Iterable[str]) -> set[str]:
         )
     ):
         out.add("AMBIGUOUS_TABLE")
+    # A printed inequality such as "<0.5 g" is evidence of a bound, not an
+    # exact macro value. Retrying it as a generic missing-field OCR failure is
+    # both wasteful and unsafe: losing the inequality glyph must never turn the
+    # bound into an exact numeric observation.
+    if "OCR_BOUNDED_CORE_VALUE" in text:
+        out.add("NON_EXACT_BOUNDED_CORE")
     return out
 
 
@@ -343,6 +349,7 @@ def build_audit(
     safe_by_families = Counter()
     three_of_four_missing_fields = Counter()
     three_of_four_family_counts = Counter()
+    bounded_three_of_four_missing_fields = Counter()
     ocr_signal = 0
     no_visual_region = 0
 
@@ -351,6 +358,7 @@ def build_audit(
     complete_blocked: list[dict[str, Any]] = []
     reasonless: list[dict[str, Any]] = []
     three_of_four: list[dict[str, Any]] = []
+    bounded_three_of_four: list[dict[str, Any]] = []
 
     for product_id, (run_id, rows) in latest_review.items():
         snapshot = _best_snapshot(rows)
@@ -393,7 +401,13 @@ def build_audit(
         # Missing values are never inferred or promoted. This list is only a bounded
         # retry queue: a future fresh OCR observation must independently recover all
         # four fields under the unchanged acceptance contract before it can be usable.
-        if present == 3 and explicit_basis and not blockers:
+        # A bounded printed value (<x or >x) is intentionally excluded: it is not an
+        # exact missing value and repeatedly losing the inequality glyph cannot make it one.
+        if present == 3 and explicit_basis and "NON_EXACT_BOUNDED_CORE" in blockers:
+            bounded_three_of_four.append(payload)
+            for field in payload["missing_core_fields"]:
+                bounded_three_of_four_missing_fields[field] += 1
+        elif present == 3 and explicit_basis and not blockers:
             three_of_four.append(payload)
             for field in payload["missing_core_fields"]:
                 three_of_four_missing_fields[field] += 1
@@ -414,6 +428,14 @@ def build_audit(
             row["product_id"],
         )
     )
+    bounded_three_of_four.sort(
+        key=lambda row: (
+            -int(row.get("independent_engine_families") or 0),
+            -int(row.get("corroborated_fields") or 0),
+            -float(row.get("confidence") or 0.0),
+            row["product_id"],
+        )
+    )
 
     result = {
         "audit_policy": (
@@ -421,9 +443,10 @@ def build_audit(
             "matching canonical reconciliation even when reruns retain an older numeric workflow run id. Replay wrappers and "
             "prior canonical materializations are excluded. Diagnostic extraction values are never promoted or made usable. "
             "A near-safe diagnostic shape requires all four core values, explicit 100 g/100 ml basis, at least two independent "
-            "OCR engine families, and no hard OCR field/basis conflict, energy-macro incoherence, or ambiguous/multiple-column "
-            "table signal. Three-of-four rows with explicit basis and no hard blocker are exposed only as fresh-retry candidates; "
-            "their missing value is never inferred and their historical partial tuple is never made usable."
+            "OCR engine families, and no hard OCR field/basis conflict, energy-macro incoherence, ambiguous/multiple-column "
+            "table signal, or non-exact bounded core value. Three-of-four rows with explicit basis and no blocker are exposed "
+            "only as fresh-retry candidates; bounded values such as <0.5 g are retained in a separate diagnostic queue and are "
+            "never treated as exact or inferred. Historical partial tuples are never made usable."
         ),
         "chronology_mode": "GITHUB_ARTIFACT_CREATED_AT" if artifact_created_at is not None else "LEGACY_RUN_ID",
         "source": f"{SOURCE}/{SOURCE_RECORD_KIND}",
@@ -441,7 +464,12 @@ def build_audit(
         "reason_prefix_counts": dict(sorted(reason_prefix_counts.items())),
         "safety_blocker_counts": {
             key: blocker_counts.get(key, 0)
-            for key in ("HARD_OCR_CONFLICT", "ENERGY_MACRO_INCOHERENCE", "AMBIGUOUS_TABLE")
+            for key in (
+                "HARD_OCR_CONFLICT",
+                "ENERGY_MACRO_INCOHERENCE",
+                "AMBIGUOUS_TABLE",
+                "NON_EXACT_BOUNDED_CORE",
+            )
         },
         "products_with_ocr_signal": ocr_signal,
         "products_without_ocr_signal": len(latest_review) - ocr_signal,
@@ -455,7 +483,13 @@ def build_audit(
         "three_of_four_explicit_basis_unblocked_review": len(three_of_four),
         "three_of_four_missing_field_counts": dict(sorted(three_of_four_missing_fields.items())),
         "three_of_four_engine_family_counts": {str(key): value for key, value in sorted(three_of_four_family_counts.items())},
-        "three_of_four_retry_policy": "DIAGNOSTIC_TARGET_QUEUE_ONLY; FRESH_OBSERVATION_MUST_RECOVER_AND_CORROBORATE_ALL_4_FIELDS; NO_CROSS_RUN_OR_CROSS_CROP_VALUE_FUSION",
+        "three_of_four_bounded_core_review": len(bounded_three_of_four),
+        "three_of_four_bounded_missing_field_counts": dict(sorted(bounded_three_of_four_missing_fields.items())),
+        "three_of_four_retry_policy": (
+            "DIAGNOSTIC_TARGET_QUEUE_ONLY; BOUNDED_CORE_VALUES_EXCLUDED_AS_NON_EXACT; "
+            "FRESH_OBSERVATION_MUST_RECOVER_AND_CORROBORATE_ALL_4_FIELDS; "
+            "NO_CROSS_RUN_OR_CROSS_CROP_VALUE_FUSION"
+        ),
         "usable_products_created": 0,
         "REVIEW_promoted": 0,
         "CLASSIFIED": 0,
@@ -467,6 +501,7 @@ def build_audit(
         "complete-but-safety-blocked": complete_blocked,
         "reasonless-review": reasonless,
         "three-of-four-explicit-basis-unblocked-review": three_of_four,
+        "three-of-four-bounded-core-review": bounded_three_of_four,
     }
     return result, files
 
