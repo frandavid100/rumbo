@@ -10,11 +10,11 @@ API detail.
 
 For this preselected cohort we allow the existing temporary-variant machinery to
 run when the fresh pass either keeps exactly three core fields or produces a
-complete tuple with only 2/4 or 3/4 fields corroborated. Acceptance is untouched:
-a usable result still has to recover all four values in the fresh observation and
-pass the normal parser, explicit-basis, energy/macro-coherence and independent-
-engine corroboration gates. No value is inferred or fused from the historical
-partial observation, and variant images are temporary.
+complete tuple with only 1/4, 2/4 or 3/4 fields corroborated. Acceptance is
+untouched: a usable result still has to recover all four values in the fresh
+observation and pass the normal parser, explicit-basis, energy/macro-coherence
+and independent-engine corroboration gates. No value is inferred or fused from
+the historical partial observation, and variant images are temporary.
 """
 
 import mercadona_near_safe_variant_rescue as rescue
@@ -30,7 +30,7 @@ def should_run_preselected_three_of_four_variant_rescue(ensemble) -> bool:
         return False
     if ensemble.independent_engine_families < 2:
         return False
-    if not (2 <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
+    if not (1 <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
         return False
     if any(
         str(reason).startswith(prefix)
