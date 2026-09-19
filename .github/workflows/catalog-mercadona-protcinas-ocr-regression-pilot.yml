@@ -2,7 +2,7 @@ name: Catalog Mercadona Protcinas OCR regression pilot
 
 # Targeted live validation of one systematic OCR row-label failure observed in
 # the prior high-yield retry: EasyOCR repeatedly read the printed Proteinas row
-# as the standalone token `Protcinas`.  Only that exact standalone row label is
+# as the standalone token `Protcinas`. Only that exact standalone row label is
 # repaired; numeric OCR, safety gates and DECLARED acceptance remain unchanged.
 on:
   push:
@@ -35,14 +35,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Run parser regression tests before OCR
+      - name: Run parser-only regression tests before OCR dependencies
         working-directory: tools/catalog
         run: |
           python -m unittest -v \
             test_mercadona_protcinas_typo_retry.py \
             test_nutrition_label_reader_ocr_typos.py \
-            test_nutrition_label_reader.py \
-            test_mercadona_ocr_safety_regressions.py
+            test_nutrition_label_reader.py
 
       - name: Revalidate exact first-party identity and perspective-9 image
         working-directory: tools/catalog
@@ -108,6 +107,19 @@ jobs:
             'paddleocr>=3.7,<3.8' \
             'easyocr>=1.7,<1.8' \
             opencv-python-headless Pillow
+
+      - name: Run full conservative OCR safety regression set
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_protcinas_typo_retry.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_mercadona_preselected_three_of_four_variant_rescue.py \
+            test_mercadona_near_safe_variant_rescue.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
 
       - name: Fresh OCR retry with exact standalone-label repair
         working-directory: tools/catalog
@@ -209,7 +221,6 @@ jobs:
               json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
           )
 
-          # Keep a minimal staging DB next to JSONL for auditability.
           db = sqlite3.connect(root / 'staging.sqlite')
           db.execute('CREATE TABLE IF NOT EXISTS observations (product_id TEXT PRIMARY KEY, ean TEXT, status TEXT, payload_json TEXT NOT NULL)')
           for row in rows:
