@@ -6,6 +6,8 @@ import unittest
 from pathlib import Path
 
 from audit_mercadona_current_review_failure_modes import build_audit
+from nutrition_label_reader import LabelReadResult
+from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
 
 EVIDENCE = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
@@ -219,6 +221,45 @@ class CurrentReviewFailureModesTest(unittest.TestCase):
             self.assertFalse(candidates[0]["promotion_allowed"])
             self.assertFalse(candidates[0]["missing_values_inferred"])
             self.assertEqual(candidates[0]["diagnostic_candidate_values"]["fat_g"], None)
+
+    def test_bounded_core_value_cannot_be_promoted_by_other_ocr_families(self) -> None:
+        """A printed `<1.0 g` is a bound, never an exact 1.0 g observation.
+
+        This reproduces the current Mercadona 34605 failure mode: one OCR family
+        preserves the inequality while two others can lose the `<` glyph and
+        otherwise agree on a complete, energy-coherent tuple. Precision wins;
+        the ensemble must keep the field in REVIEW instead of manufacturing an
+        exact protein value from two correlated OCR mistakes.
+        """
+        partial = {"calories": 342.0, "fat_g": 1.4, "carbohydrate_g": 79.0}
+        exact = {**partial, "protein_g": 1.0}
+        bounded_text = """Información nutricional por 100 g
+Valor energético 342 kcal
+Grasas 1.4 g
+Hidratos de carbono 79 g
+Proteínas
+<1.0 g
+"""
+        exact_text = bounded_text.replace("<1.0 g", "1.0 g")
+        bounded = LabelReadResult(
+            "REVIEW", "100_g", partial, .95,
+            ("MISSING_CORE:protein_g",), bounded_text,
+        )
+        paddle = LabelReadResult("REVIEW", "100_g", exact, .96, tuple(), exact_text)
+        tesseract = LabelReadResult("REVIEW", "100_g", exact, .94, tuple(), exact_text)
+
+        result = fuse_ocr_readings([
+            ParsedOCRReading("easyocr", bounded, engine_family="easyocr"),
+            ParsedOCRReading("paddleocr", paddle, engine_family="paddleocr"),
+            ParsedOCRReading("tesseract-psm6", tesseract, engine_family="tesseract"),
+        ])
+
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertIsNone((result.nutrition or {}).get("protein_g"), result)
+        self.assertTrue(
+            any(reason.startswith("OCR_BOUNDED_CORE_VALUE:protein_g") for reason in result.reasons),
+            result,
+        )
 
 
 if __name__ == "__main__":
