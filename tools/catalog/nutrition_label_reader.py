@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.28"
+READER_VERSION = "1.4.29"
 
 
 @dataclass(frozen=True)
@@ -434,10 +434,12 @@ def _coherent_kj_kcal_pair(kj: float, kcal: float) -> bool:
 
 def _energy_kcal(text: str) -> float | None:
     folded = _fold(text)
-    # An explicit printed kJ/kcal pair is stronger evidence than either unit in
-    # isolation. Parse the kcal token down to one integer digit only in this
-    # paired form, and require physical unit coherence before accepting it. This
-    # preserves fail-closed handling for a standalone `2.9 kcal` OCR token.
+    # A printed single-digit decimal kcal value is normally too fragile to
+    # trust on its own. Accept it only when the same OCR text contains an
+    # explicit kJ/kcal pair whose printed units are physically coherent.
+    # For ordinary >=10 kcal labels, preserve the established parser path:
+    # kJ is corroborating text, while macro-energy coherence remains the
+    # safety gate. This avoids changing legacy mismatch diagnostics.
     inline_pair = re.search(
         r"(?P<kj>\d{1,5}(?:\.\d{1,2})?)\s*k\s*j\s*(?:[/\\|]\s*)?"
         r"(?P<kcal>\d{1,4}(?:\.\d{1,2})?)\s*kcal\b",
@@ -447,7 +449,8 @@ def _energy_kcal(text: str) -> float | None:
     if inline_pair:
         kj = float(inline_pair.group("kj"))
         kcal = float(inline_pair.group("kcal"))
-        return kcal if _coherent_kj_kcal_pair(kj, kcal) else None
+        if kcal < 10:
+            return kcal if _coherent_kj_kcal_pair(kj, kcal) else None
 
     reverse_inline_pair = re.search(
         r"(?P<kcal>\d{1,4}(?:\.\d{1,2})?)\s*kcal\s*(?:[/\\|]\s*)?"
@@ -458,11 +461,12 @@ def _energy_kcal(text: str) -> float | None:
     if reverse_inline_pair:
         kj = float(reverse_inline_pair.group("kj"))
         kcal = float(reverse_inline_pair.group("kcal"))
-        return kcal if _coherent_kj_kcal_pair(kj, kcal) else None
+        if kcal < 10:
+            return kcal if _coherent_kj_kcal_pair(kj, kcal) else None
 
     # Some labels put the units in the heading and the values on the next line:
-    # `Valor energético (kJ/kcal) 442/106`. In that exact layout the second
-    # declared value is unambiguously kcal.
+    # `Valor energético (kJ/kcal) 442/106`. Preserve the established
+    # interpretation for that exact layout; the second printed value is kcal.
     header_pair = re.search(
         r"(?:valor energetico|energia)[\s\S]{0,70}?k\s*j\s*/\s*kcal"
         r"[\s\S]{0,35}?(\d{2,4}(?:\.\d{1,2})?)\s*[/\\|]\s*(\d{1,4}(?:\.\d{1,2})?)",
@@ -470,9 +474,7 @@ def _energy_kcal(text: str) -> float | None:
         flags=re.I,
     )
     if header_pair:
-        kj = float(header_pair.group(1))
-        kcal = float(header_pair.group(2))
-        return kcal if _coherent_kj_kcal_pair(kj, kcal) else None
+        return float(header_pair.group(2))
 
     patterns = [
         r"valor energetico[\s\S]{0,90}?(\d{2,4}(?:\.\d{1,2})?)\s*kcal",
@@ -484,7 +486,6 @@ def _energy_kcal(text: str) -> float | None:
         if m:
             return float(m.group(1))
     return None
-
 
 def _basis(text: str) -> str | None:
     folded = _fold(text)
