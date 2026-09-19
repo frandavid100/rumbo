@@ -1,9 +1,9 @@
 name: Catalog Mercadona Protcinas OCR regression pilot
 
-# Targeted live validation of one systematic OCR row-label failure observed in
-# the prior high-yield retry: EasyOCR repeatedly read the printed Proteinas row
-# as the standalone token `Protcinas`. Only that exact standalone row label is
-# repaired; numeric OCR, safety gates and DECLARED acceptance remain unchanged.
+# Targeted live validation for Mercadona product 86395. The retry keeps the
+# existing exact standalone `Protcinas` label repair and now also validates the
+# core parser's narrow handling of the observed `8.9 / Grasas / 3.20 /
+# Baturadas` ordering when OCR drops only the unit glyph from total fat.
 on:
   push:
     branches: [agent/catalog-phase1]
@@ -11,6 +11,8 @@ on:
       - '.github/workflows/catalog-mercadona-protcinas-ocr-regression-pilot.yml'
       - 'tools/catalog/mercadona_protcinas_typo_retry.py'
       - 'tools/catalog/test_mercadona_protcinas_typo_retry.py'
+      - 'tools/catalog/nutrition_label_reader.py'
+      - 'tools/catalog/test_nutrition_label_reader_reversed_fat_no_unit.py'
   workflow_dispatch:
 
 permissions:
@@ -41,7 +43,8 @@ jobs:
           python -m unittest -v \
             test_mercadona_protcinas_typo_retry.py \
             test_nutrition_label_reader_ocr_typos.py \
-            test_nutrition_label_reader.py
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_reversed_fat_no_unit.py
 
       - name: Revalidate exact first-party identity and perspective-9 image
         working-directory: tools/catalog
@@ -115,13 +118,14 @@ jobs:
             test_mercadona_protcinas_typo_retry.py \
             test_nutrition_label_reader_ocr_typos.py \
             test_nutrition_label_reader.py \
+            test_nutrition_label_reader_reversed_fat_no_unit.py \
             test_mercadona_ocr_safety_regressions.py \
             test_mercadona_preselected_three_of_four_variant_rescue.py \
             test_mercadona_near_safe_variant_rescue.py \
             test_nutrition_ocr_ensemble.py \
             test_label_image_preprocess.py
 
-      - name: Fresh OCR retry with exact standalone-label repair
+      - name: Fresh OCR retry with strict structural repairs
         working-directory: tools/catalog
         shell: bash
         run: |
@@ -178,6 +182,7 @@ jobs:
               row['live_detail_source_url'] = meta['live_detail_source_url']
               row['live_detail_observed_at'] = meta['live_detail_observed_at']
               row['protcinas_structural_label_repair'] = True
+              row['unitless_reversed_fat_structure_supported'] = True
               row['numeric_ocr_values_repaired'] = False
               row['acceptance_policy_changed'] = False
               row['cross_run_value_fusion'] = False
@@ -204,7 +209,7 @@ jobs:
               'target_product_id': '86395',
               'target_ean': meta['canonical_ean'],
               'target_image_url': meta['image_url'],
-              'repair_scope': 'EXACT_STANDALONE_PROTCINAS_ROW_LABEL_ONLY',
+              'repair_scope': 'EXACT_STANDALONE_PROTCINAS_PLUS_STRICT_UNITLESS_REVERSED_FAT_STRUCTURE',
               'numeric_ocr_values_repaired': False,
               'acceptance_policy_changed': False,
               'cross_run_value_fusion': False,
