@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.27"
+READER_VERSION = "1.4.28"
 
 
 @dataclass(frozen=True)
@@ -416,8 +416,50 @@ def _ambiguous_compact_energy_decimal(text: str) -> bool:
     return bool(re.search(r"(?<![\d.])0\d{1,3}\s*kcal\b", folded, flags=re.I))
 
 
+def _coherent_kj_kcal_pair(kj: float, kcal: float) -> bool:
+    """Accept an explicit energy pair only when the two printed units agree.
+
+    This is intentionally a structural guard, not an inference path. It lets us
+    retain a printed single-digit decimal kcal value such as `12 kJ / 2.9 kcal`
+    while rejecting OCR decimal-loss pairs such as `1278 kJ / 30.8 kcal`. The
+    absolute allowance covers ordinary label rounding at very low energies; the
+    relative allowance covers normal rounding at larger values.
+    """
+    if kj < 0 or kcal < 0:
+        return False
+    expected_kj = kcal * 4.184
+    tolerance_kj = max(2.0, expected_kj * 0.08)
+    return abs(kj - expected_kj) <= tolerance_kj
+
+
 def _energy_kcal(text: str) -> float | None:
     folded = _fold(text)
+    # An explicit printed kJ/kcal pair is stronger evidence than either unit in
+    # isolation. Parse the kcal token down to one integer digit only in this
+    # paired form, and require physical unit coherence before accepting it. This
+    # preserves fail-closed handling for a standalone `2.9 kcal` OCR token.
+    inline_pair = re.search(
+        r"(?P<kj>\d{1,5}(?:\.\d{1,2})?)\s*k\s*j\s*(?:[/\\|]\s*)?"
+        r"(?P<kcal>\d{1,4}(?:\.\d{1,2})?)\s*kcal\b",
+        folded,
+        flags=re.I,
+    )
+    if inline_pair:
+        kj = float(inline_pair.group("kj"))
+        kcal = float(inline_pair.group("kcal"))
+        return kcal if _coherent_kj_kcal_pair(kj, kcal) else None
+
+    reverse_inline_pair = re.search(
+        r"(?P<kcal>\d{1,4}(?:\.\d{1,2})?)\s*kcal\s*(?:[/\\|]\s*)?"
+        r"(?P<kj>\d{1,5}(?:\.\d{1,2})?)\s*k\s*j\b",
+        folded,
+        flags=re.I,
+    )
+    if reverse_inline_pair:
+        kj = float(reverse_inline_pair.group("kj"))
+        kcal = float(reverse_inline_pair.group("kcal"))
+        return kcal if _coherent_kj_kcal_pair(kj, kcal) else None
+
     # Some labels put the units in the heading and the values on the next line:
     # `Valor energético (kJ/kcal) 442/106`. In that exact layout the second
     # declared value is unambiguously kcal.
@@ -428,7 +470,9 @@ def _energy_kcal(text: str) -> float | None:
         flags=re.I,
     )
     if header_pair:
-        return float(header_pair.group(2))
+        kj = float(header_pair.group(1))
+        kcal = float(header_pair.group(2))
+        return kcal if _coherent_kj_kcal_pair(kj, kcal) else None
 
     patterns = [
         r"valor energetico[\s\S]{0,90}?(\d{2,4}(?:\.\d{1,2})?)\s*kcal",
@@ -553,6 +597,7 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
     # energy-coherent. A newly observed Mercadona failure mode leaves exactly one
     # macro in that reversed layout. Expose that one value only as REVIEW evidence:
     # it may help a later independent OCR family corroborate the field, but this
+    # parser must never promote the single reversed observation by itself.
     # parser must never promote the single reversed observation by itself.
     macro_patterns = {
         "fat_g": fat_patterns,
