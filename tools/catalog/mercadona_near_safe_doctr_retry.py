@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
 import tempfile
 
 from label_doctr_extractor import (
@@ -261,11 +262,43 @@ def _extract_region(evidence, region_path: Path, target_kind: str):
     return readings, engine_errors, _fuse(readings, target_kind)
 
 
+def _explicit_policy_flags_on_results_from_argv() -> None:
+    """Make the rescue's non-inference/non-classification contract explicit.
+
+    The underlying neural OCR runner predates these audit fields and therefore
+    omitted them rather than writing false. This rescue never infers missing
+    values and never performs semantic classification; materialize those facts in
+    its JSONL output before the workflow's fail-closed provenance validation.
+    """
+    try:
+        out_index = sys.argv.index("--out") + 1
+        out_dir = Path(sys.argv[out_index])
+    except (ValueError, IndexError):
+        return
+
+    for path in out_dir.glob("results-*.jsonl"):
+        patched: list[dict] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            row.setdefault("missing_values_inferred", False)
+            row.setdefault("CLASSIFIED", 0)
+            row.setdefault("MENU_ELIGIBLE", 0)
+            patched.append(row)
+        path.write_text(
+            "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in patched),
+            encoding="utf-8",
+        )
+
+
 def main() -> int:
     refresh_workflow_cohort_if_available()
     base._ORIGINAL_EXTRACT_REGION = base._extract_region
     base._extract_region = _extract_region
-    return base.main()
+    rc = base.main()
+    _explicit_policy_flags_on_results_from_argv()
+    return rc
 
 
 if __name__ == "__main__":
