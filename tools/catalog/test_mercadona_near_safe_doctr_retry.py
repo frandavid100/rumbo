@@ -45,6 +45,30 @@ Proteínas 2.6 g
         self.assertEqual(ensemble.corroborated_fields, 2)
         self.assertTrue(should_run_doctr_rescue(ensemble))
 
+    def test_routes_clean_three_of_four_missing_core_review(self):
+        partial = self._partial({"calories": 150, "fat_g": 6.1, "carbohydrate_g": 20})
+        ensemble = fuse_ocr_readings((
+            ParsedOCRReading("paddle", partial, .98, "paddleocr"),
+            ParsedOCRReading("tess", partial, .95, "tesseract"),
+        ))
+        self.assertEqual(ensemble.basis, "100_g")
+        self.assertEqual(ensemble.corroborated_fields, 3)
+        self.assertEqual(set(ensemble.nutrition or {}), {"calories", "fat_g", "carbohydrate_g"})
+        self.assertIn("MISSING_CORE:protein_g", ensemble.reasons)
+        self.assertTrue(should_run_doctr_rescue(ensemble))
+
+    def test_two_new_families_can_complete_missing_core_without_cross_run_fusion(self):
+        partial = self._partial({"calories": 150, "fat_g": 6.1, "carbohydrate_g": 20})
+        ensemble = fuse_ocr_readings((
+            ParsedOCRReading("paddle", partial, .98, "paddleocr"),
+            ParsedOCRReading("tess", partial, .95, "tesseract"),
+            ParsedOCRReading("easy", self._complete(), .96, "easyocr"),
+            ParsedOCRReading("doctr", self._complete(), .96, "doctr"),
+        ))
+        self.assertTrue(ensemble.declared_usable)
+        self.assertEqual(ensemble.corroborated_fields, 4)
+        self.assertGreaterEqual(ensemble.independent_engine_families, 4)
+
     def test_new_doctr_family_can_complete_existing_two_of_four_without_threshold_change(self):
         ensemble = fuse_ocr_readings((
             ParsedOCRReading("paddle", self._complete(), .98, "paddleocr"),
