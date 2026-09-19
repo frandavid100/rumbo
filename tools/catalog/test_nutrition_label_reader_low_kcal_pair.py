@@ -22,11 +22,11 @@ Sal 0.01 g
             "protein_g": 0.0,
         })
 
-    def test_incoherent_kj_kcal_pair_is_not_accepted_even_if_macros_fit_kcal(self):
+    def test_incoherent_single_digit_kj_kcal_pair_is_not_accepted_even_if_macros_fit_kcal(self):
         observed = """Información nutricional por 100 ml
-Valor energético 1278 kJ / 30.8 kcal
+Valor energético 127.8 kJ / 3.08 kcal
 Grasas 0 g
-Hidratos de carbono 7.7 g
+Hidratos de carbono 0.77 g
 Proteínas 0 g
 Sal 0.01 g
 """
