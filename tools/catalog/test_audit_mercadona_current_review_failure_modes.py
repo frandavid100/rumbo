@@ -52,8 +52,15 @@ def ensemble_attempt(
 
 
 class CurrentReviewFailureModesTest(unittest.TestCase):
-    def write_rows(self, root: Path, run_id: int, rows: list[dict]) -> None:
-        folder = root / f"{run_id}-123" / "unpacked"
+    def write_rows(
+        self,
+        root: Path,
+        run_id: int,
+        rows: list[dict],
+        *,
+        artifact_id: int = 123,
+    ) -> None:
+        folder = root / f"{run_id}-{artifact_id}" / "unpacked"
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "results.jsonl").write_text(
             "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
@@ -142,6 +149,44 @@ class CurrentReviewFailureModesTest(unittest.TestCase):
 
             blocked = files["complete-but-safety-blocked"]
             self.assertEqual([row["product_id"] for row in blocked], ["p2"])
+
+    def test_artifact_created_at_beats_numeric_run_id_for_latest_review(self) -> None:
+        """Rerun/run numbering must not disagree with canonical artifact chronology.
+
+        Reproduces the 84638 regression: an earlier DECLARED artifact can have a
+        numerically larger workflow run id than a later REVIEW artifact. The
+        failure-mode audit must select the later persisted artifact, exactly like
+        canonical reconciliation, instead of failing or reviving older nutrition.
+        """
+        complete = {"calories": 100, "protein_g": 10, "carbohydrate_g": 10, "fat_g": 2}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_rows(
+                root,
+                35417093808,
+                [raw_row("84638", status="DECLARED", nutrition=complete)],
+                artifact_id=10576537292,
+            )
+            self.write_rows(
+                root,
+                35417093754,
+                [raw_row("84638", attempts=[ensemble_attempt(nutrition=None, corroborated_fields=0, families=0)])],
+                artifact_id=10576348311,
+            )
+            summary = {
+                "latest_status_counts": {"DECLARED": 0, "REVIEW": 1},
+                "latest_status_product_ids": {"REVIEW": ["84638"]},
+            }
+            chronology = {
+                "35417093808-10576537292": "2026-09-19T03:04:21Z",
+                "35417093754-10576348311": "2026-09-19T03:16:03Z",
+            }
+
+            result, files = build_audit(root, summary, artifact_created_at=chronology)
+
+            self.assertEqual(result["chronology_mode"], "GITHUB_ARTIFACT_CREATED_AT")
+            self.assertEqual(result["latest_review_products"], 1)
+            self.assertEqual(files["reasonless-review"][0]["latest_raw_run_id"], 35417093754)
 
     def test_ambiguous_multiple_columns_blocks_safe_shape(self) -> None:
         complete = {"calories": 100, "protein_g": 10, "carbohydrate_g": 10, "fat_g": 2}
