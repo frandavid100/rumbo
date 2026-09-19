@@ -47,7 +47,7 @@ jobs:
                   continue
               row['_latest_raw_run_path'] = run_path
               candidates.append(row)
-'''
+          '''
           new = '''              if 'doctr' in run_path.lower() or run_path == THIS_WORKFLOW:
                   # A prior docTR observation blocks an identical retry, but not a
                   # materially newer retry implementation. Compare the exact blob
@@ -93,7 +93,7 @@ jobs:
                   row['_current_retry_impl_blob'] = current_retry_impl_blob
               row['_latest_raw_run_path'] = run_path
               candidates.append(row)
-'''
+          '''
           if old not in text:
               raise SystemExit('Expected worker retry-policy block not found; refusing unsafe patch')
           text = text.replace(old, new, 1)
