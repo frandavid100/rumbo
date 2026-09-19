@@ -1,0 +1,235 @@
+name: Catalog Mercadona Protcinas OCR regression pilot
+
+# Targeted live validation of one systematic OCR row-label failure observed in
+# the prior high-yield retry: EasyOCR repeatedly read the printed Proteinas row
+# as the standalone token `Protcinas`.  Only that exact standalone row label is
+# repaired; numeric OCR, safety gates and DECLARED acceptance remain unchanged.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-protcinas-ocr-regression-pilot.yml'
+      - 'tools/catalog/mercadona_protcinas_typo_retry.py'
+      - 'tools/catalog/test_mercadona_protcinas_typo_retry.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-protcinas-ocr-regression-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run parser regression tests before OCR
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_protcinas_typo_retry.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Revalidate exact first-party identity and perspective-9 image
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          product_id = '86395'
+          expected_ean = '8402001047039'
+          expected_image = 'https://prod-mercadona.imgix.net/images/bdc3ece27c0fe7224fd5be97b7c02fc6.jpg?fit=crop&h=3600&w=3600'
+
+          observed_at = _now()
+          payload, source_url = _get_json(product_id, timeout=20.0)
+          current = normalize(payload, source_url=source_url, observed_at=observed_at)
+          current_ean = str(current.get('ean') or '').strip()
+          if current_ean != expected_ean:
+              raise SystemExit(f'identity mismatch: expected {expected_ean}, current {current_ean}')
+
+          photos = current.get('photos') if isinstance(current.get('photos'), list) else []
+          match = next((
+              (idx, photo) for idx, photo in enumerate(photos)
+              if isinstance(photo, dict)
+              and str(photo.get('zoom') or '') == expected_image
+              and str(photo.get('perspective') or '') == '9'
+          ), None)
+          if match is None:
+              raise SystemExit('exact historical first-party perspective=9 image is no longer present')
+
+          image_index, photo = match
+          routed = dict(photo)
+          routed['perspective'] = 9
+          current = dict(current)
+          current['photos'] = [routed]
+          current['_protcinas_pilot_meta'] = {
+              'canonical_ean': expected_ean,
+              'current_ean': current_ean,
+              'image_url': expected_image,
+              'current_photo_index': image_index,
+              'current_photo_perspective': photo.get('perspective'),
+              'identity_basis': 'EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN',
+              'image_selection_basis': 'EXACT_PRIOR_REVIEW_IMAGE_URL_MATCHED_CURRENT_MERCADONA_API_PERSPECTIVE_9',
+              'live_detail_source_url': source_url,
+              'live_detail_observed_at': observed_at,
+          }
+          Path('protcinas-live-target.jsonl').write_text(
+              json.dumps(current, ensure_ascii=False, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(current['_protcinas_pilot_meta'], ensure_ascii=False, indent=2))
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' \
+            'easyocr>=1.7,<1.8' \
+            opencv-python-headless Pillow
+
+      - name: Fresh OCR retry with exact standalone-label repair
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=mercadona-protcinas-ocr-regression-pilot
+          mkdir -p "$out"
+          set +e
+          python mercadona_protcinas_typo_retry.py \
+            --products protcinas-live-target.jsonl \
+            --out "$out" \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 \
+            --eligibility-mode p9-no-ingredients-all
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+
+      - name: Attach audit metadata and validate fail-closed contract
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          root = Path('mercadona-protcinas-ocr-regression-pilot')
+          target = json.loads(Path('protcinas-live-target.jsonl').read_text(encoding='utf-8'))
+          meta = target['_protcinas_pilot_meta']
+          result_files = sorted(root.glob('results-*.jsonl'))
+          if len(result_files) != 1:
+              raise SystemExit(f'expected one result file, got {result_files}')
+
+          rows = []
+          for line in result_files[0].read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              if str(row.get('product_id') or '') != '86395':
+                  raise SystemExit(f'unexpected product {row.get("product_id")}')
+              if str(row.get('ean') or '') != meta['canonical_ean']:
+                  raise SystemExit('result EAN mismatch')
+              if str(row.get('image_url') or '') != meta['image_url']:
+                  raise SystemExit('result image mismatch')
+
+              row['canonical_ean'] = meta['canonical_ean']
+              row['current_ean'] = meta['current_ean']
+              row['identity_basis'] = meta['identity_basis']
+              row['image_index'] = meta['current_photo_index']
+              row['perspective'] = 9
+              row['image_selection_basis'] = meta['image_selection_basis']
+              row['live_detail_source_url'] = meta['live_detail_source_url']
+              row['live_detail_observed_at'] = meta['live_detail_observed_at']
+              row['protcinas_structural_label_repair'] = True
+              row['numeric_ocr_values_repaired'] = False
+              row['acceptance_policy_changed'] = False
+              row['cross_run_value_fusion'] = False
+              row['historical_partial_values_usable'] = False
+              row['missing_values_inferred'] = False
+              row['redistribution_allowed'] = False
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  raise SystemExit('unexpected evidence level')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  raise SystemExit('unexpected first-party source metadata')
+              rows.append(row)
+
+          result_files[0].write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows),
+              encoding='utf-8',
+          )
+          statuses = {}
+          for row in rows:
+              statuses[row['status']] = statuses.get(row['status'], 0) + 1
+          summary = {
+              'processed': len(rows),
+              'status_counts': statuses,
+              'declared_product_ids': [str(row['product_id']) for row in rows if row.get('status') == 'DECLARED'],
+              'target_product_id': '86395',
+              'target_ean': meta['canonical_ean'],
+              'target_image_url': meta['image_url'],
+              'repair_scope': 'EXACT_STANDALONE_PROTCINAS_ROW_LABEL_ONLY',
+              'numeric_ocr_values_repaired': False,
+              'acceptance_policy_changed': False,
+              'cross_run_value_fusion': False,
+              'historical_partial_values_usable': False,
+              'missing_values_inferred': False,
+              'images_persisted': False,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          (root / 'pilot-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+
+          # Keep a minimal staging DB next to JSONL for auditability.
+          db = sqlite3.connect(root / 'staging.sqlite')
+          db.execute('CREATE TABLE IF NOT EXISTS observations (product_id TEXT PRIMARY KEY, ean TEXT, status TEXT, payload_json TEXT NOT NULL)')
+          for row in rows:
+              db.execute(
+                  'INSERT OR REPLACE INTO observations VALUES (?, ?, ?, ?)',
+                  (str(row['product_id']), str(row.get('ean') or ''), str(row.get('status') or ''), json.dumps(row, ensure_ascii=False, sort_keys=True)),
+              )
+          db.commit(); db.close()
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+
+          if find mercadona-protcinas-ocr-regression-pilot -type f \
+            \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | grep -q .; then
+            echo 'Image persistence is forbidden' >&2
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-current-three-of-four-live-verified-variants
+          path: tools/catalog/mercadona-protcinas-ocr-regression-pilot/
+          if-no-files-found: error
+          retention-days: 90
