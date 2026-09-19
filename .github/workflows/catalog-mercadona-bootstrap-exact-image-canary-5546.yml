@@ -1,0 +1,56 @@
+name: Catalog Mercadona bootstrap exact-image canary 5546
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-bootstrap-exact-image-canary-5546.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+      - name: Materialize guarded 5546 canary from audited 86288 template
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          src = Path('.github/workflows/catalog-mercadona-current-exact-image-canary-86288.yml')
+          dst = Path('.github/workflows/catalog-mercadona-current-exact-image-canary-5546.yml')
+          text = src.read_text(encoding='utf-8')
+          text = text.replace('86288', '5546')
+          text = text.replace("missing == ['fat_g']", "missing == ['calories']")
+          text = text.replace('MISSING_FAT_G', 'MISSING_CALORIES')
+          text = text.replace('Bounded canary for the strongest remaining current 3/4 REVIEW row.', 'Parser-fix canary for the exact current 3/4 REVIEW row missing calories.')
+          if "missing == ['calories']" not in text or "pid = '5546'" not in text:
+              raise SystemExit('template substitution invariant failed')
+          dst.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit canary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/catalog-mercadona-current-exact-image-canary-5546.yml
+          git commit -m 'Catalog: add exact-current-image canary for Mercadona 5546'
+          git push origin HEAD:agent/catalog-phase1
+      - name: Dispatch materialized canary explicitly
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if gh api -X POST \
+              '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-exact-image-canary-5546.yml/dispatches' \
+              -f ref='agent/catalog-phase1'; then
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
