@@ -8,7 +8,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.4"
+ENSEMBLE_VERSION = "1.3.5"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -122,6 +122,50 @@ def _bounded_core_fields(reading: ParsedOCRReading) -> set[str]:
     return bounded
 
 
+def _anchored_single_digit_kcal(text: str) -> float | None:
+    """Recover an exact one-digit kcal cell only from an unambiguous energy row.
+
+    The generic label parser deliberately requires at least two kcal digits to
+    avoid package-text false positives. Real Mercadona labels can legitimately
+    declare e.g. `3 kcal / 100 ml`. At ensemble level we can recover that value
+    more safely because it still needs independent OCR-family corroboration.
+
+    The rescue is intentionally narrow: the value must occur after an explicit
+    `Valor energético`/`Energía` anchor and before the next core nutrient row.
+    If that energy span contains two one-digit kcal values (parallel columns such
+    as the observed `2 kcal` / `6 kcal` labels), or different anchored readings
+    in the same OCR text disagree, the observation remains ambiguous.
+    """
+    folded = _fold_ocr_text(text)
+    if not folded:
+        return None
+    anchors = list(re.finditer(r"(?:valor\s+energetico|energia)\b", folded, flags=re.I))
+    if not anchors:
+        return None
+
+    observed: list[float] = []
+    next_core = re.compile(
+        r"(?:^|\n)\s*[\[|]?\s*(?:grasas?|lipidos?|grasa\s+total|"
+        r"hidratos?|carbohidratos?|proteinas?|prote_nas?|sal)\b",
+        flags=re.I,
+    )
+    single_kcal = re.compile(r"(?<![\d.])(\d)(?![\d.])\s*kcal\b", flags=re.I)
+    for anchor in anchors:
+        tail = folded[anchor.end():anchor.end() + 180]
+        stop = next_core.search(tail)
+        if stop:
+            tail = tail[:stop.start()]
+        tokens = single_kcal.findall(tail)
+        if len(tokens) > 1:
+            return None
+        if len(tokens) == 1:
+            observed.append(float(tokens[0]))
+
+    if not observed or len(set(observed)) != 1:
+        return None
+    return observed[0]
+
+
 def _field_candidates(readings: Iterable[ParsedOCRReading], field: str):
     out = []
     for reading in readings:
@@ -136,6 +180,8 @@ def _field_candidates(readings: Iterable[ParsedOCRReading], field: str):
         if field in _bounded_core_fields(reading):
             continue
         value = result.nutrition.get(field)
+        if field == "calories" and not isinstance(value, (int, float)):
+            value = _anchored_single_digit_kcal(result.normalized_text)
         if isinstance(value, (int, float)):
             out.append((float(value), confidence, reading.strategy, reading.family))
     return out
