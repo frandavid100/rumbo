@@ -1,0 +1,35 @@
+name: Catalog Mercadona missing-one dual-family supervisor
+
+# Keep the bounded missing-one rescue aligned with implementation changes.
+# The worker workflow intentionally selects and live-revalidates its cohort from
+# the latest strict residual audit; this supervisor only dispatches that worker
+# when its dual-family retry implementation or regression test changes.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - 'tools/catalog/mercadona_near_safe_doctr_retry.py'
+      - 'tools/catalog/test_mercadona_near_safe_doctr_retry.py'
+      - '.github/workflows/catalog-mercadona-missing-one-core-dual-family-supervisor.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-missing-one-dual-family-supervisor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Dispatch bounded current-state worker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-missing-one-core-doctr-rescue.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
