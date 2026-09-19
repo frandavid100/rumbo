@@ -1,0 +1,129 @@
+{
+  "merchant": "MERCADONA",
+  "scope": "historical_first_party_cut_2026-08-27",
+  "audit_run_id": 35440980873,
+  "audit_artifact": {
+    "name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10583997190,
+    "sha256": "ebf02ee2274ed7a30c97b885bed6cab0278b05472f9c17e43d3e937ac4ec3791"
+  },
+  "historical_cut": {
+    "product_count": 4280,
+    "manifest_sha256": "7ab25357d2815bd976c7a8d666a94948364547a593eea2ab3d4f4e4b29daffdf"
+  },
+  "ocr_union": {
+    "processed_products": 2969,
+    "processed_coverage_pct": 69.3692,
+    "declared_products": 374,
+    "review_products": 2595,
+    "complete_nutrition_products": 374,
+    "complete_nutrition_coverage_pct": 8.7383,
+    "macro_coverage": {
+      "calories": 374,
+      "fat": 374,
+      "carbohydrates": 374,
+      "protein": 374
+    }
+  },
+  "latest_successful_fresh_rescue": {
+    "run_id": 35440324352,
+    "artifact_id": 10583696916,
+    "sha256": "4fea4d069451c469ead2adf05cbf3a2d2c55deaebe7cb1b5ec7dc5ede6a2bce6",
+    "processed": 5,
+    "declared": 3,
+    "review": 2,
+    "declared_product_ids": [
+      "27487",
+      "27488",
+      "60671"
+    ],
+    "declared_examples": {
+      "27487": {
+        "name": "Tónica Zero Schweppes",
+        "basis": "100_ml",
+        "calories": 2,
+        "fat_g": 0,
+        "carbohydrate_g": 0,
+        "protein_g": 0
+      },
+      "27488": {
+        "name": "Tónica Zero Schweppes",
+        "basis": "100_ml",
+        "calories": 2,
+        "fat_g": 0,
+        "carbohydrate_g": 0,
+        "protein_g": 0
+      },
+      "60671": {
+        "name": "Infusión Menta Poleo Hacendado",
+        "basis": "100_ml",
+        "calories": 3,
+        "fat_g": 0,
+        "carbohydrate_g": 0,
+        "protein_g": 0
+      }
+    },
+    "acceptance_policy_changed": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false,
+    "historical_partial_values_usable": false,
+    "historical_image_url_usable_as_evidence": false,
+    "fresh_observation_must_recover_all_four": true,
+    "images_persisted": false,
+    "missing_values_inferred": false
+  },
+  "current_review_failure_modes": {
+    "total_review": 2595,
+    "explicit_100_basis": 588,
+    "missing_explicit_100_basis": 2007,
+    "field_count_distribution": {
+      "0": 2026,
+      "1": 110,
+      "2": 167,
+      "3": 246,
+      "4": 46
+    },
+    "near_safe_complete": 2,
+    "fully_corroborated_but_still_review": 0,
+    "complete_safety_blocked": 8,
+    "three_of_four_explicit_basis_unblocked": 72,
+    "three_of_four_missing_field_counts": {
+      "calories": 3,
+      "carbohydrate_g": 29,
+      "fat_g": 20,
+      "protein_g": 20
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 46,
+      "2": 24,
+      "3": 2
+    }
+  },
+  "historical_unprocessed_residual": {
+    "residual_products": 1311,
+    "candidate_count": 0,
+    "food_signature_count": 0,
+    "alcohol_deferred_count": 11,
+    "outside_scope_or_no_food_signature_count": 1300,
+    "perspective_9_count": 1298,
+    "no_perspective_9_count": 13
+  },
+  "integrity": {
+    "identity_conflicts": 0,
+    "identity_unverified": 0,
+    "identity_unresolved": 0,
+    "processed_without_canonical_state": 0
+  },
+  "provenance_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "notes": [
+    "The latest strict canonical count is 374 DECLARED after three fresh current-p9 rescues were reconciled chronologically.",
+    "No unprocessed food-signature candidates remain in the fixed historical cut; further gains must come from conservative REVIEW rescue.",
+    "The current REVIEW queue contains 72 explicit-basis, unblocked 3/4 diagnostic candidates; historical partial values remain routing diagnostics only."
+  ]
+}
