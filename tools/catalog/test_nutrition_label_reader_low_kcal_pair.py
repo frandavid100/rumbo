@@ -48,6 +48,48 @@ Sal 0.01 g
         self.assertIsNone((r.nutrition or {}).get("calories"), r)
         self.assertIn("MISSING_CORE:calories", r.reasons)
 
+    def test_parallel_per_100_and_serving_energy_columns_are_explicitly_blocked(self):
+        observed = """Información nutricional
+250 ml
+100 ml
+Valor
+30 kJ
+12 kJ
+Energético
+7.2 kcal
+2.9 kcal
+Grasas
+0.0 g
+0.0 g
+Hidratos de Carbono
+0.2 g
+0.1 g
+Proteínas
+0.0 g
+0.0 g
+Sal
+0.23 g
+0.09 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertEqual(r.basis, "100_ml")
+        self.assertIsNone(r.nutrition)
+        self.assertIn("MULTIPLE_NUTRITION_COLUMNS", r.reasons)
+
+    def test_post_table_package_quantity_does_not_create_parallel_column(self):
+        observed = """Información nutricional por 100 ml
+Valor energético 12 kJ / 2.9 kcal
+Grasas 0 g
+Hidratos de carbono 0.1 g
+Proteínas 0 g
+Sal 0.01 g
+250 ml
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "DECLARED", r)
+        self.assertNotIn("MULTIPLE_NUTRITION_COLUMNS", r.reasons)
+
 
 if __name__ == "__main__":
     unittest.main()
