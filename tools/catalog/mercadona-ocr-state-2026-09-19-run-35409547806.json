@@ -1,0 +1,96 @@
+{
+  "merchant": "MERCADONA",
+  "scope": "historical_first_party_cut_2026-08-27",
+  "audit_run_id": 35409547806,
+  "audit_artifact": {
+    "name": "mercadona-current-ocr-residual-audit-35409547806",
+    "artifact_id": 10574931243,
+    "sha256": "8d608341ed039769405184103abb474532a209e1b9a2a04d80cfdb916094499c"
+  },
+  "historical_cut": {
+    "product_count": 4280,
+    "manifest_sha256": "7ab25357d2815bd976c7a8d666a94948364547a593eea2ab3d4f4e4b29daffdf"
+  },
+  "ocr_union": {
+    "artifact_count": 824,
+    "run_count": 92,
+    "observation_count": 25035,
+    "processed_products": 2969,
+    "processed_coverage_pct": 69.3691588785,
+    "declared_products": 371,
+    "review_products": 2598,
+    "complete_nutrition_products": 371,
+    "complete_nutrition_coverage_pct": 8.6682242991,
+    "macro_coverage": {
+      "calories": 371,
+      "fat": 371,
+      "carbohydrates": 371,
+      "protein": 371
+    }
+  },
+  "historical_transition_audit": {
+    "ever_declared_products": 394,
+    "latest_review_after_historical_declared": 23,
+    "latest_review_reason_counts": {
+      "no_explicit_single_100g_or_100ml_basis": 16,
+      "ambiguous_multi_value_rows": 4,
+      "energy_macro_inconsistent": 2,
+      "low_confidence_ocr": 1
+    },
+    "canonical_policy": "latest_observation_wins_and_latest_review_does_not_inherit_older_declared_nutrition"
+  },
+  "current_review_failure_modes": {
+    "total_review": 2598,
+    "explicit_100_basis": 606,
+    "missing_explicit_100_basis": 1992,
+    "field_count_distribution": {
+      "0": 2003,
+      "1": 131,
+      "2": 107,
+      "3": 83,
+      "4": 274
+    },
+    "complete_rows": 274,
+    "complete_safety_blocked": 269,
+    "near_safe_complete": 5,
+    "three_of_four_explicit_basis_unblocked": 83
+  },
+  "historical_unprocessed_residual": {
+    "candidate_count": 0,
+    "food_signature_count": 0,
+    "alcohol_deferred_count": 11,
+    "outside_scope_or_no_food_signature_count": 1300,
+    "perspective_9_count": 1298,
+    "no_perspective_9_count": 13,
+    "methodology": "historical_membership_revalidated_live_2026-09-18_no_structured_ingredients_or_food_signature"
+  },
+  "excluded_current_live_data": {
+    "artifact_count": 6,
+    "observation_count": 66,
+    "historical_membership_mentions": 64,
+    "included_in_historical_canonical": false
+  },
+  "integrity": {
+    "identity_conflicts": 0,
+    "identity_unverified": 0,
+    "identity_unresolved": 0,
+    "processed_without_canonical_state": 0,
+    "source_violations": 0,
+    "evidence_violations": 0,
+    "redistribution_violations": 0,
+    "classified_violations": 0,
+    "menu_eligible_violations": 0
+  },
+  "provenance_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "notes": [
+    "This audit is an authoritative strict re-baseline over the fixed 4,280-product historical cut.",
+    "The effective canonical count is 371 DECLARED, not the previously reported 374, because 23 products with older DECLARED observations have newer valid REVIEW observations under the strict latest-observation policy.",
+    "No unprocessed food-signature candidates remain in the fixed historical cut; further gains must come from conservative REVIEW rescue."
+  ]
+}
