@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.29"
+READER_VERSION = "1.4.30"
 
 
 @dataclass(frozen=True)
@@ -520,6 +520,52 @@ def _basis_heading_count(text: str) -> int:
     return len(explicit) + len(standalone)
 
 
+def _parallel_per100_serving_energy_columns(text: str) -> bool:
+    """Reject an OCR-linearized per-100 plus per-serving energy table.
+
+    A Mercadona beverage label exposed adjacent standalone `100 ml` and
+    `250 ml` headings followed by two printed kJ/kcal values. The row-oriented
+    parser must not choose one column or combine cells. Require both adjacent
+    quantity headings *and* duplicated printed energy values, so an ordinary
+    package quantity elsewhere on the label cannot trigger this guard.
+    """
+    folded = _fold(text)
+    lines = folded.splitlines()
+    heading_re = re.compile(
+        r"^\s*(\d{1,4}(?:\.\d{1,2})?)\s*(g|9|q|yg|y|m(?:l|i|1))\s*$",
+        flags=re.I,
+    )
+    headings: list[tuple[int, float, str]] = []
+    for index, line in enumerate(lines):
+        match = heading_re.match(line)
+        if not match:
+            continue
+        quantity = float(match.group(1))
+        raw_unit = match.group(2).lower()
+        unit = "ml" if raw_unit.startswith("m") else "g"
+        headings.append((index, quantity, unit))
+
+    for left_pos, left_quantity, left_unit in headings:
+        for right_pos, right_quantity, right_unit in headings:
+            if right_pos <= left_pos or right_pos - left_pos > 2:
+                continue
+            if left_unit != right_unit:
+                continue
+            quantities = {left_quantity, right_quantity}
+            if 100.0 not in quantities or len(quantities) != 2:
+                continue
+            window = "\n".join(lines[left_pos:min(len(lines), right_pos + 10)])
+            kcal_values = re.findall(
+                r"(?<![\d.])\d{1,4}(?:\.\d{1,2})?\s*kcal\b", window, flags=re.I
+            )
+            kj_values = re.findall(
+                r"(?<![\d.])\d{1,5}(?:\.\d{1,2})?\s*k\s*j\b", window, flags=re.I
+            )
+            if len(kcal_values) >= 2 or len(kj_values) >= 2:
+                return True
+    return False
+
+
 def _plausible(n: dict[str, float]) -> tuple[bool, list[str]]:
     reasons: list[str] = []
     for key in ("fat_g", "carbohydrate_g", "protein_g"):
@@ -554,7 +600,7 @@ def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> La
                                ("INSUFFICIENT_NUTRITION_MARKERS",), normalized)
 
     block = _nutrition_block(normalized)
-    if _basis_heading_count(block) > 1:
+    if _basis_heading_count(block) > 1 or _parallel_per100_serving_energy_columns(block):
         return LabelReadResult(
             "REVIEW", _basis(block), None, min(extraction_confidence, .65),
             ("MULTIPLE_NUTRITION_COLUMNS",), normalized,
