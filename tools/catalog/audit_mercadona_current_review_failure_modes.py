@@ -12,6 +12,7 @@ from summarize_mercadona_ocr_run_union import (
     SOURCE_RECORD_KIND,
     VALID,
     canonical_exclusion_reason,
+    load_artifact_created_at,
 )
 
 CORE_FIELDS = ("calories", "protein_g", "carbohydrate_g", "fat_g")
@@ -25,6 +26,17 @@ def _run_id(path: Path, root: Path) -> int | None:
     first = rel.parts[0]
     token = first.split("-", 1)[0]
     return int(token) if token.isdigit() else None
+
+
+def _artifact_key(path: Path, root: Path) -> str | None:
+    rel = path.relative_to(root)
+    if not rel.parts:
+        return None
+    first = rel.parts[0]
+    parts = first.split("-", 1)
+    if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
+        return None
+    return first
 
 
 def _load_rows(path: Path) -> Iterable[dict[str, Any]]:
@@ -259,18 +271,39 @@ def _candidate_payload(
     }
 
 
-def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
+def build_audit(
+    root: Path,
+    run_union_summary: dict[str, Any],
+    *,
+    artifact_created_at: dict[str, str] | None = None,
+) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
     expected_ids = {str(value) for value in run_union_summary.get("latest_status_product_ids", {}).get("REVIEW", [])}
     expected_count = int(run_union_summary.get("latest_status_counts", {}).get("REVIEW", len(expected_ids)))
     if expected_count != len(expected_ids):
         raise ValueError(f"run-union REVIEW count/id mismatch: count={expected_count}, ids={len(expected_ids)}")
 
-    by_product_run: dict[str, dict[int, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
+    # Production reconciliation is ordered by immutable GitHub artifact created_at,
+    # not numeric workflow run id: reruns retain their original run id but create a
+    # genuinely newer persisted artifact. Unit callers may omit the chronology map
+    # to retain deterministic legacy run-id fixtures.
+    by_product_batch: dict[str, dict[str | int, list[tuple[int, dict[str, Any]]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     excluded = Counter()
     for path in sorted(root.rglob("*.jsonl")):
         run_id = _run_id(path, root)
         if run_id is None:
             continue
+        if artifact_created_at is not None:
+            artifact_key = _artifact_key(path, root)
+            if artifact_key is None:
+                raise ValueError(f"cannot resolve artifact key for raw OCR path: {path}")
+            created_at = artifact_created_at.get(artifact_key)
+            if created_at is None:
+                raise ValueError(f"missing artifact created_at chronology for {artifact_key}")
+            batch: str | int = created_at
+        else:
+            batch = run_id
         for row in _load_rows(path):
             product_id = str(row.get("product_id") or "")
             status = str(row.get("status") or "")
@@ -280,17 +313,19 @@ def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str
             if reason:
                 excluded[reason] += 1
                 continue
-            by_product_run[product_id][run_id].append(row)
+            by_product_batch[product_id][batch].append((run_id, row))
 
-    missing = sorted(expected_ids - set(by_product_run))
+    missing = sorted(expected_ids - set(by_product_batch))
     if missing:
         raise ValueError(f"missing latest raw rows for {len(missing)} expected REVIEW products: {missing[:10]}")
 
     latest_review: dict[str, tuple[int, list[dict[str, Any]]]] = {}
     for product_id in sorted(expected_ids):
-        by_run = by_product_run[product_id]
-        latest_run = max(by_run)
-        rows = by_run[latest_run]
+        by_batch = by_product_batch[product_id]
+        latest_batch = max(by_batch)
+        observations = by_batch[latest_batch]
+        rows = [row for _, row in observations]
+        latest_run = max(run_id for run_id, _ in observations)
         statuses = {str(row.get("status") or "") for row in rows}
         if statuses != {"REVIEW"}:
             raise ValueError(
@@ -382,13 +417,15 @@ def build_audit(root: Path, run_union_summary: dict[str, Any]) -> tuple[dict[str
 
     result = {
         "audit_policy": (
-            "Latest raw-live exact-evidence REVIEW failure-mode census. Replay wrappers and prior canonical materializations "
-            "are excluded. Diagnostic extraction values are never promoted or made usable. A near-safe diagnostic shape "
-            "requires all four core values, explicit 100 g/100 ml basis, at least two independent OCR engine families, "
-            "and no hard OCR field/basis conflict, energy-macro incoherence, or ambiguous/multiple-column table signal. "
-            "Three-of-four rows with explicit basis and no hard blocker are exposed only as fresh-retry candidates; their "
-            "missing value is never inferred and their historical partial tuple is never made usable."
+            "Latest raw-live exact-evidence REVIEW failure-mode census. Production chronology is GitHub artifact created_at, "
+            "matching canonical reconciliation even when reruns retain an older numeric workflow run id. Replay wrappers and "
+            "prior canonical materializations are excluded. Diagnostic extraction values are never promoted or made usable. "
+            "A near-safe diagnostic shape requires all four core values, explicit 100 g/100 ml basis, at least two independent "
+            "OCR engine families, and no hard OCR field/basis conflict, energy-macro incoherence, or ambiguous/multiple-column "
+            "table signal. Three-of-four rows with explicit basis and no hard blocker are exposed only as fresh-retry candidates; "
+            "their missing value is never inferred and their historical partial tuple is never made usable."
         ),
+        "chronology_mode": "GITHUB_ARTIFACT_CREATED_AT" if artifact_created_at is not None else "LEGACY_RUN_ID",
         "source": f"{SOURCE}/{SOURCE_RECORD_KIND}",
         "evidence_level": EVIDENCE,
         "redistribution_allowed": False,
@@ -441,8 +478,19 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
-    summary = json.loads(Path(args.run_union_summary).read_text(encoding="utf-8"))
-    result, files = build_audit(Path(args.root), summary)
+    summary_path = Path(args.run_union_summary)
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    artifacts_tsv = summary_path.with_name("artifacts.tsv")
+    artifact_created_at = load_artifact_created_at(artifacts_tsv)
+    if not artifact_created_at:
+        raise ValueError(
+            f"artifact chronology is required for production REVIEW audit but was unavailable: {artifacts_tsv}"
+        )
+    result, files = build_audit(
+        Path(args.root),
+        summary,
+        artifact_created_at=artifact_created_at,
+    )
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "summary.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
