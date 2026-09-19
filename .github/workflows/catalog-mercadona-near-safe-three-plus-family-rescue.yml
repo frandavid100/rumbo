@@ -1,0 +1,308 @@
+name: Catalog Mercadona near-safe 3-of-4 multi-family rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-near-safe-three-plus-family-rescue.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-near-safe-three-plus-family-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PADDLE_PDX_MODEL_SOURCE: BOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve latest strict canonical audit
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          mkdir -p /tmp/canonical-audit
+          gh run download "$run_id" -n mercadona-current-ocr-residual-audit -D /tmp/canonical-audit
+
+      - name: Build exact-EAN exact-current-p9 bounded cohort
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
+          diagnostic = Path('/tmp/canonical-audit/current-review-failure-modes/near-safe-complete-review.jsonl')
+          targets = []
+          for line in diagnostic.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              values = row.get('diagnostic_candidate_values') or {}
+              if (
+                  row.get('canonical_status') == 'REVIEW'
+                  and int(row.get('corroborated_fields') or 0) == 3
+                  and int(row.get('independent_engine_families') or 0) >= 3
+                  and row.get('basis') in {'100_g', '100_ml'}
+                  and all(values.get(field) is not None for field in CORE)
+                  and not (row.get('safety_blockers') or [])
+                  and str(row.get('product_id') or '')
+                  and str(row.get('ean') or '')
+                  and str(row.get('image_url') or '')
+              ):
+                  targets.append(row)
+          targets.sort(key=lambda r: str(r.get('product_id') or ''))
+          if not targets:
+              raise SystemExit('No current clean 3-of-4 REVIEW target with >=3 OCR families')
+
+          selected = []
+          rejected = []
+          for old in targets:
+              pid = str(old['product_id'])
+              anchor_ean = str(old['ean']).strip()
+              anchor_url = str(old['image_url'])
+              observed_at = _now()
+              try:
+                  payload, source_url = _get_json(pid, timeout=20.0)
+                  current = normalize(payload, source_url=source_url, observed_at=observed_at)
+              except Exception as exc:
+                  rejected.append({'product_id': pid, 'reason': f'LIVE_ERROR:{type(exc).__name__}:{exc}'})
+                  continue
+              current_ean = str(current.get('ean') or '').strip()
+              if not current_ean or current_ean != anchor_ean:
+                  rejected.append({'product_id': pid, 'reason': 'EAN_MISMATCH', 'current_ean': current_ean})
+                  continue
+              photos = current.get('photos') if isinstance(current.get('photos'), list) else []
+              matches = [
+                  (idx, photo) for idx, photo in enumerate(photos)
+                  if isinstance(photo, dict)
+                  and str(photo.get('perspective') or '') == '9'
+                  and str(photo.get('zoom') or '') == anchor_url
+              ]
+              if len(matches) != 1:
+                  rejected.append({'product_id': pid, 'reason': 'EXACT_CURRENT_P9_IMAGE_MISMATCH', 'matches': len(matches)})
+                  continue
+              image_index, photo = matches[0]
+              candidate = dict(current)
+              candidate['photos'] = [dict(photo)]
+              candidate['_multi_family_rescue_meta'] = {
+                  'image_url': anchor_url,
+                  'image_index': image_index,
+                  'perspective': 9,
+                  'canonical_ean': anchor_ean,
+                  'current_ean': current_ean,
+                  'canonical_latest_raw_run_id': old.get('latest_raw_run_id'),
+                  'canonical_corroborated_fields': old.get('corroborated_fields'),
+                  'canonical_engine_families': old.get('independent_engine_families'),
+                  'canonical_values_diagnostic_only': old.get('diagnostic_candidate_values'),
+                  'canonical_values_usable': False,
+                  'identity_basis': 'EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN',
+                  'image_basis': 'EXACT_CANONICAL_IMAGE_URL_EQUALS_CURRENT_FIRST_PARTY_PERSPECTIVE_9_URL',
+                  'live_detail_source_url': source_url,
+                  'live_detail_observed_at': observed_at,
+              }
+              selected.append(candidate)
+
+          if not selected:
+              raise SystemExit(f'No target survived exact live identity/image verification: {rejected}')
+          with_i = [row for row in selected if row.get('ingredients')]
+          without_i = [row for row in selected if not row.get('ingredients')]
+          Path('three-plus-with-ingredients.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in with_i), encoding='utf-8')
+          Path('three-plus-without-ingredients.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in without_i), encoding='utf-8')
+          summary = {
+              'canonical_audit_run_id': int('${{ steps.audit.outputs.run_id }}'),
+              'inventory_products': 4280,
+              'current_clean_three_of_four_multi_family_targets': len(targets),
+              'selected': len(selected),
+              'selected_product_ids': [str(row.get('product_id')) for row in selected],
+              'rejected': rejected,
+              'selection_policy': 'CURRENT_COMPLETE_CORE_REVIEW; 3_OF_4_FIELDS_CORROBORATED; >=3_INDEPENDENT_OCR_FAMILIES; EXPLICIT_100G_100ML; NO_SAFETY_BLOCKER; EXACT_LIVE_EAN; EXACT_SAME_CURRENT_FIRST_PARTY_P9_IMAGE',
+              'purpose': 'FRESH_STANDALONE_RETRY_AFTER_BOUNDED_DOCTR_ROW_LABEL_REPAIR; NO_HISTORICAL_VALUE_FUSION',
+              'cross_run_value_fusion': False,
+              'cross_crop_value_fusion': False,
+              'current_observation_must_satisfy_declared_contract_independently': True,
+              'acceptance_policy_changed': False,
+              'images_persisted': False,
+              'missing_values_inferred': False,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          Path('three-plus-selection-summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check \
+            'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' 'python-doctr==1.1.0' \
+            opencv-python-headless Pillow
+
+      - name: Run conservative regressions first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_doctr_extractor.py \
+            test_mercadona_near_safe_doctr_retry.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: OCR fresh exact-image cohort
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=mercadona-near-safe-three-plus-family-rescue
+          rm -rf "$root"
+          mkdir -p "$root/with-ingredients" "$root/without-ingredients"
+          run_group() {
+            local products="$1" out="$2" mode="$3"
+            [[ -s "$products" ]] || return 0
+            set +e
+            python mercadona_near_safe_doctr_retry.py \
+              --products "$products" --out "$out" \
+              --shard-index 0 --shard-count 1 --limit 0 --eligibility-mode "$mode"
+            rc=$?
+            set -e
+            [[ $rc -eq 0 || $rc -eq 2 ]]
+          }
+          run_group three-plus-with-ingredients.jsonl "$root/with-ingredients" priority
+          run_group three-plus-without-ingredients.jsonl "$root/without-ingredients" p9-no-ingredients-all
+
+      - name: Validate and stage auditable results
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob, json, sqlite3
+          from collections import Counter
+          from pathlib import Path
+
+          CORE = ('calories', 'fat_g', 'carbohydrate_g', 'protein_g')
+          root = Path('mercadona-near-safe-three-plus-family-rescue')
+          selected = {}
+          for path in ('three-plus-with-ingredients.jsonl', 'three-plus-without-ingredients.jsonl'):
+              for line in Path(path).read_text(encoding='utf-8').splitlines():
+                  if line.strip():
+                      row = json.loads(line)
+                      selected[str(row['product_id'])] = row['_multi_family_rescue_meta']
+          rows = []
+          for path in glob.glob(str(root / '**/results-*.jsonl'), recursive=True):
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+          ids = [str(row.get('product_id') or '') for row in rows]
+          if len(rows) != len(selected) or set(ids) != set(selected) or len(ids) != len(set(ids)):
+              raise SystemExit(f'Unexpected result coverage selected={sorted(selected)} result_ids={ids}')
+
+          invalid = []
+          declared = []
+          for row in rows:
+              pid = str(row.get('product_id') or '')
+              meta = selected[pid]
+              row['image_index'] = meta['image_index']
+              row['perspective'] = 9
+              row['image_selection_basis'] = meta['image_basis']
+              row['identity_basis'] = meta['identity_basis']
+              row['cross_run_value_fusion'] = False
+              row['cross_crop_value_fusion'] = False
+              row['current_observation_must_satisfy_declared_contract_independently'] = True
+              row['acceptance_policy_changed'] = False
+              row['missing_values_inferred'] = False
+              row['CLASSIFIED'] = 0
+              row['MENU_ELIGIBLE'] = 0
+              if (
+                  row.get('source') != 'MERCADONA_FIRST_PARTY'
+                  or row.get('source_record_kind') != 'label image'
+                  or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE'
+                  or row.get('redistribution_allowed') is not False
+                  or str(row.get('ean') or '') != str(meta['current_ean'])
+                  or str(row.get('image_url') or '') != str(meta['image_url'])
+              ):
+                  invalid.append(f'{pid}:provenance_identity_image')
+              if row.get('status') == 'DECLARED':
+                  attempt = next((a for a in row.get('attempts', []) if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+                  ensemble = (attempt or {}).get('ensemble') or {}
+                  nutrition = ensemble.get('nutrition') or {}
+                  if (
+                      ensemble.get('basis') not in {'100_g', '100_ml'}
+                      or int(ensemble.get('independent_engine_families') or 0) < 2
+                      or int(ensemble.get('corroborated_fields') or 0) != 4
+                      or not all(isinstance(nutrition.get(field), (int, float)) for field in CORE)
+                  ):
+                      invalid.append(f'{pid}:declared_contract')
+                  else:
+                      declared.append(row)
+          if invalid:
+              raise SystemExit('Invalid rescue rows: ' + ','.join(invalid))
+
+          out = Path('merged')
+          out.mkdir(exist_ok=True)
+          (out / 'results-merged.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows), encoding='utf-8')
+          summary = json.loads(Path('three-plus-selection-summary.json').read_text(encoding='utf-8'))
+          summary.update({
+              'processed': len(rows),
+              'status_counts': dict(sorted(Counter(str(row.get('status') or 'UNKNOWN') for row in rows).items())),
+              'declared': len(declared),
+              'declared_product_ids': [str(row.get('product_id')) for row in declared],
+          })
+          (out / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          db = sqlite3.connect(out / 'staging.sqlite')
+          db.execute('CREATE TABLE mercadona_ocr_staging (product_id TEXT PRIMARY KEY, status TEXT, raw_json TEXT NOT NULL)')
+          for row in rows:
+              db.execute('INSERT INTO mercadona_ocr_staging VALUES (?, ?, ?)', (
+                  str(row.get('product_id')), str(row.get('status')), json.dumps(row, ensure_ascii=False, sort_keys=True)))
+          db.commit(); db.close()
+          forbidden = [str(p) for p in out.rglob('*') if p.is_file() and p.suffix.lower() in {'.jpg','.jpeg','.png','.webp','.avif','.gif'}]
+          if forbidden:
+              raise SystemExit(f'Image persistence forbidden: {forbidden}')
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-near-safe-three-plus-family-rescue
+          path: tools/catalog/merged/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Reconcile strict canonical OCR
+        run: |
+          gh api --method POST \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/dispatches' \
+            -f ref='agent/catalog-phase1'
