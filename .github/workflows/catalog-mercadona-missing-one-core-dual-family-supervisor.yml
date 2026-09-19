@@ -42,58 +42,60 @@ jobs:
               print('Worker already uses implementation-aware retry provenance')
               raise SystemExit(0)
 
-          old = '''              if 'doctr' in run_path.lower() or run_path == THIS_WORKFLOW:
-                  excluded_prior_doctr.append({'product_id': pid, 'run_id': latest_run_id, 'run_path': run_path})
-                  continue
-              row['_latest_raw_run_path'] = run_path
-              candidates.append(row)
-          '''
-          new = '''              if 'doctr' in run_path.lower() or run_path == THIS_WORKFLOW:
-                  # A prior docTR observation blocks an identical retry, but not a
-                  # materially newer retry implementation. Compare the exact blob
-                  # used by that run with the current blob. Lookup failures are
-                  # fail-closed: they never make a product eligible.
-                  retry_impl = 'tools/catalog/mercadona_near_safe_doctr_retry.py'
-                  try:
-                      run_head_sha = subprocess.check_output(
-                          ['gh', 'api', f'/repos/frandavid100/rumbo/actions/runs/{latest_run_id}', '--jq', '.head_sha'],
-                          text=True,
-                      ).strip()
-                      previous_retry_impl_blob = subprocess.check_output(
-                          [
-                              'gh', 'api', '--method', 'GET',
-                              f'/repos/frandavid100/rumbo/contents/{retry_impl}',
-                              '-f', f'ref={run_head_sha}', '--jq', '.sha',
-                          ],
-                          text=True,
-                      ).strip()
-                      current_retry_impl_blob = subprocess.check_output(
-                          ['git', 'rev-parse', f'HEAD:{retry_impl}'],
-                          text=True,
-                      ).strip()
-                  except Exception as exc:
-                      excluded_prior_doctr.append({
-                          'product_id': pid,
-                          'run_id': latest_run_id,
-                          'run_path': run_path,
-                          'reason': 'RETRY_IMPLEMENTATION_PROVENANCE_LOOKUP_FAILED',
-                          'error': f'{type(exc).__name__}:{exc}',
-                      })
-                      continue
-                  if previous_retry_impl_blob == current_retry_impl_blob:
-                      excluded_prior_doctr.append({
-                          'product_id': pid,
-                          'run_id': latest_run_id,
-                          'run_path': run_path,
-                          'reason': 'SAME_RETRY_IMPLEMENTATION_BLOB',
-                          'retry_impl_blob': current_retry_impl_blob,
-                      })
-                      continue
-                  row['_previous_retry_impl_blob'] = previous_retry_impl_blob
-                  row['_current_retry_impl_blob'] = current_retry_impl_blob
-              row['_latest_raw_run_path'] = run_path
-              candidates.append(row)
-          '''
+          old = (
+              "              if 'doctr' in run_path.lower() or run_path == THIS_WORKFLOW:\n"
+              "                  excluded_prior_doctr.append({'product_id': pid, 'run_id': latest_run_id, 'run_path': run_path})\n"
+              "                  continue\n"
+              "              row['_latest_raw_run_path'] = run_path\n"
+              "              candidates.append(row)\n"
+          )
+          new = (
+              "              if 'doctr' in run_path.lower() or run_path == THIS_WORKFLOW:\n"
+              "                  # A prior docTR observation blocks an identical retry, but not a\n"
+              "                  # materially newer retry implementation. Compare the exact blob\n"
+              "                  # used by that run with the current blob. Lookup failures are\n"
+              "                  # fail-closed: they never make a product eligible.\n"
+              "                  retry_impl = 'tools/catalog/mercadona_near_safe_doctr_retry.py'\n"
+              "                  try:\n"
+              "                      run_head_sha = subprocess.check_output(\n"
+              "                          ['gh', 'api', f'/repos/frandavid100/rumbo/actions/runs/{latest_run_id}', '--jq', '.head_sha'],\n"
+              "                          text=True,\n"
+              "                      ).strip()\n"
+              "                      previous_retry_impl_blob = subprocess.check_output(\n"
+              "                          [\n"
+              "                              'gh', 'api', '--method', 'GET',\n"
+              "                              f'/repos/frandavid100/rumbo/contents/{retry_impl}',\n"
+              "                              '-f', f'ref={run_head_sha}', '--jq', '.sha',\n"
+              "                          ],\n"
+              "                          text=True,\n"
+              "                      ).strip()\n"
+              "                      current_retry_impl_blob = subprocess.check_output(\n"
+              "                          ['git', 'rev-parse', f'HEAD:{retry_impl}'],\n"
+              "                          text=True,\n"
+              "                      ).strip()\n"
+              "                  except Exception as exc:\n"
+              "                      excluded_prior_doctr.append({\n"
+              "                          'product_id': pid,\n"
+              "                          'run_id': latest_run_id,\n"
+              "                          'run_path': run_path,\n"
+              "                          'reason': 'RETRY_IMPLEMENTATION_PROVENANCE_LOOKUP_FAILED',\n"
+              "                          'error': f'{type(exc).__name__}:{exc}',\n"
+              "                      })\n"
+              "                      continue\n"
+              "                  if previous_retry_impl_blob == current_retry_impl_blob:\n"
+              "                      excluded_prior_doctr.append({\n"
+              "                          'product_id': pid,\n"
+              "                          'run_id': latest_run_id,\n"
+              "                          'run_path': run_path,\n"
+              "                          'reason': 'SAME_RETRY_IMPLEMENTATION_BLOB',\n"
+              "                          'retry_impl_blob': current_retry_impl_blob,\n"
+              "                      })\n"
+              "                      continue\n"
+              "                  row['_previous_retry_impl_blob'] = previous_retry_impl_blob\n"
+              "                  row['_current_retry_impl_blob'] = current_retry_impl_blob\n"
+              "              row['_latest_raw_run_path'] = run_path\n"
+              "              candidates.append(row)\n"
+          )
           if old not in text:
               raise SystemExit('Expected worker retry-policy block not found; refusing unsafe patch')
           text = text.replace(old, new, 1)
