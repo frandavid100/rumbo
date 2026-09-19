@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.26"
+READER_VERSION = "1.4.27"
 
 
 @dataclass(frozen=True)
@@ -252,38 +252,58 @@ def _fat_value(label_patterns: tuple[str, ...], text: str) -> float | None:
     """Avoid treating a saturated-fat cell as total fat after OCR row reversal.
 
     A real Mercadona label was linearised as `8.9g / Grasas / 3.20 /
-    - Baturadas`. The generic row reader correctly sees 3.20 after `Grasas`, but
-    that cell belongs to the saturated-fat subrow. Reinterpret the row only when
-    an explicit gram value is immediately before `Grasas` *and* the value after
-    `Grasas` is immediately followed by a saturate-like row label. Otherwise
-    keep the ordinary row-oriented behaviour unchanged.
+    - Baturadas`. A crop of that same label dropped the `g` from the total-fat
+    cell and emitted `8.9 / Grasas / 3.20 / - Baturadas`. The generic row reader
+    sees 3.20 after `Grasas`, but that cell belongs to the saturated-fat subrow.
+    Accept a unitless preceding number only under this exact reversed structure:
+    a dedicated numeric line immediately before the fat label and a dedicated
+    numeric line immediately after it followed by a saturate-like row label.
+    Outside that structure the ordinary row-oriented behaviour is unchanged.
     """
     ordinary = _number_after(label_patterns, text)
     folded = _strip_ocr_unit_parentheses(_fold(text))
     for label in label_patterns:
         for label_match in re.finditer(label, folded, flags=re.I):
-            before = _number_immediately_before((label,), text)
-            if before is None:
-                continue
             tail = folded[label_match.end():label_match.end() + 90]
-            # EasyOCR can linearise a printed total-fat `0 g` cell as the
-            # standalone token `09` immediately *before* `Grasas`, while the
-            # saturated-fat subrow remains immediately after the label. Accept
-            # that reversed value only under this exact three-row structure.
-            # This deliberately does not rewrite arbitrary `09` tokens.
-            if re.match(
+            direct_saturated = re.match(
+                r"\s*[<>]?\s*\d{1,3}(?:\.\d{1,2})?\s*(?:g|9|q|yg|y)?\s*\n\s*[-–—]?\s*(?:saturad|baturad)",
+                tail,
+                flags=re.I,
+            )
+            qualified_saturated = re.match(
                 r"\s*de\s*las\s+cuales\s*:?\s*\n"
                 r"\s*(?:[<>]?\s*\d{1,3}(?:\.\d{1,2})?\s*(?:g|q|yg|y)|0\s*9)\s*\n"
                 r"\s*[-–—]?\s*(?:saturad|baturad)",
                 tail,
                 flags=re.I,
-            ):
+            )
+            before = _number_immediately_before((label,), text)
+            if before is None and direct_saturated:
+                # PP-OCRv6 sometimes drops only the `g` glyph from the total-fat
+                # value while preserving the exact reversed saturated-fat row.
+                # Do not make the generic pre-label reader looser: recover a bare
+                # number here only because the following structure proves that the
+                # post-label number is the saturated-fat cell, not total fat.
+                head = folded[max(0, label_match.start() - 60):label_match.start()]
+                bare = re.search(
+                    r"(?:^|\n)\s*([<>]?)\s*(\d{1,3}(?:\.\d{1,2})?)\s*$",
+                    head,
+                    flags=re.I,
+                )
+                if bare and bare.group(1) not in ("<", ">"):
+                    candidate = _repair_ocr_number(bare.group(2))
+                    if candidate is not None and 0 <= candidate <= 100:
+                        before = candidate
+            if before is None:
+                continue
+            # EasyOCR can linearise a printed total-fat `0 g` cell as the
+            # standalone token `09` immediately *before* `Grasas`, while the
+            # saturated-fat subrow remains immediately after the label. Accept
+            # that reversed value only under this exact three-row structure.
+            # This deliberately does not rewrite arbitrary `09` tokens.
+            if qualified_saturated:
                 return before
-            if re.match(
-                r"\s*[<>]?\s*\d{1,3}(?:\.\d{1,2})?\s*(?:g|9|q|yg|y)?\s*\n\s*[-–—]?\s*(?:saturad|baturad)",
-                tail,
-                flags=re.I,
-            ):
+            if direct_saturated:
                 return before
     # Tesseract can interleave a manufacturer/ingredients column between the
     # printed total-fat label and its value cells. Rescue only the exact zero-fat
