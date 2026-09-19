@@ -1,0 +1,369 @@
+name: Catalog Mercadona current OCR residual audit efficient
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-ocr-residual-audit-efficient.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-ocr-residual-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve historical 4,280-product first-party snapshot
+        id: first_party_snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tools/catalog/mercadona-current-ocr-residual-audit
+
+          original_artifacts=$(gh api -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/runs/33046950149/artifacts?per_page=100')
+          original_id=$(jq -r '.artifacts[] | select(.name == "mercadona-first-party-final" and .expired == false) | .id' <<<"$original_artifacts" | head -n1)
+          if [[ -n "$original_id" ]]; then
+            mkdir -p tools/catalog/mercadona-first-party-final /tmp/mercadona-first-party-final
+            gh api -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/artifacts/${original_id}/zip" \
+              > /tmp/mercadona-first-party-final/artifact.zip
+            unzip -q /tmp/mercadona-first-party-final/artifact.zip \
+              -d tools/catalog/mercadona-first-party-final
+            echo 'exact_source=original' >> "$GITHUB_OUTPUT"
+            jq -n \
+              --argjson run_id 33046950149 \
+              --argjson artifact_id "$original_id" \
+              '{status:"AVAILABLE_ORIGINAL_SNAPSHOT", historical_inventory_products:4280, run_id:$run_id, artifact_id:$artifact_id, exact_residual_census_available:true, historical_full_detail_snapshot_recovered:true}' \
+              > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
+            exit 0
+          fi
+
+          recovery_artifacts=$(gh api -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/runs/34430788357/artifacts?per_page=100')
+          recovery_id=$(jq -r '.artifacts[] | select(.name == "mercadona-current-ocr-residual-audit" and .expired == false and .digest == "sha256:ac4ef2b916fd41003675aa94c806574e6ed7c827a49c82da0d97e315b68d34db") | .id' <<<"$recovery_artifacts" | head -n1)
+          if [[ -n "$recovery_id" ]]; then
+            mkdir -p tools/catalog/mercadona-historical-residual-baseline /tmp/mercadona-historical-residual-baseline
+            gh api -H 'Accept: application/vnd.github+json' \
+              "/repos/frandavid100/rumbo/actions/artifacts/${recovery_id}/zip" \
+              > /tmp/mercadona-historical-residual-baseline/artifact.zip
+            unzip -q /tmp/mercadona-historical-residual-baseline/artifact.zip \
+              -d tools/catalog/mercadona-historical-residual-baseline
+            echo 'exact_source=preexpiry_audit' >> "$GITHUB_OUTPUT"
+            jq -n \
+              --argjson recovery_run_id 34430788357 \
+              --argjson recovery_artifact_id "$recovery_id" \
+              '{status:"ORIGINAL_EXPIRED_PREEXPIRY_PARTITION_AVAILABLE", historical_inventory_products:4280, original_run_id:33046950149, original_artifact_name:"mercadona-first-party-final", original_artifact_sha256:"5a8c89661afe09fe1c05d1f67e8ed608edf25b8363530db42959ec8413fef648", recovery_run_id:$recovery_run_id, recovery_artifact_id:$recovery_artifact_id, recovery_artifact_sha256:"ac4ef2b916fd41003675aa94c806574e6ed7c827a49c82da0d97e315b68d34db", exact_residual_census_available:true, historical_full_detail_snapshot_recovered:false, policy:"Recover only the exact historical membership/residual partition from the trusted pre-expiry audit. Do not substitute a later live Mercadona inventory."}' \
+              > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
+            exit 0
+          fi
+
+          echo 'exact_source=none' >> "$GITHUB_OUTPUT"
+          jq -n \
+            '{status:"EXPIRED_OR_UNAVAILABLE", historical_inventory_products:4280, run_id:33046950149, artifact_name:"mercadona-first-party-final", exact_residual_census_available:false, historical_membership_parity_verifiable:false, policy:"Do not silently substitute a later live Mercadona inventory for the auditable 2026-08-27 4,280-product cut. Canonical OCR reconciliation can still be reconstructed from persisted raw-live OCR evidence, but exact historical residual membership cannot be proven without either the original snapshot or the trusted pre-expiry partition."}' \
+            > tools/catalog/mercadona-current-ocr-residual-audit/historical-first-party-snapshot-status.json
+
+      - name: Run residual census unit tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_audit_mercadona_current_ocr_residual.py \
+            test_audit_mercadona_current_review_failure_modes.py \
+            test_summarize_mercadona_ocr_run_union.py \
+            test_materialize_mercadona_ocr_canonical.py \
+            test_recover_mercadona_historical_residual_baseline.py
+          python -m py_compile \
+            audit_mercadona_current_ocr_residual.py \
+            audit_mercadona_current_review_failure_modes.py \
+            diagnose_mercadona_ocr_union.py \
+            summarize_mercadona_ocr_run_union.py \
+            materialize_mercadona_ocr_canonical.py \
+            recover_mercadona_historical_residual_baseline.py
+
+      - name: Wait for pre-existing Mercadona runs to settle
+        shell: bash
+        run: |
+          set -euo pipefail
+          self_created_at=$(gh api -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${GITHUB_RUN_ID}" --jq '.created_at')
+          deadline=$((SECONDS + 600))
+          while :; do
+            mapfile -t active_runs < <(
+              gh api --paginate -H 'Accept: application/vnd.github+json' \
+                '/repos/frandavid100/rumbo/actions/runs?branch=agent%2Fcatalog-phase1&per_page=100' \
+                --jq ".workflow_runs[] | select(.id != ${GITHUB_RUN_ID}) | select(.created_at <= \"${self_created_at}\") | select(.status != \"completed\") | select(.name | ascii_downcase | contains(\"mercadona\")) | [.id, .name, .status, .created_at] | @tsv"
+            )
+            if (( ${#active_runs[@]} == 0 )); then
+              echo 'No pre-existing Mercadona workflow runs are still active; canonical enumeration is stable.'
+              break
+            fi
+            printf 'Waiting for %d pre-existing Mercadona run(s) before canonical enumeration:\n' "${#active_runs[@]}"
+            printf '  %s\n' "${active_runs[@]}"
+            if (( SECONDS >= deadline )); then
+              echo 'Timed out waiting for pre-existing Mercadona workflows; refusing to publish a potentially stale canonical cut.' >&2
+              exit 1
+            fi
+            sleep 15
+          done
+
+      - name: Reconstruct successful Mercadona OCR artifact union efficiently
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mercadona-ocr-artifacts tools/catalog/mercadona-current-ocr-residual-audit
+
+          gh_api_retry() {
+            local attempt=1 max_attempts=5 out err rc reset now wait_s
+            while (( attempt <= max_attempts )); do
+              out=$(mktemp)
+              err=$(mktemp)
+              set +e
+              gh api "$@" >"$out" 2>"$err"
+              rc=$?
+              set -e
+              if (( rc == 0 )); then
+                cat "$out"
+                rm -f "$out" "$err"
+                return 0
+              fi
+              cat "$err" >&2
+              if ! grep -Eqi 'rate limit|HTTP 429' "$err" || (( attempt == max_attempts )); then
+                rm -f "$out" "$err"
+                return "$rc"
+              fi
+              reset=$(gh api /rate_limit --jq '.resources.core.reset' 2>/dev/null || true)
+              now=$(date +%s)
+              if [[ "$reset" =~ ^[0-9]+$ ]] && (( reset > now )); then
+                wait_s=$((reset - now + 5))
+              else
+                wait_s=$((20 * attempt))
+              fi
+              echo "GitHub API rate limit encountered; retry ${attempt}/${max_attempts} after ${wait_s}s" >&2
+              rm -f "$out" "$err"
+              sleep "$wait_s"
+              attempt=$((attempt + 1))
+            done
+            return 1
+          }
+
+          self_created_at=$(gh_api_retry -H 'Accept: application/vnd.github+json' \
+            "/repos/frandavid100/rumbo/actions/runs/${GITHUB_RUN_ID}" --jq '.created_at')
+          end_day=${self_created_at:0:10}
+
+          # Enumerate repository runs in one-day windows. GitHub's repository-wide run list
+          # has a 1,000-result search horizon; date partitioning keeps every request safely
+          # below that boundary and avoids one API request per Mercadona workflow definition.
+          : > /tmp/mercadona-success-runs-all.tsv
+          day='2026-08-27'
+          while [[ "$day" < "$end_day" || "$day" == "$end_day" ]]; do
+            next_day=$(date -u -d "$day + 1 day" +%F)
+            start="${day}T00:00:00Z"
+            stop="${day}T23:59:59Z"
+            total=$(gh_api_retry --method GET -H 'Accept: application/vnd.github+json' \
+              '/repos/frandavid100/rumbo/actions/runs' \
+              -f branch='agent/catalog-phase1' -f created="${start}..${stop}" -f per_page=1 \
+              --jq '.total_count')
+            if ! [[ "$total" =~ ^[0-9]+$ ]]; then
+              echo "Invalid daily Actions run count for $day: $total" >&2
+              exit 1
+            fi
+            if (( total > 1000 )); then
+              echo "Daily Actions run count $total exceeds GitHub's 1,000-result horizon on $day; refusing a truncated reconciliation." >&2
+              exit 1
+            fi
+            if (( total > 0 )); then
+              gh_api_retry --paginate --method GET -H 'Accept: application/vnd.github+json' \
+                '/repos/frandavid100/rumbo/actions/runs' \
+                -f branch='agent/catalog-phase1' -f created="${start}..${stop}" -f per_page=100 \
+                --jq ".workflow_runs[] | select(.conclusion == \"success\") | select(.created_at <= \"${self_created_at}\") | select(.name | ascii_downcase | contains(\"mercadona\")) | [.id, .name, .path, .created_at] | @tsv" \
+                >> /tmp/mercadona-success-runs-all.tsv
+            fi
+            day=$next_day
+          done
+          sort -u -o /tmp/mercadona-success-runs-all.tsv /tmp/mercadona-success-runs-all.tsv
+
+          : > /tmp/mercadona-ocr-runs.tsv
+          : > tools/catalog/mercadona-current-ocr-residual-audit/diagnostic-workflows-excluded.tsv
+          while IFS=$'\t' read -r run_id run_name run_path run_created_at; do
+            [[ -n "$run_id" ]] || continue
+            if [[ "$run_path" == '.github/workflows/catalog-mercadona-parser-regression-live.yml' ]]; then
+              printf '%s\t%s\t%s\t%s\n' "$run_id" "$run_name" "$run_path" 'DIAGNOSTIC_ONLY_NOT_CANONICAL' \
+                >> tools/catalog/mercadona-current-ocr-residual-audit/diagnostic-workflows-excluded.tsv
+              continue
+            fi
+            if [[ "$run_path" == .github/workflows/catalog-mercadona-*-current-delta.yml ]]; then
+              printf '%s\t%s\t%s\t%s\n' "$run_id" "$run_name" "$run_path" 'POST_CUT_CURRENT_DELTA_NOT_HISTORICAL_CUT' \
+                >> tools/catalog/mercadona-current-ocr-residual-audit/diagnostic-workflows-excluded.tsv
+              continue
+            fi
+            if [[ "$run_path" == .github/workflows/catalog-mercadona-current-ocr-residual-audit*.yml ]]; then
+              printf '%s\t%s\t%s\t%s\n' "$run_id" "$run_name" "$run_path" 'DERIVED_AUDIT_NOT_RAW_OCR_EVIDENCE' \
+                >> tools/catalog/mercadona-current-ocr-residual-audit/diagnostic-workflows-excluded.tsv
+              continue
+            fi
+            printf '%s\t%s\t%s\n' "$run_id" "$run_name" "$run_path" >> /tmp/mercadona-ocr-runs.tsv
+          done < /tmp/mercadona-success-runs-all.tsv
+          sort -u -o /tmp/mercadona-ocr-runs.tsv /tmp/mercadona-ocr-runs.tsv
+
+          run_count=$(wc -l < /tmp/mercadona-ocr-runs.tsv | tr -d ' ')
+          if [[ "$run_count" -lt 1 ]]; then
+            echo 'No successful Mercadona OCR runs discovered' >&2
+            exit 1
+          fi
+          if ! grep -q $'^33048440695\t' /tmp/mercadona-ocr-runs.tsv; then
+            echo 'Historical Mercadona OCR anchor run 33048440695 was not discovered' >&2
+            exit 1
+          fi
+          if ! grep -q $'^34139973333\t' /tmp/mercadona-ocr-runs.tsv; then
+            echo 'Rescued Mercadona near-safe anchor run 34139973333 was not discovered' >&2
+            exit 1
+          fi
+          echo "Discovered $run_count successful canonical Mercadona OCR runs"
+
+          # Fetch repository artifact metadata once. The previous implementation queried
+          # /runs/{id}/artifacts once per historical run (~800 extra core API calls), which
+          # exhausted the installation rate limit before reconciliation completed.
+          gh_api_retry --paginate -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/artifacts?per_page=100' \
+            --jq '.artifacts[] | select(.expired == false) | select(.workflow_run.id != null) | [.workflow_run.id, .id, .name, .created_at] | @tsv' \
+            | sort -u > /tmp/repository-artifacts.tsv
+
+          if [[ ! -s /tmp/repository-artifacts.tsv ]]; then
+            echo 'Repository artifact inventory is empty' >&2
+            exit 1
+          fi
+
+          : > tools/catalog/mercadona-current-ocr-residual-audit/artifacts.tsv
+          downloaded=0
+          while IFS=$'\t' read -r run_id run_name run_path; do
+            [[ -n "$run_id" ]] || continue
+            mapfile -t run_artifacts < <(awk -F '\t' -v rid="$run_id" '$1 == rid {print $2 "\t" $3 "\t" $4}' /tmp/repository-artifacts.tsv)
+            (( ${#run_artifacts[@]} > 0 )) || continue
+
+            mapfile -t merged < <(printf '%s\n' "${run_artifacts[@]}" | awk -F '\t' 'tolower($2) ~ /mercadona/ && $2 ~ /-merged$/')
+            if (( ${#merged[@]} > 0 )); then
+              selected=("${merged[@]}")
+            else
+              mapfile -t selected < <(printf '%s\n' "${run_artifacts[@]}" | awk -F '\t' 'tolower($2) ~ /mercadona/')
+            fi
+
+            for item in "${selected[@]}"; do
+              IFS=$'\t' read -r artifact_id artifact_name artifact_created_at <<<"$item"
+              [[ -n "$artifact_id" ]] || continue
+              [[ -n "$artifact_created_at" ]] || { echo "Artifact $artifact_id missing created_at" >&2; exit 1; }
+              dest="/tmp/mercadona-ocr-artifacts/${run_id}-${artifact_id}"
+              mkdir -p "$dest"
+              gh_api_retry -H 'Accept: application/vnd.github+json' \
+                "/repos/frandavid100/rumbo/actions/artifacts/${artifact_id}/zip" \
+                > "$dest/artifact.zip"
+              unzip -q "$dest/artifact.zip" -d "$dest/unpacked"
+              rm "$dest/artifact.zip"
+              printf '%s\t%s\t%s\t%s\t%s\n' "$run_id" "$run_name" "$artifact_id" "$artifact_name" "$artifact_created_at" \
+                >> tools/catalog/mercadona-current-ocr-residual-audit/artifacts.tsv
+              downloaded=$((downloaded + 1))
+            done
+          done < /tmp/mercadona-ocr-runs.tsv
+
+          if (( downloaded < 1 )); then
+            echo 'No non-expired Mercadona artifacts downloaded' >&2
+            exit 1
+          fi
+          echo "Downloaded $downloaded Mercadona artifacts for strict-evidence census"
+
+      - name: Diagnose provenance/schema variants before strict census
+        working-directory: tools/catalog
+        run: |
+          python diagnose_mercadona_ocr_union.py \
+            --root /tmp/mercadona-ocr-artifacts \
+            --out mercadona-current-ocr-residual-audit/reconstruction-diagnostics.json
+
+      - name: Summarize chronological OCR union contributions
+        working-directory: tools/catalog
+        run: |
+          python summarize_mercadona_ocr_run_union.py \
+            --root /tmp/mercadona-ocr-artifacts \
+            --artifacts-tsv mercadona-current-ocr-residual-audit/artifacts.tsv \
+            --out mercadona-current-ocr-residual-audit/run-union-summary.json
+
+      - name: Audit latest raw-live REVIEW failure modes
+        working-directory: tools/catalog
+        run: |
+          python audit_mercadona_current_review_failure_modes.py \
+            --root /tmp/mercadona-ocr-artifacts \
+            --run-union-summary mercadona-current-ocr-residual-audit/run-union-summary.json \
+            --out mercadona-current-ocr-residual-audit/current-review-failure-modes
+
+      - name: Materialize canonical OCR staging
+        working-directory: tools/catalog
+        run: |
+          python materialize_mercadona_ocr_canonical.py \
+            --summary mercadona-current-ocr-residual-audit/run-union-summary.json \
+            --jsonl mercadona-current-ocr-residual-audit/canonical-ocr.jsonl \
+            --sqlite mercadona-current-ocr-residual-audit/canonical-ocr.sqlite \
+            --manifest mercadona-current-ocr-residual-audit/canonical-ocr-manifest.json \
+            --inventory-total 4280
+
+      - name: Audit exact historical residual universe from original snapshot
+        if: steps.first_party_snapshot.outputs.exact_source == 'original'
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_processed=$(jq -r '.final_distinct_union' mercadona-current-ocr-residual-audit/run-union-summary.json)
+          if ! [[ "$expected_processed" =~ ^[0-9]+$ ]]; then
+            echo "Invalid final_distinct_union: $expected_processed" >&2
+            exit 1
+          fi
+          python audit_mercadona_current_ocr_residual.py \
+            --products mercadona-first-party-final/products.jsonl \
+            --ocr-artifacts /tmp/mercadona-ocr-artifacts \
+            --expected-processed "$expected_processed" \
+            --out mercadona-current-ocr-residual-audit
+
+      - name: Recover exact historical residual universe from pre-expiry partition
+        if: steps.first_party_snapshot.outputs.exact_source == 'preexpiry_audit'
+        working-directory: tools/catalog
+        run: |
+          python recover_mercadona_historical_residual_baseline.py \
+            --baseline-dir mercadona-historical-residual-baseline \
+            --current-canonical mercadona-current-ocr-residual-audit/canonical-ocr.jsonl \
+            --current-union-summary mercadona-current-ocr-residual-audit/run-union-summary.json \
+            --out mercadona-current-ocr-residual-audit
+          jq -n \
+            --slurpfile recovered mercadona-current-ocr-residual-audit/summary.json \
+            '{status:$recovered[0].status, inventory_products:$recovered[0].inventory_products, processed_reconstructed:$recovered[0].processed_reconstructed, exact_residual_census_available:true, historical_membership_parity_verifiable:$recovered[0].historical_membership_parity_verifiable, historical_residual_ean_parity_verifiable:$recovered[0].historical_residual_ean_parity_verifiable, historical_processed_ean_anchors_complete:$recovered[0].historical_processed_ean_anchors_complete, historical_full_identity_map_materialized:$recovered[0].historical_full_identity_map_materialized, historical_full_detail_snapshot_recovered:false, recovery_run_id:34430788357, recovery_artifact_sha256:"ac4ef2b916fd41003675aa94c806574e6ed7c827a49c82da0d97e315b68d34db"}' \
+            > mercadona-current-ocr-residual-audit/residual-audit-status.json
+
+      - name: Record unavailable exact residual census
+        if: steps.first_party_snapshot.outputs.exact_source == 'none'
+        working-directory: tools/catalog
+        run: |
+          jq -n \
+            --slurpfile union mercadona-current-ocr-residual-audit/run-union-summary.json \
+            '{status:"BLOCKED_HISTORICAL_FIRST_PARTY_SNAPSHOT_AND_PREEXPIRY_PARTITION_UNAVAILABLE", inventory_products:4280, processed_reconstructed:$union[0].final_distinct_union, canonical_ocr_materialized:true, exact_residual_census_available:false, historical_membership_parity_verifiable:false, images_downloaded:false, images_persisted:false, missing_values_inferred:false, structured_api_macros_claimed:false, CLASSIFIED:0, MENU_ELIGIBLE:0}' \
+            > mercadona-current-ocr-residual-audit/residual-audit-status.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-ocr-residual-audit-efficient
+          path: tools/catalog/mercadona-current-ocr-residual-audit/
+          retention-days: 90
+          if-no-files-found: warn
