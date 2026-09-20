@@ -1,0 +1,60 @@
+name: Patch Mercadona audit rerun cutoff
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/patch-mercadona-audit-rerun-cutoff.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - name: Patch audit cutoff to be attempt-local
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/catalog-mercadona-current-ocr-residual-audit.yml')
+          text = path.read_text(encoding='utf-8')
+
+          marker = "      - name: Resolve historical 4,280-product first-party snapshot\n"
+          insert = """      - name: Freeze audit-attempt cutoff\n        shell: bash\n        run: |\n          set -euo pipefail\n          cutoff=$(date -u +'%Y-%m-%dT%H:%M:%SZ')\n          echo \"AUDIT_CUTOFF=$cutoff\" >> \"$GITHUB_ENV\"\n          echo \"Frozen audit-attempt cutoff: $cutoff\"\n\n"""
+          if insert not in text:
+              if text.count(marker) != 1:
+                  raise SystemExit(f'expected one insertion marker, got {text.count(marker)}')
+              text = text.replace(marker, insert + marker, 1)
+
+          old = """          self_created_at=$(gh api -H 'Accept: application/vnd.github+json' \\\n            \"/repos/frandavid100/rumbo/actions/runs/${GITHUB_RUN_ID}\" --jq '.created_at')\n"""
+          replacements = text.count(old)
+          if replacements != 2:
+              raise SystemExit(f'expected two stale run-created-at cutoffs, got {replacements}')
+          text = text.replace(old, '          self_created_at="${AUDIT_CUTOFF}"\n')
+          text = text.replace(
+              '          # scope. Only runs created no later than this audit run are eligible, so a later branch\n',
+              '          # scope. Only runs created no later than this audit attempt cutoff are eligible, so a later branch\n',
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          grep -q 'name: Freeze audit-attempt cutoff' .github/workflows/catalog-mercadona-current-ocr-residual-audit.yml
+          test "$(grep -c 'self_created_at="${AUDIT_CUTOFF}"' .github/workflows/catalog-mercadona-current-ocr-residual-audit.yml)" -eq 2
+          ! grep -q -- "--jq '.created_at')" .github/workflows/catalog-mercadona-current-ocr-residual-audit.yml
+
+          rm .github/workflows/patch-mercadona-audit-rerun-cutoff.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/catalog-mercadona-current-ocr-residual-audit.yml .github/workflows/patch-mercadona-audit-rerun-cutoff.yml
+          git diff --cached --check
+          git commit -m 'catalog: make Mercadona audit reruns use fresh cutoff'
+          git push origin HEAD:agent/catalog-phase1
