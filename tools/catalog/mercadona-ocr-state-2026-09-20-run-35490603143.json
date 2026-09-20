@@ -1,0 +1,137 @@
+{
+  "merchant": "MERCADONA",
+  "scope": "historical_first_party_cut_2026-08-27",
+  "audit_run_id": 35490603143,
+  "audit_head_sha": "4bd5885c724d9c1908fa65947ccbec603a04f791",
+  "audit_artifact": {
+    "name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10599117614,
+    "sha256": "0b1d5c20e9ce99565e53e1bc961f93b0c34b2a1ac6a647f53b24d66987a6dd61",
+    "created_at": "2026-09-20T05:15:39Z"
+  },
+  "historical_cut": {
+    "product_count": 4280
+  },
+  "ocr_union": {
+    "processed_products": 2969,
+    "processed_coverage_pct": 69.3692,
+    "declared_products": 377,
+    "review_products": 2592,
+    "complete_nutrition_products": 377,
+    "complete_nutrition_coverage_pct": 8.8084,
+    "macro_coverage": {
+      "calories": 377,
+      "fat": 377,
+      "carbohydrates": 377,
+      "protein": 377
+    }
+  },
+  "chronology": {
+    "mode": "GITHUB_ARTIFACT_CREATED_AT",
+    "latest_observation_wins": true,
+    "historical_declared_products": 401,
+    "latest_review_after_historical_declared": 24,
+    "older_declared_inherited_after_later_review": false
+  },
+  "newly_declared_from_run_35487946242": [
+    {
+      "product_id": "7878",
+      "ean": "8402001020568",
+      "name": "Yogur líquido natural Hacendado con azúcar de caña",
+      "basis": "100_g",
+      "nutrition": {"kcal": 70.0, "fat_g": 1.8, "carbohydrate_g": 11.5, "protein_g": 1.9}
+    },
+    {
+      "product_id": "84638",
+      "ean": "2105900846388",
+      "name": "12 Mini saladas surtidas",
+      "basis": "100_g",
+      "nutrition": {"kcal": 325.0, "fat_g": 19.0, "carbohydrate_g": 29.0, "protein_g": 8.9}
+    },
+    {
+      "product_id": "21649",
+      "ean": "8402001054686",
+      "name": "Empanada de carne",
+      "basis": "100_g",
+      "nutrition": {"kcal": 240.0, "fat_g": 12.0, "carbohydrate_g": 26.0, "protein_g": 6.7}
+    },
+    {
+      "product_id": "52426",
+      "ean": "8436021413505",
+      "name": "Alas de pollo barbacoa congeladas",
+      "basis": "100_g",
+      "nutrition": {"kcal": 177.0, "fat_g": 11.2, "carbohydrate_g": 2.8, "protein_g": 16.2}
+    }
+  ],
+  "current_review_failure_modes": {
+    "total_review": 2592,
+    "explicit_100_basis": 583,
+    "missing_explicit_100_basis": 2009,
+    "field_count_distribution": {
+      "0": 2028,
+      "1": 114,
+      "2": 176,
+      "3": 229,
+      "4": 45
+    },
+    "near_safe_complete": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_safety_blocked": 10,
+    "three_of_four_explicit_basis_unblocked": 48,
+    "three_of_four_missing_field_counts": {
+      "carbohydrate_g": 11,
+      "fat_g": 18,
+      "protein_g": 19
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 46,
+      "2": 1,
+      "3": 1
+    },
+    "three_of_four_bounded_core_review": 8,
+    "safety_blocker_counts": {
+      "HARD_OCR_CONFLICT": 238,
+      "ENERGY_MACRO_INCOHERENCE": 97,
+      "AMBIGUOUS_TABLE": 108,
+      "NON_EXACT_BOUNDED_CORE": 31
+    }
+  },
+  "historical_unprocessed_residual": {
+    "residual_products": 1311,
+    "current_actionable_candidate_count": 0,
+    "alcohol_deferred_count": 11,
+    "outside_scope_count": 1300,
+    "perspective_9_count": 1298,
+    "no_perspective_9_count": 13,
+    "historical_membership_parity_verifiable": true,
+    "historical_residual_ean_parity_verifiable": true
+  },
+  "integrity": {
+    "identity_conflicts": 0,
+    "identity_unverified": 0,
+    "identity_unresolved": 0,
+    "processed_without_canonical_state": 0
+  },
+  "provenance_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "next_safe_route": {
+    "kind": "FRESH_RETRY_OF_REVIEW_ONLY",
+    "priority": "three_of_four_explicit_basis_unblocked_review",
+    "strong_candidate_count": 2,
+    "strong_candidate_definition": "3/4 core fields, explicit 100 g/100 ml basis, no safety blocker, and at least two independent OCR engine families",
+    "policy": "Use residual diagnostics only for prioritization. Revalidate exact product identity and current first-party label image, then require a fresh observation to independently recover and corroborate all four core fields. Never fuse values across runs/crops/images, never inherit historical DECLARED nutrition after a newer REVIEW, and never infer bounded or absent values."
+  },
+  "notes": [
+    "This audit incorporates the completed five-product near-safe retry run 35487946242: four products became fresh DECLARED and one remained REVIEW.",
+    "No near-safe complete REVIEW remains after reconciliation; the next conservative target set is the two strongest members of the 48 three-of-four explicit-basis unblocked REVIEW cases.",
+    "No unprocessed actionable food candidate remains in the fixed 4,280-product historical cut."
+  ]
+}
