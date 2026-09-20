@@ -8,7 +8,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.6"
+ENSEMBLE_VERSION = "1.3.7"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -74,6 +74,39 @@ def _close(field: str, a: float, b: float) -> bool:
 def _fold_ocr_text(text: str) -> str:
     folded = unicodedata.normalize("NFD", (text or "").lower())
     return "".join(char for char in folded if unicodedata.category(char) != "Mn")
+
+
+def _incoherent_explicit_energy_pair(reading: ParsedOCRReading) -> bool:
+    """Veto calories when a credible OCR read exposes incompatible kJ/kcal.
+
+    This is deliberately observation-wide and fail-closed. Other OCR families
+    are not allowed to outvote an explicit physical contradiction by repeating
+    the same misread kcal glyph. The pair must be unique in that OCR text;
+    multi-column/multi-energy layouts remain governed by the existing ambiguity
+    gates instead of being paired heuristically. No value is inferred or fixed.
+    """
+    if reading.result.status == "NOT_NUTRITION_LABEL" or reading.confidence < .70:
+        return False
+    text = _fold_ocr_text(reading.result.normalized_text)
+    if not text:
+        return False
+    kj_values = re.findall(
+        r"(?<![\d.])(\d{1,5}(?:\.\d{1,2})?)\s*k\s*j\b",
+        text,
+        flags=re.I,
+    )
+    kcal_values = re.findall(
+        r"(?<![\d.])(\d{1,4}(?:\.\d{1,2})?)\s*kcal\b",
+        text,
+        flags=re.I,
+    )
+    if len(kj_values) != 1 or len(kcal_values) != 1:
+        return False
+    kj = float(kj_values[0])
+    kcal = float(kcal_values[0])
+    expected_kj = kcal * 4.184
+    tolerance_kj = max(2.0, expected_kj * 0.08)
+    return abs(kj - expected_kj) > tolerance_kj
 
 
 _BOUNDED_ROW_LABELS = {
@@ -349,8 +382,23 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
         for field in _bounded_core_fields(reading):
             bounded_families[field].add(reading.family)
 
+    incoherent_energy_families = {
+        reading.family
+        for reading in readings
+        if _incoherent_explicit_energy_pair(reading)
+    }
+
     fields: list[EnsembleField] = []
     for field in FIELDS:
+        if field == "calories" and incoherent_energy_families:
+            reasons.append(
+                "OCR_ENERGY_UNIT_MISMATCH:" + ",".join(sorted(incoherent_energy_families))
+            )
+            # A visible kJ/kcal contradiction is hard evidence that at least one
+            # energy glyph was misread. Do not let repeated OCR of the suspect
+            # kcal token become an exact ensemble value. A later fresh crop may
+            # recover a coherent printed pair; this observation remains REVIEW.
+            continue
         if bounded_families[field]:
             reasons.append(
                 f"OCR_BOUNDED_CORE_VALUE:{field}:{','.join(sorted(bounded_families[field]))}"
