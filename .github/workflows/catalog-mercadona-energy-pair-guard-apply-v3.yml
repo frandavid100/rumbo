@@ -1,0 +1,163 @@
+name: Catalog Mercadona energy-pair guard apply v3
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-energy-pair-guard-apply-v3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: catalog-mercadona-energy-pair-guard-apply-v3-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply-test-canary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - name: Apply ensemble-only fail-closed energy-pair guard
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          workflow = Path('../../.github/workflows/catalog-mercadona-energy-pair-guard-fix.yml').read_text(encoding='utf-8')
+          start_marker = "          python - <<'PY'\n"
+          end_marker = "\n          PY\n\n      - name: Run parser and ensemble safety tests"
+          start = workflow.find(start_marker)
+          end = workflow.find(end_marker, start + len(start_marker))
+          if start < 0 or end < 0:
+              raise SystemExit(f'cannot extract audited transform: start={start} end={end}')
+          script = textwrap.dedent(workflow[start + len(start_marker):end])
+          exec(compile(script, '<energy-pair-guard-transform>', 'exec'), {'__name__': '__main__'})
+          PY
+
+          # The first regression pass proved that changing the single-reading
+          # parser suppresses existing diagnostics (IMPOSSIBLE_CALORIES and
+          # ENERGY_MACRO_MISMATCH). Keep that mature behavior unchanged and
+          # enforce the new physical-consistency veto only at ensemble level,
+          # where repeated independent OCR of the same bad kcal glyph matters.
+          git checkout -- nutrition_label_reader.py
+
+          cat > test_nutrition_energy_pair_guard.py <<'PY'
+          import unittest
+
+          from nutrition_label_reader import read_nutrition_label
+          from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
+
+
+          INCOHERENT = """100 g
+          Valor
+          635 kJ
+          Energético
+          182 kcal
+          Grasas 8.9 g
+          Hidratos de carbono 0 g
+          Proteínas 18 g
+          Sal 0.15 g
+          """
+
+          OCR_182_NO_KJ = """100 g
+          Valor energético 182 kcal
+          Grasas 8.9 g
+          Hidratos de carbono 0 g
+          Proteínas 18 g
+          Sal 0.15 g
+          """
+
+          COHERENT = """Información nutricional por 100 g
+          Valor energético 635 kJ / 152 kcal
+          Grasas 8.9 g
+          Hidratos de carbono 0 g
+          Proteínas 18 g
+          Sal 0.15 g
+          """
+
+
+          class NutritionEnergyPairGuardTest(unittest.TestCase):
+              def test_single_reader_preserves_existing_energy_macro_diagnostic(self):
+                  result = read_nutrition_label(INCOHERENT, extraction_confidence=.98)
+                  self.assertEqual(result.status, "REVIEW", result)
+                  self.assertEqual((result.nutrition or {}).get("calories"), 182.0)
+                  self.assertTrue(
+                      any(reason.startswith("ENERGY_MACRO_MISMATCH") for reason in result.reasons),
+                      result.reasons,
+                  )
+
+              def test_coherent_explicit_pair_remains_usable_without_conversion(self):
+                  result = read_nutrition_label(COHERENT, extraction_confidence=.98)
+                  self.assertEqual(result.status, "DECLARED", result)
+                  self.assertEqual(result.nutrition["calories"], 152.0)
+                  self.assertEqual(result.nutrition["protein_g"], 18.0)
+
+              def test_one_incoherent_family_vetoes_repeated_suspect_kcal(self):
+                  paddle = read_nutrition_label(INCOHERENT, extraction_confidence=.98)
+                  easy = read_nutrition_label(OCR_182_NO_KJ, extraction_confidence=.96)
+                  tess = read_nutrition_label(OCR_182_NO_KJ, extraction_confidence=.94)
+                  fused = fuse_ocr_readings((
+                      ParsedOCRReading("paddleocr", paddle, .98, "paddleocr"),
+                      ParsedOCRReading("easyocr", easy, .96, "easyocr"),
+                      ParsedOCRReading("tesseract-psm11", tess, .94, "tesseract"),
+                  ))
+                  self.assertEqual(fused.status, "REVIEW", fused)
+                  self.assertNotIn("calories", fused.nutrition or {})
+                  self.assertTrue(
+                      any(reason.startswith("OCR_ENERGY_UNIT_MISMATCH:paddleocr") for reason in fused.reasons),
+                      fused.reasons,
+                  )
+
+
+          if __name__ == "__main__":
+              unittest.main()
+          PY
+
+      - name: Install focused regression-test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check opencv-python-headless numpy Pillow
+
+      - name: Run focused parser, ensemble and OCR safety regressions
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          python -m unittest -v \
+            test_nutrition_energy_pair_guard.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Commit tested ensemble safety guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'catalog-agent'
+          git config user.email 'catalog-agent@users.noreply.github.com'
+          git add tools/catalog/nutrition_ocr_ensemble.py \
+                  tools/catalog/test_nutrition_energy_pair_guard.py
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'No tested guard diff to commit' >&2; exit 1; }
+          git commit -m 'catalog: reject incoherent OCR energy pairs in ensemble [skip ci]'
+          git push origin HEAD:agent/catalog-phase1
+
+      - name: Dispatch focused 86395 fresh-image canary
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-raw-meat-doctr-rescue-pilot.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
+          echo 'Focused 86395 canary dispatched after tested ensemble guard commit.'
