@@ -1,0 +1,227 @@
+name: Catalog Mercadona 25184 bounded split canary
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-25184-bounded-split-canary.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-25184-bounded-split-canary-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      TARGET_PRODUCT_ID: '25184'
+      EXPECTED_EAN: '4052485457080'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run bounded-core regression tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_bounded_split_carbohydrate.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Fetch exact live first-party product and perspective 9 label
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf mercadona-25184-bounded-split-canary
+          mkdir -p mercadona-25184-bounded-split-canary
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from mercadona_current_p9_replacement import select_unique_current_p9
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          pid = os.environ['TARGET_PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
+          payload, source_url = _get_json(pid, timeout=20.0)
+          live = normalize(payload, source_url=source_url, observed_at=_now())
+          if str(live.get('product_id') or '') != pid:
+              raise SystemExit(f'live product id mismatch: {live.get("product_id")}')
+          ean = str(live.get('ean') or '').strip()
+          if not ean or ean != expected_ean:
+              raise SystemExit(f'live EAN mismatch for {pid}: {ean!r} != {expected_ean!r}')
+          if live.get('source') != 'MERCADONA_FIRST_PARTY' or live.get('detail_observed') is not True:
+              raise SystemExit('invalid live first-party provenance')
+
+          image_index, photo, image_url = select_unique_current_p9(live)
+          routed = dict(photo)
+          routed['_preselected_current_first_party_label_image'] = True
+          live = dict(live)
+          live['photos'] = [routed]
+          live['_bounded_split_canary_meta'] = {
+              'product_id': pid,
+              'ean': ean,
+              'image_index': image_index,
+              'perspective': photo.get('perspective'),
+              'image_url': image_url,
+              'source_url': source_url,
+              'identity_basis': 'EXACT_NONEMPTY_EXPECTED_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN',
+              'image_selection_basis': 'UNIQUE_CURRENT_MERCADONA_FIRST_PARTY_PERSPECTIVE_9_AFTER_EAN_REVALIDATION',
+              'redistribution_allowed': False,
+          }
+          root = Path('mercadona-25184-bounded-split-canary')
+          (root / 'products.jsonl').write_text(
+              json.dumps(live, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          (root / 'first-party-fetch.json').write_text(
+              json.dumps(live['_bounded_split_canary_meta'], ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(live['_bounded_split_canary_meta'], ensure_ascii=False, indent=2))
+          PY
+
+      - name: Run fresh OCR on exact current perspective 9 image
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=mercadona-25184-bounded-split-canary
+          set +e
+          python mercadona_preselected_current_image_variant_rescue.py \
+            --products "$root/products.jsonl" \
+            --out "$root/ocr" \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 1
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+
+      - name: Validate fail-closed bounded carbohydrate result
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob, json, os
+          from pathlib import Path
+
+          root = Path('mercadona-25184-bounded-split-canary')
+          meta = json.loads((root / 'first-party-fetch.json').read_text(encoding='utf-8'))
+          paths = sorted(glob.glob(str(root / 'ocr/results-*.jsonl')))
+          rows = []
+          for path in paths:
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+          if len(rows) != 1:
+              raise SystemExit(f'expected one fresh OCR result, got {len(rows)}')
+          row = rows[0]
+          pid = os.environ['TARGET_PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
+          if str(row.get('product_id') or '') != pid or str(row.get('ean') or '') != expected_ean:
+              raise SystemExit(f'fresh OCR identity mismatch: product={row.get("product_id")} ean={row.get("ean")}')
+          if row.get('source') != 'MERCADONA_FIRST_PARTY':
+              raise SystemExit(f'bad source: {row.get("source")}')
+          if row.get('source_record_kind') != 'label image':
+              raise SystemExit(f'bad source_record_kind: {row.get("source_record_kind")}')
+          if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+              raise SystemExit(f'bad evidence: {row.get("evidence_level")}')
+          if row.get('redistribution_allowed') is not False:
+              raise SystemExit('redistribution must remain false')
+          if str(row.get('image_url') or '') != str(meta.get('image_url') or ''):
+              raise SystemExit('OCR image is not the exact EAN-verified current perspective=9 image')
+          if row.get('status') != 'REVIEW':
+              raise SystemExit(f'bounded label must remain REVIEW, got {row.get("status")}')
+          if (row.get('nutrition') or {}).get('carbohydrate_g') is not None:
+              raise SystemExit(f'bounded carbohydrate became exact: {row.get("nutrition")}')
+
+          reasons = []
+          for attempt in row.get('attempts') or []:
+              ensemble = attempt.get('ensemble') or {}
+              reasons.extend(str(reason) for reason in ensemble.get('reasons') or [])
+          bounded = [reason for reason in reasons if reason.startswith('OCR_BOUNDED_CORE_VALUE:carbohydrate_g')]
+          if not bounded:
+              raise SystemExit(f'fresh ensemble did not preserve bounded carbohydrate evidence: {reasons}')
+
+          row = dict(row)
+          row.update({
+              'perspective': '9',
+              'identity_basis': meta.get('identity_basis'),
+              'image_selection_basis': meta.get('image_selection_basis'),
+              'current_first_party_ean_revalidated': True,
+              'bounded_core_value_confirmed': True,
+              'bounded_core_field': 'carbohydrate_g',
+              'bounded_core_reasons': bounded,
+              'cross_run_value_fusion': False,
+              'cross_image_value_fusion': False,
+              'missing_values_inferred': False,
+              'acceptance_policy_changed': False,
+              'image_persisted': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          })
+          (root / 'results-merged.jsonl').write_text(
+              json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          report = {
+              'inventory_products': 4280,
+              'processed': 1,
+              'status_counts': {'REVIEW': 1},
+              'product_id': pid,
+              'ean': expected_ean,
+              'image_url': meta.get('image_url'),
+              'perspective': 9,
+              'bounded_core_field': 'carbohydrate_g',
+              'bounded_core_reasons': bounded,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'source': 'MERCADONA_FIRST_PARTY/label image',
+              'redistribution_allowed': False,
+              'image_persisted': False,
+              'missing_values_inferred': False,
+              'acceptance_policy_changed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          (root / 'summary.json').write_text(
+              json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-25184-bounded-split-canary
+          path: |
+            tools/catalog/mercadona-25184-bounded-split-canary/first-party-fetch.json
+            tools/catalog/mercadona-25184-bounded-split-canary/results-merged.jsonl
+            tools/catalog/mercadona-25184-bounded-split-canary/summary.json
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Dispatch strict canonical reconciliation
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-current-ocr-residual-audit.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
