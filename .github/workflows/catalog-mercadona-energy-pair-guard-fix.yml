@@ -1,0 +1,109 @@
+name: Catalog Mercadona energy-pair safety fix
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-energy-pair-guard-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: catalog-mercadona-energy-pair-safety-fix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fix-and-canary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - name: Add fail-closed kJ/kcal coherence guard and regressions
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          reader = Path('nutrition_label_reader.py')
+          text = reader.read_text(encoding='utf-8')
+          old = 'READER_VERSION = "1.4.30"'
+          new = 'READER_VERSION = "1.4.31"'
+          if old not in text:
+              raise SystemExit('reader version anchor not found')
+          text = text.replace(old, new, 1)
+
+          anchor = '''def _energy_kcal(text: str) -> float | None:\n    folded = _fold(text)\n    # A printed single-digit decimal kcal value is normally too fragile to\n'''
+          replacement = '''def _energy_kcal(text: str) -> float | None:\n    folded = _fold(text)\n\n    # Fail closed when one explicit kJ token and one explicit kcal token are\n    # both visible but physically disagree. This is an OCR-safety check, not an\n    # inference path: no unit is converted into the other and no printed value\n    # is rewritten. A real Mercadona label was repeatedly read as `635 kJ` and\n    # `182 kcal`; 635 kJ is incompatible with 182 kcal, so the kcal observation\n    # must not become canonical merely because several OCR engines repeat the\n    # same glyph error. Multiple energy tokens are left to the existing column\n    # ambiguity guards rather than paired heuristically.\n    explicit_kj = re.findall(\n        r"(?<![\\d.])(\\d{1,5}(?:\\.\\d{1,2})?)\\s*k\\s*j\\b",\n        folded,\n        flags=re.I,\n    )\n    explicit_kcal = re.findall(\n        r"(?<![\\d.])(\\d{1,4}(?:\\.\\d{1,2})?)\\s*kcal\\b",\n        folded,\n        flags=re.I,\n    )\n    if len(explicit_kj) == 1 and len(explicit_kcal) == 1:\n        kj = float(explicit_kj[0])\n        kcal = float(explicit_kcal[0])\n        if not _coherent_kj_kcal_pair(kj, kcal):\n            return None\n\n    # A printed single-digit decimal kcal value is normally too fragile to\n'''
+          if text.count(anchor) != 1:
+              raise SystemExit(f'energy parser anchor count={text.count(anchor)}')
+          text = text.replace(anchor, replacement, 1)
+          reader.write_text(text, encoding='utf-8')
+
+          ensemble = Path('nutrition_ocr_ensemble.py')
+          text = ensemble.read_text(encoding='utf-8')
+          old = 'ENSEMBLE_VERSION = "1.3.6"'
+          new = 'ENSEMBLE_VERSION = "1.3.7"'
+          if old not in text:
+              raise SystemExit('ensemble version anchor not found')
+          text = text.replace(old, new, 1)
+
+          anchor = '''def _fold_ocr_text(text: str) -> str:\n    folded = unicodedata.normalize("NFD", (text or "").lower())\n    return "".join(char for char in folded if unicodedata.category(char) != "Mn")\n\n\n_BOUNDED_ROW_LABELS = {\n'''
+          replacement = '''def _fold_ocr_text(text: str) -> str:\n    folded = unicodedata.normalize("NFD", (text or "").lower())\n    return "".join(char for char in folded if unicodedata.category(char) != "Mn")\n\n\ndef _incoherent_explicit_energy_pair(reading: ParsedOCRReading) -> bool:\n    """Veto calories when a credible OCR read exposes incompatible kJ/kcal.\n\n    This is deliberately observation-wide and fail-closed. Other OCR families\n    are not allowed to outvote an explicit physical contradiction by repeating\n    the same misread kcal glyph. The pair must be unique in that OCR text;\n    multi-column/multi-energy layouts remain governed by the existing ambiguity\n    gates instead of being paired heuristically. No value is inferred or fixed.\n    """\n    if reading.result.status == "NOT_NUTRITION_LABEL" or reading.confidence < .70:\n        return False\n    text = _fold_ocr_text(reading.result.normalized_text)\n    if not text:\n        return False\n    kj_values = re.findall(\n        r"(?<![\\d.])(\\d{1,5}(?:\\.\\d{1,2})?)\\s*k\\s*j\\b",\n        text,\n        flags=re.I,\n    )\n    kcal_values = re.findall(\n        r"(?<![\\d.])(\\d{1,4}(?:\\.\\d{1,2})?)\\s*kcal\\b",\n        text,\n        flags=re.I,\n    )\n    if len(kj_values) != 1 or len(kcal_values) != 1:\n        return False\n    kj = float(kj_values[0])\n    kcal = float(kcal_values[0])\n    expected_kj = kcal * 4.184\n    tolerance_kj = max(2.0, expected_kj * 0.08)\n    return abs(kj - expected_kj) > tolerance_kj\n\n\n_BOUNDED_ROW_LABELS = {\n'''
+          if text.count(anchor) != 1:
+              raise SystemExit(f'ensemble helper anchor count={text.count(anchor)}')
+          text = text.replace(anchor, replacement, 1)
+
+          anchor = '''    bounded_families: dict[str, set[str]] = {field: set() for field in FIELDS}\n    for reading in readings:\n        for field in _bounded_core_fields(reading):\n            bounded_families[field].add(reading.family)\n\n    fields: list[EnsembleField] = []\n    for field in FIELDS:\n        if bounded_families[field]:\n'''
+          replacement = '''    bounded_families: dict[str, set[str]] = {field: set() for field in FIELDS}\n    for reading in readings:\n        for field in _bounded_core_fields(reading):\n            bounded_families[field].add(reading.family)\n\n    incoherent_energy_families = {\n        reading.family\n        for reading in readings\n        if _incoherent_explicit_energy_pair(reading)\n    }\n\n    fields: list[EnsembleField] = []\n    for field in FIELDS:\n        if field == "calories" and incoherent_energy_families:\n            reasons.append(\n                "OCR_ENERGY_UNIT_MISMATCH:" + ",".join(sorted(incoherent_energy_families))\n            )\n            # A visible kJ/kcal contradiction is hard evidence that at least one\n            # energy glyph was misread. Do not let repeated OCR of the suspect\n            # kcal token become an exact ensemble value. A later fresh crop may\n            # recover a coherent printed pair; this observation remains REVIEW.\n            continue\n        if bounded_families[field]:\n'''
+          if text.count(anchor) != 1:
+              raise SystemExit(f'ensemble fusion anchor count={text.count(anchor)}')
+          text = text.replace(anchor, replacement, 1)
+          ensemble.write_text(text, encoding='utf-8')
+
+          test = Path('test_nutrition_energy_pair_guard.py')
+          test.write_text('''import unittest\n\nfrom nutrition_label_reader import read_nutrition_label\nfrom nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings\n\n\nINCOHERENT = """100 g\nValor\n635 kJ\nEnergético\n182 kcal\nGrasas 8.9 g\nHidratos de carbono 0 g\nProteínas 18 g\nSal 0.15 g\n"""\n\nOCR_182_NO_KJ = """100 g\nValor energético 182 kcal\nGrasas 8.9 g\nHidratos de carbono 0 g\nProteínas 18 g\nSal 0.15 g\n"""\n\nCOHERENT = """Información nutricional por 100 g\nValor energético 635 kJ / 152 kcal\nGrasas 8.9 g\nHidratos de carbono 0 g\nProteínas 18 g\nSal 0.15 g\n"""\n\n\nclass NutritionEnergyPairGuardTest(unittest.TestCase):\n    def test_unique_incoherent_explicit_pair_withholds_calories(self):\n        result = read_nutrition_label(INCOHERENT, extraction_confidence=.98)\n        self.assertEqual(result.status, "REVIEW", result)\n        self.assertNotIn("calories", result.nutrition or {})\n        self.assertIn("MISSING_CORE:calories", result.reasons)\n\n    def test_coherent_explicit_pair_remains_usable_without_conversion(self):\n        result = read_nutrition_label(COHERENT, extraction_confidence=.98)\n        self.assertEqual(result.status, "DECLARED", result)\n        self.assertEqual(result.nutrition["calories"], 152.0)\n        self.assertEqual(result.nutrition["protein_g"], 18.0)\n\n    def test_one_incoherent_family_vetoes_repeated_suspect_kcal(self):\n        paddle = read_nutrition_label(INCOHERENT, extraction_confidence=.98)\n        easy = read_nutrition_label(OCR_182_NO_KJ, extraction_confidence=.96)\n        tess = read_nutrition_label(OCR_182_NO_KJ, extraction_confidence=.94)\n        fused = fuse_ocr_readings((\n            ParsedOCRReading("paddleocr", paddle, .98, "paddleocr"),\n            ParsedOCRReading("easyocr", easy, .96, "easyocr"),\n            ParsedOCRReading("tesseract-psm11", tess, .94, "tesseract"),\n        ))\n        self.assertEqual(fused.status, "REVIEW", fused)\n        self.assertNotIn("calories", fused.nutrition or {})\n        self.assertTrue(\n            any(reason.startswith("OCR_ENERGY_UNIT_MISMATCH:paddleocr") for reason in fused.reasons),\n            fused.reasons,\n        )\n\n\nif __name__ == "__main__":\n    unittest.main()\n''', encoding='utf-8')
+          PY
+
+      - name: Run parser and ensemble safety tests
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          python -m unittest -v \
+            test_nutrition_energy_pair_guard.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Commit tested safety fix without broad push fan-out
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'catalog-agent'
+          git config user.email 'catalog-agent@users.noreply.github.com'
+          git add tools/catalog/nutrition_label_reader.py \
+                  tools/catalog/nutrition_ocr_ensemble.py \
+                  tools/catalog/test_nutrition_energy_pair_guard.py
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'No safety fix diff to commit' >&2; exit 1; }
+          git commit -m 'catalog: reject incoherent OCR energy unit pairs [skip ci]'
+          git push origin HEAD:agent/catalog-phase1
+
+      - name: Dispatch focused 86395 fresh-image canary
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-raw-meat-doctr-rescue-pilot.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
+          echo 'Focused raw-meat canary dispatched on the tested guard commit.'
