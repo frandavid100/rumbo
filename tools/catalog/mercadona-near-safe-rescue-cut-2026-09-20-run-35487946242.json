@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "MERCADONA_OCR_PARTIAL_RESCUE_CUT",
+  "historical_universe_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "classified": false,
+  "menu_eligible": false,
+  "workflow_run_id": 35487946242,
+  "artifact_id": 10597509634,
+  "artifact_zip_sha256": "20f5f1864c0ecc11c8cbdda8ea084792578864aea71517041cd242b324ea397f",
+  "generated_at": "2026-09-20T04:55:05Z",
+  "engine": "paddleocr-3.3.2-PP-OCRv5_server_det_mobile_rec+doctr-1.0.0",
+  "parser_version": "1.3.6",
+  "crop_detector_version": "1.3.2",
+  "selection": {
+    "target_source": "latest-audit-near-safe",
+    "targets": ["54056", "53379", "72116", "72144", "53444"],
+    "attempted": 5,
+    "historical_identity_verified": 5,
+    "current_image_matches_historical": 5,
+    "fresh_declared": 4,
+    "review": 1
+  },
+  "acceptance_policy": {
+    "historical_id_ean_exact": true,
+    "single_current_perspective_9_image_required": true,
+    "fresh_retrieval_only": true,
+    "historical_macro_reuse": false,
+    "all_four_core_macros_required": true,
+    "independent_corroboration_required": true,
+    "review_is_usable": false,
+    "missing_values_inferred": false
+  },
+  "observations": [
+    {
+      "product_id": "54056",
+      "ean": "8480000540562",
+      "name": "Helado Mochi mango Hacendado",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {"kcal": 181.0, "fat_g": 1.0, "carbohydrate_g": 42.0, "protein_g": 1.1}
+    },
+    {
+      "product_id": "53379",
+      "ean": "8480000533793",
+      "name": "Caramelos blandos sabor frutas Hacendado",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {"kcal": 391.0, "fat_g": 4.5, "carbohydrate_g": 86.0, "protein_g": 1.4}
+    },
+    {
+      "product_id": "72116",
+      "ean": "8410013016818",
+      "name": "Cacao soluble instantáneo ColaCao original",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {"kcal": 361.0, "fat_g": 3.2, "carbohydrate_g": 71.0, "protein_g": 8.8}
+    },
+    {
+      "product_id": "72144",
+      "ean": "7613287476627",
+      "name": "Cacao instantáneo Nesquik NESTLÉ",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {"kcal": 374.0, "fat_g": 3.4, "carbohydrate_g": 75.3, "protein_g": 5.1}
+    },
+    {
+      "product_id": "53444",
+      "ean": "8480000534448",
+      "name": "Helado sándwich sabor nata Hacendado",
+      "status": "REVIEW",
+      "basis": "100_g",
+      "nutrition_usable": false
+    }
+  ],
+  "artifact_internal_sha256": {
+    "results-merged.jsonl": "54d487b0553f1f1b6e53fa989d65d00a07e1345c49979878b834221d123d8cb7",
+    "results-merged.sqlite": "ea6f3e93b27179738100f79825327d7351b094d42a7736b7c98ce8f0cbe63887",
+    "selection-summary.json": "20ca0c6787c3566bf28266677f5bfdb8afc25122bc44555f86d6f42ba91a984a",
+    "summary.json": "11e26e13890d9d83c3cfc548fc396231a9e84b2b175276336678048e77d2a6eb"
+  },
+  "canonical_note": "This partial cut records fresh OCR observations only. Canonical Mercadona counts remain authoritative only after strict residual-audit reconciliation with latest-observation-wins semantics."
+}
