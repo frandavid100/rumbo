@@ -10,11 +10,12 @@ API detail.
 
 For this preselected cohort we allow the existing temporary-variant machinery to
 run when the fresh pass either keeps exactly three core fields or produces a
-complete tuple with only 1/4, 2/4 or 3/4 fields corroborated. A fresh three-of-four
-observation from only one OCR family is also retryable: variants are observation
-quality retries whose purpose is precisely to seek an independent family, while
-acceptance remains unchanged and still requires the ordinary independent-engine
-gates. Historical values are never consumed by this decision.
+complete tuple with only 0/4, 1/4, 2/4 or 3/4 fields corroborated. A fresh
+observation from only one OCR family is therefore retryable whether it recovers
+3/4 or all 4 fields: variants are observation-quality retries whose purpose is
+precisely to seek an independent family, while acceptance remains unchanged and
+still requires the ordinary independent-engine gates. Historical values are
+never consumed by this decision.
 
 Acceptance is untouched: a usable result still has to recover all four values in
 the fresh observation and pass the normal parser, explicit-basis,
@@ -50,13 +51,10 @@ def should_run_preselected_three_of_four_variant_rescue(ensemble) -> bool:
     missing = [field for field in base.CORE_NUTRITION_FIELDS if field not in present]
 
     if not missing:
-        # A complete fresh tuple still needs at least two independent families
-        # before the bounded near-safe retry route is opened. This preserves the
-        # established complete-tuple behaviour; the new single-family allowance
-        # below is limited to an exact 3/4 MISSING_CORE observation.
-        if ensemble.independent_engine_families < 2:
-            return False
-        if not (1 <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
+        # A complete fresh tuple from one family is still only REVIEW evidence.
+        # Let deterministic temporary variants seek a second family; this changes
+        # routing only, never the >=2-family acceptance contract.
+        if not (0 <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
             return False
         return "UNCORROBORATED_CORE_FIELDS" in ensemble.reasons
 
