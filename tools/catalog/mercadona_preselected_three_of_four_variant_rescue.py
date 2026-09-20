@@ -10,11 +10,17 @@ API detail.
 
 For this preselected cohort we allow the existing temporary-variant machinery to
 run when the fresh pass either keeps exactly three core fields or produces a
-complete tuple with only 1/4, 2/4 or 3/4 fields corroborated. Acceptance is
-untouched: a usable result still has to recover all four values in the fresh
-observation and pass the normal parser, explicit-basis, energy/macro-coherence
-and independent-engine corroboration gates. No value is inferred or fused from
-the historical partial observation, and variant images are temporary.
+complete tuple with only 1/4, 2/4 or 3/4 fields corroborated. A fresh three-of-four
+observation from only one OCR family is also retryable: variants are observation
+quality retries whose purpose is precisely to seek an independent family, while
+acceptance remains unchanged and still requires the ordinary independent-engine
+gates. Historical values are never consumed by this decision.
+
+Acceptance is untouched: a usable result still has to recover all four values in
+the fresh observation and pass the normal parser, explicit-basis,
+energy/macro-coherence and independent-engine corroboration gates. No value is
+inferred or fused from the historical partial observation, and variant images are
+temporary.
 """
 
 import mercadona_near_safe_variant_rescue as rescue
@@ -28,9 +34,7 @@ def should_run_preselected_three_of_four_variant_rescue(ensemble) -> bool:
         return False
     if not ensemble.nutrition:
         return False
-    if ensemble.independent_engine_families < 2:
-        return False
-    if not (1 <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
+    if ensemble.independent_engine_families < 1:
         return False
     if any(
         str(reason).startswith(prefix)
@@ -46,11 +50,26 @@ def should_run_preselected_three_of_four_variant_rescue(ensemble) -> bool:
     missing = [field for field in base.CORE_NUTRITION_FIELDS if field not in present]
 
     if not missing:
-        # Fresh reread has all values but is still short of full independent
-        # corroboration. Temporary variants may improve observation quality only.
+        # A complete fresh tuple still needs at least two independent families
+        # before the bounded near-safe retry route is opened. This preserves the
+        # established complete-tuple behaviour; the new single-family allowance
+        # below is limited to an exact 3/4 MISSING_CORE observation.
+        if ensemble.independent_engine_families < 2:
+            return False
+        if not (1 <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
+            return False
         return "UNCORROBORATED_CORE_FIELDS" in ensemble.reasons
 
     if len(missing) != 1:
+        return False
+
+    # The preselected workflow has already established the historical clean 3/4
+    # contract. On the fresh exact same first-party image, one family may recover
+    # the same 3/4 tuple while other engines fail to parse anything. Running
+    # deterministic temporary variants is safe here because this is routing only:
+    # a result can become usable only if the fresh retry independently recovers
+    # all four fields and satisfies the unchanged >=2-family acceptance gates.
+    if not (0 <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
         return False
 
     # A missing field is retryable only when the ensemble explicitly records the
