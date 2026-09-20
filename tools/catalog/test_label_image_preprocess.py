@@ -22,6 +22,27 @@ class LabelImagePreprocessTest(unittest.TestCase):
             self.assertTrue(all(v.path.is_file() for v in variants))
             self.assertTrue(all(v.path.stat().st_size > 0 for v in variants))
 
+    def test_large_image_adds_native_resolution_tiles_below_paddle_limit(self):
+        with tempfile.TemporaryDirectory() as td:
+            source = Path(td) / "large-label.jpg"
+            Image.new("RGB", (2804, 5220), "white").save(source)
+            out = Path(td) / "variants"
+            variants = build_fallback_variants(source, out)
+            tiles = [v for v in variants if v.name.startswith("native_tile_")]
+
+            self.assertEqual(
+                [v.name for v in tiles],
+                ["native_tile_r0_c0", "native_tile_r1_c0"],
+            )
+            self.assertTrue(tiles)
+            for tile in tiles:
+                with Image.open(tile.path) as image:
+                    self.assertLessEqual(max(image.size), 3900)
+                    # Native-resolution tiles may crop, but must never upscale the
+                    # first-party pixels merely to satisfy Paddle's detector cap.
+                    self.assertLessEqual(image.width, 2804)
+                    self.assertLessEqual(image.height, 5220)
+
 
 if __name__ == "__main__":
     unittest.main()
