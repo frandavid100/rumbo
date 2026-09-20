@@ -30,9 +30,10 @@ concurrency:
 jobs:
   audit:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 90
     env:
       GH_TOKEN: ${{ github.token }}
+      MERCADONA_SETTLE_WAIT_SECONDS: '3600'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -120,7 +121,7 @@ jobs:
           set -euo pipefail
           self_created_at=$(gh api -H 'Accept: application/vnd.github+json' \
             "/repos/frandavid100/rumbo/actions/runs/${GITHUB_RUN_ID}" --jq '.created_at')
-          deadline=$((SECONDS + 600))
+          deadline=$((SECONDS + MERCADONA_SETTLE_WAIT_SECONDS))
           while :; do
             mapfile -t active_runs < <(
               gh api -H 'Accept: application/vnd.github+json' \
