@@ -3,6 +3,7 @@ import unittest
 from mercadona_near_safe_variant_rescue import (
     RESCUE_VARIANT_NAMES,
     _bounded_dissenting_family_rescue,
+    _ordered_variant_names,
     _strategy_suffix,
     should_run_variant_rescue,
 )
@@ -47,6 +48,22 @@ Hidratos de carbono 20 g
         ))
         self.assertEqual(_strategy_suffix("full_autocontrast"), "autocontrast")
         self.assertEqual(_strategy_suffix("crop_center"), "crop_center")
+
+    def test_native_tiles_are_retried_deterministically_after_full_image(self):
+        available = {
+            "crop_right", "native_tile_r1_c0", "full_autocontrast",
+            "native_tile_r0_c0", "crop_center", "unrelated_variant",
+        }
+        self.assertEqual(
+            _ordered_variant_names(available),
+            (
+                "full_autocontrast",
+                "native_tile_r0_c0",
+                "native_tile_r1_c0",
+                "crop_center",
+                "crop_right",
+            ),
+        )
 
     def test_does_not_retry_already_declared_tuple(self):
         parsed = read_nutrition_label("""Información nutricional por 100 g
