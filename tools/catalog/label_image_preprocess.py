@@ -10,9 +10,10 @@ try:
 except ImportError as exc:  # pragma: no cover - dependency is checked in CI
     raise RuntimeError("Pillow is required for label image preprocessing") from exc
 
-PREPROCESS_VERSION = "1.1.0"
+PREPROCESS_VERSION = "1.1.1"
 PADDLE_SAFE_MAX_SIDE = 3900
 NATIVE_TILE_OVERLAP_FRACTION = 0.15
+LEGACY_CROP_ENLARGE_FACTOR = 1.5
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,26 @@ def _native_tile_boxes(
     return boxes
 
 
+def _resize_legacy_crop_for_detector(crop: Image.Image) -> Image.Image:
+    """Enlarge a crop only while keeping its longest side below Paddle's cap.
+
+    PP-OCRv6 otherwise emits a max_side_limit warning and immediately shrinks the
+    fixed 1.5x fallback. Keeping the preprocessed image below that boundary makes
+    the scale deterministic and avoids spending OCR work on pixels that Paddle
+    will discard internally. Oversized unusual inputs are explicitly reduced here;
+    their native-resolution tiles are attempted earlier by the rescue route.
+    """
+    longest = max(crop.width, crop.height)
+    if longest <= 0:
+        return crop
+    scale = min(LEGACY_CROP_ENLARGE_FACTOR, PADDLE_SAFE_MAX_SIDE / float(longest))
+    if abs(scale - 1.0) < 1e-9:
+        return crop
+    width = max(1, round(crop.width * scale))
+    height = max(1, round(crop.height * scale))
+    return crop.resize((width, height), Image.Resampling.LANCZOS)
+
+
 def build_fallback_variants(image_path: str | Path, output_dir: str | Path) -> list[ImageVariant]:
     """Create deterministic OCR fallback variants from one already-downloaded image.
 
@@ -116,8 +137,7 @@ def build_fallback_variants(image_path: str | Path, output_dir: str | Path) -> l
 
         for name, box in _crop_boxes(width, height):
             crop = image.crop(box)
-            # Enlarge crops so small pack text occupies more pixels for OCR.
-            target = crop.resize((int(crop.width * 1.5), int(crop.height * 1.5)), Image.Resampling.LANCZOS)
+            target = _resize_legacy_crop_for_detector(crop)
             path = out / f"crop-{name}.jpg"
             _save_autocontrast(target, path)
             variants.append(ImageVariant(f"crop_{name}", path))
