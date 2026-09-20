@@ -1,0 +1,51 @@
+name: Catalog Mercadona energy-pair runner bootstrap
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-energy-pair-runner-bootstrap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-runner:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+          fetch-depth: 0
+
+      - name: Add missing regression-test dependencies to focused safety runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/catalog-mercadona-energy-pair-guard-fix.yml')
+          text = path.read_text(encoding='utf-8')
+          marker = '''      - name: Run parser and ensemble safety tests\n        working-directory: tools/catalog\n'''
+          if 'Install focused regression-test dependencies' in text:
+              raise SystemExit('dependency bootstrap already present')
+          if text.count(marker) != 1:
+              raise SystemExit(f'test-step marker count={text.count(marker)}')
+          install = '''      - name: Install focused regression-test dependencies\n        run: |\n          python -m pip install --disable-pip-version-check opencv-python-headless numpy Pillow\n\n'''
+          path.write_text(text.replace(marker, install + marker, 1), encoding='utf-8')
+          PY
+
+      - name: Commit runner dependency bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'catalog-agent'
+          git config user.email 'catalog-agent@users.noreply.github.com'
+          git add .github/workflows/catalog-mercadona-energy-pair-guard-fix.yml
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'No runner patch to commit' >&2; exit 1; }
+          git commit -m 'catalog: install focused OCR safety test dependencies'
+          git push origin HEAD:agent/catalog-phase1
