@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "kind": "MERCADONA_OCR_PARTIAL_CANARY_CUT",
+  "canonical_not_updated_here": true,
+  "inventory_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY",
+  "source_record_kind": "label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 35526316821,
+  "workflow_run_attempt": 3,
+  "workflow_head_sha": "77623224bca0c68550f70cdd4b52250eb0486086",
+  "artifact_id": 10615621339,
+  "artifact_name": "mercadona-current-crop-cap-canary-merged",
+  "artifact_sha256": "374a8867c32c7e9ecc77124f003d82ca83700486407c2687d1e1b4a4f7079956",
+  "artifact_created_at": "2026-09-20T22:43:22Z",
+  "canonical_audit_run_id_before_canary": 35519284109,
+  "selection": {
+    "strict_diagnostic_rows": 39,
+    "eligible_simple_single_family_rows": 26,
+    "selected": 3,
+    "selected_product_ids": ["4241", "8994", "20277"],
+    "selected_missing_fields": ["fat_g", "carbohydrate_g", "protein_g"],
+    "policy": "ONE_LIVE_VERIFIED_CANDIDATE_PER_AVAILABLE_MISSING_FIELD; CURRENT_REVIEW_3_OF_4; EXPLICIT_BASIS; ONE_HISTORICAL_OCR_FAMILY; NO_HARD_BLOCKER; SIMPLE_REASON_PREFIXES_ONLY; EXACT_EAN; EXACT_CURRENT_P9_URL"
+  },
+  "result": {
+    "processed": 3,
+    "status_counts": {
+      "DECLARED": 1,
+      "REVIEW": 2
+    },
+    "declared_product_ids": ["4241"],
+    "review_product_ids": ["8994", "20277"]
+  },
+  "declared_rows": [
+    {
+      "product_id": "4241",
+      "name": "Aceite de oliva 0,4º Hacendado",
+      "ean": "8402001027482",
+      "basis": "100_ml",
+      "nutrition": {
+        "calories": 822.0,
+        "fat_g": 91.4,
+        "carbohydrate_g": 0.0,
+        "protein_g": 0.0
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4,
+      "image_url": "https://prod-mercadona.imgix.net/images/3eb95d1e4b1daee2df5e5c85dafbfe38.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "preprocess_version": "1.1.1",
+      "paddle_safe_max_side": 3900,
+      "source": "MERCADONA_FIRST_PARTY",
+      "source_record_kind": "label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false
+    }
+  ],
+  "safety": {
+    "historical_values_consumed": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false,
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "acceptance_policy_changed": false,
+    "classifed_or_menu_eligible_changed": false
+  },
+  "purpose": "Persist the successful detector-safe crop-cap canary result and trigger a strict canonical residual audit. This file is audit metadata only; the Actions artifact remains the raw OCR evidence source."
+}
