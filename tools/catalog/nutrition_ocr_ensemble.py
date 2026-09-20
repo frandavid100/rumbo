@@ -8,7 +8,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.5"
+ENSEMBLE_VERSION = "1.3.6"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -96,8 +96,10 @@ def _bounded_core_fields(reading: ParsedOCRReading) -> set[str]:
 
     Matching is deliberately narrow: the inequality must be on the same row,
     the immediately following value row, or the immediately preceding reversed
-    value row. Bounds on saturated fat, sugars, salt, ingredients, or distant
-    prose therefore cannot veto a core macro.
+    value row. A Mercadona label has also been observed with OCR layout wrapping
+    `Hidratos de` and `Carbono` around the bounded value itself; that exact
+    split-label geometry is accepted too. Bounds on saturated fat, sugars, salt,
+    ingredients, or distant prose therefore cannot veto a core macro.
     """
     if reading.result.status == "NOT_NUTRITION_LABEL" or reading.confidence < .70:
         return set()
@@ -113,10 +115,28 @@ def _bounded_core_fields(reading: ParsedOCRReading) -> set[str]:
         same_row = rf"(?:^|\n)\s*[\[|]?\s*{label}\b[^\n]*?{number}{unit}(?=\s|$)"
         next_row = rf"(?:^|\n)\s*[\[|]?\s*{label}\b[^\n]*\n\s*{number}{unit}(?=\s|$)"
         reversed_row = rf"(?:^|\n)\s*{number}{unit}\s*\n\s*[\[|]?\s*{label}\b"
+        split_carbohydrate_label = None
+        if field == "carbohydrate_g":
+            # Real first-party OCR sample (Mercadona product 25184):
+            #   Hidratos de
+            #   <0.5 g
+            #   0               # occasional OCR layout artefact
+            #   Carbono
+            # This is still an explicitly bounded carbohydrate row, not an exact
+            # 0.5 g observation. Keep the geometry intentionally narrow so a bound
+            # on the following sugars row cannot be misattributed to carbohydrates.
+            split_carbohydrate_label = (
+                rf"(?:^|\n)\s*[\[|]?\s*hidratos?\s+de\s*\n\s*"
+                rf"{number}{unit}(?=\s|$)\s*(?:\n\s*[0o]\s*)?\n\s*carbono\b"
+            )
         if (
             re.search(same_row, text, flags=re.I)
             or re.search(next_row, text, flags=re.I)
             or re.search(reversed_row, text, flags=re.I)
+            or (
+                split_carbohydrate_label is not None
+                and re.search(split_carbohydrate_label, text, flags=re.I)
+            )
         ):
             bounded.add(field)
     return bounded
