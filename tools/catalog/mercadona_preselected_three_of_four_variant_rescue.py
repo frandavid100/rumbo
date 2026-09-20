@@ -11,9 +11,11 @@ API detail.
 For this preselected cohort we allow the existing temporary-variant machinery to
 run when the fresh pass either keeps exactly three core fields or produces a
 complete tuple with only 0/4, 1/4, 2/4 or 3/4 fields corroborated. A fresh
-observation from only one OCR family is therefore retryable whether it recovers
-3/4 or all 4 fields: variants are observation-quality retries whose purpose is
-precisely to seek an independent family, while acceptance remains unchanged and
+complete observation with 0/4 corroborated fields is retryable only when it came
+from one OCR family: variants are observation-quality retries whose purpose is
+precisely to seek an independent family. Complete tuples already spanning two or
+more families retain the established requirement that at least one core field be
+corroborated before the retry route opens. Acceptance remains unchanged and
 still requires the ordinary independent-engine gates. Historical values are
 never consumed by this decision.
 
@@ -51,10 +53,13 @@ def should_run_preselected_three_of_four_variant_rescue(ensemble) -> bool:
     missing = [field for field in base.CORE_NUTRITION_FIELDS if field not in present]
 
     if not missing:
-        # A complete fresh tuple from one family is still only REVIEW evidence.
-        # Let deterministic temporary variants seek a second family; this changes
-        # routing only, never the >=2-family acceptance contract.
-        if not (0 <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
+        # A complete one-family tuple with no corroborated core fields is still
+        # useful retry evidence: deterministic variants can seek the missing
+        # independent family. Once two or more families are already represented,
+        # preserve the older fail-closed gate and require at least one core field
+        # to agree before opening this bounded retry route.
+        min_corroborated = 0 if ensemble.independent_engine_families == 1 else 1
+        if not (min_corroborated <= ensemble.corroborated_fields < len(base.CORE_NUTRITION_FIELDS)):
             return False
         return "UNCORROBORATED_CORE_FIELDS" in ensemble.reasons
 
