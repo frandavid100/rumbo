@@ -5,18 +5,21 @@
   "source": "MERCADONA_FIRST_PARTY/label image",
   "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
   "redistribution_allowed": false,
+  "images_persisted": false,
   "classified": false,
   "menu_eligible": false,
   "workflow_run_id": 35487946242,
-  "artifact_id": 10597509634,
-  "artifact_zip_sha256": "20f5f1864c0ecc11c8cbdda8ea084792578864aea71517041cd242b324ea397f",
-  "generated_at": "2026-09-20T04:55:05Z",
-  "engine": "paddleocr-3.3.2-PP-OCRv5_server_det_mobile_rec+doctr-1.0.0",
-  "parser_version": "1.3.6",
-  "crop_detector_version": "1.3.2",
+  "workflow_head_sha": "4aa2ba8dddf662051c480213cdb4e1ff0e254152",
+  "artifact": {
+    "name": "mercadona-current-near-safe-complete-retry",
+    "artifact_id": 10597509634,
+    "sha256": "e27c5c37f591aff86e0f7ab937c504167ee7c8ebc8ec5112b4e96d3447938f04",
+    "created_at": "2026-09-20T04:14:18Z"
+  },
+  "reader": "ensemble-1.3.6",
   "selection": {
-    "target_source": "latest-audit-near-safe",
-    "targets": ["54056", "53379", "72116", "72144", "53444"],
+    "target_source": "canonical-audit-run-35484472877-near-safe-complete-review",
+    "targets": ["7878", "84638", "21649", "24541", "52426"],
     "attempted": 5,
     "historical_identity_verified": 5,
     "current_image_matches_historical": 5,
@@ -28,58 +31,88 @@
     "single_current_perspective_9_image_required": true,
     "fresh_retrieval_only": true,
     "historical_macro_reuse": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false,
     "all_four_core_macros_required": true,
     "independent_corroboration_required": true,
     "review_is_usable": false,
-    "missing_values_inferred": false
+    "missing_values_inferred": false,
+    "acceptance_policy_changed": false
   },
   "observations": [
     {
-      "product_id": "54056",
-      "ean": "8480000540562",
-      "name": "Helado Mochi mango Hacendado",
+      "product_id": "7878",
+      "ean": "8402001020568",
+      "name": "Yogur líquido natural Hacendado con azúcar de caña",
       "status": "DECLARED",
       "basis": "100_g",
-      "nutrition": {"kcal": 181.0, "fat_g": 1.0, "carbohydrate_g": 42.0, "protein_g": 1.1}
+      "image_url": "https://prod-mercadona.imgix.net/images/98defbc6961fcc68faede107199125f3.jpg?fit=crop&h=3600&w=3600",
+      "independent_engine_families": 2,
+      "corroborated_fields": 4,
+      "nutrition": {"kcal": 70.0, "fat_g": 1.8, "carbohydrate_g": 11.5, "protein_g": 1.9}
     },
     {
-      "product_id": "53379",
-      "ean": "8480000533793",
-      "name": "Caramelos blandos sabor frutas Hacendado",
+      "product_id": "84638",
+      "ean": "2105900846388",
+      "name": "12 Mini saladas surtidas",
       "status": "DECLARED",
       "basis": "100_g",
-      "nutrition": {"kcal": 391.0, "fat_g": 4.5, "carbohydrate_g": 86.0, "protein_g": 1.4}
+      "image_url": "https://prod-mercadona.imgix.net/images/c6a38f514cb055c172d688eed1811f30.jpg?fit=crop&h=3600&w=3600",
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "nutrition": {"kcal": 325.0, "fat_g": 19.0, "carbohydrate_g": 29.0, "protein_g": 8.9},
+      "diagnostic_note": "EasyOCR fat disagreement was ignored; the accepted value remained independently corroborated by PaddleOCR and Tesseract."
     },
     {
-      "product_id": "72116",
-      "ean": "8410013016818",
-      "name": "Cacao soluble instantáneo ColaCao original",
+      "product_id": "21649",
+      "ean": "8402001054686",
+      "name": "Empanada de carne",
       "status": "DECLARED",
       "basis": "100_g",
-      "nutrition": {"kcal": 361.0, "fat_g": 3.2, "carbohydrate_g": 71.0, "protein_g": 8.8}
+      "image_url": "https://prod-mercadona.imgix.net/images/1b085f5f14d821129d2d72b0d71138c3.jpg?fit=crop&h=3600&w=3600",
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "nutrition": {"kcal": 240.0, "fat_g": 12.0, "carbohydrate_g": 26.0, "protein_g": 6.7}
     },
     {
-      "product_id": "72144",
-      "ean": "7613287476627",
-      "name": "Cacao instantáneo Nesquik NESTLÉ",
-      "status": "DECLARED",
-      "basis": "100_g",
-      "nutrition": {"kcal": 374.0, "fat_g": 3.4, "carbohydrate_g": 75.3, "protein_g": 5.1}
-    },
-    {
-      "product_id": "53444",
-      "ean": "8480000534448",
-      "name": "Helado sándwich sabor nata Hacendado",
+      "product_id": "24541",
+      "ean": "8402001050428",
+      "name": "Golosinas tubos rellenos Hacendado sabor nata y fresa",
       "status": "REVIEW",
+      "basis": null,
+      "image_url": "https://prod-mercadona.imgix.net/images/778d340daab64031f191ec5cac1b87ab.jpg?fit=crop&h=3600&w=3600",
+      "independent_engine_families": 3,
+      "corroborated_fields": 1,
+      "nutrition_usable": false,
+      "blocking_reasons": [
+        "OCR_FIELD_CONFLICT:fat_g",
+        "OCR_FIELD_CONFLICT:carbohydrate_g",
+        "OCR_FIELD_CONFLICT:protein_g",
+        "MISSING_CORE:fat_g,carbohydrate_g,protein_g"
+      ]
+    },
+    {
+      "product_id": "52426",
+      "ean": "8436021413505",
+      "name": "Alas de pollo barbacoa congeladas",
+      "status": "DECLARED",
       "basis": "100_g",
-      "nutrition_usable": false
+      "image_url": "https://prod-mercadona.imgix.net/images/83b8bfed4498a06f7d5d818db3d2073d.jpg?fit=crop&h=3600&w=3600",
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "nutrition": {"kcal": 177.0, "fat_g": 11.2, "carbohydrate_g": 2.8, "protein_g": 16.2}
     }
   ],
   "artifact_internal_sha256": {
-    "results-merged.jsonl": "54d487b0553f1f1b6e53fa989d65d00a07e1345c49979878b834221d123d8cb7",
-    "results-merged.sqlite": "ea6f3e93b27179738100f79825327d7351b094d42a7736b7c98ce8f0cbe63887",
-    "selection-summary.json": "20ca0c6787c3566bf28266677f5bfdb8afc25122bc44555f86d6f42ba91a984a",
-    "summary.json": "11e26e13890d9d83c3cfc548fc396231a9e84b2b175276336678048e77d2a6eb"
+    "results-merged.jsonl": "6bec52db511d88fe305242097ad5e55d9ede0df33f7a1dfd9f98b07ac3792374",
+    "staging.sqlite": "f4c54acadf366692bdafce11a2b03cc4c1925ff67f25b31aa2dfd38909be727a",
+    "selection-summary.json": "e839565f6e025cada6e052ce1e0a14c98119369c00594f2e4b957eff717df9fa",
+    "summary.json": "13c56bf2cdfff5036836e7f3517c71d80f092cfe67e00bd8cc09bf0bec9c11b6"
   },
-  "canonical_note": "This partial cut records fresh OCR observations only. Canonical Mercadona counts remain authoritative only after strict residual-audit reconciliation with latest-observation-wins semantics."
+  "canonical_reconciliation": {
+    "run_id": 35490603143,
+    "status_after_reconciliation": {"DECLARED": 377, "REVIEW": 2592, "processed": 2969}
+  },
+  "correction_note": "This file corrects a previously persisted manifest whose targets and observations did not match workflow run 35487946242. Values above are transcribed from artifact 10597509634 and its selection/summary files; no historical macro values were reused.",
+  "canonical_note": "This partial cut records fresh OCR observations only. Canonical Mercadona counts are authoritative only after strict residual-audit reconciliation with latest-observation-wins semantics."
 }
