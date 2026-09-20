@@ -1,0 +1,103 @@
+{
+  "merchant": "MERCADONA",
+  "scope": "historical_first_party_cut_2026-08-27",
+  "audit_run_id": 35484472877,
+  "audit_artifact": {
+    "name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10598495230,
+    "sha256": "6e3462ca4b3186e161e11c5af71d067e9b3d9a7ea76d95bc40ee23dac4324c95"
+  },
+  "historical_cut": {
+    "product_count": 4280
+  },
+  "ocr_union": {
+    "processed_products": 2969,
+    "processed_coverage_pct": 69.3692,
+    "declared_products": 373,
+    "review_products": 2596,
+    "complete_nutrition_products": 373,
+    "complete_nutrition_coverage_pct": 8.715,
+    "macro_coverage": {
+      "calories": 373,
+      "fat": 373,
+      "carbohydrates": 373,
+      "protein": 373
+    }
+  },
+  "chronology": {
+    "mode": "GITHUB_ARTIFACT_CREATED_AT",
+    "latest_observation_wins": true,
+    "historical_declared_products": 400,
+    "latest_review_after_historical_declared": 27,
+    "older_declared_inherited_after_later_review": false
+  },
+  "current_review_failure_modes": {
+    "total_review": 2596,
+    "explicit_100_basis": 587,
+    "missing_explicit_100_basis": 2009,
+    "field_count_distribution": {
+      "0": 2028,
+      "1": 113,
+      "2": 176,
+      "3": 229,
+      "4": 50
+    },
+    "near_safe_complete": 5,
+    "fully_corroborated_but_still_review": 0,
+    "complete_safety_blocked": 10,
+    "three_of_four_explicit_basis_unblocked": 48,
+    "three_of_four_missing_field_counts": {
+      "carbohydrate_g": 11,
+      "fat_g": 18,
+      "protein_g": 19
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 46,
+      "2": 1,
+      "3": 1
+    },
+    "three_of_four_bounded_core_review": 8,
+    "safety_blocker_counts": {
+      "HARD_OCR_CONFLICT": 237,
+      "ENERGY_MACRO_INCOHERENCE": 97,
+      "AMBIGUOUS_TABLE": 108,
+      "NON_EXACT_BOUNDED_CORE": 31
+    }
+  },
+  "historical_unprocessed_residual": {
+    "residual_products": 1311,
+    "current_actionable_candidate_count": 0,
+    "alcohol_deferred_count": 11,
+    "outside_scope_count": 1300,
+    "perspective_9_count": 1298,
+    "no_perspective_9_count": 13
+  },
+  "integrity": {
+    "identity_conflicts": 0,
+    "identity_unverified": 0,
+    "identity_unresolved": 0,
+    "processed_without_canonical_state": 0
+  },
+  "provenance_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "next_safe_route": {
+    "kind": "FRESH_RETRY_OF_REVIEW_ONLY",
+    "priority": [
+      "near_safe_complete_review",
+      "three_of_four_explicit_basis_unblocked_review"
+    ],
+    "policy": "Use residual diagnostics only for prioritization. Revalidate exact product identity and current first-party label image, then require a fresh observation to independently recover and corroborate all four core fields. Never inherit historical DECLARED nutrition after a newer REVIEW, never fuse values across runs/crops/images, and never infer bounded or absent values."
+  },
+  "notes": [
+    "This strict audit supersedes the previously persisted 375 DECLARED / 2594 REVIEW state.",
+    "The previous count overcounted chronologically stale DECLARED observations. Canonical reconciliation is latest-observation-wins by GitHub artifact creation time, so 27 products with an older DECLARED and a later valid REVIEW remain REVIEW.",
+    "No unprocessed actionable food candidate remains in the fixed 4,280-product historical cut; further gains must come from conservative fresh retries of REVIEW products."
+  ]
+}
