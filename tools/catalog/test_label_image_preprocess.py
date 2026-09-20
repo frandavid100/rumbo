@@ -43,6 +43,25 @@ class LabelImagePreprocessTest(unittest.TestCase):
                     self.assertLessEqual(image.width, 2804)
                     self.assertLessEqual(image.height, 5220)
 
+    def test_legacy_enlarged_crops_never_trigger_paddle_internal_downscale(self):
+        # Mercadona p9 URLs commonly request 3600x3600. The previous fixed 1.5x
+        # fallback enlargement turned their ~3024 px crops into ~4536 px images,
+        # so PaddleOCR immediately shrank them again at its 4000 px detector cap.
+        with tempfile.TemporaryDirectory() as td:
+            source = Path(td) / "mercadona-p9.jpg"
+            Image.new("RGB", (3600, 3600), "white").save(source)
+            out = Path(td) / "variants"
+            variants = build_fallback_variants(source, out)
+
+            crop_variants = [v for v in variants if v.name.startswith("crop_")]
+            self.assertEqual(len(crop_variants), 5)
+            for variant in crop_variants:
+                with Image.open(variant.path) as image:
+                    self.assertLessEqual(
+                        max(image.size), 3900,
+                        f"{variant.name} would be downscaled internally by PaddleOCR: {image.size}",
+                    )
+
 
 if __name__ == "__main__":
     unittest.main()
