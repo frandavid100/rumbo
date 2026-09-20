@@ -91,6 +91,11 @@ jobs:
           ]
           candidates = []
           rejected_shape = []
+          allowed_reason_prefixes = {
+              'MISSING_CORE',
+              'INSUFFICIENT_NUTRITION_MARKERS',
+              'MISSING_100G_100ML_BASIS',
+          }
           for row in rows:
               pid = str(row.get('product_id') or '').strip()
               if not pid or pid in attempted_before:
@@ -98,6 +103,7 @@ jobs:
               values = row.get('diagnostic_candidate_values') or {}
               missing_core = [field for field in core if values.get(field) is None]
               present_core = [field for field in core if values.get(field) is not None]
+              reason_prefixes = set(row.get('reason_prefixes') or [])
               valid = (
                   row.get('canonical_status') == 'REVIEW'
                   and row.get('basis') in {'100_g', '100_ml'}
@@ -106,7 +112,8 @@ jobs:
                   and len(present_core) == 3
                   and list(row.get('missing_core_fields') or []) == missing_core
                   and int(row.get('independent_engine_families') or 0) == 1
-                  and list(row.get('reason_prefixes') or []) == ['MISSING_CORE']
+                  and 'MISSING_CORE' in reason_prefixes
+                  and reason_prefixes <= allowed_reason_prefixes
                   and str(row.get('ean') or '').strip()
                   and str(row.get('image_url') or '').strip()
               )
@@ -116,7 +123,7 @@ jobs:
                   rejected_shape.append(pid)
 
           if not candidates:
-              raise SystemExit('No strict single-family missing-one REVIEW candidate remains after prior-canary exclusion')
+              raise SystemExit('No simple single-family missing-one REVIEW candidate remains after prior-canary exclusion')
 
           verified = []
           exclusions = []
@@ -203,7 +210,7 @@ jobs:
           selected_items.sort(key=lambda item: str(item['old'].get('product_id') or ''))
 
           if not selected_items:
-              raise SystemExit('No exact-EAN exact-current-p9 single-family missing-one candidate survived live verification')
+              raise SystemExit('No exact-EAN exact-current-p9 simple single-family missing-one candidate survived live verification')
 
           selected_products = [item['live'] for item in selected_items]
           selection_rows = []
@@ -217,6 +224,7 @@ jobs:
                   'historical_engine_families': old.get('independent_engine_families'),
                   'historical_corroborated_fields': old.get('corroborated_fields'),
                   'previous_latest_raw_run_id': old.get('latest_raw_run_id'),
+                  'historical_reason_prefixes': old.get('reason_prefixes'),
                   'ean': meta.get('canonical_ean'),
                   'image_url': meta.get('image_url'),
                   'perspective': meta.get('current_photo_perspective'),
@@ -234,7 +242,7 @@ jobs:
               'prior_canary_run_id': int('${{ steps.canary.outputs.run_id }}'),
               'prior_canary_excluded_ids': sorted(attempted_before),
               'strict_diagnostic_rows': len(rows),
-              'strict_single_family_candidates_after_prior_exclusion': len(candidates),
+              'simple_single_family_candidates_after_prior_exclusion': len(candidates),
               'rejected_shape_product_ids': sorted(rejected_shape),
               'live_verified_exact_ean_exact_p9': len(verified),
               'live_exclusions': exclusions,
@@ -245,7 +253,7 @@ jobs:
                   item['old']['missing_core_fields'][0] for item in selected_items
               ).items())),
               'selected_with_structured_ingredients': sum(1 for item in selected_items if item['has_structured_ingredients']),
-              'selection_policy': 'CURRENT_REVIEW_EXACTLY_3_OBSERVED_CORE; EXPLICIT_100G_100ML; NO_HARD_BLOCKER; EXACTLY_1_HISTORICAL_OCR_FAMILY; MISSING_CORE_ONLY; EXACT_EAN; EXACT_CURRENT_FIRST_PARTY_P9_IMAGE; PRIOR_CANARY_EXCLUDED; BALANCED_2_PER_MISSING_FIELD; STRUCTURED_INGREDIENTS_FIRST',
+              'selection_policy': 'CURRENT_REVIEW_EXACTLY_3_OBSERVED_CORE; EXPLICIT_100G_100ML; NO_HARD_BLOCKER; EXACTLY_1_HISTORICAL_OCR_FAMILY; SIMPLE_HISTORICAL_REASON_PREFIXES_ONLY; MISSING_CORE_REQUIRED; EXACT_EAN; EXACT_CURRENT_FIRST_PARTY_P9_IMAGE; PRIOR_CANARY_EXCLUDED; BALANCED_2_PER_MISSING_FIELD; STRUCTURED_INGREDIENTS_FIRST',
               'selected_rows': selection_rows,
               'historical_partial_values_usable': False,
               'cross_run_value_fusion': False,
