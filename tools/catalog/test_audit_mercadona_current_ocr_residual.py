@@ -14,6 +14,10 @@ from audit_mercadona_current_ocr_residual import (
     residual_profile,
 )
 
+# Touching this audited test target intentionally starts a brand-new residual-audit run.
+# GitHub reruns retain the original run.created_at, so only a new run gives the evidence
+# union a fresh chronology cutoff after later OCR artifacts have completed.
+
 
 def row(
     product_id: str,
