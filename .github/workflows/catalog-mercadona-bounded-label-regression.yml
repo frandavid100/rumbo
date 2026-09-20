@@ -1,0 +1,33 @@
+name: Catalog Mercadona bounded label regression
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-bounded-label-regression.yml'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/test_nutrition_ocr_ensemble.py'
+      - 'tools/catalog/test_nutrition_ocr_ensemble_split_bounded_label.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run bounded-label regression and ensemble suite
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_ocr_ensemble_split_bounded_label.py \
+            test_nutrition_ocr_ensemble.py
+          python -m py_compile nutrition_ocr_ensemble.py
