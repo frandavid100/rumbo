@@ -1,0 +1,112 @@
+{
+  "merchant": "MERCADONA",
+  "scope": "historical_first_party_cut_2026-08-27",
+  "audit_run_id": 35480279623,
+  "audit_artifact": {
+    "name": "mercadona-current-ocr-residual-audit-efficient",
+    "artifact_id": 10595138766,
+    "sha256": "5483ec5e8bd26b0dc64b850774159ee45c7b27ba8120147f3bcb9abf450ea6d5"
+  },
+  "historical_cut": {
+    "product_count": 4280
+  },
+  "ocr_union": {
+    "processed_products": 2969,
+    "processed_coverage_pct": 69.3692,
+    "declared_products": 375,
+    "review_products": 2594,
+    "complete_nutrition_products": 375,
+    "complete_nutrition_coverage_pct": 8.7617,
+    "macro_coverage": {
+      "calories": 375,
+      "fat": 375,
+      "carbohydrates": 375,
+      "protein": 375
+    }
+  },
+  "latest_successful_fresh_rescue": {
+    "run_id": 35479458055,
+    "artifact_id": 10595368119,
+    "sha256": "65716ad71765332a6a99120288f09623b7ae0c6c9a3131d7b9fb607c191e0e03",
+    "processed": 5,
+    "declared": 1,
+    "review": 4,
+    "declared_product_ids": [
+      "11470"
+    ],
+    "declared_examples": {
+      "11470": {
+        "name": "Infusión Laxsen sabor menta Hacendado",
+        "basis": "100_ml",
+        "calories": 3,
+        "fat_g": 0,
+        "carbohydrate_g": 0,
+        "protein_g": 0
+      }
+    },
+    "acceptance_policy_changed": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false,
+    "historical_partial_values_usable": false,
+    "fresh_observation_must_recover_all_four": true,
+    "images_persisted": false,
+    "missing_values_inferred": false
+  },
+  "current_review_failure_modes": {
+    "total_review": 2594,
+    "explicit_100_basis": 586,
+    "missing_explicit_100_basis": 2008,
+    "field_count_distribution": {
+      "0": 2027,
+      "1": 113,
+      "2": 175,
+      "3": 232,
+      "4": 47
+    },
+    "near_safe_complete": 2,
+    "fully_corroborated_but_still_review": 0,
+    "complete_safety_blocked": 9,
+    "three_of_four_explicit_basis_unblocked": 49,
+    "three_of_four_missing_field_counts": {
+      "carbohydrate_g": 12,
+      "fat_g": 18,
+      "protein_g": 19
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 46,
+      "2": 3
+    }
+  },
+  "historical_unprocessed_residual": {
+    "residual_products": 1311,
+    "candidate_count": 0,
+    "food_signature_count": 0,
+    "alcohol_deferred_count": 11,
+    "outside_scope_or_no_food_signature_count": 1300,
+    "perspective_9_count": 1298,
+    "no_perspective_9_count": 13
+  },
+  "integrity": {
+    "identity_conflicts": 0,
+    "identity_unverified": 0,
+    "identity_unresolved": 0,
+    "processed_without_canonical_state": 0
+  },
+  "provenance_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "next_safe_route": {
+    "kind": "CURRENT_UNIQUE_P9_REPLACEMENT_RETRY",
+    "workflow": ".github/workflows/catalog-mercadona-current-p9-replacement-retry.yml",
+    "policy": "Use the latest 3/4 REVIEW diagnostics only for prioritization. Revalidate exact EAN, select exactly one current nonempty perspective=9 image, require that it differs from the historical image URL, and make the fresh observation independently recover and corroborate all four core fields. No historical values are usable."
+  },
+  "notes": [
+    "The latest strict canonical count is 375 DECLARED after one fresh current-p9 rescue was reconciled chronologically.",
+    "No unprocessed food-signature candidates remain in the fixed historical cut; further gains must come from conservative REVIEW rescue.",
+    "The strongest remaining 3/4 candidates have current first-party perspective=9 image replacements, so a fail-closed replacement-image retry has been added without relaxing the parser or acceptance contract."
+  ]
+}
