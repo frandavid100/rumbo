@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "MERCADONA_OCR_PARTIAL_CURRENT_P9_REFRESH_CUT",
+  "canonical_not_updated_here": true,
+  "inventory_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY",
+  "source_record_kind": "label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 35564901676,
+  "workflow_run_attempt": 1,
+  "workflow_head_sha": "d1d524987cecc4f2f321f8c03b3c432a165d4f63",
+  "artifact_id": 10624157113,
+  "artifact_name": "mercadona-current-p9-refresh-wave4",
+  "artifact_sha256": "328b28a318ad539cce4941ef829f6501285da1b2bb49aeeaf6576e99b00a140f",
+  "artifact_created_at": "2026-09-21T05:43:12Z",
+  "canonical_audit_run_id_before_wave": 35561134189,
+  "selection": {
+    "strict_residual_rows": 35,
+    "live_verified_changed_unique_p9_candidates": 10,
+    "already_attempted_product_ids": ["14378", "22154", "2778", "63101"],
+    "selected": 3,
+    "selected_product_ids": ["22799", "59085", "16484"],
+    "selected_missing_fields": ["fat_g", "carbohydrate_g", "protein_g"],
+    "policy": "STRICT_SINGLE_FAMILY_3_OF_4_REVIEW; EXPLICIT_BASIS; NO_HARD_BLOCKER; EXACT_EAN; EXACTLY_ONE_CURRENT_PERSPECTIVE_9_IMAGE; EXCLUDE_PREVIOUSLY_ATTEMPTED_CURRENT_P9_CANARY; HISTORICAL_IMAGE_VALUES_NEVER_CONSUMED; CHANGED_IMAGE_URL_ALLOWED"
+  },
+  "result": {
+    "processed": 3,
+    "status_counts": {
+      "DECLARED": 1,
+      "REVIEW": 2
+    },
+    "declared_product_ids": ["22799"],
+    "review_product_ids": ["59085", "16484"]
+  },
+  "declared_rows": [
+    {
+      "product_id": "22799",
+      "name": "Postre lácteo sabor fresa sin lactosa Hacendado",
+      "ean": "8480000227997",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 86.0,
+        "fat_g": 3.29,
+        "carbohydrate_g": 11.0,
+        "protein_g": 3.2
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "image_url": "https://prod-mercadona.imgix.net/images/3906479015abb60c3e556312cdf17e63.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source": "MERCADONA_FIRST_PARTY",
+      "source_record_kind": "label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false
+    }
+  ],
+  "safety": {
+    "historical_values_consumed": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false,
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "acceptance_policy_changed": false,
+    "classified_or_menu_eligible_changed": false
+  },
+  "purpose": "Persist the successful changed-current-P9 wave4 result and trigger a strict canonical residual audit. This file is audit metadata only; the Actions artifact remains the raw OCR evidence source."
+}
