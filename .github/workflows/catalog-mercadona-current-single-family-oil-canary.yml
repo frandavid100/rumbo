@@ -1,0 +1,101 @@
+name: Catalog Mercadona single-family 3-of-4 oil canary
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-single-family-oil-canary.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-single-family-oil-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - name: Resolve latest successful strict canonical audit
+        id: canonical
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          mkdir -p /tmp/audit
+          gh run download "$run_id" -n mercadona-current-ocr-residual-audit -D /tmp/audit
+
+      - name: Build exact-current-image oil canary
+        working-directory: tools/catalog
+        run: |
+          python mercadona_current_single_family_canary_prepare.py \
+            --residual /tmp/audit/current-review-failure-modes/three-of-four-explicit-basis-unblocked-review.jsonl \
+            --out mercadona-current-single-family-oil-canary \
+            --targets 14727 4041 4641
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('mercadona-current-single-family-oil-canary/selection-summary.json')
+          x = json.loads(p.read_text())
+          x['canonical_audit_run_id'] = int('${{ steps.canonical.outputs.run_id }}')
+          p.write_text(json.dumps(x, ensure_ascii=False, indent=2) + '\n')
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run conservative rescue tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_preselected_current_image_routing.py \
+            test_mercadona_preselected_three_of_four_variant_rescue.py \
+            test_mercadona_near_safe_variant_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py \
+            test_label_image_preprocess.py
+
+      - name: OCR exact current first-party images
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=mercadona-current-single-family-oil-canary
+          set +e
+          python mercadona_preselected_current_image_variant_rescue.py \
+            --products "$root/products.jsonl" --out "$root/ocr" \
+            --shard-index 0 --shard-count 1 --limit 0
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+          python mercadona_current_canary_finalize.py --root "$root"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-single-family-oil-canary
+          path: tools/catalog/mercadona-current-single-family-oil-canary/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Reconcile canonical OCR after successful canary
+        if: success()
+        run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
