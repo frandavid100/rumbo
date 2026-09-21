@@ -20,14 +20,11 @@ from typing import Any
 from mercadona_label_evidence import LabelImageEvidence
 import mercadona_near_safe_variant_rescue as rescue
 import mercadona_neural_ocr_wave as base
+from mercadona_ocr_image_safety import attempts_have_structural_ambiguity
 import mercadona_preselected_three_of_four_variant_rescue as preselected
 
 
 PRESELECTED_FLAG = "_preselected_current_first_party_label_image"
-_IMAGE_WIDE_STRUCTURAL_REASON_PREFIXES = (
-    "MULTIPLE_NUTRITION_COLUMNS",
-    "OCR_AMBIGUOUS_NUTRITION_COLUMNS",
-)
 
 
 def _preselected_photo(row: dict[str, Any]) -> tuple[int, dict[str, Any]] | None:
@@ -51,28 +48,6 @@ def _configure_variant_rescue() -> None:
     base._ORIGINAL_EXTRACT_REGION = base._extract_region
     rescue.should_run_variant_rescue = preselected.should_run_preselected_three_of_four_variant_rescue
     base._extract_region = rescue._extract_region
-
-
-def _attempts_have_structural_ambiguity(attempts: list[dict[str, Any]]) -> bool:
-    """Return True when any OCR target saw a structurally ambiguous nutrition table.
-
-    Targets are alternative crops of the *same* first-party label image. A crop
-    that happens to isolate the 100 g column cannot make nutrition usable when a
-    credible OCR target of that image exposes parallel nutrition columns. This
-    veto therefore applies across all targets, not only inside one ensemble call.
-    """
-    for attempt in attempts:
-        ensemble = attempt.get("ensemble") if isinstance(attempt, dict) else None
-        if not isinstance(ensemble, dict):
-            continue
-        reasons = ensemble.get("reasons") if isinstance(ensemble.get("reasons"), list) else []
-        if any(
-            str(reason).startswith(prefix)
-            for reason in reasons
-            for prefix in _IMAGE_WIDE_STRUCTURAL_REASON_PREFIXES
-        ):
-            return True
-    return False
 
 
 def main() -> int:
@@ -194,7 +169,7 @@ def main() -> int:
                 # Do not stop at the first clean-looking crop. All OCR targets of
                 # the same image must be inspected before a DECLARED candidate can
                 # become usable, otherwise a crop can hide a parallel serving column.
-                if _attempts_have_structural_ambiguity(item["attempts"]):
+                if attempts_have_structural_ambiguity(item["attempts"]):
                     item["status"] = "REVIEW"
                     item["image_wide_reasons"] = ["MULTIPLE_NUTRITION_COLUMNS"]
                     item.pop("basis", None)
