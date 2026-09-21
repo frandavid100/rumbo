@@ -1,0 +1,118 @@
+{
+  "merchant": "MERCADONA",
+  "scope": "historical_first_party_cut_2026-08-27",
+  "audit_run_id": 35544870901,
+  "audit_run_attempt": 1,
+  "audit_head_sha": "c5276d3bdc933198339524c674a77de4aeb3f2bc",
+  "audit_artifact": {
+    "name": "mercadona-current-ocr-residual-audit",
+    "artifact_id": 10616272958,
+    "sha256": "5536d8b7cbcd21eada2d3831f69d07390159fb002d1df3e00401e234aad0dd2f",
+    "created_at": "2026-09-20T23:45:10Z"
+  },
+  "historical_cut": {
+    "product_count": 4280
+  },
+  "ocr_union": {
+    "processed_products": 2969,
+    "processed_coverage_pct": 69.3692,
+    "declared_products": 380,
+    "review_products": 2589,
+    "complete_nutrition_products": 380,
+    "complete_nutrition_coverage_pct": 8.8785,
+    "macro_coverage": {
+      "calories": 380,
+      "fat": 380,
+      "carbohydrates": 380,
+      "protein": 380
+    }
+  },
+  "chronology": {
+    "mode": "GITHUB_ARTIFACT_CREATED_AT",
+    "latest_observation_wins": true,
+    "historical_declared_products": 403,
+    "latest_review_after_historical_declared": 23,
+    "older_declared_inherited_after_later_review": false
+  },
+  "newly_declared_since_previous_persisted_cut": [
+    {
+      "product_id": "4241",
+      "ean": "8402001027482",
+      "name": "Aceite de oliva 0,4º Hacendado",
+      "basis": "100_ml",
+      "latest_live_run_id": 35526316821,
+      "nutrition": {"kcal": 822.0, "fat_g": 91.4, "carbohydrate_g": 0.0, "protein_g": 0.0}
+    }
+  ],
+  "current_review_failure_modes": {
+    "total_review": 2589,
+    "explicit_100_basis": 579,
+    "missing_explicit_100_basis": 2010,
+    "field_count_distribution": {
+      "0": 2030,
+      "1": 114,
+      "2": 181,
+      "3": 217,
+      "4": 47
+    },
+    "near_safe_complete": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_safety_blocked": 10,
+    "three_of_four_explicit_basis_unblocked": 36,
+    "three_of_four_missing_field_counts": {
+      "carbohydrate_g": 7,
+      "fat_g": 15,
+      "protein_g": 14
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 36
+    },
+    "three_of_four_bounded_core_review": 8,
+    "safety_blocker_counts": {
+      "HARD_OCR_CONFLICT": 240,
+      "ENERGY_MACRO_INCOHERENCE": 98,
+      "AMBIGUOUS_TABLE": 110,
+      "NON_EXACT_BOUNDED_CORE": 34
+    }
+  },
+  "historical_unprocessed_residual": {
+    "residual_products": 1311,
+    "current_actionable_candidate_count": 0,
+    "alcohol_deferred_count": 11,
+    "outside_scope_count": 1300,
+    "perspective_9_count": 1298,
+    "no_perspective_9_count": 13,
+    "historical_membership_parity_verifiable": true,
+    "historical_residual_ean_parity_verifiable": true
+  },
+  "integrity": {
+    "identity_conflicts": 0,
+    "identity_unverified": 0,
+    "identity_unresolved": 0,
+    "processed_without_canonical_state": 0
+  },
+  "provenance_contract": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY/label image",
+    "redistribution_allowed": false,
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "structured_api_macros_claimed": false,
+    "classified": false,
+    "menu_eligible": false
+  },
+  "next_safe_route": {
+    "kind": "FRESH_RETRY_OF_REVIEW_ONLY",
+    "priority": "three_of_four_explicit_basis_unblocked_review",
+    "candidate_count": 36,
+    "strong_multi_family_candidate_count": 0,
+    "candidate_definition": "3/4 core fields, explicit 100 g/100 ml basis, no safety blocker; current residual members each have exactly one OCR engine family",
+    "policy": "Use residual diagnostics only for prioritization. Revalidate exact product identity and current first-party label image, and require each fresh observation to independently recover and corroborate all four core fields. Never fuse values across runs/crops/images, never inherit historical DECLARED nutrition after a newer REVIEW, and never infer bounded or absent values."
+  },
+  "notes": [
+    "This audit incorporates crop-cap canary run 35526316821.",
+    "The canary recovered product 4241 from a fresh current first-party perspective=9 label image; products 8994 and 20277 remained REVIEW.",
+    "The strict 3/4 explicit-basis retry queue shrank from 39 to 36 and still contains no multi-family strong candidate; all 36 have exactly one OCR family.",
+    "No unprocessed actionable food candidate remains in the fixed 4,280-product historical cut."
+  ]
+}
