@@ -1,6 +1,6 @@
 import unittest
 
-import mercadona_preselected_current_image_variant_rescue as rescue
+from mercadona_ocr_image_safety import attempts_have_structural_ambiguity
 
 
 class ImageWideStructuralAmbiguityTest(unittest.TestCase):
@@ -32,7 +32,7 @@ class ImageWideStructuralAmbiguityTest(unittest.TestCase):
             },
         ]
 
-        self.assertTrue(rescue._attempts_have_structural_ambiguity(attempts))
+        self.assertTrue(attempts_have_structural_ambiguity(attempts))
 
     def test_unrelated_review_does_not_create_structural_veto(self):
         attempts = [
@@ -46,7 +46,7 @@ class ImageWideStructuralAmbiguityTest(unittest.TestCase):
             }
         ]
 
-        self.assertFalse(rescue._attempts_have_structural_ambiguity(attempts))
+        self.assertFalse(attempts_have_structural_ambiguity(attempts))
 
 
 if __name__ == "__main__":
