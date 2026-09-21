@@ -1,0 +1,220 @@
+name: Catalog Mercadona current P9 exact consensus revalidate
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-p9-exact-consensus-revalidate.yml'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/test_nutrition_ocr_ensemble.py'
+      - 'tools/catalog/test_nutrition_ocr_ensemble_exact_cross_family.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-p9-exact-consensus-revalidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      TARGET_PRODUCT_ID: '22799'
+      EXPECTED_EAN: '8480000227997'
+      HISTORICAL_IMAGE_URL: 'https://prod-mercadona.imgix.net/images/85a85cab17a7c9c2759adbcb29fdf6d1.jpg?fit=crop&h=3600&w=3600'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run exact-consensus unit regression first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_nutrition_ocr_ensemble.py \
+            test_nutrition_ocr_ensemble_exact_cross_family.py
+          python -m py_compile nutrition_ocr_ensemble.py
+
+      - name: Fetch exact current first-party P9 target
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-current-p9-exact-consensus-revalidate
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from mercadona_first_party_details import _get_json, normalize, _now
+
+          pid = os.environ['TARGET_PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
+          historical_image_url = os.environ['HISTORICAL_IMAGE_URL']
+          observed_at = _now()
+          payload, source_url = _get_json(pid, timeout=20.0)
+          live = normalize(payload, source_url=source_url, observed_at=observed_at)
+          current_ean = str(live.get('ean') or '').strip()
+          if current_ean != expected_ean:
+              raise SystemExit(f'identity mismatch: expected EAN {expected_ean}; live {current_ean}')
+          photos = live.get('photos') if isinstance(live.get('photos'), list) else []
+          p9 = [
+              (index, photo) for index, photo in enumerate(photos)
+              if isinstance(photo, dict)
+              and str(photo.get('perspective') or '') == '9'
+              and str(photo.get('zoom') or '').strip()
+          ]
+          if len(p9) != 1:
+              raise SystemExit(f'exactly one current P9 required; found {len(p9)}')
+          image_index, photo = p9[0]
+          image_url = str(photo.get('zoom') or '').strip()
+          routed = dict(photo)
+          routed['_preselected_current_first_party_label_image'] = True
+          live = dict(live)
+          live['photos'] = [routed]
+          live['_exact_current_image_meta'] = {
+              'image_url': image_url,
+              'historical_image_url': historical_image_url,
+              'historical_image_url_changed': image_url != historical_image_url,
+              'current_photo_index': image_index,
+              'current_photo_perspective': photo.get('perspective'),
+              'canonical_ean': expected_ean,
+              'current_ean': current_ean,
+              'identity_basis': 'EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN',
+              'image_selection_basis': 'UNIQUE_CURRENT_FIRST_PARTY_PERSPECTIVE_9_IMAGE_AFTER_EXACT_EAN_REVALIDATION',
+              'live_detail_source_url': source_url,
+              'live_detail_observed_at': observed_at,
+              'historical_missing_core_fields': ['fat_g'],
+              'historical_engine_families': 1,
+              'historical_corroborated_fields': 3,
+              'historical_reason_prefixes': ['INSUFFICIENT_NUTRITION_MARKERS', 'MISSING_CORE'],
+              'historical_diagnostic_values_are_usable': False,
+          }
+          root = Path('mercadona-current-p9-exact-consensus-revalidate')
+          (root / 'products.jsonl').write_text(
+              json.dumps(live, ensure_ascii=False, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          (root / 'selection.json').write_text(json.dumps({
+              'product_id': pid,
+              'ean': expected_ean,
+              'name': live.get('name'),
+              'image_url': image_url,
+              'perspective': 9,
+              'identity_basis': live['_exact_current_image_meta']['identity_basis'],
+              'image_selection_basis': live['_exact_current_image_meta']['image_selection_basis'],
+              'purpose': 'Fresh first-party revalidation after exact cross-family consensus safety regression',
+              'historical_values_usable': False,
+              'cross_run_value_fusion': False,
+              'cross_image_value_fusion': False,
+              'missing_values_inferred': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+          }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run fresh OCR on exact current P9 image
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=mercadona-current-p9-exact-consensus-revalidate
+          set +e
+          python mercadona_preselected_current_image_variant_rescue.py \
+            --products "$root/products.jsonl" \
+            --out "$root/ocr" \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 2>&1 | tee "$root/ocr.log"
+          rc=${PIPESTATUS[0]}
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+
+      - name: Require fail-closed REVIEW for the observed near-value conflict
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob
+          import json
+          import os
+          from pathlib import Path
+          from nutrition_ocr_ensemble import ENSEMBLE_VERSION
+
+          root = Path('mercadona-current-p9-exact-consensus-revalidate')
+          rows = []
+          for path in glob.glob(str(root / 'ocr/results-*.jsonl')):
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+          if len(rows) != 1:
+              raise SystemExit(f'expected exactly one OCR result, got {len(rows)}')
+          row = rows[0]
+          pid = os.environ['TARGET_PRODUCT_ID']
+          ean = os.environ['EXPECTED_EAN']
+          if str(row.get('product_id') or '') != pid or str(row.get('ean') or '') != ean:
+              raise SystemExit('unexpected product identity in OCR result')
+          if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+              raise SystemExit('invalid first-party source provenance')
+          if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
+              raise SystemExit('invalid OCR evidence/redistribution provenance')
+          if str(row.get('perspective') or '') not in {'9', ''}:
+              raise SystemExit(f'unexpected perspective: {row.get("perspective")}')
+          if row.get('status') != 'REVIEW':
+              raise SystemExit(f'expected fail-closed REVIEW after exact-consensus fix, got {row.get("status")}')
+          conflict_seen = False
+          for attempt in row.get('attempts') or []:
+              ensemble = attempt.get('ensemble') or {}
+              if any(str(reason).startswith('OCR_FIELD_CONFLICT:fat_g') for reason in ensemble.get('reasons') or []):
+                  conflict_seen = True
+                  break
+          if not conflict_seen:
+              raise SystemExit('expected OCR_FIELD_CONFLICT:fat_g was not observed')
+          summary = {
+              'source': 'MERCADONA_FIRST_PARTY',
+              'source_record_kind': 'label image',
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'product_id': pid,
+              'ean': ean,
+              'name': row.get('name'),
+              'status': row.get('status'),
+              'nutrition': row.get('nutrition'),
+              'ensemble_version': ENSEMBLE_VERSION,
+              'safety_reason': 'OCR_FIELD_CONFLICT:fat_g',
+              'historical_values_consumed': False,
+              'cross_run_value_fusion': False,
+              'cross_image_value_fusion': False,
+              'missing_values_inferred': False,
+              'images_persisted': False,
+              'redistribution_allowed': False,
+              'CLASSIFIED': 0,
+              'MENU_ELIGIBLE': 0,
+          }
+          (root / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-current-p9-exact-consensus-revalidate-22799
+          path: |
+            tools/catalog/mercadona-current-p9-exact-consensus-revalidate/selection.json
+            tools/catalog/mercadona-current-p9-exact-consensus-revalidate/ocr/results-*.jsonl
+            tools/catalog/mercadona-current-p9-exact-consensus-revalidate/ocr/summary-*.json
+            tools/catalog/mercadona-current-p9-exact-consensus-revalidate/summary.json
+          retention-days: 30
+          if-no-files-found: warn
