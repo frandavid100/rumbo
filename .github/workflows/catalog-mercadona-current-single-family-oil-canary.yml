@@ -1,4 +1,4 @@
-name: Catalog Mercadona single-family 3-of-4 oil canary
+name: Catalog Mercadona dynamic single-family 3-of-4 canary
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: catalog-mercadona-current-single-family-oil-canary-${{ github.ref }}
+  group: catalog-mercadona-current-single-family-canary-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -38,17 +38,18 @@ jobs:
           mkdir -p /tmp/audit
           gh run download "$run_id" -n mercadona-current-ocr-residual-audit -D /tmp/audit
 
-      - name: Build exact-current-image oil canary
+      - name: Build bounded exact-current-image canary dynamically
         working-directory: tools/catalog
         run: |
+          python -m py_compile mercadona_current_single_family_canary_prepare.py
           python mercadona_current_single_family_canary_prepare.py \
             --residual /tmp/audit/current-review-failure-modes/three-of-four-explicit-basis-unblocked-review.jsonl \
-            --out mercadona-current-single-family-oil-canary \
-            --targets 14727 4041 4641
+            --out mercadona-current-single-family-canary \
+            --limit-selected 3
           python - <<'PY'
           import json
           from pathlib import Path
-          p = Path('mercadona-current-single-family-oil-canary/selection-summary.json')
+          p = Path('mercadona-current-single-family-canary/selection-summary.json')
           x = json.loads(p.read_text())
           x['canonical_audit_run_id'] = int('${{ steps.canonical.outputs.run_id }}')
           p.write_text(json.dumps(x, ensure_ascii=False, indent=2) + '\n')
@@ -78,7 +79,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          root=mercadona-current-single-family-oil-canary
+          root=mercadona-current-single-family-canary
           set +e
           python mercadona_preselected_current_image_variant_rescue.py \
             --products "$root/products.jsonl" --out "$root/ocr" \
@@ -91,8 +92,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mercadona-current-single-family-oil-canary
-          path: tools/catalog/mercadona-current-single-family-oil-canary/
+          name: mercadona-current-single-family-canary
+          path: tools/catalog/mercadona-current-single-family-canary/
           retention-days: 90
           if-no-files-found: error
 
