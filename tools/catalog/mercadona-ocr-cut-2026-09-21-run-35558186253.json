@@ -1,0 +1,58 @@
+{
+  "kind": "MERCADONA_OCR_PARTIAL_CUT",
+  "created_from_workflow_run": 35558186253,
+  "workflow_name": "Catalog Mercadona current crop-cap wave 3",
+  "artifact": {
+    "id": 10621330648,
+    "name": "mercadona-current-crop-cap-wave3",
+    "sha256": "e6e51e17279c78a81318dcd043853f184454705df44d089e599c4e0585518bb8"
+  },
+  "historical_inventory_products": 4280,
+  "canonical_audit_run_before_wave": 35544870901,
+  "processed": 1,
+  "status_counts": {
+    "DECLARED": 1,
+    "REVIEW": 0,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "declared": [
+    {
+      "product_id": "63101",
+      "ean": "8480000631015",
+      "name": "Filetes de merluza al huevo Hacendado ultracongelados",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 189.0,
+        "fat_g": 10.0,
+        "carbohydrate_g": 14.0,
+        "protein_g": 11.0
+      },
+      "image_url": "https://prod-mercadona.imgix.net/images/9b494db20d292337f2176b210fdcf6dd.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source": "MERCADONA_FIRST_PARTY",
+      "source_record_kind": "label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "reader": "ensemble-1.3.7",
+      "independent_engine_families": 2,
+      "corroborated_fields": 4,
+      "identity_basis": "EXACT_NONEMPTY_CANONICAL_EAN_EQUALS_CURRENT_FIRST_PARTY_EAN",
+      "image_selection_basis": "EXACT_LATEST_OBSERVED_PERSPECTIVE_9_IMAGE_URL_OCCURS_ONCE_IN_CURRENT_MERCADONA_FIRST_PARTY_PHOTOS_AFTER_EAN_REVALIDATION",
+      "historical_missing_core_fields": ["fat_g"],
+      "historical_partial_values_usable": false,
+      "cross_run_value_fusion": false,
+      "cross_image_value_fusion": false,
+      "missing_values_inferred": false,
+      "redistribution_allowed": false
+    }
+  ],
+  "selection": {
+    "selected": 1,
+    "skipped_live_verification": 34,
+    "notes": "Historical residual candidates were used only to select product identities. Fresh OCR had to recover and independently corroborate all four core nutrition values from one current first-party perspective=9 image. No historical OCR value was consumed."
+  },
+  "images_persisted": false,
+  "canonical_not_updated_here": true,
+  "classified": false,
+  "menu_eligible": false
+}
