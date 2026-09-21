@@ -6,8 +6,10 @@ on:
     paths:
       - '.github/workflows/catalog-mercadona-current-p9-exact-consensus-revalidate.yml'
       - 'tools/catalog/nutrition_ocr_ensemble.py'
+      - 'tools/catalog/mercadona_preselected_current_image_variant_rescue.py'
       - 'tools/catalog/test_nutrition_ocr_ensemble.py'
       - 'tools/catalog/test_nutrition_ocr_ensemble_exact_cross_family.py'
+      - 'tools/catalog/test_mercadona_preselected_current_image_variant_rescue.py'
   workflow_dispatch:
 
 permissions:
@@ -35,13 +37,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Run exact-consensus unit regression first
+      - name: Run structural safety regressions first
         working-directory: tools/catalog
         run: |
           python -m unittest -v \
             test_nutrition_ocr_ensemble.py \
-            test_nutrition_ocr_ensemble_exact_cross_family.py
-          python -m py_compile nutrition_ocr_ensemble.py
+            test_nutrition_ocr_ensemble_exact_cross_family.py \
+            test_mercadona_preselected_current_image_variant_rescue.py
+          python -m py_compile \
+            nutrition_ocr_ensemble.py \
+            mercadona_preselected_current_image_variant_rescue.py
 
       - name: Fetch exact current first-party P9 target
         working-directory: tools/catalog
@@ -110,7 +115,7 @@ jobs:
               'perspective': 9,
               'identity_basis': live['_exact_current_image_meta']['identity_basis'],
               'image_selection_basis': live['_exact_current_image_meta']['image_selection_basis'],
-              'purpose': 'Fresh first-party revalidation after exact cross-family consensus safety regression',
+              'purpose': 'Fresh first-party revalidation after image-wide multi-column and exact cross-family safety regressions',
               'historical_values_usable': False,
               'cross_run_value_fusion': False,
               'cross_image_value_fusion': False,
@@ -144,7 +149,7 @@ jobs:
           set -e
           [[ $rc -eq 0 || $rc -eq 2 ]]
 
-      - name: Require fail-closed REVIEW for the observed near-value conflict
+      - name: Require image-wide fail-closed REVIEW
         working-directory: tools/catalog
         shell: bash
         run: |
@@ -165,8 +170,11 @@ jobs:
           row = rows[0]
           pid = os.environ['TARGET_PRODUCT_ID']
           ean = os.environ['EXPECTED_EAN']
+          selection = json.loads((root / 'selection.json').read_text(encoding='utf-8'))
           if str(row.get('product_id') or '') != pid or str(row.get('ean') or '') != ean:
               raise SystemExit('unexpected product identity in OCR result')
+          if row.get('image_url') != selection.get('image_url'):
+              raise SystemExit('OCR result did not use the freshly revalidated current P9 image')
           if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
               raise SystemExit('invalid first-party source provenance')
           if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
@@ -174,15 +182,19 @@ jobs:
           if str(row.get('perspective') or '') not in {'9', ''}:
               raise SystemExit(f'unexpected perspective: {row.get("perspective")}')
           if row.get('status') != 'REVIEW':
-              raise SystemExit(f'expected fail-closed REVIEW after exact-consensus fix, got {row.get("status")}')
-          conflict_seen = False
+              raise SystemExit(f'expected fail-closed REVIEW after structural fixes, got {row.get("status")}')
+          if row.get('nutrition') is not None:
+              raise SystemExit('structurally ambiguous table retained usable nutrition')
+          image_wide = [str(x) for x in row.get('image_wide_reasons') or []]
+          structural_attempt = False
+          fat_conflict = False
           for attempt in row.get('attempts') or []:
               ensemble = attempt.get('ensemble') or {}
-              if any(str(reason).startswith('OCR_FIELD_CONFLICT:fat_g') for reason in ensemble.get('reasons') or []):
-                  conflict_seen = True
-                  break
-          if not conflict_seen:
-              raise SystemExit('expected OCR_FIELD_CONFLICT:fat_g was not observed')
+              reasons = [str(reason) for reason in ensemble.get('reasons') or []]
+              structural_attempt = structural_attempt or any(reason.startswith('MULTIPLE_NUTRITION_COLUMNS') for reason in reasons)
+              fat_conflict = fat_conflict or any(reason.startswith('OCR_FIELD_CONFLICT:fat_g') for reason in reasons)
+          if 'MULTIPLE_NUTRITION_COLUMNS' not in image_wide or not structural_attempt:
+              raise SystemExit('expected image-wide MULTIPLE_NUTRITION_COLUMNS veto was not observed')
           summary = {
               'source': 'MERCADONA_FIRST_PARTY',
               'source_record_kind': 'label image',
@@ -190,10 +202,13 @@ jobs:
               'product_id': pid,
               'ean': ean,
               'name': row.get('name'),
+              'image_url': row.get('image_url'),
+              'perspective': row.get('perspective'),
               'status': row.get('status'),
               'nutrition': row.get('nutrition'),
               'ensemble_version': ENSEMBLE_VERSION,
-              'safety_reason': 'OCR_FIELD_CONFLICT:fat_g',
+              'safety_reason': 'MULTIPLE_NUTRITION_COLUMNS',
+              'secondary_fat_conflict_observed': fat_conflict,
               'historical_values_consumed': False,
               'cross_run_value_fusion': False,
               'cross_image_value_fusion': False,
