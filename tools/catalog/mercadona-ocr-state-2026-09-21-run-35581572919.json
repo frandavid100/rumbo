@@ -1,0 +1,85 @@
+{
+  "kind": "MERCADONA_OCR_CANONICAL_STATE",
+  "created_from_workflow_run": 35581572919,
+  "source_commit": "b7b8e877f588d0b49e534e6b62e2271134e5e9fc",
+  "artifact": {
+    "id": 10630777916,
+    "name": "mercadona-current-ocr-residual-audit",
+    "sha256": "7d2f2ec226c5f2bc2a3442e94e04ea5f4a9302c38a5f87907e67336aa81a53bc"
+  },
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 374,
+    "REVIEW": 2595
+  },
+  "usable_complete": 374,
+  "usable_complete_pct_inventory": 8.7383,
+  "usable_field_counts": {
+    "calories": 374,
+    "fat_g": 374,
+    "carbohydrate_g": 374,
+    "protein_g": 374
+  },
+  "chronology_correction_since_run_35561134189": {
+    "previous_declared": 381,
+    "current_declared": 374,
+    "demoted_declared_to_review": 7,
+    "product_ids": [
+      "7878",
+      "8804",
+      "8946",
+      "21649",
+      "58278",
+      "58298",
+      "84638"
+    ],
+    "policy": "LATEST_RAW_LIVE_OBSERVATION_BY_GITHUB_ARTIFACT_CREATED_AT_WINS",
+    "older_declared_nutrition_inherited": false,
+    "reason": "Newer raw-live OCR artifacts created after the previous audit supersede older DECLARED observations. Numeric workflow run id is not used as freshness because reruns retain the original run id."
+  },
+  "strict_review_residual": {
+    "near_safe_complete_review": 2,
+    "near_safe_product_ids": ["21649", "24541"],
+    "three_of_four_explicit_basis_unblocked_review": 31,
+    "three_of_four_missing_field_counts": {
+      "calories": 2,
+      "carbohydrate_g": 5,
+      "fat_g": 12,
+      "protein_g": 12
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 29,
+      "2": 2
+    },
+    "three_of_four_bounded_core_review": 7
+  },
+  "safety_blocker_counts": {
+    "HARD_OCR_CONFLICT": 242,
+    "ENERGY_MACRO_INCOHERENCE": 100,
+    "AMBIGUOUS_TABLE": 112,
+    "NON_EXACT_BOUNDED_CORE": 31
+  },
+  "historical_exact_residual": {
+    "products": 1311,
+    "ocr_actionable_p9_total": 0,
+    "out_of_scope": 1300,
+    "deferred_bodega": 11
+  },
+  "identity_reconciliation": {
+    "identity_anchored_products": 2969,
+    "identity_conflict_products": 0,
+    "identity_unverified_products": 0,
+    "identity_unresolved_products": 0,
+    "coverage_without_canonical_state": 0
+  },
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "structured_api_macros_claimed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "redistribution_allowed": false,
+  "classified": 0,
+  "menu_eligible": 0
+}
