@@ -31,16 +31,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Resolve latest successful efficient canonical audit
+      - name: Resolve latest successful strict canonical audit
         id: canonical
         shell: bash
         run: |
           set -euo pipefail
-          run_id=$(gh api '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit-efficient.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          run_id=$(gh api '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
           [[ "$run_id" =~ ^[0-9]+$ ]]
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
           mkdir -p /tmp/audit
-          gh run download "$run_id" -n mercadona-current-ocr-residual-audit-efficient -D /tmp/audit
+          gh run download "$run_id" -n mercadona-current-ocr-residual-audit -D /tmp/audit
 
       - name: Build bounded current-image cohort
         working-directory: tools/catalog
@@ -337,4 +337,4 @@ jobs:
 
       - name: Reconcile canonical OCR after successful pilot
         if: success()
-        run: gh workflow run catalog-mercadona-current-ocr-residual-audit-efficient.yml --ref agent/catalog-phase1
+        run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
