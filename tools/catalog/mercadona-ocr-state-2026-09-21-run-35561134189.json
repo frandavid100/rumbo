@@ -1,0 +1,93 @@
+{
+  "kind": "MERCADONA_OCR_CANONICAL_STATE",
+  "created_from_workflow_run": 35561134189,
+  "source_commit": "55a53335823cb736f06caf3ca0200fffd4a96923",
+  "artifact": {
+    "id": 10622616074,
+    "name": "mercadona-current-ocr-residual-audit",
+    "sha256": "94885804f27bf8d400a4e3ad81f867cc7c26ca3bb82b1be1a4c7d27ddfb61a31"
+  },
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 381,
+    "REVIEW": 2588
+  },
+  "usable_complete": 381,
+  "usable_complete_pct_inventory": 8.9019,
+  "usable_field_counts": {
+    "calories": 381,
+    "fat_g": 381,
+    "carbohydrate_g": 381,
+    "protein_g": 381
+  },
+  "newly_canonical_since_run_35544870901": [
+    {
+      "product_id": "63101",
+      "ean": "8480000631015",
+      "name": "Filetes de merluza al huevo Hacendado ultracongelados",
+      "latest_live_run_id": 35558186253,
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 189.0,
+        "fat_g": 10.0,
+        "carbohydrate_g": 14.0,
+        "protein_g": 11.0
+      },
+      "source": "MERCADONA_FIRST_PARTY/label image",
+      "source_record_kind": "label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false
+    }
+  ],
+  "strict_review_residual": {
+    "near_safe_complete_review": 0,
+    "three_of_four_explicit_basis_unblocked_review": 35,
+    "three_of_four_missing_field_counts": {
+      "carbohydrate_g": 7,
+      "fat_g": 14,
+      "protein_g": 14
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 35
+    },
+    "three_of_four_bounded_core_review": 8
+  },
+  "safety_blocker_counts": {
+    "HARD_OCR_CONFLICT": 240,
+    "ENERGY_MACRO_INCOHERENCE": 98,
+    "AMBIGUOUS_TABLE": 110,
+    "NON_EXACT_BOUNDED_CORE": 34
+  },
+  "historical_exact_residual": {
+    "products": 1311,
+    "ocr_actionable_p9_total": 0,
+    "out_of_scope": 1300,
+    "deferred_bodega": 11
+  },
+  "changed_current_p9_canary": {
+    "run_id": 35561353971,
+    "artifact": {
+      "id": 10622850519,
+      "name": "mercadona-current-p9-refresh-wave4",
+      "sha256": "0564afd7d2aa0acc2b4a04344f971828a491ac863de39dedcd3c11fb83002110"
+    },
+    "live_verified_changed_unique_p9_candidates": 13,
+    "processed": 3,
+    "status_counts": {
+      "REVIEW": 3
+    },
+    "declared": 0,
+    "selected_product_ids": ["22154", "2778", "14378"],
+    "decision": "NO_SCALE_UP_YET"
+  },
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "structured_api_macros_claimed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "redistribution_allowed": false,
+  "classified": 0,
+  "menu_eligible": 0
+}
