@@ -33,70 +33,76 @@ jobs:
           path = Path('.github/workflows/catalog-mercadona-current-crop-cap-canary.yml')
           text = path.read_text(encoding='utf-8')
 
-          anchor = """          selected_products = []
-          selected_rows = []
-          live_exclusions = []
-"""
-          replacement = """          attempted_crop_cap_ids = set()
-          for cut_path in sorted(Path('.').glob('mercadona-ocr-cut-*-run-*.json')):
-              try:
-                  cut = json.loads(cut_path.read_text(encoding='utf-8'))
-              except Exception:
-                  continue
-              if cut.get('kind') != 'MERCADONA_OCR_PARTIAL_CANARY_CUT':
-                  continue
-              if 'crop-cap canary' not in str(cut.get('purpose') or '').lower():
-                  continue
-              selection = cut.get('selection') if isinstance(cut.get('selection'), dict) else {}
-              attempted_crop_cap_ids.update(
-                  str(pid).strip()
-                  for pid in (selection.get('selected_product_ids') or [])
-                  if str(pid).strip()
-              )
-
-          selected_products = []
-          selected_rows = []
-          live_exclusions = []
-"""
+          anchor = (
+              "          selected_products = []\n"
+              "          selected_rows = []\n"
+              "          live_exclusions = []\n"
+          )
+          replacement = (
+              "          attempted_crop_cap_ids = set()\n"
+              "          for cut_path in sorted(Path('.').glob('mercadona-ocr-cut-*-run-*.json')):\n"
+              "              try:\n"
+              "                  cut = json.loads(cut_path.read_text(encoding='utf-8'))\n"
+              "              except Exception:\n"
+              "                  continue\n"
+              "              if cut.get('kind') != 'MERCADONA_OCR_PARTIAL_CANARY_CUT':\n"
+              "                  continue\n"
+              "              if 'crop-cap canary' not in str(cut.get('purpose') or '').lower():\n"
+              "                  continue\n"
+              "              selection = cut.get('selection') if isinstance(cut.get('selection'), dict) else {}\n"
+              "              attempted_crop_cap_ids.update(\n"
+              "                  str(pid).strip()\n"
+              "                  for pid in (selection.get('selected_product_ids') or [])\n"
+              "                  if str(pid).strip()\n"
+              "              )\n"
+              "\n"
+              "          selected_products = []\n"
+              "          selected_rows = []\n"
+              "          live_exclusions = []\n"
+          )
           if text.count(anchor) != 1:
               raise SystemExit(f'expected selection anchor exactly once, found {text.count(anchor)}')
           text = text.replace(anchor, replacement, 1)
 
-          loop_anchor = """              for old in group:
-                  pid = str(old.get('product_id') or '').strip()
-                  canonical_ean = str(old.get('ean') or '').strip()
-"""
-          loop_replacement = """              for old in group:
-                  pid = str(old.get('product_id') or '').strip()
-                  if pid in attempted_crop_cap_ids:
-                      live_exclusions.append({'product_id': pid, 'reason': 'PRIOR_CROP_CAP_ATTEMPT'})
-                      continue
-                  canonical_ean = str(old.get('ean') or '').strip()
-"""
+          loop_anchor = (
+              "              for old in group:\n"
+              "                  pid = str(old.get('product_id') or '').strip()\n"
+              "                  canonical_ean = str(old.get('ean') or '').strip()\n"
+          )
+          loop_replacement = (
+              "              for old in group:\n"
+              "                  pid = str(old.get('product_id') or '').strip()\n"
+              "                  if pid in attempted_crop_cap_ids:\n"
+              "                      live_exclusions.append({'product_id': pid, 'reason': 'PRIOR_CROP_CAP_ATTEMPT'})\n"
+              "                      continue\n"
+              "                  canonical_ean = str(old.get('ean') or '').strip()\n"
+          )
           if text.count(loop_anchor) != 1:
               raise SystemExit(f'expected candidate loop anchor exactly once, found {text.count(loop_anchor)}')
           text = text.replace(loop_anchor, loop_replacement, 1)
 
-          summary_anchor = """              'eligible_simple_single_family_rows': sum(len(group) for group in by_field.values()),
-              'selected': len(selected_products),
-"""
-          summary_replacement = """              'eligible_simple_single_family_rows': sum(len(group) for group in by_field.values()),
-              'prior_crop_cap_attempted_count': len(attempted_crop_cap_ids),
-              'prior_crop_cap_attempted_ids': sorted(attempted_crop_cap_ids),
-              'eligible_after_prior_attempt_exclusion_rows': sum(
-                  1
-                  for group in by_field.values()
-                  for row in group
-                  if str(row.get('product_id') or '').strip() not in attempted_crop_cap_ids
-              ),
-              'selected': len(selected_products),
-"""
+          summary_anchor = (
+              "              'eligible_simple_single_family_rows': sum(len(group) for group in by_field.values()),\n"
+              "              'selected': len(selected_products),\n"
+          )
+          summary_replacement = (
+              "              'eligible_simple_single_family_rows': sum(len(group) for group in by_field.values()),\n"
+              "              'prior_crop_cap_attempted_count': len(attempted_crop_cap_ids),\n"
+              "              'prior_crop_cap_attempted_ids': sorted(attempted_crop_cap_ids),\n"
+              "              'eligible_after_prior_attempt_exclusion_rows': sum(\n"
+              "                  1\n"
+              "                  for group in by_field.values()\n"
+              "                  for row in group\n"
+              "                  if str(row.get('product_id') or '').strip() not in attempted_crop_cap_ids\n"
+              "              ),\n"
+              "              'selected': len(selected_products),\n"
+          )
           if text.count(summary_anchor) != 1:
               raise SystemExit(f'expected summary anchor exactly once, found {text.count(summary_anchor)}')
           text = text.replace(summary_anchor, summary_replacement, 1)
 
-          old_policy = "ONE_LIVE_VERIFIED_CANDIDATE_PER_AVAILABLE_MISSING_FIELD; CURRENT_REVIEW_3_OF_4; EXPLICIT_BASIS; ONE_HISTORICAL_OCR_FAMILY; NO_HARD_BLOCKER; SIMPLE_REASON_PREFIXES_ONLY; EXACT_EAN; EXACT_CURRENT_P9_URL"
-          new_policy = old_policy + "; EXCLUDE_PRIOR_CROP_CAP_ATTEMPTS"
+          old_policy = 'ONE_LIVE_VERIFIED_CANDIDATE_PER_AVAILABLE_MISSING_FIELD; CURRENT_REVIEW_3_OF_4; EXPLICIT_BASIS; ONE_HISTORICAL_OCR_FAMILY; NO_HARD_BLOCKER; SIMPLE_REASON_PREFIXES_ONLY; EXACT_EAN; EXACT_CURRENT_P9_URL'
+          new_policy = old_policy + '; EXCLUDE_PRIOR_CROP_CAP_ATTEMPTS'
           if text.count(old_policy) != 1:
               raise SystemExit(f'expected policy exactly once, found {text.count(old_policy)}')
           text = text.replace(old_policy, new_policy, 1)
