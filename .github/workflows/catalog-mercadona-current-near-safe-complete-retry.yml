@@ -246,7 +246,7 @@ jobs:
                       'current_observation_must_satisfy_declared_contract_independently': True,
                       'acceptance_policy_changed': False,
                       'missing_values_inferred': False,
-                      'image_guessing': false,
+                      'image_guessing': False,
                   })
                   patched.append(row)
                   rows.append(row)
