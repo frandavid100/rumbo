@@ -8,7 +8,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.7"
+ENSEMBLE_VERSION = "1.3.8"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -278,14 +278,24 @@ def _family_representative(field: str, family_candidates):
 
 
 def _exact_cross_family_consensus(candidates, representative_families):
+    """Return an exact value only when every clean OCR family observed it.
+
+    Near-value tolerance is useful inside one OCR family to cluster correlated
+    layouts, but it must never manufacture cross-family agreement. In particular,
+    a printed unit glyph can be misread as a trailing digit by more than one OCR
+    engine (for example `3.2 g` -> `3.29`). If another clean family sees `3.2`,
+    the observation is conflicting rather than approximately corroborated.
+    """
     eligible = tuple(x for x in candidates if x[3] in representative_families)
     support = {}
     for candidate in eligible:
         support.setdefault(candidate[0], set()).add(candidate[3])
-    max_families = max((len(families) for families in support.values()), default=0)
-    if max_families < 2:
+    if len(representative_families) < 2:
         return None
-    winners = [value for value, families in support.items() if len(families) == max_families]
+    winners = [
+        value for value, families in support.items()
+        if families == representative_families
+    ]
     if len(winners) != 1:
         return None
     matching = [candidate for candidate in eligible if candidate[0] == winners[0]]
@@ -333,14 +343,19 @@ def _choose_field(field: str, candidates):
     exact_consensus = _exact_cross_family_consensus(candidates, representative_families)
     if exact_consensus is not None:
         selected = exact_consensus
+    elif len(representatives) >= 2 and len({x[0] for x in representatives}) > 1:
+        # All clean families must expose one identical numeric token somewhere in
+        # their accepted layouts. A merely nearby value is not an exact label
+        # declaration and must not become usable nutrition through tolerance.
+        return None, f"OCR_FIELD_CONFLICT:{field}"
 
     agreeing = [
         x for x in candidates
-        if x[3] in representative_families and _close(field, selected[0], x[0])
+        if x[3] in representative_families and x[0] == selected[0]
     ]
     strategies = tuple(sorted({x[2] for x in agreeing}))
     confidences = tuple(x[1] for x in agreeing)
-    families = tuple(sorted(representative_families))
+    families = tuple(sorted({x[3] for x in agreeing}))
     note = None
     if ambiguous_families:
         note = f"IGNORED_AMBIGUOUS_ENGINE_FAMILY:{field}:{','.join(sorted(ambiguous_families))}"
