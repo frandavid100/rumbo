@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "kind": "MERCADONA_OCR_PARTIAL_NEAR_SAFE_RETRY_CUT",
+  "canonical_not_updated_here": true,
+  "inventory_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY",
+  "source_record_kind": "label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 35598774493,
+  "workflow_run_attempt": 1,
+  "workflow_head_sha": "2de8ce2754a61248faaf61723b0fc8d1a86f32b8",
+  "artifact_id": 10639137110,
+  "artifact_name": "mercadona-current-near-safe-complete-retry",
+  "artifact_sha256": "612cf11145e73f0fcc86ecfc1fed633875aa8922c28932ffcc45ef38eb940152",
+  "artifact_created_at": "2026-09-21T12:45:42Z",
+  "canonical_audit_run_id_before_retry": 35581572919,
+  "selection": {
+    "diagnostic_candidates": 2,
+    "selected_after_live_verification": 2,
+    "selected_product_ids": ["21649", "24541"],
+    "excluded_after_live_verification": 0,
+    "policy": "LATEST_STRICT_NEAR_SAFE_COMPLETE_REVIEW; EXPLICIT_100_G_OR_100_ML_BASIS; NO_HARD_BLOCKER; COMPLETE_DIAGNOSTIC_VALUES; >=2_HISTORICAL_OCR_FAMILIES; EXACT_NONEMPTY_EAN_REVALIDATION; EXACT_CURRENT_PERSPECTIVE_9_IMAGE_URL_UNIQUE; FRESH_OBSERVATION_MUST_RECOVER_ALL_FOUR"
+  },
+  "result": {
+    "processed": 2,
+    "status_counts": {
+      "DECLARED": 1,
+      "REVIEW": 1
+    },
+    "declared_product_ids": ["21649"],
+    "review_product_ids": ["24541"]
+  },
+  "declared_rows": [
+    {
+      "product_id": "21649",
+      "name": "Empanada de carne",
+      "ean": "8402001054686",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 240.0,
+        "fat_g": 12.0,
+        "carbohydrate_g": 26.0,
+        "protein_g": 6.7
+      },
+      "independent_engine_families": 3,
+      "corroborated_fields": 4,
+      "image_url": "https://prod-mercadona.imgix.net/images/1b085f5f14d821129d2d72b0d71138c3.jpg?fit=crop&h=3600&w=3600",
+      "perspective": 9,
+      "source": "MERCADONA_FIRST_PARTY",
+      "source_record_kind": "label image",
+      "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "redistribution_allowed": false
+    }
+  ],
+  "safety": {
+    "historical_values_consumed": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false,
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "acceptance_policy_changed": false,
+    "classifed_or_menu_eligible_changed": false
+  },
+  "purpose": "Persist the latest live-verified near-safe retry result and trigger a strict canonical residual audit. This file is audit metadata only; the Actions artifact remains the raw OCR evidence source."
+}
