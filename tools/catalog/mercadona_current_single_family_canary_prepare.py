@@ -22,38 +22,68 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def prepare(residual_path: Path, output_dir: Path, targets: list[str]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    by_id = {str(row.get("product_id") or ""): row for row in _load_jsonl(residual_path)}
+def _static_candidate(row: dict[str, Any]) -> bool:
+    values = row.get("diagnostic_candidate_values") or {}
+    missing = [field for field in CORE if values.get(field) is None]
+    return bool(
+        row.get("canonical_status") == "REVIEW"
+        and row.get("basis") in {"100_g", "100_ml"}
+        and not (row.get("safety_blockers") or [])
+        and len(missing) == 1
+        and missing == (row.get("missing_core_fields") or [])
+        and int(row.get("independent_engine_families") or 0) == 1
+        and str(row.get("ean") or "").strip()
+        and str(row.get("image_url") or "").strip()
+    )
+
+
+def prepare(
+    residual_path: Path,
+    output_dir: Path,
+    targets: list[str] | None = None,
+    limit_selected: int = 0,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    rows = _load_jsonl(residual_path)
+    by_id = {str(row.get("product_id") or ""): row for row in rows}
+    explicit_targets = [str(pid) for pid in (targets or []) if str(pid).strip()]
+
     products: list[dict[str, Any]] = []
     selected: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
 
-    for pid in targets:
+    if explicit_targets:
+        candidate_ids = explicit_targets
+        selection_mode = "explicit_targets"
+    else:
+        # Preserve the strict auditor's deterministic residual order. The canary is bounded
+        # by successful current-image selections, not by the first N historical rows, so a
+        # stale/disappeared P9 does not prevent trying the next still-current candidate.
+        candidate_ids = [str(row.get("product_id") or "") for row in rows if str(row.get("product_id") or "")]
+        selection_mode = "dynamic_strict_residual"
+
+    live_attempted = 0
+    static_candidates = 0
+    stopped_after_limit = False
+
+    for candidate_index, pid in enumerate(candidate_ids):
+        if limit_selected > 0 and len(products) >= limit_selected:
+            stopped_after_limit = True
+            break
+
         old = by_id.get(pid)
         if old is None:
             excluded.append({"product_id": pid, "reason": "NO_LONGER_IN_STRICT_3_OF_4_RESIDUAL"})
             continue
 
-        values = old.get("diagnostic_candidate_values") or {}
-        missing = [field for field in CORE if values.get(field) is None]
-        blockers = old.get("safety_blockers") or []
-        valid = (
-            old.get("canonical_status") == "REVIEW"
-            and old.get("basis") in {"100_g", "100_ml"}
-            and not blockers
-            and len(missing) == 1
-            and missing == (old.get("missing_core_fields") or [])
-            and int(old.get("independent_engine_families") or 0) == 1
-            and str(old.get("ean") or "").strip()
-            and str(old.get("image_url") or "").strip()
-        )
-        if not valid:
+        if not _static_candidate(old):
             excluded.append({"product_id": pid, "reason": "NO_LONGER_SINGLE_FAMILY_EXPLICIT_3_OF_4"})
             continue
+        static_candidates += 1
 
         canonical_ean = str(old["ean"]).strip()
         observed_image_url = str(old["image_url"]).strip()
         observed_at = _now()
+        live_attempted += 1
         try:
             payload, source_url = _get_json(pid, timeout=20.0)
             live = normalize(payload, source_url=source_url, observed_at=observed_at)
@@ -118,6 +148,7 @@ def prepare(residual_path: Path, output_dir: Path, targets: list[str]) -> tuple[
             "ean": canonical_ean,
             "image_url": observed_image_url,
             "perspective": photo.get("perspective"),
+            "residual_candidate_index": candidate_index,
         })
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -126,10 +157,17 @@ def prepare(residual_path: Path, output_dir: Path, targets: list[str]) -> tuple[
         encoding="utf-8",
     )
     summary = {
-        "target_product_ids": targets,
+        "selection_mode": selection_mode,
+        "requested_target_product_ids": explicit_targets,
+        "residual_rows": len(rows),
+        "candidate_product_ids": candidate_ids,
+        "static_candidates_seen_before_stop": static_candidates,
+        "live_candidates_attempted": live_attempted,
+        "limit_selected": limit_selected,
+        "stopped_after_selection_limit": stopped_after_limit,
         "selected_after_live_verification": selected,
         "excluded_after_live_verification": excluded,
-        "selection_basis": "strict single-family explicit 3-of-4 bounded canary",
+        "selection_basis": "strict single-family explicit 3-of-4 bounded canary; exact latest observed P9 must still occur exactly once in current first-party photos after exact EAN revalidation",
         "historical_partial_values_usable": False,
         "cross_run_value_fusion": False,
         "cross_image_value_fusion": False,
@@ -151,12 +189,25 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--residual", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--targets", nargs="+", required=True)
+    ap.add_argument("--targets", nargs="*")
+    ap.add_argument(
+        "--limit-selected",
+        type=int,
+        default=0,
+        help="Stop after this many candidates pass live EAN/exact-P9 verification; 0 means no limit.",
+    )
     args = ap.parse_args()
-    products, summary = prepare(Path(args.residual), Path(args.out), list(args.targets))
+    if args.limit_selected < 0:
+        raise SystemExit("--limit-selected must be >= 0")
+    products, summary = prepare(
+        Path(args.residual),
+        Path(args.out),
+        list(args.targets or []),
+        args.limit_selected,
+    )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     if not products:
-        raise SystemExit("No canary target passed current EAN/exact-P9 verification; refusing OCR guess")
+        raise SystemExit("No strict residual candidate passed current EAN/exact-P9 verification; refusing OCR guess")
     return 0
 
 
