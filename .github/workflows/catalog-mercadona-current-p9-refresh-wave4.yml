@@ -61,7 +61,8 @@ jobs:
               'INSUFFICIENT_NUTRITION_MARKERS',
               'MISSING_100G_100ML_BASIS',
           }
-          already_attempted = {'63101'}
+          # Do not spend OCR budget on changed-image candidates already sampled by this route.
+          already_attempted = {'63101', '22154', '2778', '14378'}
           diagnostic = Path('/tmp/audit/current-review-failure-modes/three-of-four-explicit-basis-unblocked-review.jsonl')
           if not diagnostic.exists():
               raise SystemExit('strict 3/4 diagnostic missing from latest canonical audit')
@@ -180,10 +181,11 @@ jobs:
               'canonical_audit_run_id': int('${{ steps.canonical.outputs.run_id }}'),
               'strict_residual_rows': len(rows),
               'live_verified_changed_unique_p9_candidates': len(verified),
+              'already_attempted_product_ids': sorted(already_attempted),
               'selected': len(products),
               'selected_rows': selected_rows,
               'skipped': len(skipped),
-              'selection_policy': 'STRICT_SINGLE_FAMILY_3_OF_4_REVIEW; EXPLICIT_BASIS; NO_HARD_BLOCKER; EXACT_EAN; EXACTLY_ONE_CURRENT_PERSPECTIVE_9_IMAGE; HISTORICAL_IMAGE_VALUES_NEVER_CONSUMED; CHANGED_IMAGE_URL_ALLOWED',
+              'selection_policy': 'STRICT_SINGLE_FAMILY_3_OF_4_REVIEW; EXPLICIT_BASIS; NO_HARD_BLOCKER; EXACT_EAN; EXACTLY_ONE_CURRENT_PERSPECTIVE_9_IMAGE; EXCLUDE_PREVIOUSLY_ATTEMPTED_CURRENT_P9_CANARY; HISTORICAL_IMAGE_VALUES_NEVER_CONSUMED; CHANGED_IMAGE_URL_ALLOWED',
               'historical_partial_values_usable': False,
               'cross_run_value_fusion': False,
               'cross_image_value_fusion': False,
