@@ -8,7 +8,7 @@ from typing import Iterable
 
 from nutrition_label_reader import LabelReadResult, read_nutrition_label
 
-ENSEMBLE_VERSION = "1.3.8"
+ENSEMBLE_VERSION = "1.3.9"
 FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 
 
@@ -178,7 +178,7 @@ def _bounded_core_fields(reading: ParsedOCRReading) -> set[str]:
 def _anchored_single_digit_kcal(text: str) -> float | None:
     """Recover an exact one-digit kcal cell only from an unambiguous energy row.
 
-    The generic label parser deliberately requires at least two kcal digits to
+    The generic label parser deliberately requires at least two energy digits to
     avoid package-text false positives. Real Mercadona labels can legitimately
     declare e.g. `3 kcal / 100 ml`. At ensemble level we can recover that value
     more safely because it still needs independent OCR-family corroboration.
@@ -372,6 +372,25 @@ def fuse_ocr_readings(readings: Iterable[ParsedOCRReading]) -> OCREnsembleResult
         if x.result.status != "NOT_NUTRITION_LABEL" and x.confidence >= .70 and x.result.nutrition
     )
     independent_families = len({x.family for x in eligible_readings})
+
+    # Structural ambiguity is observation-wide. A clean-looking crop cannot turn
+    # one column of a parallel per-100/per-serving table into an exact declaration
+    # when another credible OCR of the same target sees multiple nutrition columns.
+    # This is deliberately fail-closed: later fresh imagery may expose a genuinely
+    # single-column table, but values are never selected from an ambiguous layout.
+    multiple_column_families = {
+        x.family for x in readings
+        if x.confidence >= .70
+        and any(str(reason).startswith("MULTIPLE_NUTRITION_COLUMNS") for reason in x.result.reasons)
+    }
+    if multiple_column_families:
+        return OCREnsembleResult(
+            "REVIEW", None, None, 0.0, tuple(), 0, independent_families,
+            (
+                "MULTIPLE_NUTRITION_COLUMNS",
+                "OCR_AMBIGUOUS_NUTRITION_COLUMNS:" + ",".join(sorted(multiple_column_families)),
+            ),
+        )
 
     bases = [(x.result.basis, x.confidence, x.strategy, x.family) for x in readings
              if x.result.basis and x.confidence >= .70]
