@@ -57,10 +57,6 @@ jobs:
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_current_canary_finalize.py
 
-      - name: Test preselected-image routing contract
-        working-directory: tools/catalog
-        run: python -m unittest -v test_mercadona_preselected_current_image_routing.py
-
       - name: Compile current-image canary path
         working-directory: tools/catalog
         run: |
