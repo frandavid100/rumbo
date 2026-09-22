@@ -43,7 +43,7 @@ class CurrentSingleFamilyCanaryPrepareTests(unittest.TestCase):
             "photos": photos,
         }
 
-    def _prepare(self, photos: list[dict[str, str]]):
+    def _prepare(self, photos: list[dict[str, str]], *, retry_same_image: bool = False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             residual = self._residual(root)
@@ -58,12 +58,13 @@ class CurrentSingleFamilyCanaryPrepareTests(unittest.TestCase):
                     residual,
                     out,
                     limit_selected=3,
-                    allow_unique_current_non_p9=True,
+                    allow_unique_current_non_p9=not retry_same_image,
+                    allow_unique_current_non_p9_retry=retry_same_image,
                 )
             persisted = json.loads((out / "selection-summary.json").read_text(encoding="utf-8"))
             return products, summary, persisted
 
-    def test_unique_non_p9_is_selected_only_when_no_unique_current_p9_exists(self):
+    def test_unique_non_p9_is_selected_only_when_no_current_p9_exists(self):
         products, summary, persisted = self._prepare([
             {
                 "perspective": "5",
@@ -78,16 +79,20 @@ class CurrentSingleFamilyCanaryPrepareTests(unittest.TestCase):
         meta = products[0]["_exact_current_image_meta"]
         self.assertEqual(meta["image_url"], "https://prod-mercadona.imgix.net/current-alt.jpg")
         self.assertEqual(meta["current_photo_perspective"], "5")
-        self.assertEqual(meta["image_identity_rule"], "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9")
+        self.assertEqual(meta["image_identity_rule"], "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_P9")
         self.assertFalse(summary["image_guessing"])
         self.assertTrue(summary["allow_unique_current_non_p9"])
         self.assertEqual(persisted["selected_after_live_verification"][0]["perspective"], "5")
 
-    def test_unique_non_p9_route_refuses_when_unique_current_p9_exists(self):
+    def test_unique_non_p9_route_refuses_any_current_p9(self):
         products, summary, _ = self._prepare([
             {
                 "perspective": "9",
-                "zoom": "https://prod-mercadona.imgix.net/current-p9.jpg",
+                "zoom": "https://prod-mercadona.imgix.net/current-p9-a.jpg",
+            },
+            {
+                "perspective": "9",
+                "zoom": "https://prod-mercadona.imgix.net/current-p9-b.jpg",
             },
             {
                 "perspective": "5",
@@ -96,7 +101,7 @@ class CurrentSingleFamilyCanaryPrepareTests(unittest.TestCase):
         ])
         self.assertEqual(products, [])
         reasons = [row["reason"] for row in summary["excluded_after_live_verification"]]
-        self.assertIn("UNIQUE_CURRENT_P9_EXISTS_USE_P9_ROUTE", reasons)
+        self.assertIn("CURRENT_P9_PRESENT_USE_OR_RESOLVE_P9_ROUTE", reasons)
 
     def test_unique_non_p9_route_refuses_multiple_alternatives(self):
         products, summary, _ = self._prepare([
@@ -124,6 +129,37 @@ class CurrentSingleFamilyCanaryPrepareTests(unittest.TestCase):
         reasons = [row["reason"] for row in summary["excluded_after_live_verification"]]
         self.assertIn("CURRENT_NON_P9_EQUALS_HISTORICAL_OCR_IMAGE", reasons)
 
+    def test_retry_mode_selects_only_exact_current_same_image(self):
+        products, summary, persisted = self._prepare([
+            {
+                "perspective": "5",
+                "zoom": "https://prod-mercadona.imgix.net/historical-p9.jpg",
+            }
+        ], retry_same_image=True)
+        self.assertEqual(len(products), 1)
+        meta = products[0]["_exact_current_image_meta"]
+        self.assertEqual(meta["image_url"], "https://prod-mercadona.imgix.net/historical-p9.jpg")
+        self.assertFalse(meta["historical_image_url_changed"])
+        self.assertEqual(meta["image_identity_rule"], "EXACT_CURRENT_ONLY_NON_P9_ZOOM_SAME_URL_RETRY")
+        self.assertTrue(summary["allow_unique_current_non_p9_retry"])
+        self.assertTrue(summary["fresh_same_image_retry"])
+        self.assertFalse(summary["historical_partial_values_usable"])
+        self.assertEqual(
+            persisted["selected_after_live_verification"][0]["image_url"],
+            "https://prod-mercadona.imgix.net/historical-p9.jpg",
+        )
+
+    def test_retry_mode_refuses_changed_image_url(self):
+        products, summary, _ = self._prepare([
+            {
+                "perspective": "5",
+                "zoom": "https://prod-mercadona.imgix.net/current-alt.jpg",
+            }
+        ], retry_same_image=True)
+        self.assertEqual(products, [])
+        reasons = [row["reason"] for row in summary["excluded_after_live_verification"]]
+        self.assertIn("CURRENT_NON_P9_DIFFERS_FROM_HISTORICAL_USE_ALT_ROUTE", reasons)
+
     def test_mutually_exclusive_live_image_modes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -133,7 +169,7 @@ class CurrentSingleFamilyCanaryPrepareTests(unittest.TestCase):
                     residual,
                     root / "out",
                     allow_changed_current_p9=True,
-                    allow_unique_current_non_p9=True,
+                    allow_unique_current_non_p9_retry=True,
                 )
 
 
