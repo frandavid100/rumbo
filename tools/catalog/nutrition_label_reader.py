@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-READER_VERSION = "1.4.30"
+READER_VERSION = "1.4.31"
 
 
 @dataclass(frozen=True)
@@ -79,7 +79,17 @@ def _nutrition_block(text: str) -> str:
     """
     folded = _fold(text)
     starts = []
-    for pattern in (r"informacion nutricional", r"declaracion nutricional", r"valores nutricionales"):
+    # `Valor nutricional medio` is another genuine table heading used on
+    # Mercadona labels. PP-OCRv6 has also emitted the narrow observed typo
+    # `Vator nutricional medio`; accepting that exact heading keeps unrelated
+    # package quantities outside the nutrition block without fuzzy matching.
+    for pattern in (
+        r"informacion nutricional",
+        r"declaracion nutricional",
+        r"valores nutricionales",
+        r"valor nutricional(?: medio)?",
+        r"vator nutricional(?: medio)?",
+    ):
         m = re.search(pattern, folded, flags=re.I)
         if m:
             starts.append(m.start())
@@ -498,26 +508,28 @@ def _basis(text: str) -> str | None:
 
 
 def _basis_heading_count(text: str) -> int:
-    """Count explicit per-100 column headings, including OCR-linearized rows.
+    """Count distinct explicit per-100 column headings.
 
-    Two per-100 headings usually mean parallel nutrition columns (e.g. net
-    weight vs drained weight, or product vs accompanying cheese). OCR can drop
-    the printed `Por` and linearise those headings as consecutive standalone
-    `100 g` rows, so count that exact row shape too. Incidental `100 g` prose is
-    not counted unless it occupies the whole line. The parser is row-oriented
-    and must review rather than silently mix parallel columns.
+    Two genuinely distinct per-100 headings usually mean parallel nutrition
+    columns (e.g. net vs drained weight), which the row-oriented parser must
+    reject. OCR can also linearise one ordinary heading as `por` followed by a
+    standalone `100 g` row. In that case the explicit and standalone regexes
+    describe the exact same basis token, so count its character span only once.
     """
     folded = _fold(text)
-    explicit = re.findall(
-        r"\bpor\s+100\s*(?:g\b|9\b|q\b|yg\b|y\b|m(?:l|i|1)\b)",
+    unit = r"(?:g\b|9\b|q\b|yg\b|y\b|m(?:l|i|1)\b)"
+    explicit = list(re.finditer(
+        rf"\bpor\s+(?P<basis>100\s*{unit})",
         folded,
         flags=re.I,
-    )
-    standalone = re.findall(
-        r"(?im)^\s*100\s*(?:g|9|q|yg|y|m(?:l|i|1))\s*$",
+    ))
+    standalone = list(re.finditer(
+        rf"(?im)^\s*(?P<basis>100\s*{unit})\s*$",
         folded,
-    )
-    return len(explicit) + len(standalone)
+    ))
+    spans = {(m.start("basis"), m.end("basis")) for m in explicit}
+    spans.update((m.start("basis"), m.end("basis")) for m in standalone)
+    return len(spans)
 
 
 def _parallel_per100_serving_energy_columns(text: str) -> bool:

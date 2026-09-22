@@ -136,6 +136,48 @@ Sal 1,1 g 1,1 g
         self.assertIn("MULTIPLE_NUTRITION_COLUMNS", r.reasons)
         self.assertIsNone(r.nutrition)
 
+    def test_single_per100_heading_split_across_lines_is_not_parallel_columns(self):
+        # A single printed heading can be OCR-linearised as `por` on one line and
+        # `100 g` on the next. The same basis token must not be counted twice as
+        # though it represented two nutrition columns.
+        observed = """INFORMACIÓN NUTRICIONAL
+Valores medios por
+100 g
+Valor energético 1050 kJ/251 kcal
+Grasas 12.8 g
+de las cuales saturadas 4.8 g
+Hidratos de carbono <0.5 g
+de los cuales azúcares <0.5 g
+Proteínas 33.3 g
+Sal 4.28 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertNotIn("MULTIPLE_NUTRITION_COLUMNS", r.reasons)
+        self.assertIn("MISSING_CORE:carbohydrate_g", r.reasons)
+
+    def test_observed_vator_nutricional_heading_excludes_package_net_weight(self):
+        # Observed PP-OCRv6 text for a Mercadona label used `Vator Nutricional
+        # Medio` for the table heading while a separate package net-weight
+        # `100g` appeared earlier. The package quantity must stay outside the
+        # nutrition block rather than becoming a phantom second basis column.
+        observed = """CECINA AHUMADA
+100g
+LOTE 1234
+Vator Nutricional Medio por 100g
+Valor energético 868 kJ/206 kcal
+Grasas 7 g
+de las cuales saturadas 2.4 g
+Hidratos de carbono <0.8 g
+de los cuales azúcares <0.5 g
+Proteínas 35 g
+Sal 3.8 g
+"""
+        r = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(r.status, "REVIEW", r)
+        self.assertNotIn("MULTIPLE_NUTRITION_COLUMNS", r.reasons)
+        self.assertIn("MISSING_CORE:carbohydrate_g", r.reasons)
+
     def test_kj_kcal_header_before_values_is_parsed_conservatively(self):
         observed = """Información Nutricional por 100 g de Producto
 Valor energético (kJ/kcal)
