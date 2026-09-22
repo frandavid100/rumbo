@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-09-22T17:08:03Z",
+  "source": "mercadona-first-party-neural-ocr-current-strict-audit-efficient",
+  "branch": "agent/catalog-phase1",
+  "audit": {
+    "workflow_run_id": 35756053051,
+    "head_sha": "6286f6ab41b37b4c155e98d817c32169d3343c33",
+    "artifact": {
+      "id": 10707688567,
+      "sha256": "a1116355f6a340076263ca979b1baf2e16975185e5aa208cae75f4f4114102d4",
+      "size_bytes": 302486
+    }
+  },
+  "coverage": {
+    "inventory_total": 4280,
+    "processed": 2969,
+    "processed_pct": 69.3692,
+    "declared": 380,
+    "review": 2589,
+    "usable_complete": 380,
+    "usable_complete_pct": 8.8785,
+    "macro_field_counts": {
+      "energy_kcal": 380,
+      "fat_g": 380,
+      "carbohydrate_g": 380,
+      "protein_g": 380
+    }
+  },
+  "identity": {
+    "policy": "EARLIEST_RAW_LIVE_EAN_ANCHOR",
+    "anchored": 2969,
+    "conflicts": 0,
+    "unverified": 0,
+    "unresolved": 0,
+    "coverage_without_canonical_state": 0
+  },
+  "strict_review_residual": {
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 9,
+    "three_of_four_explicit_basis_unblocked": 0,
+    "three_of_four_bounded_core_review": 7,
+    "current_actionable_p9_total": 0,
+    "ocr_blocked_no_p9_food_route_total": 0,
+    "fixed_cut_residual_total": 1311,
+    "fixed_cut_no_p9_residual_total": 13,
+    "fixed_cut_deferred_bodega_total": 11,
+    "fixed_cut_out_of_scope_total": 1300,
+    "green_path_exhausted": true
+  },
+  "former_strict_three_of_four_routes": {
+    "exact_current_non_p9_same_image": {
+      "workflow_run_id": 35745857558,
+      "artifact": {
+        "id": 10704261087,
+        "sha256": "0999fb8323a5ad7318feb88177447ee23fdd931dc4e9f3802c6984a122bd128c",
+        "size_bytes": 10602
+      },
+      "products": [
+        {
+          "id": "59101",
+          "name": "Cecina ahumada natural Embutidos Pajariel lonchas",
+          "result": "REVIEW"
+        },
+        {
+          "id": "59280",
+          "name": "Jamón serrano Jamcal medias lonchas",
+          "result": "REVIEW"
+        }
+      ],
+      "declared": 0,
+      "review": 2,
+      "historical_values_consumed": false,
+      "cross_run_value_fusion": false,
+      "cross_image_value_fusion": false
+    },
+    "fixed_cut_removed_product_exact_image_reread": {
+      "workflow_run_id": 35755078500,
+      "artifact": {
+        "id": 10708196424,
+        "sha256": "664a04301028156a5ca38435e933d234ed224be15084af68c176dba0b07b4239",
+        "size_bytes": 45150
+      },
+      "products": [
+        {
+          "id": "50939",
+          "name": "Queso mezcla semicurado Hacendado",
+          "current_detail": "HTTP_404",
+          "result": "REVIEW"
+        },
+        {
+          "id": "60244",
+          "name": "Pechuga de pavo Hacendado finas lonchas",
+          "current_detail": "HTTP_404",
+          "result": "REVIEW"
+        }
+      ],
+      "declared": 0,
+      "review": 2,
+      "historical_values_consumed": false,
+      "historical_ocr_text_consumed": false,
+      "cross_run_value_fusion": false,
+      "cross_image_value_fusion": false
+    }
+  },
+  "review_failure_modes": {
+    "core_field_count": {
+      "0": 2058,
+      "1": 114,
+      "2": 187,
+      "3": 183,
+      "4": 47
+    },
+    "independent_engine_families": {
+      "0": 2033,
+      "1": 232,
+      "2": 200,
+      "3": 121,
+      "4": 3
+    },
+    "basis": {
+      "100g": 462,
+      "100ml": 88,
+      "none": 2039
+    },
+    "safety_blockers": {
+      "HARD_OCR_CONFLICT": 251,
+      "ENERGY_MACRO_INCOHERENCE": 108,
+      "AMBIGUOUS_TABLE": 117,
+      "NON_EXACT_BOUNDED_CORE": 36
+    },
+    "reasonless_review": 0
+  },
+  "fixed_cut_reconstruction": {
+    "status": "EXACT_HISTORICAL_RESIDUAL_RECOVERED",
+    "baseline_processed": 2969,
+    "residual": 1311,
+    "membership_parity": true,
+    "trusted_pre_expiry_audit_run_id": 34430788357,
+    "trusted_membership_digest": "ac4ef2b916fd41003675aa94c806574e6ed7c827a49c82da0d97e315b68d34db",
+    "original_fixed_cut_artifact_sha256": "5a8c89661afe09fe1c05d1f67e8ed608edf25b8363530db42959ec8413fef648"
+  },
+  "provenance_policy": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY",
+    "source_record_kind": "label image",
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "redistribution_allowed": false,
+    "structured_api_macros": false,
+    "classified": 0,
+    "menu_eligible": 0
+  },
+  "canonical_policy": "Latest raw-live observation by artifact.created_at wins; REVIEW never inherits previous DECLARED.",
+  "next_safe_route": "No green-path OCR candidate remains under the current identity and safety policy. Do not loosen acceptance or infer missing values. Continue only if a new official first-party image route appears, or after a test-backed detector/parser improvement is demonstrated on a bounded sample without weakening ambiguity, conflict, energy-coherence, exact-value, or independent-corroboration gates."
+}
