@@ -1,0 +1,147 @@
+name: Catalog Mercadona fixed-cut removed-product OCR reread
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-fixed-cut-removed-product-reread.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-fixed-cut-removed-product-reread-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reread:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download exact historical raw-live first-party anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/source50939 /tmp/source60244
+          mkdir -p /tmp/source50939 /tmp/source60244
+          gh run download 33385757290 -n mercadona-neural-ocr-p9-alternative-wave16-p1-merged -D /tmp/source50939
+          gh run download 33585514166 -n mercadona-neural-ocr-p9-alternative-wave39-p2-merged -D /tmp/source60244
+
+      - name: Prove fixed-cut identity anchors and current HTTP 404
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=mercadona-fixed-cut-removed-product-reread
+          rm -rf "$root"
+          python mercadona_fixed_cut_removed_product_reread_prepare.py \
+            --source-dir /tmp/source50939 \
+            --source-dir /tmp/source60244 \
+            --out "$root" \
+            --targets 50939 60244 \
+            --source-run 50939=33385757290 \
+            --source-run 60244=33585514166 \
+            --source-artifact 50939=9755966635 \
+            --source-artifact 60244=9830165900
+          test "$(wc -l < "$root/products.jsonl" | tr -d ' ')" = '2'
+          python -m py_compile \
+            mercadona_fixed_cut_removed_product_reread_prepare.py \
+            mercadona_fixed_cut_removed_product_reread_finalize.py
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run conservative OCR safety tests
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_image_preprocess.py \
+            test_mercadona_preselected_current_image_routing.py \
+            test_mercadona_preselected_three_of_four_variant_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py
+
+      - name: Fresh OCR from exact fixed-cut first-party image URLs
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=mercadona-fixed-cut-removed-product-reread
+          set +e
+          python mercadona_preselected_current_image_variant_rescue.py \
+            --products "$root/products.jsonl" \
+            --out "$root/ocr" \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+          python mercadona_fixed_cut_removed_product_reread_finalize.py --root "$root"
+
+      - name: Assert bounded fixed-cut provenance contract
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('mercadona-fixed-cut-removed-product-reread')
+          rows = [json.loads(line) for line in (root / 'results-merged.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          if {str(row.get('product_id')) for row in rows} != {'50939', '60244'}:
+              raise SystemExit('unexpected fixed-cut product set')
+          for row in rows:
+              if row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+                  raise SystemExit('wrong evidence marker')
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image':
+                  raise SystemExit('wrong first-party provenance')
+              if row.get('redistribution_allowed') is not False:
+                  raise SystemExit('redistribution must remain false')
+              if row.get('live_detail_status_at_reread') != 'HTTP_404':
+                  raise SystemExit('removed-product route requires fresh HTTP 404')
+              if row.get('image_identity_rule') != 'FIXED_CUT_EXACT_FIRST_PARTY_IMAGE_URL_REREAD_AFTER_LIVE_404':
+                  raise SystemExit('wrong identity rule')
+              if row.get('missing_values_inferred') is not False:
+                  raise SystemExit('missing values must never be inferred')
+              if row.get('cross_run_value_fusion') is not False or row.get('cross_image_value_fusion') is not False:
+                  raise SystemExit('cross-run/image fusion must remain disabled')
+          print(json.dumps({'products': len(rows), 'statuses': {str(row['product_id']): row.get('status') for row in rows}}, indent=2))
+          PY
+
+      - name: Upload auditable fixed-cut reread
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-fixed-cut-removed-product-reread-merged
+          path: |
+            tools/catalog/mercadona-fixed-cut-removed-product-reread/selection-summary.json
+            tools/catalog/mercadona-fixed-cut-removed-product-reread/results-merged.jsonl
+            tools/catalog/mercadona-fixed-cut-removed-product-reread/summary.json
+            tools/catalog/mercadona-fixed-cut-removed-product-reread/ocr/results-*.jsonl
+            tools/catalog/mercadona-fixed-cut-removed-product-reread/ocr/summary-*.json
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Reconcile fixed-cut canonical OCR after successful reread
+        if: success()
+        run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
