@@ -45,7 +45,7 @@ jobs:
           python mercadona_current_single_family_canary_prepare.py \
             --residual /tmp/audit/current-review-failure-modes/three-of-four-explicit-basis-unblocked-review.jsonl \
             --out mercadona-current-single-family-canary \
-            --limit-selected 3
+            --limit-selected 5
           python - <<'PY'
           import json
           from pathlib import Path
