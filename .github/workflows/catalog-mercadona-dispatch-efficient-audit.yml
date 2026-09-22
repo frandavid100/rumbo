@@ -1,0 +1,24 @@
+name: Dispatch Mercadona efficient OCR audit
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-dispatch-efficient-audit.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Dispatch efficient strict Mercadona OCR audit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run catalog-mercadona-current-ocr-residual-audit-efficient.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
