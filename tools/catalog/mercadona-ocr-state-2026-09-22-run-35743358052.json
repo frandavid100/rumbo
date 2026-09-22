@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-09-22T15:03:46Z",
+  "source": "mercadona-first-party-neural-ocr-current-strict-audit-efficient",
+  "branch": "agent/catalog-phase1",
+  "audit": {
+    "workflow_run_id": 35743358052,
+    "artifact": {
+      "id": 10703011147,
+      "sha256": "a48b669fdbfdac8312601a2f8fa0a578568d02017433daf7e8450aa395ea3fec",
+      "size_bytes": 300130
+    }
+  },
+  "preceding_canary": {
+    "workflow_run_id": 35733793254,
+    "artifact": {
+      "id": 10697665541,
+      "sha256": "4484b01cf17666b80e2f5cddb01dd3aa8cc6636fccb739056ff2175125d0f72c",
+      "size_bytes": 47154
+    },
+    "product": {
+      "id": "14727",
+      "ean": "8402001039393",
+      "name": "Aceite de oliva virgen extra Hacendado",
+      "basis": "100_ml",
+      "nutrition": {
+        "energy_kcal": 822,
+        "fat_g": 91,
+        "carbohydrate_g": 0,
+        "protein_g": 0
+      },
+      "engine_families": [
+        "easyocr",
+        "paddleocr",
+        "tesseract"
+      ],
+      "corroborated_fields": 4,
+      "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "source": "MERCADONA_FIRST_PARTY",
+      "source_record_kind": "label image",
+      "image_perspective": 2,
+      "image_identity_rule": "EXACT_CURRENT_ONLY_NON_P9_ZOOM_SAME_URL_RETRY",
+      "live_ean_verified": true,
+      "live_image_verified": true,
+      "historical_values_reused": false,
+      "cross_run_merge_used": false,
+      "cross_image_merge_used": false
+    }
+  },
+  "coverage": {
+    "inventory_total": 4280,
+    "processed": 2969,
+    "processed_pct": 69.3692,
+    "declared": 380,
+    "review": 2589,
+    "usable_complete": 380,
+    "usable_complete_pct": 8.8785,
+    "macro_field_counts": {
+      "energy_kcal": 380,
+      "fat_g": 380,
+      "carbohydrate_g": 380,
+      "protein_g": 380
+    }
+  },
+  "identity": {
+    "anchored": 2969,
+    "conflicts": 0,
+    "unverified": 0,
+    "unresolved": 0,
+    "coverage_without_canonical_state": 0
+  },
+  "strict_review_residual": {
+    "near_safe_complete_review": 0,
+    "complete_but_safety_blocked": 9,
+    "three_of_four_explicit_basis_unblocked": 4,
+    "three_of_four_engine_families": {
+      "1": 4
+    },
+    "missing_core_field_counts": {
+      "carbohydrate_g": 3,
+      "protein_g": 1
+    },
+    "current_actionable_p9_total": 0,
+    "three_of_four_product_ids": [
+      "50939",
+      "59101",
+      "59280",
+      "60244"
+    ],
+    "residual_no_p9_count": 13,
+    "deferred_bodega_count": 11,
+    "out_of_scope_count": 1300
+  },
+  "safety_blockers": {
+    "HARD_OCR_CONFLICT": 250,
+    "ENERGY_MACRO_INCOHERENCE": 108,
+    "AMBIGUOUS_TABLE": 116,
+    "NON_EXACT_BOUNDED_CORE": 34
+  },
+  "provenance_policy": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY",
+    "source_record_kind": "label image",
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "redistribution_allowed": false,
+    "structured_api_macros": false,
+    "classified": 0,
+    "menu_eligible": 0
+  },
+  "canonical_policy": "Latest raw-live observation by artifact.created_at wins; REVIEW never inherits previous DECLARED.",
+  "next_safe_route": "Continue the exact-current same-image non-P9 retry only for remaining strict 3/4 candidates that pass fresh live EAN/image verification. Historical OCR values are selection diagnostics only; every usable observation must recover and corroborate all four core fields afresh."
+}
