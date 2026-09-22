@@ -1,0 +1,154 @@
+name: Catalog Mercadona unique current non-P9 safe canary
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-current-unique-non-p9-safe-canary.yml'
+      - 'tools/catalog/mercadona_current_single_family_canary_prepare.py'
+      - 'tools/catalog/mercadona_current_canary_finalize.py'
+      - 'tools/catalog/mercadona_preselected_current_image_variant_rescue.py'
+      - 'tools/catalog/test_mercadona_current_single_family_canary_prepare.py'
+      - 'tools/catalog/test_mercadona_current_canary_finalize.py'
+      - 'tools/catalog/test_mercadona_preselected_current_image_routing.py'
+      - 'tools/catalog/nutrition_ocr_ensemble.py'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-current-unique-non-p9-safe-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve latest successful strict canonical audit
+        id: canonical
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          mkdir -p /tmp/audit
+          gh run download "$run_id" -n mercadona-current-ocr-residual-audit -D /tmp/audit
+
+      - name: Run routing and finalizer contract tests before live selection
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_current_single_family_canary_prepare.py \
+            test_mercadona_current_canary_finalize.py \
+            test_mercadona_preselected_current_image_routing.py
+          python -m py_compile \
+            mercadona_current_single_family_canary_prepare.py \
+            mercadona_current_canary_finalize.py \
+            mercadona_preselected_current_image_variant_rescue.py
+
+      - name: Select bounded exact-current alternate-image canary
+        id: cohort
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from mercadona_current_single_family_canary_prepare import prepare
+
+          root = Path('mercadona-current-unique-non-p9-safe-canary')
+          products, summary = prepare(
+              Path('/tmp/audit/current-review-failure-modes/three-of-four-explicit-basis-unblocked-review.jsonl'),
+              root,
+              limit_selected=3,
+              allow_unique_current_non_p9=True,
+          )
+          summary['canonical_audit_run_id'] = int('${{ steps.canonical.outputs.run_id }}')
+          summary['purpose'] = (
+              'Bounded fail-closed rescue after strict current-P9 exhaustion: use an alternate '
+              'first-party image only when the live product has no unique P9 and exactly one '
+              'non-P9 zoom image; exact EAN and exact image identity are revalidated live.'
+          )
+          (root / 'selection-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f'selected={len(products)}\n')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Install OCR dependencies
+        if: steps.cohort.outputs.selected != '0'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run conservative OCR safety tests first
+        if: steps.cohort.outputs.selected != '0'
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_image_preprocess.py \
+            test_mercadona_current_single_family_canary_prepare.py \
+            test_mercadona_current_canary_finalize.py \
+            test_mercadona_preselected_current_image_routing.py \
+            test_mercadona_preselected_three_of_four_variant_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py
+
+      - name: Fresh OCR on uniquely identified current alternate images
+        if: steps.cohort.outputs.selected != '0'
+        working-directory: tools/catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=mercadona-current-unique-non-p9-safe-canary
+          set +e
+          python mercadona_preselected_current_image_variant_rescue.py \
+            --products "$root/products.jsonl" \
+            --out "$root/ocr" \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0
+          rc=$?
+          set -e
+          [[ $rc -eq 0 || $rc -eq 2 ]]
+          python mercadona_current_canary_finalize.py --root "$root"
+
+      - name: Upload auditable canary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-current-unique-non-p9-safe-canary
+          path: |
+            tools/catalog/mercadona-current-unique-non-p9-safe-canary/selection-summary.json
+            tools/catalog/mercadona-current-unique-non-p9-safe-canary/results-merged.jsonl
+            tools/catalog/mercadona-current-unique-non-p9-safe-canary/summary.json
+            tools/catalog/mercadona-current-unique-non-p9-safe-canary/ocr/results-*.jsonl
+            tools/catalog/mercadona-current-unique-non-p9-safe-canary/ocr/summary-*.json
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Reconcile canonical OCR after successful canary
+        if: success() && steps.cohort.outputs.selected != '0'
+        run: gh workflow run catalog-mercadona-current-ocr-residual-audit.yml --ref agent/catalog-phase1
