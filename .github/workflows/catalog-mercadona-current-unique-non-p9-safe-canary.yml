@@ -49,13 +49,21 @@ jobs:
           mkdir -p /tmp/audit
           gh run download "$run_id" -n mercadona-current-ocr-residual-audit -D /tmp/audit
 
-      - name: Run routing and finalizer contract tests before live selection
+      - name: Test current-image selection contract
+        working-directory: tools/catalog
+        run: python -m unittest -v test_mercadona_current_single_family_canary_prepare.py
+
+      - name: Test current-image finalizer contract
+        working-directory: tools/catalog
+        run: python -m unittest -v test_mercadona_current_canary_finalize.py
+
+      - name: Test preselected-image routing contract
+        working-directory: tools/catalog
+        run: python -m unittest -v test_mercadona_preselected_current_image_routing.py
+
+      - name: Compile current-image canary path
         working-directory: tools/catalog
         run: |
-          python -m unittest -v \
-            test_mercadona_current_single_family_canary_prepare.py \
-            test_mercadona_current_canary_finalize.py \
-            test_mercadona_preselected_current_image_routing.py
           python -m py_compile \
             mercadona_current_single_family_canary_prepare.py \
             mercadona_current_canary_finalize.py \
