@@ -49,23 +49,43 @@ class CurrentCanaryFinalizeTests(unittest.TestCase):
             self._write_case(
                 root,
                 perspective="5",
-                identity_rule="EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9",
+                identity_rule="EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_P9",
             )
             summary = finalize_mod.finalize(root)
             self.assertEqual(summary["processed"], 1)
             self.assertEqual(
                 summary["image_identity_rule"],
-                "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9",
+                "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_P9",
             )
             self.assertEqual(
                 summary["image_identity_rules"],
-                ["EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9"],
+                ["EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_P9"],
             )
             row = json.loads((root / "results-merged.jsonl").read_text(encoding="utf-8").strip())
             self.assertEqual(row["perspective"], "5")
             self.assertEqual(
                 row["image_identity_rule"],
-                "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9",
+                "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_P9",
+            )
+
+    def test_accepts_exact_current_non_p9_same_image_retry_identity_rule(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_case(
+                root,
+                perspective="5",
+                identity_rule="EXACT_CURRENT_ONLY_NON_P9_ZOOM_SAME_URL_RETRY",
+            )
+            summary = finalize_mod.finalize(root)
+            self.assertEqual(
+                summary["image_identity_rule"],
+                "EXACT_CURRENT_ONLY_NON_P9_ZOOM_SAME_URL_RETRY",
+            )
+            row = json.loads((root / "results-merged.jsonl").read_text(encoding="utf-8").strip())
+            self.assertEqual(row["perspective"], "5")
+            self.assertEqual(
+                row["image_identity_rule"],
+                "EXACT_CURRENT_ONLY_NON_P9_ZOOM_SAME_URL_RETRY",
             )
 
     def test_legacy_missing_identity_rule_remains_p9_only(self):
@@ -81,7 +101,7 @@ class CurrentCanaryFinalizeTests(unittest.TestCase):
             self._write_case(
                 root,
                 perspective="9",
-                identity_rule="EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9",
+                identity_rule="EXACT_CURRENT_ONLY_NON_P9_ZOOM_SAME_URL_RETRY",
             )
             with self.assertRaises(SystemExit):
                 finalize_mod.finalize(root)
