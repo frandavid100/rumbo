@@ -1,0 +1,107 @@
+{
+  "kind": "MERCADONA_OCR_CANONICAL_STATE",
+  "created_from_workflow_run": 35689719676,
+  "source_commit": "57e7d8cd60d61486ad8de92776bab6aff2bd5f37",
+  "artifact": {
+    "id": 10678188939,
+    "name": "mercadona-current-ocr-residual-audit",
+    "sha256": "8e2e3a6d30dae0fa1e9282044c6efdd8f3080ffd619852a75ad5559541620719"
+  },
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 378,
+    "REVIEW": 2591
+  },
+  "usable_complete": 378,
+  "usable_complete_pct_inventory": 8.8318,
+  "usable_field_counts": {
+    "calories": 378,
+    "fat_g": 378,
+    "carbohydrate_g": 378,
+    "protein_g": 378
+  },
+  "milestone_since_run_35664987035": {
+    "previous_declared": 376,
+    "current_declared": 378,
+    "new_declared": 2,
+    "product_ids": ["4041", "4641"],
+    "products": [
+      {
+        "product_id": "4041",
+        "name": "Aceite de girasol refinado 0,2º Hacendado",
+        "ean": "8402001021633",
+        "basis": "PER_100ML",
+        "calories": 821,
+        "fat_g": 92.0,
+        "carbohydrate_g": 0.0,
+        "protein_g": 0.0
+      },
+      {
+        "product_id": "4641",
+        "name": "Aceite de oliva 1º Hacendado",
+        "ean": "8480000046413",
+        "basis": "PER_100ML",
+        "calories": 822,
+        "fat_g": 91.4,
+        "carbohydrate_g": 0.0,
+        "protein_g": 0.0
+      }
+    ],
+    "source_observation_workflow_run": 35688150569,
+    "source_observation_artifact": {
+      "id": 10677433020,
+      "name": "mercadona-current-p9-changed-safe-canary",
+      "sha256": "b21760fdf3eb2f880a08875b1332515bb7d2df5d332c1e54e3cb5a68e81a0aaf"
+    },
+    "policy": "LATEST_RAW_LIVE_OBSERVATION_BY_GITHUB_ARTIFACT_CREATED_AT_WINS",
+    "fresh_four_of_four_recovery_required": true,
+    "fresh_independent_corroboration_required": true,
+    "older_declared_nutrition_inherited": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false
+  },
+  "strict_review_residual": {
+    "near_safe_complete_review": 0,
+    "near_safe_product_ids": [],
+    "three_of_four_explicit_basis_unblocked_review": 17,
+    "three_of_four_missing_field_counts": {
+      "carbohydrate_g": 5,
+      "fat_g": 5,
+      "protein_g": 7
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 17
+    },
+    "three_of_four_bounded_core_review": 7,
+    "three_of_four_retry_policy": "DIAGNOSTIC_TARGET_QUEUE_ONLY; BOUNDED_CORE_VALUES_EXCLUDED_AS_NON_EXACT; FRESH_OBSERVATION_MUST_RECOVER_AND_CORROBORATE_ALL_4_FIELDS; NO_CROSS_RUN_OR_CROSS_CROP_VALUE_FUSION"
+  },
+  "safety_blocker_counts": {
+    "HARD_OCR_CONFLICT": 247,
+    "ENERGY_MACRO_INCOHERENCE": 103,
+    "AMBIGUOUS_TABLE": 113,
+    "NON_EXACT_BOUNDED_CORE": 34
+  },
+  "historical_exact_residual": {
+    "products": 1311,
+    "ocr_actionable_p9_total": 0,
+    "out_of_scope": 1300,
+    "deferred_bodega": 11
+  },
+  "identity_reconciliation": {
+    "identity_anchored_products": 2969,
+    "identity_conflict_products": 0,
+    "identity_unverified_products": 0,
+    "identity_unresolved_products": 0,
+    "coverage_without_canonical_state": 0
+  },
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "structured_api_macros_claimed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "redistribution_allowed": false,
+  "classified": 0,
+  "menu_eligible": 0
+}
