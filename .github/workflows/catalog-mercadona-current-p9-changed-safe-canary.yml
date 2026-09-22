@@ -1,5 +1,5 @@
 name: Catalog Mercadona changed-current-P9 safe canary
-# Operational retrigger batch 2 after successful 0/3 conservative canary.
+# Operational retrigger batch 3 after successful 2/3 recovery; exclude all already-attempted current-P9 IDs.
 
 on:
   push:
@@ -66,7 +66,7 @@ jobs:
               root,
               limit_selected=3,
               allow_changed_current_p9=True,
-              exclude_targets=['63101', '22154', '2778', '14378', '22799', '59085', '16484'],
+              exclude_targets=['63101', '22154', '2778', '14378', '22799', '59085', '16484', '4041', '4641', '53140'],
           )
           summary['canonical_audit_run_id'] = int('${{ steps.canonical.outputs.run_id }}')
           summary['purpose'] = 'Fresh conservative retry of never-attempted changed-current-P9 strict residual after later OCR safety regressions'
