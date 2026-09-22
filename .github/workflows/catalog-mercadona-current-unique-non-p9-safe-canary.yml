@@ -1,4 +1,4 @@
-name: Catalog Mercadona unique current non-P9 safe canary
+name: Catalog Mercadona exact-current non-P9 retry canary
 
 on:
   push:
@@ -65,7 +65,7 @@ jobs:
             mercadona_current_canary_finalize.py \
             mercadona_preselected_current_image_variant_rescue.py
 
-      - name: Select bounded exact-current alternate-image canary
+      - name: Select bounded exact-current same-image retry canary
         id: cohort
         working-directory: tools/catalog
         shell: bash
@@ -82,13 +82,14 @@ jobs:
               Path('/tmp/audit/current-review-failure-modes/three-of-four-explicit-basis-unblocked-review.jsonl'),
               root,
               limit_selected=3,
-              allow_unique_current_non_p9=True,
+              allow_unique_current_non_p9_retry=True,
           )
           summary['canonical_audit_run_id'] = int('${{ steps.canonical.outputs.run_id }}')
           summary['purpose'] = (
-              'Bounded fail-closed rescue after strict current-P9 exhaustion: use an alternate '
-              'first-party image only when the live product has no unique P9 and exactly one '
-              'non-P9 zoom image; exact EAN and exact image identity are revalidated live.'
+              'Bounded fresh OCR retry after current-P9 exhaustion. Candidate must still expose the exact historical '
+              'OCR image URL as its sole current non-P9 zoom image, expose zero current P9 images, and retain the '
+              'exact canonical EAN. Historical OCR values are selection diagnostics only; current OCR must recover '
+              'all four macros afresh and satisfy the ordinary independent-engine safety gates.'
           )
           (root / 'selection-summary.json').write_text(
               json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
@@ -120,7 +121,7 @@ jobs:
             test_nutrition_label_reader.py \
             test_nutrition_ocr_ensemble.py
 
-      - name: Fresh OCR on uniquely identified current alternate images
+      - name: Fresh OCR on exact-current same image URLs
         if: steps.cohort.outputs.selected != '0'
         working-directory: tools/catalog
         shell: bash
