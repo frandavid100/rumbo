@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from mercadona_nutrition_label_percentage_guard import LabelReadResult, read_nutrition_label
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 from mercadona_label_evidence import LabelImageEvidence
+from nutrition_unit_glyph_repair import repair_observed_trailing_g_as_eight
 
-ADAPTER_VERSION = "1.0.5"
+ADAPTER_VERSION = "1.0.6"
 OCR_EVIDENCE_LEVEL = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
 
 
@@ -33,8 +34,15 @@ def read_evidence(evidence: LabelImageEvidence, extraction: VisionExtraction) ->
 
     The vision/OCR engine is intentionally injected. This module never assumes
     that an image is nutritional based on its position or filename.
+
+    Before generic parsing, apply only the Mercadona-specific observed unit-glyph
+    repair for exact core-nutrient rows where Tesseract read the printed terminal
+    `g` as `8` (for example `12.20 g` -> `12.208`). The repair does not invent a
+    missing value: it is row-anchored, requires explicit gram evidence elsewhere
+    in the same OCR observation, and leaves bounds/prose/non-core tokens intact.
     """
-    parsed = read_nutrition_label(extraction.text, extraction_confidence=extraction.confidence)
+    parser_text = repair_observed_trailing_g_as_eight(extraction.text)
+    parsed = read_nutrition_label(parser_text, extraction_confidence=extraction.confidence)
     return MercadonaLabelReading(evidence, extraction, parsed)
 
 
