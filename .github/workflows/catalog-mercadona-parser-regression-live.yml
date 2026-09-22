@@ -39,9 +39,11 @@ jobs:
             eligibility_mode: 'p9-no-ingredients-all'
           # Real observed Tesseract regression: printed `12.20 g`/`1.00 g`
           # became `12.208`/`1.008`. Keep this bounded target live and exact-EAN.
+          # This product has no structured ingredients in the current API, so it
+          # must use the exact-P9 packaged-food eligibility route rather than priority.
           - target_product_id: '15700'
             expected_ean: '8480000157003'
-            eligibility_mode: 'priority'
+            eligibility_mode: 'p9-no-ingredients-all'
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
       TARGET_PRODUCT_ID: ${{ matrix.target_product_id }}
