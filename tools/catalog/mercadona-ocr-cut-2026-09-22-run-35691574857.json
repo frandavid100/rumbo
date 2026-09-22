@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "kind": "MERCADONA_OCR_PARTIAL_CANARY_CUT",
+  "canonical_not_updated_here": true,
+  "inventory_products": 4280,
+  "source": "MERCADONA_FIRST_PARTY",
+  "source_record_kind": "label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "workflow_run_id": 35691574857,
+  "workflow_run_attempt": 1,
+  "workflow_head_sha": "22bc6a95b0d3e09d87e78ec3c65a759a01a18856",
+  "artifact_id": 10679151266,
+  "artifact_name": "mercadona-current-p9-changed-safe-canary",
+  "artifact_sha256": "cdaf987f64ba99ebcdbe76feb6e12c682a2dfd3d0592fe5a6a4bc14a0d4c7573",
+  "artifact_created_at": "2026-09-22T05:43:31Z",
+  "canonical_audit_run_id_before_canary": 35689719676,
+  "selection": {
+    "strict_diagnostic_rows": 17,
+    "static_candidates_seen_before_stop": 13,
+    "live_candidates_attempted": 13,
+    "selected": 3,
+    "selected_product_ids": ["56661", "59090", "63623"],
+    "selected_missing_fields": ["protein_g", "protein_g", "fat_g"],
+    "policy": "STRICT SINGLE-FAMILY EXPLICIT 3-OF-4 BOUNDED CANARY; EXACT EAN; EXACTLY ONE CURRENT FIRST-PARTY P9; CURRENT P9 MUST DIFFER FROM HISTORICAL OCR IMAGE; HISTORICAL VALUES NEVER CONSUMED; FRESH OBSERVATION MUST RECOVER AND CORROBORATE ALL FOUR CORE MACROS"
+  },
+  "result": {
+    "processed": 3,
+    "status_counts": {
+      "REVIEW": 3
+    },
+    "declared_product_ids": [],
+    "review_product_ids": ["56661", "59090", "63623"]
+  },
+  "review_diagnostics": [
+    {
+      "product_id": "56661",
+      "name": "Tiras de pechuga de pollo 99% Hacendado al natural",
+      "current_p9_changed": true,
+      "reason": "SELECTED_VISUAL_REGION_WAS_NOT_A_NUTRITION_LABEL; ZERO_CORE_FIELDS_RECOVERED"
+    },
+    {
+      "product_id": "59090",
+      "name": "Salami extra Hacendado lonchas",
+      "current_p9_changed": true,
+      "reason": "MULTIPLE_NUTRITION_COLUMNS; OCR_AMBIGUOUS_NUTRITION_COLUMNS; FAIL_CLOSED"
+    },
+    {
+      "product_id": "63623",
+      "name": "Pizza 4 quesos sin gluten y sin lactosa Hacendado ultracongelada",
+      "current_p9_changed": true,
+      "reason": "SELECTED_VISUAL_REGION_WAS_NOT_A_NUTRITION_LABEL; ZERO_CORE_FIELDS_RECOVERED"
+    }
+  ],
+  "live_selection_exclusions": {
+    "detail_404_product_ids": ["14727", "50939", "60244"],
+    "no_unique_current_p9_product_ids": ["18407", "2169", "24203", "24208", "58159", "59101", "59280"]
+  },
+  "safety": {
+    "historical_values_consumed": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false,
+    "missing_values_inferred": false,
+    "images_persisted": false,
+    "acceptance_policy_changed": false,
+    "classified_or_menu_eligible_changed": false
+  },
+  "next_action": {
+    "exclude_attempted_product_ids_from_next_changed_current_p9_canary": ["56661", "59090", "63623"],
+    "do_not_relaunch_while_canonical_audit_run_35691829596_is_in_progress": true,
+    "reason": "Avoid duplicate/racing OCR while the strict canonical reconciliation triggered by this canary is reconstructing the artifact union."
+  },
+  "purpose": "Persist auditable metadata for the completed changed-current-P9 canary. This canary produced no newly usable nutrition and therefore does not alter canonical DECLARED coverage. The Actions artifact remains the raw OCR evidence source."
+}
