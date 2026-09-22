@@ -11,8 +11,20 @@ from typing import Any
 
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 P9_IDENTITY_RULE = "EXACT_CURRENT_UNIQUE_P9"
-ALT_IDENTITY_RULE = "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9"
-ALLOWED_IMAGE_IDENTITY_RULES = {P9_IDENTITY_RULE, ALT_IDENTITY_RULE}
+LEGACY_ALT_IDENTITY_RULE = "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9"
+ALT_IDENTITY_RULE = "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_P9"
+RETRY_IDENTITY_RULE = "EXACT_CURRENT_ONLY_NON_P9_ZOOM_SAME_URL_RETRY"
+ALLOWED_IMAGE_IDENTITY_RULES = {
+    P9_IDENTITY_RULE,
+    LEGACY_ALT_IDENTITY_RULE,
+    ALT_IDENTITY_RULE,
+    RETRY_IDENTITY_RULE,
+}
+NON_P9_IDENTITY_RULES = {
+    LEGACY_ALT_IDENTITY_RULE,
+    ALT_IDENTITY_RULE,
+    RETRY_IDENTITY_RULE,
+}
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -29,7 +41,7 @@ def _perspective_allowed(identity_rule: str, perspective: Any) -> bool:
     value = str(perspective or "").strip()
     if identity_rule == P9_IDENTITY_RULE:
         return value == "9"
-    if identity_rule == ALT_IDENTITY_RULE:
+    if identity_rule in NON_P9_IDENTITY_RULES:
         return bool(value) and value != "9"
     return False
 
