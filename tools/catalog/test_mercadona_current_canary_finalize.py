@@ -54,6 +54,10 @@ class CurrentCanaryFinalizeTests(unittest.TestCase):
             summary = finalize_mod.finalize(root)
             self.assertEqual(summary["processed"], 1)
             self.assertEqual(
+                summary["image_identity_rule"],
+                "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9",
+            )
+            self.assertEqual(
                 summary["image_identity_rules"],
                 ["EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9"],
             )
