@@ -1,0 +1,95 @@
+{
+  "kind": "MERCADONA_OCR_CANONICAL_STATE",
+  "created_from_workflow_run": 35664987035,
+  "source_commit": "9b05388aec2717d22fc775beff20633f8e9e5b1e",
+  "artifact": {
+    "id": 10669521481,
+    "name": "mercadona-current-ocr-residual-audit",
+    "sha256": "4e50fd31d5b0bfc9e4e8702e9cc565a38553d97c68c2920def017f07c1d6b971"
+  },
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 376,
+    "REVIEW": 2593
+  },
+  "usable_complete": 376,
+  "usable_complete_pct_inventory": 8.785,
+  "usable_field_counts": {
+    "calories": 376,
+    "fat_g": 376,
+    "carbohydrate_g": 376,
+    "protein_g": 376
+  },
+  "milestone_since_run_35604648009": {
+    "previous_declared": 375,
+    "current_declared": 376,
+    "new_declared": 1,
+    "product_ids": ["16288"],
+    "product": {
+      "product_id": "16288",
+      "name": "Bizcocho de manzana",
+      "ean": "8402001047640",
+      "basis": "PER_100G",
+      "calories": 297,
+      "fat_g": 12.0,
+      "carbohydrate_g": 43.0,
+      "protein_g": 3.5
+    },
+    "source_observation_workflow_run": 35664199310,
+    "source_observation_artifact": {
+      "id": 10668792041,
+      "name": "mercadona-current-single-family-canary",
+      "sha256": "a8d751c9a1fdf9e5e9dfff03455207f36f6c14bab68d38b4f02a18e0f0546b0f"
+    },
+    "policy": "LATEST_RAW_LIVE_OBSERVATION_BY_GITHUB_ARTIFACT_CREATED_AT_WINS",
+    "fresh_four_of_four_recovery_required": true,
+    "fresh_independent_corroboration_required": true,
+    "older_declared_nutrition_inherited": false,
+    "cross_run_value_fusion": false,
+    "cross_image_value_fusion": false
+  },
+  "strict_review_residual": {
+    "near_safe_complete_review": 0,
+    "near_safe_product_ids": [],
+    "three_of_four_explicit_basis_unblocked_review": 26,
+    "three_of_four_missing_field_counts": {
+      "carbohydrate_g": 5,
+      "fat_g": 10,
+      "protein_g": 11
+    },
+    "three_of_four_engine_family_counts": {
+      "1": 26
+    },
+    "three_of_four_bounded_core_review": 7,
+    "three_of_four_retry_policy": "DIAGNOSTIC_TARGET_QUEUE_ONLY; BOUNDED_CORE_VALUES_EXCLUDED_AS_NON_EXACT; FRESH_OBSERVATION_MUST_RECOVER_AND_CORROBORATE_ALL_4_FIELDS; NO_CROSS_RUN_OR_CROSS_CROP_VALUE_FUSION"
+  },
+  "safety_blocker_counts": {
+    "HARD_OCR_CONFLICT": 243,
+    "ENERGY_MACRO_INCOHERENCE": 100,
+    "AMBIGUOUS_TABLE": 112,
+    "NON_EXACT_BOUNDED_CORE": 33
+  },
+  "historical_exact_residual": {
+    "products": 1311,
+    "ocr_actionable_p9_total": 0,
+    "out_of_scope": 1300,
+    "deferred_bodega": 11
+  },
+  "identity_reconciliation": {
+    "identity_anchored_products": 2969,
+    "identity_conflict_products": 0,
+    "identity_unverified_products": 0,
+    "identity_unresolved_products": 0,
+    "coverage_without_canonical_state": 0
+  },
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "structured_api_macros_claimed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "redistribution_allowed": false,
+  "classified": 0,
+  "menu_eligible": 0
+}
