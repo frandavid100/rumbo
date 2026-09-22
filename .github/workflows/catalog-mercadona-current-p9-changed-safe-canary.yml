@@ -1,5 +1,5 @@
 name: Catalog Mercadona changed-current-P9 safe canary
-# Operational retrigger after workflow registration on branch.
+# Operational retrigger batch 2 after successful 0/3 conservative canary.
 
 on:
   push:
