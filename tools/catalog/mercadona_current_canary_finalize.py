@@ -135,6 +135,7 @@ def finalize(root: Path) -> dict[str, Any]:
         "processed": len(rows),
         "status_counts": dict(sorted(counts.items())),
         "declared_product_ids": declared_ids,
+        "image_identity_rule": identity_rules[0] if len(identity_rules) == 1 else "MIXED",
         "image_identity_rules": identity_rules,
         "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
         "source": "MERCADONA_FIRST_PARTY/label image",
