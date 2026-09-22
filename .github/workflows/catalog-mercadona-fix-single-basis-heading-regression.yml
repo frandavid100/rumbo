@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install lightweight safety-test dependencies
+        run: python -m pip install --disable-pip-version-check numpy opencv-python-headless Pillow
+
       - name: Reproduce regression, patch parser, and validate
         run: python tools/catalog/mercadona_fix_single_basis_heading_regression.py
 
