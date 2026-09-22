@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-09-22T09:37:46Z",
+  "source": "mercadona-first-party-neural-ocr-current-strict-audit",
+  "branch": "agent/catalog-phase1",
+  "audit": {
+    "workflow_run_id": 35707269865,
+    "artifact": {
+      "id": 10685871093,
+      "sha256": "e1e4442658b8c9f56fcf7cf21a38eac5e9ec3709dc1fff7ef30767588768fecb",
+      "size_bytes": 303117
+    }
+  },
+  "preceding_canary": {
+    "workflow_run_id": 35706951102,
+    "artifact": {
+      "id": 10684219675,
+      "sha256": "cf0bcf873b55223f7b6d7e8eaa0ddd6f81506da2ddd770ec4b10fd099b32d56f",
+      "size_bytes": 9320
+    },
+    "product": {
+      "id": "9377",
+      "ean": "8480000093776",
+      "name": "Cereales rellenos de cacao y avellana Hacendado",
+      "basis": "100_g",
+      "nutrition": {
+        "energy_kcal": 442,
+        "fat_g": 15,
+        "carbohydrate_g": 67,
+        "protein_g": 6.7
+      },
+      "engine_families": [
+        "paddleocr",
+        "tesseract"
+      ],
+      "corroborated_fields": 4,
+      "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+      "source": "MERCADONA_FIRST_PARTY",
+      "source_record_kind": "label image",
+      "image_perspective": 9,
+      "live_ean_verified": true,
+      "live_image_verified": true,
+      "historical_values_reused": false,
+      "cross_run_merge_used": false,
+      "cross_image_merge_used": false
+    }
+  },
+  "coverage": {
+    "inventory_total": 4280,
+    "processed": 2969,
+    "processed_pct": 69.3692,
+    "declared": 379,
+    "review": 2590,
+    "usable_complete": 379,
+    "usable_complete_pct": 8.8551,
+    "macro_field_counts": {
+      "energy_kcal": 379,
+      "fat_g": 379,
+      "carbohydrate_g": 379,
+      "protein_g": 379
+    }
+  },
+  "identity": {
+    "anchored": 2969,
+    "conflicts": 0,
+    "unverified": 0,
+    "unresolved": 0,
+    "coverage_without_canonical_state": 0
+  },
+  "strict_review_residual": {
+    "near_safe_complete_review": 0,
+    "complete_but_safety_blocked": 9,
+    "three_of_four_explicit_basis_unblocked": 10,
+    "three_of_four_engine_families": {
+      "1": 10
+    },
+    "missing_core_field_counts": {
+      "carbohydrate_g": 3,
+      "fat_g": 3,
+      "protein_g": 4
+    },
+    "current_actionable_p9_total": 0,
+    "changed_current_p9_route": {
+      "exhausted": true,
+      "last_live_failures": {
+        "api_404": [
+          "14727",
+          "50939",
+          "60244"
+        ],
+        "no_unique_current_p9": [
+          "18407",
+          "2169",
+          "24203",
+          "24208",
+          "58159",
+          "59101",
+          "59280"
+        ]
+      }
+    },
+    "residual_no_p9_count": 13,
+    "deferred_bodega_count": 11,
+    "out_of_scope_count": 1300
+  },
+  "safety_blockers": {
+    "HARD_OCR_CONFLICT": 247,
+    "ENERGY_MACRO_INCOHERENCE": 105,
+    "AMBIGUOUS_TABLE": 116,
+    "NON_EXACT_BOUNDED_CORE": 34
+  },
+  "provenance_policy": {
+    "evidence": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+    "source": "MERCADONA_FIRST_PARTY",
+    "source_record_kind": "label image",
+    "images_persisted": false,
+    "missing_values_inferred": false,
+    "redistribution_allowed": false,
+    "structured_api_macros": false,
+    "classified": 0,
+    "menu_eligible": 0
+  },
+  "canonical_policy": "Latest raw-live observation by artifact.created_at wins; REVIEW never inherits previous DECLARED.",
+  "next_safe_route": "Changed-current-P9 is exhausted for the current strict 3/4 residual. Any further OCR rescue must use an explicit current first-party alternate image selected without guessing, with live EAN plus exact URL/perspective revalidation and no historical-value reuse or cross-image/cross-run merge."
+}
