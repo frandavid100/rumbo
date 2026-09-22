@@ -10,10 +10,28 @@ from pathlib import Path
 from typing import Any
 
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
+P9_IDENTITY_RULE = "EXACT_CURRENT_UNIQUE_P9"
+ALT_IDENTITY_RULE = "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9"
+ALLOWED_IMAGE_IDENTITY_RULES = {P9_IDENTITY_RULE, ALT_IDENTITY_RULE}
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _identity_rule(meta: dict[str, Any]) -> str:
+    # Backward compatibility for existing exact/changed-P9 canaries created before the
+    # explicit rule field existed. Missing rule remains fail-closed to P9 only.
+    return str(meta.get("image_identity_rule") or P9_IDENTITY_RULE)
+
+
+def _perspective_allowed(identity_rule: str, perspective: Any) -> bool:
+    value = str(perspective or "").strip()
+    if identity_rule == P9_IDENTITY_RULE:
+        return value == "9"
+    if identity_rule == ALT_IDENTITY_RULE:
+        return bool(value) and value != "9"
+    return False
 
 
 def finalize(root: Path) -> dict[str, Any]:
@@ -30,11 +48,17 @@ def finalize(root: Path) -> dict[str, Any]:
             if source_product is None:
                 raise SystemExit(f"unexpected result product {pid}")
             meta = source_product["_exact_current_image_meta"]
+            identity_rule = _identity_rule(meta)
+            if identity_rule not in ALLOWED_IMAGE_IDENTITY_RULES:
+                raise SystemExit(f"unknown image identity rule for {pid}: {identity_rule}")
+            if not _perspective_allowed(identity_rule, meta.get("current_photo_perspective")):
+                raise SystemExit(f"image identity rule/perspective mismatch for {pid}")
             if str(row.get("image_url") or "") != str(meta["image_url"]):
                 raise SystemExit(f"unexpected result routing for {pid}")
             row.update({
                 "image_index": meta.get("current_photo_index"),
                 "perspective": meta.get("current_photo_perspective"),
+                "image_identity_rule": identity_rule,
                 "image_selection_basis": meta.get("image_selection_basis"),
                 "identity_basis": meta.get("identity_basis"),
                 "canonical_ean": meta.get("canonical_ean"),
@@ -66,6 +90,7 @@ def finalize(root: Path) -> dict[str, Any]:
 
     for row in rows:
         pid = str(row.get("product_id") or "")
+        identity_rule = str(row.get("image_identity_rule") or "")
         if (
             row.get("source") != "MERCADONA_FIRST_PARTY"
             or row.get("source_record_kind") != "label image"
@@ -73,7 +98,8 @@ def finalize(root: Path) -> dict[str, Any]:
             or row.get("redistribution_allowed") is not False
             or not row.get("canonical_ean")
             or row.get("canonical_ean") != row.get("current_ean")
-            or str(row.get("perspective") or "") != "9"
+            or identity_rule not in ALLOWED_IMAGE_IDENTITY_RULES
+            or not _perspective_allowed(identity_rule, row.get("perspective"))
         ):
             raise SystemExit(f"unsafe provenance/identity for {pid}")
         if row.get("status") != "DECLARED":
@@ -103,11 +129,13 @@ def finalize(root: Path) -> dict[str, Any]:
     )
     counts = Counter(str(row.get("status") or "UNKNOWN") for row in rows)
     declared_ids = [str(row.get("product_id") or "") for row in rows if row.get("status") == "DECLARED"]
+    identity_rules = sorted({str(row.get("image_identity_rule") or "") for row in rows})
     summary = {
         "inventory_products": 4280,
         "processed": len(rows),
         "status_counts": dict(sorted(counts.items())),
         "declared_product_ids": declared_ids,
+        "image_identity_rules": identity_rules,
         "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
         "source": "MERCADONA_FIRST_PARTY/label image",
         "redistribution_allowed": False,
