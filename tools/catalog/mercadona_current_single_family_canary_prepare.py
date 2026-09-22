@@ -17,7 +17,8 @@ from mercadona_first_party_details import _get_json, normalize, _now
 CORE = ("calories", "fat_g", "carbohydrate_g", "protein_g")
 PRESELECTED_FLAG = "_preselected_current_first_party_label_image"
 P9_IDENTITY_RULE = "EXACT_CURRENT_UNIQUE_P9"
-ALT_IDENTITY_RULE = "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_UNIQUE_P9"
+ALT_IDENTITY_RULE = "EXACT_CURRENT_ONLY_NON_P9_ZOOM_WITHOUT_P9"
+RETRY_IDENTITY_RULE = "EXACT_CURRENT_ONLY_NON_P9_ZOOM_SAME_URL_RETRY"
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -47,9 +48,15 @@ def prepare(
     allow_changed_current_p9: bool = False,
     exclude_targets: list[str] | None = None,
     allow_unique_current_non_p9: bool = False,
+    allow_unique_current_non_p9_retry: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    if allow_changed_current_p9 and allow_unique_current_non_p9:
-        raise ValueError("changed-current-P9 and unique-current-non-P9 modes are mutually exclusive")
+    live_modes = (
+        int(bool(allow_changed_current_p9))
+        + int(bool(allow_unique_current_non_p9))
+        + int(bool(allow_unique_current_non_p9_retry))
+    )
+    if live_modes > 1:
+        raise ValueError("current-image routing modes are mutually exclusive")
 
     rows = _load_jsonl(residual_path)
     by_id = {str(row.get("product_id") or ""): row for row in rows}
@@ -115,7 +122,7 @@ def prepare(
             continue
 
         photos = live.get("photos") if isinstance(live.get("photos"), list) else []
-        if allow_unique_current_non_p9:
+        if allow_unique_current_non_p9 or allow_unique_current_non_p9_retry:
             current_p9 = [
                 (index, photo)
                 for index, photo in enumerate(photos)
@@ -123,10 +130,11 @@ def prepare(
                 and str(photo.get("perspective") or "") == "9"
                 and str(photo.get("zoom") or "").strip()
             ]
-            if len(current_p9) == 1:
+            if current_p9:
                 excluded.append({
                     "product_id": pid,
-                    "reason": "UNIQUE_CURRENT_P9_EXISTS_USE_P9_ROUTE",
+                    "reason": "CURRENT_P9_PRESENT_USE_OR_RESOLVE_P9_ROUTE",
+                    "matches": len(current_p9),
                 })
                 continue
             alternatives = [
@@ -147,12 +155,6 @@ def prepare(
                 continue
             image_index, photo = alternatives[0]
             selected_image_url = str(photo.get("zoom") or "").strip()
-            if selected_image_url == observed_image_url:
-                excluded.append({
-                    "product_id": pid,
-                    "reason": "CURRENT_NON_P9_EQUALS_HISTORICAL_OCR_IMAGE",
-                })
-                continue
             matching_current_urls = sum(
                 1
                 for candidate in photos
@@ -166,11 +168,32 @@ def prepare(
                     "matches": matching_current_urls,
                 })
                 continue
-            image_selection_basis = (
-                "ONLY_CURRENT_FIRST_PARTY_NON_P9_ZOOM_IMAGE_AFTER_EXACT_EAN_REVALIDATION; "
-                "NO_UNIQUE_CURRENT_P9; HISTORICAL_OCR_IMAGE_NOT_REUSED; NO_IMAGE_RANKING"
-            )
-            image_identity_rule = ALT_IDENTITY_RULE
+
+            if allow_unique_current_non_p9_retry:
+                if selected_image_url != observed_image_url:
+                    excluded.append({
+                        "product_id": pid,
+                        "reason": "CURRENT_NON_P9_DIFFERS_FROM_HISTORICAL_USE_ALT_ROUTE",
+                    })
+                    continue
+                image_selection_basis = (
+                    "ONLY_CURRENT_FIRST_PARTY_NON_P9_ZOOM_IMAGE_AFTER_EXACT_EAN_REVALIDATION; "
+                    "NO_CURRENT_P9; EXACT_URL_EQUALS_HISTORICAL_OCR_IMAGE; FRESH_IMAGE_DOWNLOAD_AND_"
+                    "FRESH_4_OF_4_OCR_REQUIRED; HISTORICAL_OCR_VALUES_NOT_CONSUMED; NO_IMAGE_RANKING"
+                )
+                image_identity_rule = RETRY_IDENTITY_RULE
+            else:
+                if selected_image_url == observed_image_url:
+                    excluded.append({
+                        "product_id": pid,
+                        "reason": "CURRENT_NON_P9_EQUALS_HISTORICAL_OCR_IMAGE",
+                    })
+                    continue
+                image_selection_basis = (
+                    "ONLY_CURRENT_FIRST_PARTY_NON_P9_ZOOM_IMAGE_AFTER_EXACT_EAN_REVALIDATION; "
+                    "NO_CURRENT_P9; HISTORICAL_OCR_IMAGE_NOT_REUSED; NO_IMAGE_RANKING"
+                )
+                image_identity_rule = ALT_IDENTITY_RULE
         elif allow_changed_current_p9:
             current_p9 = [
                 (index, photo)
@@ -266,9 +289,15 @@ def prepare(
         "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in products),
         encoding="utf-8",
     )
-    if allow_unique_current_non_p9:
+    if allow_unique_current_non_p9_retry:
         selection_basis = (
-            "strict single-family explicit 3-of-4 bounded canary; exact EAN; no unique current P9; exactly one "
+            "strict single-family explicit 3-of-4 bounded canary; exact EAN; zero current P9 images; exactly one "
+            "current first-party non-P9 zoom image; exact current URL must equal historical OCR image URL; image "
+            "is freshly downloaded and all four macros must be recovered afresh; historical OCR values never consumed"
+        )
+    elif allow_unique_current_non_p9:
+        selection_basis = (
+            "strict single-family explicit 3-of-4 bounded canary; exact EAN; zero current P9 images; exactly one "
             "current first-party non-P9 zoom image; historical OCR image not reused; no image ranking/guessing"
         )
     elif allow_changed_current_p9:
@@ -287,6 +316,8 @@ def prepare(
         "excluded_previously_attempted_product_ids": sorted(excluded_target_ids),
         "allow_changed_current_p9": allow_changed_current_p9,
         "allow_unique_current_non_p9": allow_unique_current_non_p9,
+        "allow_unique_current_non_p9_retry": allow_unique_current_non_p9_retry,
+        "fresh_same_image_retry": allow_unique_current_non_p9_retry,
         "residual_rows": len(rows),
         "candidate_product_ids": candidate_ids,
         "static_candidates_seen_before_stop": static_candidates,
@@ -328,8 +359,16 @@ def main() -> int:
         "--allow-unique-current-non-p9",
         action="store_true",
         help=(
-            "Allow exactly one live non-P9 zoom image only when no unique current P9 exists; "
-            "never consume historical OCR values or rank among multiple images."
+            "Allow exactly one live non-P9 zoom image only when zero current P9 images exist and its URL differs "
+            "from the historical OCR image; never consume historical OCR values or rank among multiple images."
+        ),
+    )
+    ap.add_argument(
+        "--allow-unique-current-non-p9-retry",
+        action="store_true",
+        help=(
+            "Allow a fresh OCR retry when zero current P9 images exist and exactly one current non-P9 zoom image "
+            "exists whose URL exactly matches the historical OCR image; historical OCR values are never consumed."
         ),
     )
     ap.add_argument(
@@ -349,6 +388,7 @@ def main() -> int:
         bool(args.allow_changed_current_p9),
         list(args.exclude_targets or []),
         bool(args.allow_unique_current_non_p9),
+        bool(args.allow_unique_current_non_p9_retry),
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     if not products:
