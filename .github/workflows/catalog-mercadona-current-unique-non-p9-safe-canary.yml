@@ -49,6 +49,22 @@ jobs:
           mkdir -p /tmp/audit
           gh run download "$run_id" -n mercadona-current-ocr-residual-audit -D /tmp/audit
 
+          # Do not spend another fresh-OCR wave on products already exercised by
+          # this exact-current same-image route. Each prior selection was already
+          # revalidated against the live Mercadona EAN/image identity contract and
+          # produced a fresh observation; repeating it cannot add independent
+          # evidence because cross-run value fusion is forbidden.
+          mkdir -p /tmp/prior-canaries
+          gh api '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-unique-non-p9-safe-canary.yml/runs?branch=agent%2Fcatalog-phase1&per_page=100' \
+            --jq '.workflow_runs[] | select(.conclusion == "success") | .id' | while read -r prior_run_id; do
+              [[ "$prior_run_id" =~ ^[0-9]+$ ]] || continue
+              prior_dir="/tmp/prior-canaries/$prior_run_id"
+              mkdir -p "$prior_dir"
+              if ! gh run download "$prior_run_id" -n mercadona-current-unique-non-p9-safe-canary -D "$prior_dir"; then
+                rm -rf "$prior_dir"
+              fi
+            done
+
       - name: Test current-image selection contract
         working-directory: tools/catalog
         run: python -m unittest -v test_mercadona_current_single_family_canary_prepare.py
@@ -77,19 +93,36 @@ jobs:
           from pathlib import Path
           from mercadona_current_single_family_canary_prepare import prepare
 
+          excluded = set()
+          prior_summaries = 0
+          for path in sorted(Path('/tmp/prior-canaries').glob('*/selection-summary.json')):
+              try:
+                  payload = json.loads(path.read_text(encoding='utf-8'))
+              except (OSError, json.JSONDecodeError):
+                  continue
+              prior_summaries += 1
+              for row in payload.get('selected_after_live_verification') or []:
+                  product_id = str((row or {}).get('product_id') or '').strip()
+                  if product_id:
+                      excluded.add(product_id)
+
           root = Path('mercadona-current-unique-non-p9-safe-canary')
           products, summary = prepare(
               Path('/tmp/audit/current-review-failure-modes/three-of-four-explicit-basis-unblocked-review.jsonl'),
               root,
               limit_selected=3,
+              exclude_targets=sorted(excluded),
               allow_unique_current_non_p9_retry=True,
           )
           summary['canonical_audit_run_id'] = int('${{ steps.canonical.outputs.run_id }}')
+          summary['prior_retry_selection_summaries_scanned'] = prior_summaries
+          summary['prior_retry_product_ids_excluded'] = sorted(excluded)
           summary['purpose'] = (
               'Bounded fresh OCR retry after current-P9 exhaustion. Candidate must still expose the exact historical '
               'OCR image URL as its sole current non-P9 zoom image, expose zero current P9 images, and retain the '
               'exact canonical EAN. Historical OCR values are selection diagnostics only; current OCR must recover '
-              'all four macros afresh and satisfy the ordinary independent-engine safety gates.'
+              'all four macros afresh and satisfy the ordinary independent-engine safety gates. Products already '
+              'attempted by this exact-current same-image route are excluded because cross-run fusion is forbidden.'
           )
           (root / 'selection-summary.json').write_text(
               json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
