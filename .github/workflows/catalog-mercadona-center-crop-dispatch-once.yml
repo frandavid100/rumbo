@@ -1,0 +1,23 @@
+name: Catalog Mercadona center crop dispatch once
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-center-crop-dispatch-once.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Dispatch bounded production canary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run catalog-mercadona-parser-production-canary.yml \
+            --repo frandavid100/rumbo \
+            --ref agent/catalog-phase1
