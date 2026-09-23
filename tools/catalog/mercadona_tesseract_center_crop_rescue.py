@@ -4,9 +4,12 @@ from __future__ import annotations
 
 This path is deliberately narrower than the diagnostic preprocessing pilot. It
 uses exactly the legacy ``crop_center`` transform, PP-OCRv6 and Tesseract PSM 11.
-A product is DECLARED only when both independent OCR families individually pass
-the normal Mercadona parser with a complete per-100 profile and those profiles
-match exactly. No other preprocessing variant is inspected or ranked.
+A product is DECLARED only when the two independent OCR families expose the same
+complete per-100 profile, at least one family independently passes the normal
+parser as DECLARED, and the other is either DECLARED or is held in REVIEW solely
+by the parser's narrow single-reversed-macro guard. The ensemble must still
+corroborate all four core fields across both families. No other preprocessing
+variant is inspected or ranked.
 """
 
 import argparse
@@ -25,7 +28,8 @@ from mercadona_nutrition_reader import OCR_EVIDENCE_LEVEL, VisionExtraction, rea
 from nutrition_ocr_ensemble import ParsedOCRReading, fuse_ocr_readings
 
 CORE_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
-RESCUE_VERSION = "1.0.0"
+RESCUE_VERSION = "1.0.1"
+_SINGLE_REVERSED_PREFIX = "SINGLE_REVERSED_MACRO_CANDIDATE:"
 
 
 def _load_one(path: Path) -> dict[str, Any]:
@@ -35,9 +39,18 @@ def _load_one(path: Path) -> dict[str, Any]:
     return rows[0]
 
 
-def _profile(parsed) -> tuple[str, tuple[float, float, float, float]] | None:
-    if getattr(parsed, "status", None) != "DECLARED":
-        return None
+def _profile(parsed, *, allow_single_reversed_review: bool = False) -> tuple[str, tuple[float, float, float, float]] | None:
+    status = getattr(parsed, "status", None)
+    if status != "DECLARED":
+        reasons = tuple(getattr(parsed, "reasons", ()) or ())
+        if not (
+            allow_single_reversed_review
+            and status == "REVIEW"
+            and len(reasons) == 1
+            and reasons[0].startswith(_SINGLE_REVERSED_PREFIX)
+            and reasons[0][len(_SINGLE_REVERSED_PREFIX):] in {"fat_g", "carbohydrate_g", "protein_g"}
+        ):
+            return None
     basis = str(getattr(parsed, "basis", "") or "")
     nutrition = getattr(parsed, "nutrition", None)
     if basis not in {"100_g", "100_ml"} or not isinstance(nutrition, dict):
@@ -50,9 +63,18 @@ def _profile(parsed) -> tuple[str, tuple[float, float, float, float]] | None:
 
 
 def _profiles_exactly_match(left, right) -> bool:
-    """Require two complete, independently DECLARED profiles to match exactly."""
-    a = _profile(left)
-    b = _profile(right)
+    """Require exact two-family agreement with at least one clean DECLARED read.
+
+    The generic parser intentionally routes a single value-before-label macro to
+    REVIEW even after full-tuple energy coherence so that an independent OCR
+    family can corroborate it later. This rescue is that later corroboration
+    point: one such narrowly tagged REVIEW may participate, but two REVIEW reads
+    can never self-promote and any other REVIEW reason remains disqualifying.
+    """
+    if getattr(left, "status", None) != "DECLARED" and getattr(right, "status", None) != "DECLARED":
+        return False
+    a = _profile(left, allow_single_reversed_review=True)
+    b = _profile(right, allow_single_reversed_review=True)
     return a is not None and b is not None and a == b
 
 
