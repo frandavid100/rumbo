@@ -1,0 +1,193 @@
+name: Catalog Mercadona Tesseract preprocess diagnostic
+
+# Diagnostic-only bounded rescue. Artifacts from this workflow are never part of
+# canonical Mercadona reconciliation; they only test whether deterministic image
+# preprocessing lets Tesseract independently corroborate PP-OCRv6 fields.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-tesseract-preprocess-diagnostic.yml'
+      - 'tools/catalog/mercadona_tesseract_preprocess_diagnostic.py'
+      - 'tools/catalog/label_image_preprocess.py'
+      - 'tools/catalog/label_text_extractor.py'
+      - 'tools/catalog/nutrition_unit_glyph_repair.py'
+      - 'tools/catalog/mercadona_nutrition_label_manufacturer_interleave.py'
+      - 'tools/catalog/mercadona_nutrition_reader.py'
+      - 'tools/catalog/test_label_image_preprocess.py'
+      - 'tools/catalog/test_label_text_extractor.py'
+      - 'tools/catalog/test_nutrition_unit_glyph_repair.py'
+      - 'tools/catalog/test_mercadona_nutrition_label_manufacturer_interleave.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-tesseract-preprocess-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Current unique near-safe residual: PP-OCRv6 has a complete coherent
+          # profile, while unprocessed Tesseract misreads several decimal glyphs.
+          - target_product_id: '24541'
+            expected_ean: '8402001050428'
+          # Control for a known manufacturer-interleaved label where PP-OCRv6
+          # reads protein=6.7 but ordinary Tesseract previously conflicted at 6.1.
+          - target_product_id: '21649'
+            expected_ean: '8402001054686'
+    env:
+      TARGET_PRODUCT_ID: ${{ matrix.target_product_id }}
+      EXPECTED_EAN: ${{ matrix.expected_ean }}
+      EXPECTED_GENERIC_PARSER_VERSION: '1.4.31'
+      EXPECTED_ADAPTER_VERSION: '1.0.7'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install bounded diagnostic dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check Pillow
+
+      - name: Run preprocessing and parser safety tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_image_preprocess.py \
+            test_label_text_extractor.py \
+            test_nutrition_unit_glyph_repair.py \
+            test_mercadona_nutrition_label_manufacturer_interleave.py
+          python -m py_compile mercadona_tesseract_preprocess_diagnostic.py
+
+      - name: Fetch exact target identity and current P9 from official Mercadona API
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-tesseract-preprocess-diagnostic /tmp/mercadona-target-details
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pid = os.environ['TARGET_PRODUCT_ID']
+          Path('/tmp/mercadona-target-inventory.jsonl').write_text(
+              json.dumps({'product_id': pid, 'category_id': '', 'category_path': []}, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          python mercadona_first_party_details.py \
+            --inventory /tmp/mercadona-target-inventory.jsonl \
+            --out /tmp/mercadona-target-details \
+            --shard-index 0 --shard-count 1 --timeout 20 --delay 0
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          pid = os.environ['TARGET_PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
+          detail_path = Path('/tmp/mercadona-target-details/details-00.jsonl')
+          error_path = Path('/tmp/mercadona-target-details/errors-00.jsonl')
+          rows = [json.loads(line) for line in detail_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          errors = [json.loads(line) for line in error_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors:
+              raise SystemExit(f'first-party API fetch errors: {errors}')
+          if len(rows) != 1:
+              raise SystemExit(f'expected exactly one API result, got {len(rows)}')
+          product = rows[0]
+          if str(product.get('product_id')) != pid:
+              raise SystemExit('product id mismatch')
+          if product.get('source') != 'MERCADONA_FIRST_PARTY' or product.get('evidence_type') != 'OBSERVED_API' or product.get('detail_observed') is not True:
+              raise SystemExit('invalid first-party API provenance')
+          if str(product.get('ean') or '') != expected_ean:
+              raise SystemExit(f'live first-party identity mismatch for {pid}: EAN={product.get("ean")}; expected={expected_ean}')
+          p9 = [p for p in (product.get('photos') or []) if str(p.get('perspective')) == '9' and (p.get('zoom') or p.get('regular'))]
+          if len(p9) != 1:
+              raise SystemExit(f'expected exactly one current perspective=9 label candidate, got {len(p9)}')
+          p9_url = p9[0].get('zoom') or p9[0].get('regular')
+          metadata = {
+              'product_id': pid,
+              'ean': product.get('ean'),
+              'name': product.get('name'),
+              'source': product.get('source'),
+              'evidence_type': product.get('evidence_type'),
+              'source_url': product.get('source_url'),
+              'observed_at': product.get('observed_at'),
+              'p9_image_url': p9_url,
+              'redistribution_allowed': False,
+          }
+          Path('mercadona-tesseract-preprocess-diagnostic/first-party-fetch.json').write_text(
+              json.dumps(metadata, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+
+      - name: Run fresh Tesseract over deterministic temporary variants
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          IMAGE_URL="$(python -c 'import json; print(json.load(open("mercadona-tesseract-preprocess-diagnostic/first-party-fetch.json"))["p9_image_url"])')"
+          python mercadona_tesseract_preprocess_diagnostic.py \
+            --image-url "$IMAGE_URL" \
+            --product-id "$TARGET_PRODUCT_ID" \
+            --ean "$EXPECTED_EAN" \
+            --out mercadona-tesseract-preprocess-diagnostic/report.json
+
+      - name: Validate diagnostic provenance and summarize
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          report = json.loads(Path('mercadona-tesseract-preprocess-diagnostic/report.json').read_text(encoding='utf-8'))
+          fetched = json.loads(Path('mercadona-tesseract-preprocess-diagnostic/first-party-fetch.json').read_text(encoding='utf-8'))
+          if report.get('diagnostic_only') is not True or report.get('canonical_reconciliation_allowed') is not False:
+              raise SystemExit('diagnostic unexpectedly eligible for canonical reconciliation')
+          if report.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+              raise SystemExit('invalid OCR evidence level')
+          if report.get('source') != 'MERCADONA_FIRST_PARTY/label image' or report.get('redistribution_allowed') is not False:
+              raise SystemExit('invalid source/redistribution provenance')
+          if report.get('source_image_persisted') is not False or report.get('missing_values_inferred') is not False:
+              raise SystemExit('unsafe diagnostic persistence/inference flags')
+          if str(report.get('product_id')) != os.environ['TARGET_PRODUCT_ID'] or str(report.get('ean')) != os.environ['EXPECTED_EAN']:
+              raise SystemExit('diagnostic identity mismatch')
+          if report.get('image_url') != fetched.get('p9_image_url'):
+              raise SystemExit('diagnostic image URL mismatch')
+          if report.get('generic_parser_version') != os.environ['EXPECTED_GENERIC_PARSER_VERSION']:
+              raise SystemExit(f'unexpected generic parser version: {report.get("generic_parser_version")}')
+          if report.get('adapter_version') != os.environ['EXPECTED_ADAPTER_VERSION']:
+              raise SystemExit(f'unexpected adapter version: {report.get("adapter_version")}')
+          if any(int(profile.get('independent_engine_families') or 0) != 1 for profile in report.get('complete_declared_profiles') or []):
+              raise SystemExit('preprocess variants incorrectly counted as independent OCR families')
+          forbidden = list(Path('mercadona-tesseract-preprocess-diagnostic').glob('*.jpg')) + list(Path('mercadona-tesseract-preprocess-diagnostic').glob('*.png'))
+          if forbidden:
+              raise SystemExit(f'image assets must not be persisted: {forbidden}')
+          print(json.dumps({
+              'product_id': report.get('product_id'),
+              'name': fetched.get('name'),
+              'attempts': len(report.get('attempts') or []),
+              'complete_declared_profiles': report.get('complete_declared_profiles') or [],
+          }, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-tesseract-preprocess-diagnostic-${{ env.TARGET_PRODUCT_ID }}
+          path: |
+            tools/catalog/mercadona-tesseract-preprocess-diagnostic/first-party-fetch.json
+            tools/catalog/mercadona-tesseract-preprocess-diagnostic/report.json
+          retention-days: 30
+          if-no-files-found: warn
