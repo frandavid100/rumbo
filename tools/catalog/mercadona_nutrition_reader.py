@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from mercadona_nutrition_label_percentage_guard import LabelReadResult, read_nutrition_label
+from mercadona_nutrition_label_manufacturer_interleave import LabelReadResult, read_nutrition_label
 from nutrition_resolver import NutritionCandidate, ProductIdentity
 from mercadona_label_evidence import LabelImageEvidence
 from nutrition_unit_glyph_repair import repair_observed_trailing_g_as_eight
 
-ADAPTER_VERSION = "1.0.6"
+ADAPTER_VERSION = "1.0.7"
 OCR_EVIDENCE_LEVEL = "OCR_DERIVED_FROM_MERCADONA_IMAGE"
 
 
