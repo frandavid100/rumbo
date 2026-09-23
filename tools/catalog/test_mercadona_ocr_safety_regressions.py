@@ -244,6 +244,34 @@ Sal 0.7 g
         )
         self.assertTrue(_should_run_easyocr_rescue(readings, "visual_region"))
 
+    def test_easyocr_rescue_routes_one_corroborated_field_when_union_is_complete_and_coherent(self):
+        # Real wave candidate 18037 shape: Paddle and Tesseract agree on energy,
+        # while their complementary partial rows recover the remaining core tuple.
+        # This only routes EasyOCR as a third observation; it does not relax final
+        # four-field/two-family corroboration or any parser safety gate.
+        paddle = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 820 kJ / 196 kcal
+Grasas
+Hidratos de carbono
+Proteínas 13 g
+Sal 0.7 g
+""", extraction_confidence=.98)
+        tesseract = read_nutrition_label("""Información nutricional por 100 g
+Valor energético 820 kJ / 196 kcal
+Grasas 15 g
+Hidratos de carbono 2.29 g
+Proteínas
+Sal 0.7 g
+""", extraction_confidence=.94)
+        self.assertEqual(paddle.status, "REVIEW")
+        self.assertEqual(tesseract.status, "REVIEW")
+        readings = (
+            ("paddleocr", "paddleocr", _observed_reading(paddle, .98)),
+            ("tesseract-psm11", "tesseract", _observed_reading(tesseract, .94)),
+        )
+        self.assertTrue(_should_run_easyocr_rescue(readings, "visual_region"))
+
+
     def test_easyocr_rescue_rejects_cross_engine_field_conflict(self):
         paddle = read_nutrition_label("""Información nutricional por 100 g
 Valor energético 954 kJ / 228 kcal

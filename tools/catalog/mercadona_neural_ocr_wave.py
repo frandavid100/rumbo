@@ -220,9 +220,12 @@ def _should_run_easyocr_rescue(readings, target_kind: str) -> bool:
         return False
     if ensemble.independent_engine_families < 2:
         return False
-    # Keep this expansion narrow: at least half of the complete tuple must already
-    # be independently corroborated before paying for a third family.
-    if not (2 <= ensemble.corroborated_fields < len(CORE_NUTRITION_FIELDS)):
+    # Routing a third OCR family is not acceptance. One independently corroborated
+    # core field is enough to justify the bounded rescue when the complementary
+    # two-family union is already complete, explicit-basis, conflict-free and
+    # energy/macro coherent. Final DECLARED still requires the ordinary four-field
+    # corroboration gate after EasyOCR runs.
+    if not (1 <= ensemble.corroborated_fields < len(CORE_NUTRITION_FIELDS)):
         return False
     if "UNCORROBORATED_CORE_FIELDS" not in ensemble.reasons:
         return False
