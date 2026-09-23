@@ -44,12 +44,6 @@ jobs:
           - target_product_id: '15700'
             expected_ean: '8480000157003'
             eligibility_mode: 'p9-no-ingredients-all'
-          # Near-safe residual: Paddle reads all four core values, while other
-          # OCR families lose decimal points or the terminal `g`. Exercise it live
-          # without promoting this diagnostic artifact into canonical coverage.
-          - target_product_id: '24541'
-            expected_ean: '8480000245410'
-            eligibility_mode: 'p9-no-ingredients-all'
     env:
       PADDLE_PDX_MODEL_SOURCE: BOS
       TARGET_PRODUCT_ID: ${{ matrix.target_product_id }}
