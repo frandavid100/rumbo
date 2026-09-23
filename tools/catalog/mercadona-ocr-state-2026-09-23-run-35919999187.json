@@ -1,0 +1,109 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "authoritative_audit_run_id": 35919999187,
+  "authoritative_audit_artifact_id": 10776678949,
+  "authoritative_audit_artifact_sha256": "fc64535af471889783ff54411a4c9f56ed4913e56507a78be37ae47da7225824",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 381,
+    "REVIEW": 2588,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0
+  },
+  "usable_complete": 381,
+  "usable_complete_pct_inventory": 8.9019,
+  "usable_field_counts": {
+    "calories": 381,
+    "fat_g": 381,
+    "carbohydrate_g": 381,
+    "protein_g": 381
+  },
+  "identity_integrity": {
+    "processed_products": 2969,
+    "identity_anchored_products": 2969,
+    "unresolved_or_unverified": 0,
+    "conflicts": 0,
+    "processed_without_canonical_state": 0,
+    "identity_anchor_mode": "EARLIEST_RAW_LIVE_EAN_ANCHOR"
+  },
+  "deterministic_center_crop_rescue": {
+    "workflow_run_id": 35919542868,
+    "rescue_version": "1.0.1",
+    "variant_selection_policy": "FIXED_SINGLE_VARIANT_NO_RANKING",
+    "product_21649": {
+      "artifact_id": 10777135200,
+      "artifact_sha256": "a458e95b203dbec2ba2f7129fa1db7c944b5a81fcb669e97449087310b4da310",
+      "product_id": "21649",
+      "ean": "8402001054686",
+      "name": "Empanada de carne",
+      "perspective": 9,
+      "preprocess_variant": "crop_center",
+      "status": "DECLARED",
+      "basis": "100_g",
+      "nutrition": {
+        "calories": 240.0,
+        "fat_g": 12.0,
+        "carbohydrate_g": 26.0,
+        "protein_g": 6.7
+      },
+      "independent_engine_families": 2,
+      "corroborated_fields": 4,
+      "engines": [
+        "paddleocr-PP-OCRv6",
+        "tesseract"
+      ],
+      "exact_independent_profile_match": true,
+      "current_p9_revalidated": true,
+      "canonicalized_by_authoritative_audit": true
+    },
+    "product_24541_control": {
+      "artifact_id": 10776372902,
+      "artifact_sha256": "a66e2a30495bc48398812599429dda7dba1763cb5748b177558f836cf50fc025",
+      "product_id": "24541",
+      "ean": "8402001050428",
+      "name": "Golosinas tubos rellenos Hacendado sabor nata y fresa",
+      "perspective": 9,
+      "preprocess_variant": "crop_center",
+      "status": "REVIEW",
+      "nutrition": null,
+      "independent_engine_families": 2,
+      "corroborated_fields": 0,
+      "blocking_reason": "OCR_FIELD_CONFLICT:calories; MISSING_CORE:calories,fat_g,carbohydrate_g,protein_g",
+      "current_p9_revalidated": true,
+      "canonicalized_by_authoritative_audit": true
+    }
+  },
+  "delta_vs_run_35830316735": {
+    "declared_added": ["21649"],
+    "declared_removed_to_review": [],
+    "net_declared_change": 1
+  },
+  "current_review_failure_modes": {
+    "near_safe_complete_review": 0,
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 7,
+    "three_of_four_explicit_basis_unblocked_review": 0,
+    "three_of_four_bounded_core_review": 7,
+    "hard_ocr_conflict_products": 251,
+    "energy_macro_incoherence_products": 108,
+    "ambiguous_table_products": 117,
+    "non_exact_bounded_core_products": 36
+  },
+  "ocr_actionable_p9_total": 0,
+  "ocr_blocked_no_p9_food_route_total": 0,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "redistribution_allowed": false,
+  "structured_api_macros_claimed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "notes": [
+    "Product 21649 is now canonical latest-live DECLARED after the fixed deterministic center-crop rescue corroborated all four core fields independently with PP-OCRv6 and Tesseract on the current first-party perspective=9 image.",
+    "Product 24541 remains REVIEW: the same fixed rescue produced conflicting calorie readings and did not corroborate a complete macro profile; no value is inferred or reused from historical runs.",
+    "The strict REVIEW queue has zero near-safe complete rows and zero exact three-of-four rows with explicit basis and no safety blocker after this reconciliation.",
+    "REVIEW rows remain non-usable; no cross-run, cross-image, or cross-crop value fusion and no missing-value inference are permitted."
+  ]
+}
