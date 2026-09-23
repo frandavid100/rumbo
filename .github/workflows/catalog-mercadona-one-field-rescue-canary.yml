@@ -1,0 +1,188 @@
+name: Catalog Mercadona one-field rescue canary
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-one-field-rescue-canary.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-one-field-rescue-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download consolidated Mercadona first-party cut
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-first-party-final
+          path: tools/catalog/mercadona-first-party-final
+          github-token: ${{ github.token }}
+          run-id: 33046950149
+      - name: Resolve latest successful canonical OCR audit
+        id: canonical-audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          test "$run_id" != "null"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download latest canonical OCR audit
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-current-ocr-residual-audit
+          path: tools/catalog/mercadona-current-ocr-residual-audit
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.canonical-audit.outputs.run_id }}
+      - name: Build non-canonical candidate cut
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          canonical = Path('mercadona-current-ocr-residual-audit/canonical-ocr.jsonl')
+          source = Path('mercadona-first-party-final/products.jsonl')
+          usable = {
+              str(row.get('product_id') or '')
+              for row in (json.loads(line) for line in canonical.read_text(encoding='utf-8').splitlines() if line.strip())
+              if row.get('usable_complete') is True and row.get('status') == 'DECLARED'
+          }
+          kept = []
+          for line in source.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              row = json.loads(line)
+              if str(row.get('product_id') or '') not in usable:
+                  kept.append(row)
+          Path('mercadona-one-field-rescue-candidates.jsonl').write_text(
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in kept),
+              encoding='utf-8',
+          )
+          print(json.dumps({'canonical_declared_excluded': len(usable), 'remaining': len(kept)}, sort_keys=True))
+          if len(usable) < 300:
+              raise SystemExit('Unexpectedly small canonical DECLARED set')
+          PY
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run conservative OCR regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+      - name: Run bounded current-image canary
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-one-field-rescue-candidates.jsonl \
+            --out mercadona-one-field-rescue-canary \
+            --shard-index ${{ matrix.shard }} \
+            --shard-count 4 \
+            --limit 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-one-field-rescue-canary-${{ matrix.shard }}
+          path: tools/catalog/mercadona-one-field-rescue-canary/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    runs-on: ubuntu-24.04
+    needs: ocr
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mercadona-one-field-rescue-canary-*
+          path: input
+          merge-multiple: true
+      - name: Merge and enforce safety invariants
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import glob, json
+          from pathlib import Path
+          rows = []
+          for path in sorted(glob.glob('input/results-*.jsonl')):
+              rows.extend(json.loads(line) for line in Path(path).read_text(encoding='utf-8').splitlines() if line.strip())
+          counts = Counter(row.get('status', 'UNKNOWN') for row in rows)
+          declared = [row for row in rows if row.get('status') == 'DECLARED']
+          unsafe = []
+          bad_provenance = []
+          flagged = []
+          easyocr_rows = []
+          for row in rows:
+              if row.get('source') != 'MERCADONA_FIRST_PARTY' or row.get('source_record_kind') != 'label image' or row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
+                  bad_provenance.append(row.get('product_id'))
+              if row.get('classified') is True or row.get('CLASSIFIED') is True or row.get('menu_eligible') is True or row.get('MENU_ELIGIBLE') is True:
+                  flagged.append(row.get('product_id'))
+              if any('easyocr' in (attempt.get('engines') or {}) for attempt in row.get('attempts') or []):
+                  easyocr_rows.append(row.get('product_id'))
+              if row.get('status') == 'DECLARED':
+                  accepted = next((a for a in row.get('attempts') or [] if (a.get('ensemble') or {}).get('status') == 'DECLARED'), None)
+                  ensemble = (accepted or {}).get('ensemble') or {}
+                  if ensemble.get('independent_engine_families', 0) < 2 or ensemble.get('corroborated_fields', 0) < 4:
+                      unsafe.append(row.get('product_id'))
+          summary = {
+              'processed': len(rows),
+              'status_counts': dict(sorted(counts.items())),
+              'declared': len(declared),
+              'review': counts.get('REVIEW', 0),
+              'no_visual_region': sum(1 for row in rows if row.get('visual_regions_detected') == 0),
+              'errors': counts.get('ERROR', 0),
+              'easyocr_observed_product_ids': sorted(set(easyocr_rows)),
+              'declared_product_ids': [row.get('product_id') for row in declared],
+              'unsafe_declared_product_ids': unsafe,
+              'invalid_provenance_product_ids': bad_provenance,
+              'classified_or_menu_eligible_product_ids': flagged,
+              'evidence_level': 'OCR_DERIVED_FROM_MERCADONA_IMAGE',
+              'redistribution_allowed': False,
+          }
+          Path('merged').mkdir(exist_ok=True)
+          Path('merged/results.jsonl').write_text(''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in rows), encoding='utf-8')
+          Path('merged/summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          if unsafe or bad_provenance or flagged:
+              raise SystemExit('Canary safety invariant failed')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-one-field-rescue-canary-merged
+          path: merged/
+          retention-days: 30
+          if-no-files-found: warn
