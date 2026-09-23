@@ -1,0 +1,107 @@
+{
+  "kind": "mercadona_tesseract_preprocess_diagnostic_cut",
+  "observed_date": "2026-09-23",
+  "workflow_run_id": 35862236475,
+  "head_sha": "d07b674e25ae4ccbd13bb3aeb99474fd254a316c",
+  "status": "SUCCESS",
+  "canonical_reconciliation_allowed": false,
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "source_images_persisted": false,
+  "missing_values_inferred": false,
+  "classified": false,
+  "menu_eligible": false,
+  "production_decision": {
+    "result": "BOUNDED_RESCUE_VALIDATED_FOR_FIXED_CENTER_CROP_ONLY",
+    "safe_next_step": "Integrate one deterministic crop_center plus Tesseract PSM 11 rescue behind existing conservative fusion gates; do not select among multiple preprocessing variants in production.",
+    "do_not_use": [
+      "full_autocontrast variant selection",
+      "decimal inference or repair without an observed separator",
+      "multiple preprocessing variants as independent OCR families"
+    ]
+  },
+  "products": [
+    {
+      "product_id": "21649",
+      "ean": "8402001054686",
+      "role": "positive_control",
+      "complete_declared_profiles": [
+        {
+          "variant": "crop_center",
+          "psm": 11,
+          "ocr_confidence": 0.9058276128857143,
+          "basis": "100_g",
+          "nutrition": {
+            "calories": 240.0,
+            "fat_g": 12.0,
+            "carbohydrate_g": 26.0,
+            "protein_g": 6.7
+          }
+        },
+        {
+          "variant": "crop_left",
+          "psm": 11,
+          "ocr_confidence": 0.8964775252363631,
+          "basis": "100_g",
+          "nutrition": {
+            "calories": 240.0,
+            "fat_g": 12.0,
+            "carbohydrate_g": 26.0,
+            "protein_g": 6.7
+          }
+        },
+        {
+          "variant": "full_autocontrast",
+          "psm": 11,
+          "ocr_confidence": 0.9120833406916425,
+          "basis": "100_g",
+          "nutrition": {
+            "calories": 240.0,
+            "fat_g": 12.0,
+            "carbohydrate_g": 26.0,
+            "protein_g": 6.79
+          },
+          "accepted_for_production_rescue": false,
+          "reason": "protein conflicts with the independently established 6.7 g profile"
+        }
+      ],
+      "selected_safe_diagnostic_observation": {
+        "variant": "crop_center",
+        "psm": 11,
+        "nutrition": {
+          "calories": 240.0,
+          "fat_g": 12.0,
+          "carbohydrate_g": 26.0,
+          "protein_g": 6.7
+        }
+      },
+      "artifact": {
+        "id": 10750218089,
+        "name": "mercadona-tesseract-preprocess-diagnostic-21649",
+        "sha256": "80467a87f22002b465e920889203fdf240d6162604da1267c8d4f9f4e8c61f41"
+      }
+    },
+    {
+      "product_id": "24541",
+      "ean": "8402001050428",
+      "role": "negative_control",
+      "complete_declared_profiles": [],
+      "result": "REVIEW",
+      "reason": "No deterministic Tesseract preprocessing variant produced a complete parser-DECLARED profile; no decimal or missing-value inference was applied.",
+      "artifact": {
+        "id": 10750752776,
+        "name": "mercadona-tesseract-preprocess-diagnostic-24541",
+        "sha256": "dce3d83cf487126bc59d4fa4d7ac80ebb3c0c7e7e6baeee8f82417e944668e28"
+      }
+    }
+  ],
+  "canonical_state_after_diagnostic": {
+    "inventory_total": 4280,
+    "processed": 2969,
+    "declared": 380,
+    "review": 2589,
+    "complete_coverage_pct": 8.8785,
+    "changed_by_this_diagnostic": false
+  }
+}
