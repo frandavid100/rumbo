@@ -1,0 +1,73 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "authoritative_audit_run_id": 35830316735,
+  "authoritative_audit_artifact_id": 10737041446,
+  "authoritative_audit_artifact_sha256": "ef04c755709b7d9c4fd4535797057bb43b16a3dee1eaaf7ff0879c783ffaaba0",
+  "inventory_products": 4280,
+  "processed_canonical_products": 2969,
+  "processed_pct_inventory": 69.3692,
+  "status_counts": {
+    "DECLARED": 380,
+    "REVIEW": 2589
+  },
+  "usable_complete": 380,
+  "usable_complete_pct_inventory": 8.8785,
+  "usable_field_counts": {
+    "calories": 380,
+    "fat_g": 380,
+    "carbohydrate_g": 380,
+    "protein_g": 380
+  },
+  "parser_production_canary": {
+    "workflow_run_id": 35829981759,
+    "artifact_id": 10736387937,
+    "artifact_sha256": "915fd4cf9439520d4dd0cb53fa66b6c2ebeec9ff1fe2145806d13a5936236c1f",
+    "product_id": "15700",
+    "ean": "8480000157003",
+    "name": "Jamón serrano cortado a máquina",
+    "status": "DECLARED",
+    "basis": "100_g",
+    "nutrition": {
+      "calories": 247.8,
+      "fat_g": 12.2,
+      "carbohydrate_g": 1.0,
+      "protein_g": 33.5
+    },
+    "independent_engine_families": 2,
+    "corroborated_fields": 4,
+    "generic_parser_version": "1.4.31",
+    "mercadona_adapter_version": "1.0.6",
+    "current_p9_revalidated": true,
+    "canonicalized_by_authoritative_audit": true
+  },
+  "delta_vs_run_35756053051": {
+    "declared_added": ["15700", "58298"],
+    "declared_removed_to_review": ["21649", "84736"],
+    "net_declared_change": 0
+  },
+  "current_review_failure_modes": {
+    "near_safe_complete_review": 2,
+    "near_safe_complete_product_ids": ["21649", "24541"],
+    "fully_corroborated_but_still_review": 0,
+    "complete_but_safety_blocked": 7,
+    "three_of_four_explicit_basis_unblocked_review": 0,
+    "three_of_four_bounded_core_review": 7,
+    "hard_ocr_conflict_products": 251,
+    "energy_macro_incoherence_products": 107,
+    "ambiguous_table_products": 117,
+    "non_exact_bounded_core_products": 36
+  },
+  "ocr_actionable_p9_total": 0,
+  "ocr_blocked_no_p9_food_route_total": 0,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "notes": [
+    "Product 15700 is now a canonical latest-live DECLARED row from the production canary; the authoritative total remains 380 because independent raw-live chronology also adds 58298 while demoting 21649 and 84736 to REVIEW.",
+    "Do not reuse the earlier user-facing diagnostic tuple 247.8/16/0.5/29 for product 15700: the persisted diagnostic and production artifacts both contain the fresh exact-current-P9 tuple 247.8/12.2/1.0/33.5.",
+    "REVIEW rows remain non-usable; no cross-run/cross-image/cross-crop value fusion and no missing-value inference are permitted."
+  ]
+}
