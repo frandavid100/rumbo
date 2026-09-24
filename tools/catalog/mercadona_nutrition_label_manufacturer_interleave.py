@@ -14,6 +14,11 @@ generic label parser:
   generic row parser can mis-attach the subrow/salt values to total fat/protein.
   The guard below only withholds those suspect partial fields; it never supplies
   the preceding values and therefore cannot create usable nutrition.
+* whole-package Mercadona OCR can read printed prose such as ``100% MALTA`` as
+  ``1009 MALTA``. Basis recovery therefore prefers an explicit contextual
+  ``por/per/cada 100 ml|g`` heading and accepts loose OCR unit glyphs only when
+  they are a standalone basis row. This prevents package prose from changing a
+  per-100-ml table into a per-100-g record.
 """
 
 import re
@@ -24,7 +29,7 @@ from mercadona_nutrition_label_percentage_guard import (
 )
 from nutrition_label_reader import _fold, _number_immediately_before, _nutrition_block
 
-READER_VERSION = "1.1.0"
+READER_VERSION = "1.1.1"
 
 _FAT_PATTERNS = (
     r"(?:^|\n)\s*grasas?(?:\s*/\s*lipidos?)?\b",
@@ -43,6 +48,80 @@ _HARD_REASON_PREFIXES = (
 )
 _REASON = "MERCADONA_MANUFACTURER_INTERLEAVED_VALUE_BEFORE_LABEL_STRUCTURE"
 _SHIFT_REASON = "MERCADONA_SHIFTED_SUBROW_VALUE_WITHHELD"
+_BASIS_CORRECTED_REASON = "MERCADONA_CONTEXTUAL_BASIS_CORRECTED"
+_BASIS_WITHHELD_REASON = "MERCADONA_NONCONTEXTUAL_BASIS_WITHHELD"
+
+
+def _mercadona_basis(text: str) -> str | None:
+    """Recover a per-100 basis without treating inline package prose as a unit.
+
+    ``9/q/y/yg`` remain accepted OCR substitutions for a printed ``g``, but only
+    with a contextual basis prefix or as a complete standalone row. In
+    particular, inline text such as ``1009 MALTA`` is not a 100-g basis.
+    Explicit ml/g headings are checked before standalone OCR fallbacks so a real
+    ``por 100 ml`` heading cannot be overridden by unrelated package text.
+    """
+    folded = _fold(text)
+    prefix = r"(?:por|cada|per|pr|valores? medios? por)"
+    gram = r"(?:g|9|q|yg|y)"
+    millilitre = r"m(?:l|i|1)"
+
+    explicit_ml = bool(re.search(
+        rf"\b{prefix}\s*100\s*{millilitre}\b",
+        folded,
+        flags=re.I,
+    ))
+    explicit_g = bool(re.search(
+        rf"\b{prefix}\s*100\s*{gram}\b",
+        folded,
+        flags=re.I,
+    ))
+    if explicit_ml != explicit_g:
+        return "100_ml" if explicit_ml else "100_g"
+    if explicit_ml and explicit_g:
+        return None
+
+    standalone_ml = bool(re.search(
+        rf"(?im)^\s*100\s*{millilitre}\s*$",
+        folded,
+    ))
+    standalone_g = bool(re.search(
+        rf"(?im)^\s*100\s*{gram}\s*$",
+        folded,
+    ))
+    if standalone_ml != standalone_g:
+        return "100_ml" if standalone_ml else "100_g"
+    return None
+
+
+def _apply_mercadona_basis_guard(result: LabelReadResult) -> LabelReadResult:
+    """Correct or withhold only the basis; never manufacture nutrition values."""
+    contextual = _mercadona_basis(result.normalized_text)
+    if contextual == result.basis:
+        return result
+
+    if contextual is None:
+        if result.basis is None:
+            return result
+        reasons = tuple(result.reasons) + (_BASIS_WITHHELD_REASON,)
+        return LabelReadResult(
+            status="REVIEW",
+            basis=None,
+            nutrition=result.nutrition,
+            confidence=min(result.confidence, .75),
+            reasons=reasons,
+            normalized_text=result.normalized_text,
+        )
+
+    reasons = tuple(result.reasons) + (_BASIS_CORRECTED_REASON,)
+    return LabelReadResult(
+        status=result.status,
+        basis=contextual,
+        nutrition=result.nutrition,
+        confidence=result.confidence,
+        reasons=reasons,
+        normalized_text=result.normalized_text,
+    )
 
 
 def _protein_before_bilingual_manufacturer(text: str) -> float | None:
@@ -223,6 +302,7 @@ def _repair_manufacturer_interleave(
 
 def read_nutrition_label(text: str, *, extraction_confidence: float = 1.0) -> LabelReadResult:
     result = _read_nutrition_label(text, extraction_confidence=extraction_confidence)
+    result = _apply_mercadona_basis_guard(result)
     result = _withhold_shifted_subrow_values(result)
     repaired = _repair_manufacturer_interleave(
         result,
