@@ -5,6 +5,8 @@ on:
     branches: [agent/catalog-phase1]
     paths:
       - '.github/workflows/catalog-mercadona-bodega-fullimage-rescue.yml'
+      - 'tools/catalog/mercadona_bodega_fullimage_rescue.py'
+      - 'tools/catalog/test_mercadona_bodega_fullimage_rescue.py'
 
 permissions:
   actions: read
