@@ -25,6 +25,29 @@ class LabelTableGeometryTest(unittest.TestCase):
         self.assertEqual(header.basis, "100_g")
         self.assertEqual(header.center_x, 235.0)
 
+    def test_finds_prefixed_por100g_header_without_broad_suffix_matching(self):
+        raw = TSV_HEADER + _word(text="Por100g", left=220, width=55)
+        status, header = unique_basis_header(parse_tesseract_tsv(raw))
+        self.assertEqual(status, "UNIQUE_EXPLICIT_100_BASIS_HEADER")
+        self.assertEqual(header.basis, "100_g")
+        self.assertEqual(header.text, "Por100g")
+
+        unrelated = TSV_HEADER + _word(text="ingredientes100g", left=220, width=90)
+        status, header = unique_basis_header(parse_tesseract_tsv(unrelated))
+        self.assertEqual(status, "MISSING_EXPLICIT_100_BASIS_HEADER")
+        self.assertIsNone(header)
+
+    def test_finds_prefixed_split_por100_g_only_when_visually_adjacent(self):
+        raw = (
+            TSV_HEADER
+            + _word(text="Por100", left=150, width=42, word=1)
+            + _word(text="g", left=198, width=8, word=2)
+        )
+        status, header = unique_basis_header(parse_tesseract_tsv(raw))
+        self.assertEqual(status, "UNIQUE_EXPLICIT_100_BASIS_HEADER")
+        self.assertEqual(header.basis, "100_g")
+        self.assertEqual(header.text, "Por100 g")
+
     def test_finds_split_100_g_only_when_visually_adjacent(self):
         raw = (
             TSV_HEADER

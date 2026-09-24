@@ -36,10 +36,10 @@ from nutrition_unit_glyph_repair import repair_observed_trailing_g_as_eight
 
 PSMS = (4, 6, 11)
 CORE_FIELDS = ("calories", "fat_g", "carbohydrate_g", "protein_g")
-# Fixed before OCR is run.  The diagnostic must not choose the transform with the
-# most plausible output after seeing nutritional values.
+# Fixed before OCR is run. The diagnostic must not choose a transform or PSM with
+# the most plausible output after seeing nutritional values.
 GEOMETRY_VARIANTS = ("full_autocontrast", "crop_top", "crop_center")
-GEOMETRY_PSM = 6
+GEOMETRY_PSMS = (4, 6, 11)
 
 
 def _download_first_party_image(url: str, destination: Path) -> None:
@@ -126,28 +126,29 @@ def diagnose(
 
         for variant in variants:
             if variant.name in GEOMETRY_VARIANTS:
-                geometry_attempt: dict[str, object] = {
-                    "variant": variant.name,
-                    "psm": GEOMETRY_PSM,
-                    "engine": "tesseract_tsv",
-                    "selection_policy": "predefined_variant_and_explicit_100_basis_header_only",
-                    "nutrition_values_selected": False,
-                }
-                try:
-                    tokens = run_tesseract_tsv(variant.path, language="spa", psm=GEOMETRY_PSM)
-                except RuntimeError as exc:
-                    geometry_attempt["error"] = str(exc)
-                else:
-                    status, unique_header = unique_basis_header(tokens)
-                    headers = find_explicit_basis_headers(tokens)
-                    geometry_attempt.update({
-                        "token_count": len(tokens),
-                        "basis_header_status": status,
-                        "basis_headers": [_header_dict(header) for header in headers],
-                        "unique_basis_header": _header_dict(unique_header) if unique_header else None,
-                        "lines": geometry_lines(tokens),
-                    })
-                geometry_attempts.append(geometry_attempt)
+                for geometry_psm in GEOMETRY_PSMS:
+                    geometry_attempt: dict[str, object] = {
+                        "variant": variant.name,
+                        "psm": geometry_psm,
+                        "engine": "tesseract_tsv",
+                        "selection_policy": "predefined_variant_psm_and_explicit_100_basis_header_only",
+                        "nutrition_values_selected": False,
+                    }
+                    try:
+                        tokens = run_tesseract_tsv(variant.path, language="spa", psm=geometry_psm)
+                    except RuntimeError as exc:
+                        geometry_attempt["error"] = str(exc)
+                    else:
+                        status, unique_header = unique_basis_header(tokens)
+                        headers = find_explicit_basis_headers(tokens)
+                        geometry_attempt.update({
+                            "token_count": len(tokens),
+                            "basis_header_status": status,
+                            "basis_headers": [_header_dict(header) for header in headers],
+                            "unique_basis_header": _header_dict(unique_header) if unique_header else None,
+                            "lines": geometry_lines(tokens),
+                        })
+                    geometry_attempts.append(geometry_attempt)
 
             for psm in PSMS:
                 attempt: dict[str, object] = {
@@ -216,7 +217,7 @@ def diagnose(
         "geometry_version": GEOMETRY_VERSION,
         "psms": list(PSMS),
         "geometry_variants": list(GEOMETRY_VARIANTS),
-        "geometry_psm": GEOMETRY_PSM,
+        "geometry_psms": list(GEOMETRY_PSMS),
         "attempts": attempts,
         "geometry_attempts": geometry_attempts,
         "complete_declared_profiles": complete_declared_profiles,
@@ -247,6 +248,7 @@ def main() -> None:
         "geometry": [
             {
                 "variant": attempt.get("variant"),
+                "psm": attempt.get("psm"),
                 "basis_header_status": attempt.get("basis_header_status"),
                 "basis_headers": attempt.get("basis_headers"),
             }

@@ -16,7 +16,7 @@ import re
 import subprocess
 from pathlib import Path
 
-GEOMETRY_VERSION = "1.0.0"
+GEOMETRY_VERSION = "1.1.0"
 
 
 @dataclass(frozen=True)
@@ -69,10 +69,24 @@ class BasisHeader:
 
 
 _HEADER_COMPACT_RE = re.compile(r"^100(?:g|gr|ml)$", re.IGNORECASE)
+_EXPLICIT_BASIS_PREFIXES = ("por", "per")
 
 
 def _compact_token(text: str) -> str:
     return re.sub(r"[^0-9a-záéíóúüñ]+", "", text.casefold())
+
+
+def _basis_candidate(compact: str) -> str:
+    """Normalize only explicit per-100 prefixes observed on nutrition headers.
+
+    ``Por100g``/``per100g`` are common OCR tokenizations of table headers.  We do
+    not strip arbitrary text, so tokens such as ``ingredientes100g`` remain
+    ineligible and cannot accidentally define a nutrition column.
+    """
+    for prefix in _EXPLICIT_BASIS_PREFIXES:
+        if compact.startswith(prefix):
+            return compact[len(prefix):]
+    return compact
 
 
 def parse_tesseract_tsv(raw_tsv: str) -> list[TsvToken]:
@@ -132,16 +146,18 @@ def _basis_from_compact(compact: str) -> str | None:
 def find_explicit_basis_headers(tokens: list[TsvToken]) -> list[BasisHeader]:
     """Find explicit 100 g/100 ml headers without interpreting nearby values.
 
-    Headers may be one token (``100g``) or two adjacent tokens (``100`` ``g``).
-    A caller may use geometry only if exactly one candidate remains.  We do not
-    rank candidates by macro values, energy coherence or physical plausibility.
+    Headers may be one token (``100g``/``Por100g``) or two adjacent tokens
+    (``100`` ``g``/``Por100`` ``g``). A caller may use geometry only if exactly
+    one candidate remains. We do not rank candidates by macro values, energy
+    coherence or physical plausibility.
     """
     headers: list[BasisHeader] = []
     for line in _lines(tokens):
         for index, token in enumerate(line):
             compact = _compact_token(token.text)
-            if _HEADER_COMPACT_RE.fullmatch(compact):
-                basis = _basis_from_compact(compact)
+            candidate = _basis_candidate(compact)
+            if _HEADER_COMPACT_RE.fullmatch(candidate):
+                basis = _basis_from_compact(candidate)
                 if basis:
                     headers.append(BasisHeader(
                         basis=basis,
@@ -154,7 +170,7 @@ def find_explicit_basis_headers(tokens: list[TsvToken]) -> list[BasisHeader]:
                     ))
                     continue
 
-            if compact != "100" or index + 1 >= len(line):
+            if candidate != "100" or index + 1 >= len(line):
                 continue
             unit = line[index + 1]
             unit_compact = _compact_token(unit.text)
