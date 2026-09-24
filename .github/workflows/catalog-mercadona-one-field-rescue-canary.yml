@@ -106,10 +106,31 @@ jobs:
           if len(canonical_ids | residual_ids) != inventory:
               raise SystemExit('Canonical + residual partitions do not reconstruct the exact 4,280-product cut')
 
-          # Keep the exact historical residual rows only. This avoids the expired original
-          # 4,280-product artifact without substituting a later live inventory. The OCR wave
-          # itself still applies the strict P9 + structured-ingredients eligibility filter.
-          candidates = p9 + no_p9
+          # The trusted pre-expiry audit intentionally stores only residual routing metadata,
+          # not the full 2026-08-27 product payload. Rebuild only the two fields consumed by
+          # the priority OCR router: a P9 photo entry and a truthy *presence-only* ingredients
+          # marker. No ingredient text, nutrition value, or later live inventory is invented.
+          candidates = []
+          for row in p9:
+              if row.get('has_structured_ingredients') is not True:
+                  continue
+              p9_url = str(row.get('p9_url') or '')
+              if not p9_url:
+                  raise SystemExit(f"P9 structured-ingredients residual lacks p9_url: {row.get('product_id')}")
+              if row.get('source') != 'MERCADONA_FIRST_PARTY/label image' or row.get('redistribution_allowed') is not False:
+                  raise SystemExit(f"Invalid residual provenance: {row.get('product_id')}")
+              adapted = dict(row)
+              adapted['photos'] = [{'perspective': 9, 'zoom': p9_url}]
+              adapted['ingredients'] = [{'routing_presence_only': True, 'content_persisted': False}]
+              adapted['category_name'] = row.get('top_level_category')
+              candidates.append(adapted)
+
+          if not candidates:
+              raise SystemExit('No exact historical P9 + structured-ingredients residual candidates')
+          candidate_ids = ids(candidates, 'priority candidates')
+          if not candidate_ids <= p9_ids:
+              raise SystemExit('Priority candidate escaped exact historical P9 residual membership')
+
           Path('mercadona-one-field-rescue-candidates.jsonl').write_text(
               ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in candidates),
               encoding='utf-8',
@@ -123,8 +144,10 @@ jobs:
               'residual_total': residual_total,
               'residual_p9': len(p9),
               'residual_no_p9': len(no_p9),
-              'candidate_rows': len(candidates),
+              'priority_p9_structured_ingredients_candidates': len(candidates),
               'historical_membership_parity_verifiable': True,
+              'candidate_adapter': 'P9_URL_PLUS_STRUCTURED_INGREDIENTS_PRESENCE_ONLY',
+              'missing_values_inferred': False,
           }, sort_keys=True))
           PY
       - name: Install OCR dependencies
