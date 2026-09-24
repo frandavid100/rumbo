@@ -1,0 +1,65 @@
+{
+  "run_id": 35997971673,
+  "artifact": {
+    "id": 10807296348,
+    "name": "mercadona-easyocr-reversal-diagnostic",
+    "sha256": "b2b82466cb40bf49d329ed8366578e963082e079ea735593f4d5c6d63c711683"
+  },
+  "product_id": "21366",
+  "ean": "8480000213662",
+  "name": "Tarta de queso Hacendado",
+  "image_url": "https://prod-mercadona.imgix.net/images/20c9a6aba7c86ece8fc3e1323617a4b9.jpg?fit=crop&h=3600&w=3600",
+  "perspective": 9,
+  "source": "MERCADONA_FIRST_PARTY",
+  "source_record_kind": "label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "redistribution_allowed": false,
+  "image_bytes_persisted": false,
+  "historical_nutrition_values_reused": false,
+  "missing_values_inferred": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "diagnostic_status": "NOT_CORROBORATED",
+  "identity_revalidated_from_current_api": true,
+  "current_unique_p9_revalidated": true,
+  "visual_region": {
+    "name": "visual_table_0",
+    "box": [0, 193, 3600, 3600],
+    "score": 0.917610203393884
+  },
+  "paddleocr": {
+    "status": "REVIEW",
+    "basis": "100_g",
+    "nutrition": {
+      "calories": 266.0,
+      "fat_g": 19.0,
+      "carbohydrate_g": 18.6,
+      "protein_g": 5.1
+    },
+    "reasons": ["SINGLE_REVERSED_MACRO_CANDIDATE:protein_g"],
+    "confidence": 0.9227505277942967,
+    "engine": "paddleocr-PP-OCRv6",
+    "engine_version": "3.7.0"
+  },
+  "easyocr": {
+    "status": "REVIEW",
+    "basis": null,
+    "nutrition": {
+      "calories": 266.0,
+      "protein_g": 51.0
+    },
+    "reasons": [
+      "MISSING_100G_100ML_BASIS",
+      "IMPOSSIBLE_FAT_G",
+      "MISSING_CORE:fat_g,carbohydrate_g"
+    ],
+    "confidence": 0.48754933501889147,
+    "engine": "easyocr",
+    "engine_version": "1.7.2"
+  },
+  "decision": {
+    "promote_to_declared": false,
+    "reason": "Independent EasyOCR did not reproduce an exact explicit-basis four-field tuple; keep REVIEW and do not relax parser or ensemble acceptance.",
+    "next_safe_blocker": "OCR segmentation/glyph loss in the independent family: EasyOCR reads the basis and decimal macro cells unreliably on the current P9. Any further rescue must improve image targeting/preprocessing first and be validated on a bounded sample before production routing."
+  }
+}
