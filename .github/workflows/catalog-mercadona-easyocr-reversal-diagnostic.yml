@@ -1,0 +1,160 @@
+name: Catalog Mercadona EasyOCR reversal diagnostic
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-easyocr-reversal-diagnostic.yml'
+      - 'tools/catalog/mercadona_easyocr_reversal_diagnostic.py'
+      - 'tools/catalog/test_mercadona_easyocr_reversal_diagnostic.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-easyocr-reversal-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      PRODUCT_ID: '21366'
+      EXPECTED_EAN: '8480000213662'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install bounded OCR dependencies
+        run: |
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+      - name: Run diagnostic policy tests first
+        working-directory: tools/catalog
+        run: python -m unittest -v test_mercadona_easyocr_reversal_diagnostic.py
+      - name: Resolve exact current first-party P9 and revalidate identity
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from urllib.parse import urlparse
+          from urllib.request import Request, urlopen
+
+          pid = os.environ['PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
+          url = f'https://tienda.mercadona.es/api/v1_1/products/{pid}?lang=es&wh=vlc1'
+          req = Request(url, headers={
+              'Accept': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (compatible; rumbo-catalog-audit/1.0)',
+              'Referer': 'https://tienda.mercadona.es/',
+          })
+          with urlopen(req, timeout=20) as response:
+              payload = json.load(response)
+
+          def values(obj, key):
+              if isinstance(obj, dict):
+                  if key in obj:
+                      yield obj[key]
+                  for value in obj.values():
+                      yield from values(value, key)
+              elif isinstance(obj, list):
+                  for value in obj:
+                      yield from values(value, key)
+
+          def scalar(value):
+              if isinstance(value, (str, int, float)):
+                  value = str(value).strip()
+                  return value or None
+              return None
+
+          live_id = scalar(payload.get('id')) or scalar(payload.get('product_id'))
+          live_ean = scalar(payload.get('ean'))
+          if live_id != pid or live_ean != expected_ean:
+              raise SystemExit(f'IDENTITY_MISMATCH id={live_id} ean={live_ean}')
+
+          p9 = {}
+          for photos in values(payload, 'photos'):
+              if not isinstance(photos, list):
+                  continue
+              for photo in photos:
+                  if not isinstance(photo, dict) or str(photo.get('perspective')) != '9':
+                      continue
+                  image_url = scalar(photo.get('zoom')) or scalar(photo.get('regular')) or scalar(photo.get('url'))
+                  if not image_url:
+                      continue
+                  host = (urlparse(image_url).hostname or '').lower()
+                  if host == 'prod-mercadona.imgix.net' or host.endswith('.mercadona.es'):
+                      p9[image_url] = image_url
+          if len(p9) != 1:
+              raise SystemExit(f'CURRENT_P9_COUNT:{len(p9)}')
+
+          name = scalar(payload.get('display_name')) or scalar(payload.get('name')) or pid
+          resolved = {
+              'product_id': pid,
+              'ean': live_ean,
+              'name': name,
+              'image_url': next(iter(p9)),
+              'perspective': 9,
+              'api_url': url,
+          }
+          Path('mercadona-easyocr-reversal-live.json').write_text(
+              json.dumps(resolved, ensure_ascii=False, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(resolved, ensure_ascii=False, sort_keys=True))
+          PY
+      - name: Run fresh Paddle plus EasyOCR diagnostic
+        working-directory: tools/catalog
+        run: |
+          eval "$(python - <<'PY'
+          import json, shlex
+          row=json.load(open('mercadona-easyocr-reversal-live.json', encoding='utf-8'))
+          for key in ('product_id','ean','name','image_url'):
+              print(f"{key.upper()}={shlex.quote(str(row[key]))}")
+          PY
+          )"
+          python mercadona_easyocr_reversal_diagnostic.py \
+            --product-id "$PRODUCT_ID" \
+            --ean "$EAN" \
+            --name "$NAME" \
+            --image-url "$IMAGE_URL" \
+            --out mercadona-easyocr-reversal-diagnostic/report.json
+      - name: Enforce diagnostic provenance
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('mercadona-easyocr-reversal-diagnostic/report.json').read_text(encoding='utf-8'))
+          if report.get('source') != 'MERCADONA_FIRST_PARTY':
+              raise SystemExit('BAD_SOURCE')
+          if report.get('source_record_kind') != 'label image':
+              raise SystemExit('BAD_RECORD_KIND')
+          if report.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+              raise SystemExit('BAD_EVIDENCE_LEVEL')
+          if report.get('redistribution_allowed') is not False or report.get('image_bytes_persisted') is not False:
+              raise SystemExit('IMAGE_POLICY_VIOLATION')
+          if report.get('historical_nutrition_values_reused') is not False or report.get('missing_values_inferred') is not False:
+              raise SystemExit('DERIVATION_POLICY_VIOLATION')
+          if report.get('CLASSIFIED') != 0 or report.get('MENU_ELIGIBLE') != 0:
+              raise SystemExit('SEMANTIC_FLAG_VIOLATION')
+          print(json.dumps({
+              'product_id': report.get('product_id'),
+              'diagnostic_status': report.get('diagnostic_status'),
+          }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-easyocr-reversal-diagnostic
+          path: |
+            tools/catalog/mercadona-easyocr-reversal-live.json
+            tools/catalog/mercadona-easyocr-reversal-diagnostic/report.json
+          retention-days: 30
+          if-no-files-found: warn
