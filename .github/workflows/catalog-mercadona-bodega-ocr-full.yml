@@ -1,0 +1,222 @@
+name: Catalog Mercadona Bodega OCR full
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-bodega-ocr-full.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-bodega-ocr-full-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve validated Bodega canary
+        id: canary
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-bodega-ocr-canary.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
+          test "$run_id" != "null"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download validated Bodega canary
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-bodega-ocr-canary
+          path: tools/catalog/mercadona-bodega-canary-source
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.canary.outputs.run_id }}
+
+      - name: Revalidate all canary candidates against current first-party API
+        working-directory: tools/catalog
+        env:
+          CANARY_RUN: ${{ steps.canary.outputs.run_id }}
+        run: |
+          python - <<'PY'
+          import json, os, time
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib.error import HTTPError, URLError
+          from urllib.parse import urlparse
+          from urllib.request import Request, urlopen
+
+          source = Path('mercadona-bodega-canary-source')
+          final = json.loads((source / 'final-summary.json').read_text(encoding='utf-8'))
+          status = json.loads((source / 'live-candidate-status.json').read_text(encoding='utf-8'))
+          if final.get('unsafe') != [] or final.get('processed') != 4 or final.get('error_product_ids'):
+              raise SystemExit('Canary did not satisfy its safety/health gate')
+          if int(status.get('historical_bodega_residual', -1)) != 11 or int(status.get('live_eligible_unique_p9', -1)) != 11:
+              raise SystemExit('Canary did not establish the exact 11-product Bodega residual')
+
+          def scalar(value):
+              if isinstance(value, (str, int, float)):
+                  value = str(value).strip()
+                  return value or None
+              return None
+
+          def values(obj, key):
+              if isinstance(obj, dict):
+                  if key in obj:
+                      yield obj[key]
+                  for v in obj.values():
+                      yield from values(v, key)
+              elif isinstance(obj, list):
+                  for v in obj:
+                      yield from values(v, key)
+
+          def first_scalar(payload, keys):
+              for key in keys:
+                  v = scalar(payload.get(key)) if isinstance(payload, dict) else None
+                  if v:
+                      return v
+              for key in keys:
+                  for v in values(payload, key):
+                      v = scalar(v)
+                      if v:
+                          return v
+              return None
+
+          def p9s(payload):
+              hits = {}
+              for photos in values(payload, 'photos'):
+                  if not isinstance(photos, list):
+                      continue
+                  for photo in photos:
+                      if not isinstance(photo, dict) or str(photo.get('perspective')) != '9':
+                          continue
+                      url = scalar(photo.get('zoom')) or scalar(photo.get('regular')) or scalar(photo.get('url'))
+                      if not url:
+                          continue
+                      host = (urlparse(url).hostname or '').lower()
+                      if host != 'prod-mercadona.imgix.net' and not host.endswith('.mercadona.es'):
+                          continue
+                      row = dict(photo); row['perspective'] = 9; row['zoom'] = url
+                      hits[url] = row
+              return list(hits.values())
+
+          def fetch(pid):
+              errors=[]
+              for url in (f'https://tienda.mercadona.es/api/v1_1/products/{pid}?lang=es&wh=vlc1', f'https://tienda.mercadona.es/api/v1_1/products/{pid}'):
+                  req=Request(url,headers={'Accept':'application/json','User-Agent':'Mozilla/5.0 (compatible; rumbo-catalog-audit/1.0)','Referer':'https://tienda.mercadona.es/'})
+                  try:
+                      with urlopen(req,timeout=20) as response: return json.load(response),url,None
+                  except HTTPError as exc: errors.append(f'{url}:HTTP_{exc.code}')
+                  except (URLError,TimeoutError,json.JSONDecodeError) as exc: errors.append(f'{url}:{type(exc).__name__}:{exc}')
+                  time.sleep(.25)
+              return None,None,';'.join(errors)
+
+          candidates=[]; checks=[]; observed_at=datetime.now(timezone.utc).isoformat()
+          for prior in status['candidates']:
+              if not prior.get('eligible') or prior.get('skip_reason') is not None:
+                  raise SystemExit(f'Unexpected ineligible canary row: {prior}')
+              pid=str(prior['product_id']); expected_ean=str(prior['live_ean'])
+              payload,api_url,error=fetch(pid)
+              check={'product_id':pid,'expected_ean':expected_ean,'prior_p9_url':prior['live_p9_url']}
+              if payload is None:
+                  check['ok']=False; check['reason']=error; checks.append(check); continue
+              live_id=first_scalar(payload,('id','product_id')); live_ean=first_scalar(payload,('ean',)); hits=p9s(payload)
+              check.update({'live_id':live_id,'live_ean':live_ean,'live_p9_count':len(hits)})
+              if live_id != pid or live_ean != expected_ean or len(hits) != 1:
+                  check['ok']=False; check['reason']='IDENTITY_EAN_OR_P9_CHANGED'; checks.append(check); continue
+              p9=hits[0]
+              check.update({'ok':True,'live_p9_url':p9['zoom'],'p9_changed_since_canary':p9['zoom'] != prior['live_p9_url']}); checks.append(check)
+              name=first_scalar(payload,('display_name','name')) or prior['name']
+              candidates.append({'product_id':pid,'id':pid,'ean':live_ean,'name':name,'display_name':name,
+                  'brand':first_scalar(payload,('brand',)),'ingredients':None,'photos':[p9],
+                  'share_url':first_scalar(payload,('share_url',)),'observed_at':observed_at,'live_api_url':api_url,
+                  'rescue_origin':'DEFERRED_BODEGA_VALIDATED_FULL','prior_values_reused':False,'missing_values_inferred':False})
+
+          out=Path('mercadona-bodega-ocr-full'); out.mkdir(parents=True,exist_ok=True)
+          (out/'live-revalidation.json').write_text(json.dumps({'canary_run':int(os.environ['CANARY_RUN']),'expected':11,'validated':len(candidates),'checks':checks,
+              'prior_values_reused':False,'missing_values_inferred':False,'image_bytes_persisted':False,'redistribution_allowed':False,'CLASSIFIED':0,'MENU_ELIGIBLE':0},ensure_ascii=False,indent=2),encoding='utf-8')
+          Path('mercadona-bodega-live-candidates.jsonl').write_text(''.join(json.dumps(r,ensure_ascii=False,sort_keys=True)+'\n' for r in candidates),encoding='utf-8')
+          if len(candidates) != 11:
+              raise SystemExit(f'Refusing partial scale: revalidated {len(candidates)}/11 current Bodega candidates')
+          PY
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run conservative OCR regressions
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_easyocr_extractor.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_label_reader_ocr_typos.py \
+            test_nutrition_label_reader_row_tokens.py \
+            test_nutrition_ocr_ensemble.py \
+            test_mercadona_nutrition_label_manufacturer_interleave.py \
+            test_mercadona_label_pipeline.py \
+            test_mercadona_ocr_safety_regressions.py
+
+      - name: Process all 11 validated Bodega residuals
+        working-directory: tools/catalog
+        run: |
+          python mercadona_neural_ocr_wave.py \
+            --products mercadona-bodega-live-candidates.jsonl \
+            --out mercadona-bodega-ocr-full \
+            --shard-index 0 \
+            --shard-count 1 \
+            --limit 0 \
+            --eligibility-mode p9-no-ingredients-all
+
+      - name: Enforce full-cut safety and completeness
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[json.loads(line) for line in Path('mercadona-bodega-ocr-full/results-00.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          unsafe=[]; declared=[]
+          if len(rows) != 11 or len({str(r.get('product_id')) for r in rows}) != 11:
+              unsafe.append(f'INCOMPLETE_OR_DUPLICATE:{len(rows)}')
+          for row in rows:
+              if row.get('source')!='MERCADONA_FIRST_PARTY' or row.get('source_record_kind')!='label image' or row.get('evidence_level')!='OCR_DERIVED_FROM_MERCADONA_IMAGE' or row.get('redistribution_allowed') is not False:
+                  unsafe.append(f"{row.get('product_id')}:PROVENANCE")
+              if row.get('status')=='DECLARED':
+                  accepted=next((a for a in row.get('attempts') or [] if (a.get('ensemble') or {}).get('status')=='DECLARED'),None)
+                  ens=(accepted or {}).get('ensemble') or {}
+                  if ens.get('independent_engine_families',0)<2 or ens.get('corroborated_fields',0)<4:
+                      unsafe.append(f"{row.get('product_id')}:CORROBORATION")
+                  declared.append(row.get('product_id'))
+          final={'processed':len(rows),'declared_product_ids':declared,'review_product_ids':[r.get('product_id') for r in rows if r.get('status')=='REVIEW'],
+              'no_visual_region_product_ids':[r.get('product_id') for r in rows if r.get('status')=='NO_VISUAL_REGION'],'error_product_ids':[r.get('product_id') for r in rows if r.get('status')=='ERROR'],
+              'unsafe':unsafe,'evidence_level':'OCR_DERIVED_FROM_MERCADONA_IMAGE','redistribution_allowed':False,'CLASSIFIED':0,'MENU_ELIGIBLE':0}
+          Path('mercadona-bodega-ocr-full/final-summary.json').write_text(json.dumps(final,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(final,ensure_ascii=False,indent=2))
+          if unsafe: raise SystemExit('Full Bodega safety/completeness invariant failed')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-bodega-ocr-full
+          path: tools/catalog/mercadona-bodega-ocr-full/
+          retention-days: 30
+          if-no-files-found: warn
