@@ -35,12 +35,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Current unique near-safe residual: PP-OCRv6 has a complete coherent
-          # profile, while unprocessed Tesseract misreads several decimal glyphs.
-          - target_product_id: '24541'
-            expected_ean: '8402001050428'
-          # Control for a known manufacturer-interleaved label where PP-OCRv6
-          # reads protein=6.7 but ordinary Tesseract previously conflicted at 6.1.
+          # Fresh PP-OCRv6 read is complete/coherent but raw Tesseract did not
+          # independently corroborate the profile. Probe deterministic variants.
+          - target_product_id: '21366'
+            expected_ean: '8480000213662'
+          # Two-column label. Diagnostic only: any result still needs an explicit
+          # safety regression before a production route may isolate one column.
+          - target_product_id: '67660'
+            expected_ean: '8480000676603'
+          # Positive control for the already validated fixed crop_center rescue.
           - target_product_id: '21649'
             expected_ean: '8402001054686'
     env:
