@@ -7,6 +7,7 @@ import tempfile
 from typing import Any
 
 from label_easyocr_extractor import extract_with_easyocr
+from label_image_preprocess import build_fallback_variants
 from label_neural_extractor import extract_with_paddleocr
 from mercadona_label_evidence import LabelImageEvidence
 from mercadona_label_pipeline import download_label_image
@@ -119,6 +120,15 @@ def main() -> int:
         if not targets:
             targets = [("full_back_image", image_path, None)]
 
+        # One deterministic preprocessing fallback only. This is a diagnostic
+        # probe, not a best-of-many selector: the known center crop is attempted
+        # after the ordinary visual target to test whether text scale/edge clutter
+        # explains EasyOCR's lost decimal glyphs and basis token.
+        variants = build_fallback_variants(image_path, base / "fallback")
+        center = next((variant for variant in variants if variant.name == "crop_center"), None)
+        if center is not None:
+            targets.append(("crop_center", center.path, None))
+
         for target_kind, target_path, region in targets:
             attempt: dict[str, Any] = {
                 "target_kind": target_kind,
@@ -126,7 +136,7 @@ def main() -> int:
                     "name": region.name,
                     "box": list(region.box),
                     "score": region.score,
-                } if region is not None else {"name": "full_back_image", "box": None, "score": None},
+                } if region is not None else {"name": target_kind, "box": None, "score": None},
                 "engines": {},
                 "errors": {},
                 "exact_independent_corroboration": False,
