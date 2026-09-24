@@ -74,8 +74,20 @@ jobs:
                   return value or None
               return None
 
-          live_id = scalar(payload.get('id')) or scalar(payload.get('product_id'))
-          live_ean = scalar(payload.get('ean'))
+          def first_scalar(keys):
+              for key in keys:
+                  value = scalar(payload.get(key)) if isinstance(payload, dict) else None
+                  if value:
+                      return value
+              for key in keys:
+                  for value in values(payload, key):
+                      value = scalar(value)
+                      if value:
+                          return value
+              return None
+
+          live_id = first_scalar(('id', 'product_id'))
+          live_ean = first_scalar(('ean',))
           if live_id != pid or live_ean != expected_ean:
               raise SystemExit(f'IDENTITY_MISMATCH id={live_id} ean={live_ean}')
 
@@ -95,7 +107,7 @@ jobs:
           if len(p9) != 1:
               raise SystemExit(f'CURRENT_P9_COUNT:{len(p9)}')
 
-          name = scalar(payload.get('display_name')) or scalar(payload.get('name')) or pid
+          name = first_scalar(('display_name', 'name')) or pid
           resolved = {
               'product_id': pid,
               'ean': live_ean,
