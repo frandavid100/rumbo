@@ -1,0 +1,5 @@
+{
+  "21366":{"ean":"8480000213662","artifact_id":10823740184,"artifact_sha256":"07cc51b4a586d89b915325527843a4c8fdd2b16bd92313f43923a8081a54ea10","exact_values":[]},
+  "67660":{"ean":"8480000676603","artifact_id":10823420396,"artifact_sha256":"bdab5c79000f7901b7b739f53990ffa1f8dca8faac5b0ccf79b70e32e4959fec","exact_values":{"calories":395.0}},
+  "21649":{"ean":"8402001054686","artifact_id":10823620229,"artifact_sha256":"def707af47554113d0db9317d37708d44075010a1f5ac9570ad84a1bcd9874a0","exact_values":{"protein_g":6.7},"rejected":{"fat_g":"129","carbohydrate_g":"269"}}
+}
