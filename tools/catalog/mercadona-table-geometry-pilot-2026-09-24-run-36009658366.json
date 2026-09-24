@@ -1,0 +1,84 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "workflow_run_id": 36009658366,
+  "head_commit": "30f80b12793c70a5e830506cd88e6ee99545a56c",
+  "geometry_version": "1.1.0",
+  "diagnostic_only": true,
+  "canonical_reconciliation_allowed": false,
+  "images_persisted": false,
+  "missing_values_inferred": false,
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "tests": {
+    "total": 22,
+    "passed": 22
+  },
+  "findings": {
+    "21366": {
+      "product_id": "21366",
+      "ean": "8480000213662",
+      "name": "Tarta de queso Hacendado",
+      "current_p9_revalidated": true,
+      "basis_detection": "UNIQUE_EXPLICIT_100_BASIS_HEADER",
+      "basis": "100_g",
+      "observed_header": "Por100g",
+      "validated_variants": [
+        "full_autocontrast",
+        "crop_top",
+        "crop_center"
+      ],
+      "validated_psms": [4, 6, 11],
+      "complete_declared_profiles": 0,
+      "canonical_change": false,
+      "artifact_id": 10811906929,
+      "artifact_sha256": "f350dd9aed2957ce441de53b4159119f99d026acf9dde25c4a19f030aa7f4e86"
+    },
+    "67660": {
+      "product_id": "67660",
+      "ean": "8480000676603",
+      "name": "Café soluble cappuccino caramelo Hacendado",
+      "current_p9_revalidated": true,
+      "basis_detection": "UNIQUE_EXPLICIT_100_BASIS_HEADER",
+      "basis": "100_g",
+      "observed_header": "100 g",
+      "validated_variant": "full_autocontrast",
+      "validated_psm": 11,
+      "other_geometry_attempts_fail_closed": true,
+      "complete_declared_profiles": 0,
+      "canonical_change": false,
+      "artifact_id": 10811932456,
+      "artifact_sha256": "ec02cefb1a3ebc535111acb5d4b83d7b56616589d02808796659ca8be30061ec"
+    },
+    "21649": {
+      "product_id": "21649",
+      "ean": "8402001054686",
+      "name": "Empanada de carne",
+      "positive_control": true,
+      "current_p9_revalidated": true,
+      "artifact_id": 10812266144,
+      "artifact_sha256": "2c0b469a0409e4c64ebf0659795435682659a5ccf53046d4486a8257e3f939d9"
+    }
+  },
+  "canonical_state_unchanged": {
+    "authoritative_audit_run_id": 35919999187,
+    "inventory_products": 4280,
+    "processed_canonical_products": 2969,
+    "processed_pct_inventory": 69.3692,
+    "DECLARED": 381,
+    "REVIEW": 2588,
+    "NO_VISUAL_REGION": 0,
+    "ERROR": 0,
+    "usable_complete": 381,
+    "usable_complete_pct_inventory": 8.9019
+  },
+  "safety_invariants": [
+    "Geometry remains diagnostic only and never selects nutrition values.",
+    "No OCR variant or PSM is ranked by nutritional plausibility.",
+    "Arbitrary suffix-bearing tokens such as ingredientes100g do not count as explicit basis headers.",
+    "Multiple explicit basis headers remain fail-closed.",
+    "REVIEW remains non-usable; no missing value is inferred or fused across runs, images, crops, or OCR families."
+  ],
+  "next_safe_step": "Add tests for geometry-based nutrition-row/column association and validate it in diagnostic-only mode before any canonical value selection. Require explicit 100 g/100 ml basis geometry, row-label association, and fail-closed handling of multiple plausible numeric columns."
+}
