@@ -51,104 +51,261 @@ jobs:
           path: tools/catalog/mercadona-current-ocr-residual-audit
           github-token: ${{ github.token }}
           run-id: ${{ steps.canonical-audit.outputs.run_id }}
-      - name: Build exact historical residual candidate cut
+      - name: Build live revalidated bounded-core rescue cut
+        env:
+          AUTHORITATIVE_AUDIT_RUN: ${{ steps.canonical-audit.outputs.run_id }}
         working-directory: tools/catalog
         run: |
           python - <<'PY'
           import json
+          import os
+          import time
+          from datetime import datetime, timezone
           from pathlib import Path
+          from urllib.error import HTTPError, URLError
+          from urllib.parse import urlparse
+          from urllib.request import Request, urlopen
 
           base = Path('mercadona-current-ocr-residual-audit')
-          canonical_path = base / 'canonical-ocr.jsonl'
-          p9_path = base / 'residual-p9.jsonl'
-          no_p9_path = base / 'residual-no-p9.jsonl'
           summary_path = base / 'summary.json'
-          for path in (canonical_path, p9_path, no_p9_path, summary_path):
+          bounded_path = base / 'current-review-failure-modes' / 'three-of-four-bounded-core-review.jsonl'
+          for path in (summary_path, bounded_path):
               if not path.exists():
                   raise SystemExit(f'Missing authoritative audit file: {path}')
 
-          def load_jsonl(path):
-              return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
-
           summary = json.loads(summary_path.read_text(encoding='utf-8'))
-          canonical = load_jsonl(canonical_path)
-          p9 = load_jsonl(p9_path)
-          no_p9 = load_jsonl(no_p9_path)
-
-          inventory = int(summary.get('inventory_products', -1))
-          processed = int(summary.get('processed_reconstructed', -1))
-          residual_total = int(summary.get('residual_total', -1))
-          if inventory != 4280:
-              raise SystemExit(f'Unexpected historical inventory size: {inventory}')
+          bounded = [
+              json.loads(line)
+              for line in bounded_path.read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          if int(summary.get('inventory_products', -1)) != 4280:
+              raise SystemExit(f"Unexpected inventory size: {summary.get('inventory_products')}")
           if summary.get('historical_membership_parity_verifiable') is not True:
-              raise SystemExit('Exact historical membership parity is not verifiable; refusing rescue canary')
-          if len(canonical) != processed:
-              raise SystemExit(f'Canonical row count {len(canonical)} != processed_reconstructed {processed}')
-          if len(p9) + len(no_p9) != residual_total:
-              raise SystemExit(f'Residual row count {len(p9) + len(no_p9)} != residual_total {residual_total}')
+              raise SystemExit('Historical membership parity is not verifiable; refusing rescue canary')
 
-          def ids(rows, label):
-              values = [str(row.get('product_id') or '') for row in rows]
-              if any(not value for value in values):
-                  raise SystemExit(f'{label} contains missing product_id')
-              if len(set(values)) != len(values):
-                  raise SystemExit(f'{label} contains duplicate product_id')
-              return set(values)
+          def norm_scalar(value):
+              if value is None:
+                  return None
+              if isinstance(value, (str, int, float)):
+                  text = str(value).strip()
+                  return text or None
+              return None
 
-          canonical_ids = ids(canonical, 'canonical')
-          p9_ids = ids(p9, 'residual-p9')
-          no_p9_ids = ids(no_p9, 'residual-no-p9')
-          residual_ids = p9_ids | no_p9_ids
-          if p9_ids & no_p9_ids:
-              raise SystemExit('Residual P9 and no-P9 partitions overlap')
-          if canonical_ids & residual_ids:
-              raise SystemExit('Canonical and residual partitions overlap')
-          if len(canonical_ids | residual_ids) != inventory:
-              raise SystemExit('Canonical + residual partitions do not reconstruct the exact 4,280-product cut')
+          def nested_values(obj, key):
+              if isinstance(obj, dict):
+                  if key in obj:
+                      yield obj[key]
+                  for value in obj.values():
+                      yield from nested_values(value, key)
+              elif isinstance(obj, list):
+                  for value in obj:
+                      yield from nested_values(value, key)
 
-          # The trusted pre-expiry audit intentionally stores only residual routing metadata,
-          # not the full 2026-08-27 product payload. Rebuild only the two fields consumed by
-          # the priority OCR router: a P9 photo entry and a truthy *presence-only* ingredients
-          # marker. No ingredient text, nutrition value, or later live inventory is invented.
+          def first_scalar(payload, keys):
+              for key in keys:
+                  direct = norm_scalar(payload.get(key)) if isinstance(payload, dict) else None
+                  if direct:
+                      return direct
+              for key in keys:
+                  for value in nested_values(payload, key):
+                      scalar = norm_scalar(value)
+                      if scalar:
+                          return scalar
+              return None
+
+          def first_truthy(payload, keys):
+              if isinstance(payload, dict):
+                  for key in keys:
+                      value = payload.get(key)
+                      if value:
+                          return value
+              for key in keys:
+                  for value in nested_values(payload, key):
+                      if value:
+                          return value
+              return None
+
+          def live_p9(payload):
+              photo_lists = []
+              if isinstance(payload, dict) and isinstance(payload.get('photos'), list):
+                  photo_lists.append(payload['photos'])
+              for value in nested_values(payload, 'photos'):
+                  if isinstance(value, list) and value not in photo_lists:
+                      photo_lists.append(value)
+              hits = []
+              for photos in photo_lists:
+                  for photo in photos:
+                      if not isinstance(photo, dict) or str(photo.get('perspective')) != '9':
+                          continue
+                      url = norm_scalar(photo.get('zoom')) or norm_scalar(photo.get('regular')) or norm_scalar(photo.get('url'))
+                      if not url:
+                          continue
+                      host = (urlparse(url).hostname or '').lower()
+                      if not (host == 'prod-mercadona.imgix.net' or host.endswith('.mercadona.es')):
+                          continue
+                      adapted = dict(photo)
+                      adapted['perspective'] = 9
+                      adapted['zoom'] = url
+                      hits.append(adapted)
+              unique = {}
+              for hit in hits:
+                  unique[hit['zoom']] = hit
+              return list(unique.values())
+
+          def fetch_live(product_id):
+              urls = [
+                  f'https://tienda.mercadona.es/api/v1_1/products/{product_id}?lang=es&wh=vlc1',
+                  f'https://tienda.mercadona.es/api/v1_1/products/{product_id}',
+              ]
+              errors = []
+              for url in urls:
+                  request = Request(
+                      url,
+                      headers={
+                          'Accept': 'application/json',
+                          'User-Agent': 'Mozilla/5.0 (compatible; rumbo-catalog-audit/1.0)',
+                          'Referer': 'https://tienda.mercadona.es/',
+                      },
+                  )
+                  try:
+                      with urlopen(request, timeout=20) as response:
+                          payload = json.load(response)
+                      return payload, url, None
+                  except HTTPError as exc:
+                      errors.append(f'{url}:HTTP_{exc.code}')
+                      if exc.code == 404:
+                          continue
+                  except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+                      errors.append(f'{url}:{type(exc).__name__}:{exc}')
+                  time.sleep(0.25)
+              return None, None, ';'.join(errors)
+
+          # This canary is intentionally limited to the smallest current REVIEW
+          # residual: exactly three core values plus one non-exact bounded value.
+          # The bounded value is never promoted or inferred. We only use the row
+          # to choose a product, then reacquire product identity, ingredients and
+          # P9 from the live official API before running OCR from scratch.
+          bounded.sort(key=lambda row: (int(row.get('canonical_rank') or 999999), str(row.get('product_id') or '')))
           candidates = []
-          for row in p9:
-              if row.get('has_structured_ingredients') is not True:
+          status_rows = []
+          seen = set()
+          observed_at = datetime.now(timezone.utc).isoformat()
+          for audit_row in bounded:
+              product_id = str(audit_row.get('product_id') or '').strip()
+              if not product_id or product_id in seen:
+                  raise SystemExit(f'Invalid/duplicate bounded candidate product_id: {product_id!r}')
+              seen.add(product_id)
+              status = {
+                  'product_id': product_id,
+                  'name': audit_row.get('name'),
+                  'audit_ean': str(audit_row.get('ean') or ''),
+                  'missing_core_fields': audit_row.get('missing_core_fields'),
+                  'safety_blockers': audit_row.get('safety_blockers'),
+                  'audit_image_url': audit_row.get('image_url'),
+                  'authoritative_audit_run': int(os.environ['AUTHORITATIVE_AUDIT_RUN']),
+                  'live_api_checked_at': observed_at,
+                  'eligible': False,
+              }
+              if audit_row.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE' or audit_row.get('source') != 'MERCADONA_FIRST_PARTY' or audit_row.get('source_record_kind') != 'label image' or audit_row.get('redistribution_allowed') is not False:
+                  raise SystemExit(f'Invalid audit provenance for bounded candidate {product_id}')
+
+              payload, api_url, error = fetch_live(product_id)
+              status['live_api_url'] = api_url
+              if payload is None:
+                  status['skip_reason'] = error or 'LIVE_API_UNAVAILABLE'
+                  status_rows.append(status)
                   continue
-              p9_url = str(row.get('p9_url') or '')
-              if not p9_url:
-                  raise SystemExit(f"P9 structured-ingredients residual lacks p9_url: {row.get('product_id')}")
-              if row.get('source') != 'MERCADONA_FIRST_PARTY/label image' or row.get('redistribution_allowed') is not False:
-                  raise SystemExit(f"Invalid residual provenance: {row.get('product_id')}")
-              adapted = dict(row)
-              adapted['photos'] = [{'perspective': 9, 'zoom': p9_url}]
-              adapted['ingredients'] = [{'routing_presence_only': True, 'content_persisted': False}]
-              adapted['category_name'] = row.get('top_level_category')
-              candidates.append(adapted)
 
-          if not candidates:
-              raise SystemExit('No exact historical P9 + structured-ingredients residual candidates')
-          candidate_ids = ids(candidates, 'priority candidates')
-          if not candidate_ids <= p9_ids:
-              raise SystemExit('Priority candidate escaped exact historical P9 residual membership')
+              live_id = first_scalar(payload, ('id', 'product_id'))
+              if live_id != product_id:
+                  status['skip_reason'] = f'IDENTITY_MISMATCH:{live_id}'
+                  status_rows.append(status)
+                  continue
 
+              live_ean = first_scalar(payload, ('ean',))
+              audit_ean = str(audit_row.get('ean') or '').strip()
+              status['live_ean'] = live_ean
+              if not live_ean:
+                  status['skip_reason'] = 'LIVE_EAN_MISSING'
+                  status_rows.append(status)
+                  continue
+              if audit_ean and live_ean != audit_ean:
+                  status['skip_reason'] = f'EAN_CHANGED:{audit_ean}->{live_ean}'
+                  status_rows.append(status)
+                  continue
+
+              ingredients = first_truthy(payload, ('ingredients',))
+              status['has_live_structured_ingredients'] = bool(ingredients)
+              if not ingredients:
+                  status['skip_reason'] = 'LIVE_STRUCTURED_INGREDIENTS_MISSING'
+                  status_rows.append(status)
+                  continue
+
+              p9_hits = live_p9(payload)
+              status['live_p9_count'] = len(p9_hits)
+              if len(p9_hits) != 1:
+                  status['skip_reason'] = f'LIVE_P9_COUNT:{len(p9_hits)}'
+                  status_rows.append(status)
+                  continue
+
+              p9 = p9_hits[0]
+              status['live_p9_url'] = p9['zoom']
+              status['p9_changed_since_audit'] = p9['zoom'] != audit_row.get('image_url')
+              name = first_scalar(payload, ('display_name', 'name')) or str(audit_row.get('name') or product_id)
+              candidate = {
+                  'product_id': product_id,
+                  'id': product_id,
+                  'ean': live_ean,
+                  'name': name,
+                  'display_name': name,
+                  'brand': first_scalar(payload, ('brand',)),
+                  'category_id': first_scalar(payload, ('category_id',)) or audit_row.get('category_id'),
+                  'category_name': first_scalar(payload, ('category_name',)) or audit_row.get('category_name'),
+                  'ingredients': ingredients,
+                  'photos': [p9],
+                  'share_url': first_scalar(payload, ('share_url',)),
+                  'observed_at': observed_at,
+                  'live_api_url': api_url,
+                  'rescue_origin': 'THREE_OF_FOUR_BOUNDED_CORE_REVIEW',
+                  'prior_missing_core_fields': audit_row.get('missing_core_fields'),
+                  'prior_bounded_value_reused': False,
+                  'missing_values_inferred': False,
+              }
+              candidates.append(candidate)
+              status['eligible'] = True
+              status['skip_reason'] = None
+              status_rows.append(status)
+
+          out_dir = Path('mercadona-one-field-rescue-canary')
+          out_dir.mkdir(parents=True, exist_ok=True)
           Path('mercadona-one-field-rescue-candidates.jsonl').write_text(
               ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in candidates),
               encoding='utf-8',
           )
-          declared = sum(1 for row in canonical if row.get('status') == 'DECLARED' and row.get('usable_complete') is True)
+          (out_dir / 'live-candidate-status.json').write_text(
+              json.dumps({
+                  'authoritative_audit_run': int(os.environ['AUTHORITATIVE_AUDIT_RUN']),
+                  'audit_bounded_candidates': len(bounded),
+                  'live_eligible_candidates': len(candidates),
+                  'candidates': status_rows,
+                  'selection_policy': 'THREE_OF_FOUR_BOUNDED_CORE_REVIEW_THEN_LIVE_API_ID_EAN_INGREDIENTS_UNIQUE_P9_REVALIDATION',
+                  'bounded_value_reused': False,
+                  'missing_values_inferred': False,
+                  'image_bytes_persisted': False,
+                  'redistribution_allowed': False,
+              }, ensure_ascii=False, indent=2),
+              encoding='utf-8',
+          )
           print(json.dumps({
-              'authoritative_audit_run': int('${{ steps.canonical-audit.outputs.run_id }}'),
-              'inventory_products': inventory,
-              'processed_canonical': processed,
-              'canonical_declared': declared,
-              'residual_total': residual_total,
-              'residual_p9': len(p9),
-              'residual_no_p9': len(no_p9),
-              'priority_p9_structured_ingredients_candidates': len(candidates),
-              'historical_membership_parity_verifiable': True,
-              'candidate_adapter': 'P9_URL_PLUS_STRUCTURED_INGREDIENTS_PRESENCE_ONLY',
+              'authoritative_audit_run': int(os.environ['AUTHORITATIVE_AUDIT_RUN']),
+              'audit_bounded_candidates': len(bounded),
+              'live_eligible_candidates': len(candidates),
+              'skipped': len(bounded) - len(candidates),
               'missing_values_inferred': False,
           }, sort_keys=True))
+          if not candidates:
+              raise SystemExit('No bounded REVIEW candidate remains live with matching EAN, structured ingredients and one current P9')
           PY
       - name: Install OCR dependencies
         run: |
@@ -169,13 +326,22 @@ jobs:
             test_mercadona_ocr_safety_regressions.py
       - name: Run bounded current-image canary
         working-directory: tools/catalog
+        shell: bash
         run: |
+          set +e
           python mercadona_neural_ocr_wave.py \
             --products mercadona-one-field-rescue-candidates.jsonl \
             --out mercadona-one-field-rescue-canary \
             --shard-index ${{ matrix.shard }} \
             --shard-count 4 \
             --limit 8
+          rc=$?
+          set -e
+          # Exit 2 means this deterministic shard is empty after live revalidation.
+          # Other non-zero exits remain real failures.
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then
+            exit "$rc"
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
