@@ -38,8 +38,8 @@ def _visual_rows(tokens: list[TsvToken]) -> list[list[TsvToken]]:
         for index, row in enumerate(rows):
             row_center = sum(item.center_y for item in row) / len(row)
             distance = abs(token.center_y - row_center)
-            # Use centers only. Very tall OCR boxes can overlap several real rows;
-            # overlap-based clustering would let one bad box bridge a whole table.
+            # Very tall OCR boxes can overlap several real rows. Center-only
+            # clustering prevents one bad box from bridging a whole table.
             if distance <= tolerance:
                 if best_distance is None or distance < best_distance:
                     best_index = index
@@ -52,29 +52,44 @@ def _visual_rows(tokens: list[TsvToken]) -> list[list[TsvToken]]:
     return sorted(normalized, key=lambda row: (min(item.top for item in row), min(item.left for item in row)))
 
 
-def _line_label_and_field(row: list[TsvToken]) -> tuple[str | None, str]:
-    label_tokens: list[TsvToken] = []
-    for token in row:
-        if _DIGIT_RE.search(token.text):
-            break
-        label_tokens.append(token)
-    label_text = " ".join(token.text for token in label_tokens).strip()
+def _classify_label_text(label_text: str) -> str | None:
     compact = _ascii_compact(label_text)
-    if not compact:
-        return None, label_text
-    if "valorenergetico" in compact or compact.startswith("energia"):
-        return "calories", label_text
-    if (compact.startswith("grasas") or compact.startswith("grasa")) and "satur" not in compact:
-        return "fat_g", label_text
-    if ("hidratosdecarbono" in compact or compact.startswith("carbohidr")) and "azucar" not in compact:
-        return "carbohydrate_g", label_text
-    if compact.startswith("proteina") or compact.startswith("protein"):
-        return "protein_g", label_text
-    return None, label_text
+    if compact in {
+        "energia", "energetico", "energeticoenergia",
+        "valorenergetico", "valorenergeticoenergia",
+    }:
+        return "calories"
+    if compact in {"grasa", "grasas", "lipidos", "grasaslipidos", "grasalipidos"}:
+        return "fat_g"
+    if compact in {"hidratosdecarbono", "carbohidrato", "carbohidratos"}:
+        return "carbohydrate_g"
+    if compact in {"proteina", "proteinas", "protein", "proteins"}:
+        return "protein_g"
+    return None
+
+
+def _field_before_cell(row: list[TsvToken], cell_left: int) -> tuple[str | None, str]:
+    """Find the nearest explicit core-row label immediately left of a cell.
+
+    Looking backwards from the candidate cell avoids unrelated ingredient text
+    and numbers that may share the same visual y coordinate elsewhere on a label.
+    Only short exact label phrases are accepted.
+    """
+    preceding = [token for token in row if token.right <= cell_left and not _DIGIT_RE.search(token.text)]
+    if not preceding:
+        return None, ""
+    preceding = sorted(preceding, key=lambda token: (token.left, token.word_num))
+    for length in range(1, min(5, len(preceding)) + 1):
+        phrase_tokens = preceding[-length:]
+        phrase = " ".join(token.text for token in phrase_tokens).strip()
+        field = _classify_label_text(phrase)
+        if field:
+            return field, phrase
+    return None, ""
 
 
 def _numeric_cell_spans(row: list[TsvToken]) -> list[list[TsvToken]]:
-    """Split the value side into cells using physical gaps only."""
+    """Split numeric-bearing parts of a visual row into geometry-only cells."""
     try:
         start = next(index for index, token in enumerate(row) if _DIGIT_RE.search(token.text))
     except StopIteration:
@@ -92,7 +107,17 @@ def _numeric_cell_spans(row: list[TsvToken]) -> list[list[TsvToken]]:
             groups.append([token])
         else:
             groups[-1].append(token)
-    return [group for group in groups if any(_DIGIT_RE.search(token.text) for token in group)]
+
+    cells: list[list[TsvToken]] = []
+    for group in groups:
+        try:
+            first_numeric = next(index for index, token in enumerate(group) if _DIGIT_RE.search(token.text))
+        except StopIteration:
+            continue
+        # A wide OCR line can contain ingredient text and a table cell at the
+        # same y coordinate. Trim leading nonnumeric text from each candidate.
+        cells.append(group[first_numeric:])
+    return cells
 
 
 def _cell_dict(group: list[TsvToken]) -> dict[str, object]:
@@ -150,71 +175,82 @@ def associate_explicit_basis_column(tokens: list[TsvToken]) -> dict[str, object]
     column_half_width = max(24.0, header_width * 0.9, median_height * 2.5)
     result["column_half_width_px"] = column_half_width
 
-    matching_rows: dict[str, list[tuple[list[TsvToken], str]]] = {field: [] for field in CORE_FIELDS}
+    matches: dict[str, list[dict[str, object]]] = {field: [] for field in CORE_FIELDS}
+    ambiguous_labeled_rows: list[dict[str, object]] = []
+    ambiguous_fields: set[str] = set()
     for row in _visual_rows(tokens):
         if min(token.top for token in row) < header.bottom:
             continue
-        field, label_text = _line_label_and_field(row)
-        if field:
-            matching_rows[field].append((row, label_text))
-
-    rows: dict[str, object] = {}
-    associated_centers: list[float] = []
-    global_status: str | None = None
-    for field in CORE_FIELDS:
-        row_matches = matching_rows[field]
-        if not row_matches:
-            rows[field] = {
-                "status": "MISSING_ROW_LABEL",
-                "label_text": None,
-                "candidate_cells": [],
-                "associated_cell": None,
-            }
-            continue
-        if len(row_matches) != 1:
-            rows[field] = {
-                "status": "AMBIGUOUS_ROW_LABEL",
-                "label_text": [label for _, label in row_matches],
-                "candidate_cells": [],
-                "associated_cell": None,
-            }
-            global_status = "AMBIGUOUS_ROW_LABEL"
-            continue
-
-        row, label_text = row_matches[0]
         all_cells = [_cell_dict(group) for group in _numeric_cell_spans(row)]
         plausible = [
             cell for cell in all_cells
             if abs(float(cell["center_x"]) - header.center_x) <= column_half_width
         ]
-        if not plausible:
-            rows[field] = {
-                "status": "MISSING_EXPLICIT_COLUMN_CELL",
-                "label_text": label_text,
-                "candidate_cells": all_cells,
-                "associated_cell": None,
-            }
-            continue
-        if len(plausible) != 1:
-            rows[field] = {
-                "status": "AMBIGUOUS_EXPLICIT_COLUMN_CELL",
-                "label_text": label_text,
+        labeled = []
+        for cell in plausible:
+            field, label_text = _field_before_cell(row, int(cell["left"]))
+            if field:
+                labeled.append((field, label_text, cell))
+        if len(plausible) > 1 and labeled:
+            ambiguous_fields.update(field for field, _, _ in labeled)
+            ambiguous_labeled_rows.append({
+                "fields": sorted({field for field, _, _ in labeled}),
+                "labels": [label for _, label, _ in labeled],
                 "candidate_cells": all_cells,
                 "plausible_cells": plausible,
+            })
+            continue
+        if len(plausible) == 1 and len(labeled) == 1:
+            field, label_text, cell = labeled[0]
+            matches[field].append({
+                "label_text": label_text,
+                "candidate_cells": all_cells,
+                "associated_cell": cell,
+            })
+
+    rows: dict[str, object] = {}
+    associated_centers: list[float] = []
+    global_status: str | None = "AMBIGUOUS_NUMERIC_COLUMN" if ambiguous_labeled_rows else None
+    for field in CORE_FIELDS:
+        field_matches = matches[field]
+        if field in ambiguous_fields:
+            related = [row for row in ambiguous_labeled_rows if field in row.get("fields", [])]
+            rows[field] = {
+                "status": "AMBIGUOUS_EXPLICIT_COLUMN_CELL",
+                "label_text": [label for row in related for label in row.get("labels", [])],
+                "candidate_cells": [cell for row in related for cell in row.get("candidate_cells", [])],
+                "plausible_cells": [cell for row in related for cell in row.get("plausible_cells", [])],
                 "associated_cell": None,
             }
-            global_status = "AMBIGUOUS_NUMERIC_COLUMN"
             continue
-
-        associated = plausible[0]
+        if not field_matches:
+            rows[field] = {
+                "status": "MISSING_ROW_LABEL_OR_EXPLICIT_COLUMN_CELL",
+                "label_text": None,
+                "candidate_cells": [],
+                "associated_cell": None,
+            }
+            continue
+        if len(field_matches) != 1:
+            rows[field] = {
+                "status": "AMBIGUOUS_ROW_LABEL",
+                "label_text": [match["label_text"] for match in field_matches],
+                "candidate_cells": [],
+                "associated_cell": None,
+            }
+            global_status = "AMBIGUOUS_ROW_LABEL"
+            continue
+        match = field_matches[0]
         rows[field] = {
             "status": "ASSOCIATED_CELL_DIAGNOSTIC",
-            "label_text": label_text,
-            "candidate_cells": all_cells,
-            "associated_cell": associated,
+            "label_text": match["label_text"],
+            "candidate_cells": match["candidate_cells"],
+            "associated_cell": match["associated_cell"],
         }
-        associated_centers.append(float(associated["center_x"]))
+        associated_centers.append(float(match["associated_cell"]["center_x"]))
 
+    if ambiguous_labeled_rows:
+        result["ambiguous_labeled_rows"] = ambiguous_labeled_rows
     result["rows"] = rows
     if global_status:
         result["status"] = global_status
