@@ -1,6 +1,6 @@
 import unittest
 
-from nutrition_label_reader import _basis
+from mercadona_nutrition_label_manufacturer_interleave import _mercadona_basis
 
 
 class NutritionLabelBasisPrecedenceTest(unittest.TestCase):
@@ -14,18 +14,18 @@ Grasas 0 g
 Hidratos de carbono 3.0 g
 Proteinas 0 g
 """
-        self.assertEqual(_basis(observed), "100_ml")
+        self.assertEqual(_mercadona_basis(observed), "100_ml")
 
     def test_unrelated_inline_1009_malta_is_not_a_100g_basis(self):
-        self.assertIsNone(_basis("Ingredientes: agua, cebada. 1009 MALTA"))
+        self.assertIsNone(_mercadona_basis("Ingredientes: agua, cebada. 1009 MALTA"))
 
     def test_explicit_and_standalone_100g_ocr_forms_remain_supported(self):
-        self.assertEqual(_basis("Valores medios por 1009"), "100_g")
-        self.assertEqual(_basis("Informacion nutricional\n1009\nValor energetico"), "100_g")
+        self.assertEqual(_mercadona_basis("Valores medios por 1009"), "100_g")
+        self.assertEqual(_mercadona_basis("Informacion nutricional\n1009\nValor energetico"), "100_g")
 
     def test_explicit_and_standalone_100ml_forms_remain_supported(self):
-        self.assertEqual(_basis("Valores medios por 100 ml"), "100_ml")
-        self.assertEqual(_basis("Informacion nutricional\n100 ml\nValor energetico"), "100_ml")
+        self.assertEqual(_mercadona_basis("Valores medios por 100 ml"), "100_ml")
+        self.assertEqual(_mercadona_basis("Informacion nutricional\n100 ml\nValor energetico"), "100_ml")
 
 
 if __name__ == "__main__":
