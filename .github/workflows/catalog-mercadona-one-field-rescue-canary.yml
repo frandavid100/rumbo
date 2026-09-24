@@ -33,13 +33,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Download consolidated Mercadona first-party cut
-        uses: actions/download-artifact@v4
-        with:
-          name: mercadona-first-party-final
-          path: tools/catalog/mercadona-first-party-final
-          github-token: ${{ github.token }}
-          run-id: 33046950149
       - name: Resolve latest successful canonical OCR audit
         id: canonical-audit
         shell: bash
@@ -47,44 +40,92 @@ jobs:
           set -euo pipefail
           run_id=$(gh api \
             -H 'Accept: application/vnd.github+json' \
-            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
+            '/repos/frandavid100/rumbo/actions/workflows/catalog-mercadona-current-ocr-residual-audit-efficient.yml/runs?branch=agent%2Fcatalog-phase1&per_page=20' \
             --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id')
           test "$run_id" != "null"
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
       - name: Download latest canonical OCR audit
         uses: actions/download-artifact@v4
         with:
-          name: mercadona-current-ocr-residual-audit
+          name: mercadona-current-ocr-residual-audit-efficient
           path: tools/catalog/mercadona-current-ocr-residual-audit
           github-token: ${{ github.token }}
           run-id: ${{ steps.canonical-audit.outputs.run_id }}
-      - name: Build non-canonical candidate cut
+      - name: Build exact historical residual candidate cut
         working-directory: tools/catalog
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          canonical = Path('mercadona-current-ocr-residual-audit/canonical-ocr.jsonl')
-          source = Path('mercadona-first-party-final/products.jsonl')
-          usable = {
-              str(row.get('product_id') or '')
-              for row in (json.loads(line) for line in canonical.read_text(encoding='utf-8').splitlines() if line.strip())
-              if row.get('usable_complete') is True and row.get('status') == 'DECLARED'
-          }
-          kept = []
-          for line in source.read_text(encoding='utf-8').splitlines():
-              if not line.strip():
-                  continue
-              row = json.loads(line)
-              if str(row.get('product_id') or '') not in usable:
-                  kept.append(row)
+
+          base = Path('mercadona-current-ocr-residual-audit')
+          canonical_path = base / 'canonical-ocr.jsonl'
+          p9_path = base / 'residual-p9.jsonl'
+          no_p9_path = base / 'residual-no-p9.jsonl'
+          summary_path = base / 'summary.json'
+          for path in (canonical_path, p9_path, no_p9_path, summary_path):
+              if not path.exists():
+                  raise SystemExit(f'Missing authoritative audit file: {path}')
+
+          def load_jsonl(path):
+              return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+
+          summary = json.loads(summary_path.read_text(encoding='utf-8'))
+          canonical = load_jsonl(canonical_path)
+          p9 = load_jsonl(p9_path)
+          no_p9 = load_jsonl(no_p9_path)
+
+          inventory = int(summary.get('inventory_products', -1))
+          processed = int(summary.get('processed_reconstructed', -1))
+          residual_total = int(summary.get('residual_total', -1))
+          if inventory != 4280:
+              raise SystemExit(f'Unexpected historical inventory size: {inventory}')
+          if summary.get('historical_membership_parity_verifiable') is not True:
+              raise SystemExit('Exact historical membership parity is not verifiable; refusing rescue canary')
+          if len(canonical) != processed:
+              raise SystemExit(f'Canonical row count {len(canonical)} != processed_reconstructed {processed}')
+          if len(p9) + len(no_p9) != residual_total:
+              raise SystemExit(f'Residual row count {len(p9) + len(no_p9)} != residual_total {residual_total}')
+
+          def ids(rows, label):
+              values = [str(row.get('product_id') or '') for row in rows]
+              if any(not value for value in values):
+                  raise SystemExit(f'{label} contains missing product_id')
+              if len(set(values)) != len(values):
+                  raise SystemExit(f'{label} contains duplicate product_id')
+              return set(values)
+
+          canonical_ids = ids(canonical, 'canonical')
+          p9_ids = ids(p9, 'residual-p9')
+          no_p9_ids = ids(no_p9, 'residual-no-p9')
+          residual_ids = p9_ids | no_p9_ids
+          if p9_ids & no_p9_ids:
+              raise SystemExit('Residual P9 and no-P9 partitions overlap')
+          if canonical_ids & residual_ids:
+              raise SystemExit('Canonical and residual partitions overlap')
+          if len(canonical_ids | residual_ids) != inventory:
+              raise SystemExit('Canonical + residual partitions do not reconstruct the exact 4,280-product cut')
+
+          # Keep the exact historical residual rows only. This avoids the expired original
+          # 4,280-product artifact without substituting a later live inventory. The OCR wave
+          # itself still applies the strict P9 + structured-ingredients eligibility filter.
+          candidates = p9 + no_p9
           Path('mercadona-one-field-rescue-candidates.jsonl').write_text(
-              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in kept),
+              ''.join(json.dumps(row, ensure_ascii=False, sort_keys=True) + '\n' for row in candidates),
               encoding='utf-8',
           )
-          print(json.dumps({'canonical_declared_excluded': len(usable), 'remaining': len(kept)}, sort_keys=True))
-          if len(usable) < 300:
-              raise SystemExit('Unexpectedly small canonical DECLARED set')
+          declared = sum(1 for row in canonical if row.get('status') == 'DECLARED' and row.get('usable_complete') is True)
+          print(json.dumps({
+              'authoritative_audit_run': int('${{ steps.canonical-audit.outputs.run_id }}'),
+              'inventory_products': inventory,
+              'processed_canonical': processed,
+              'canonical_declared': declared,
+              'residual_total': residual_total,
+              'residual_p9': len(p9),
+              'residual_no_p9': len(no_p9),
+              'candidate_rows': len(candidates),
+              'historical_membership_parity_verifiable': True,
+          }, sort_keys=True))
           PY
       - name: Install OCR dependencies
         run: |
