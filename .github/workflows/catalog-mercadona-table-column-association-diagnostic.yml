@@ -1,0 +1,211 @@
+name: Catalog Mercadona table column association diagnostic
+
+# Diagnostic-only geometry canary. It never parses nutrition values or feeds the
+# canonical Mercadona reconciliation path.
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-table-column-association-diagnostic.yml'
+      - 'tools/catalog/mercadona_table_column_association_diagnostic.py'
+      - 'tools/catalog/label_table_column_association.py'
+      - 'tools/catalog/label_table_geometry.py'
+      - 'tools/catalog/label_image_preprocess.py'
+      - 'tools/catalog/test_label_table_column_association.py'
+      - 'tools/catalog/test_label_table_column_association_regressions.py'
+      - 'tools/catalog/test_label_table_geometry.py'
+      - 'tools/catalog/test_label_image_preprocess.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-table-column-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Single-column label with explicit Por100g header.
+          - target_product_id: '21366'
+            expected_ean: '8480000213662'
+          # Two-column label: explicit 100 g column plus per-serving column.
+          - target_product_id: '67660'
+            expected_ean: '8480000676603'
+          # Positive control from the validated fixed-crop rescue.
+          - target_product_id: '21649'
+            expected_ean: '8402001054686'
+    env:
+      TARGET_PRODUCT_ID: ${{ matrix.target_product_id }}
+      EXPECTED_EAN: ${{ matrix.expected_ean }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/catalog-phase1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install bounded geometry dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check Pillow
+
+      - name: Run geometry safety tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_label_image_preprocess.py \
+            test_label_table_geometry.py \
+            test_label_table_column_association.py \
+            test_label_table_column_association_regressions.py
+          python -m py_compile \
+            label_table_geometry.py \
+            label_table_column_association.py \
+            mercadona_table_column_association_diagnostic.py
+
+      - name: Fetch exact target identity and current P9 from official Mercadona API
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          mkdir -p mercadona-table-column-diagnostic /tmp/mercadona-target-details
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pid = os.environ['TARGET_PRODUCT_ID']
+          Path('/tmp/mercadona-target-inventory.jsonl').write_text(
+              json.dumps({'product_id': pid, 'category_id': '', 'category_path': []}, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          python mercadona_first_party_details.py \
+            --inventory /tmp/mercadona-target-inventory.jsonl \
+            --out /tmp/mercadona-target-details \
+            --shard-index 0 --shard-count 1 --timeout 20 --delay 0
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          pid = os.environ['TARGET_PRODUCT_ID']
+          expected_ean = os.environ['EXPECTED_EAN']
+          detail_path = Path('/tmp/mercadona-target-details/details-00.jsonl')
+          error_path = Path('/tmp/mercadona-target-details/errors-00.jsonl')
+          rows = [json.loads(line) for line in detail_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          errors = [json.loads(line) for line in error_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if errors:
+              raise SystemExit(f'first-party API fetch errors: {errors}')
+          if len(rows) != 1:
+              raise SystemExit(f'expected exactly one API result, got {len(rows)}')
+          product = rows[0]
+          if str(product.get('product_id')) != pid:
+              raise SystemExit('product id mismatch')
+          if product.get('source') != 'MERCADONA_FIRST_PARTY' or product.get('evidence_type') != 'OBSERVED_API' or product.get('detail_observed') is not True:
+              raise SystemExit('invalid first-party API provenance')
+          if str(product.get('ean') or '') != expected_ean:
+              raise SystemExit(f'live first-party identity mismatch for {pid}: EAN={product.get("ean")}; expected={expected_ean}')
+          p9 = [p for p in (product.get('photos') or []) if str(p.get('perspective')) == '9' and (p.get('zoom') or p.get('regular'))]
+          if len(p9) != 1:
+              raise SystemExit(f'expected exactly one current perspective=9 label candidate, got {len(p9)}')
+          metadata = {
+              'product_id': pid,
+              'ean': product.get('ean'),
+              'name': product.get('name'),
+              'source': product.get('source'),
+              'evidence_type': product.get('evidence_type'),
+              'source_url': product.get('source_url'),
+              'observed_at': product.get('observed_at'),
+              'p9_image_url': p9[0].get('zoom') or p9[0].get('regular'),
+              'redistribution_allowed': False,
+          }
+          Path('mercadona-table-column-diagnostic/first-party-fetch.json').write_text(
+              json.dumps(metadata, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+
+      - name: Run explicit-column geometry diagnostic
+        working-directory: tools/catalog
+        run: |
+          set -euo pipefail
+          IMAGE_URL="$(python -c 'import json; print(json.load(open("mercadona-table-column-diagnostic/first-party-fetch.json"))["p9_image_url"])')"
+          python mercadona_table_column_association_diagnostic.py \
+            --image-url "$IMAGE_URL" \
+            --product-id "$TARGET_PRODUCT_ID" \
+            --ean "$EXPECTED_EAN" \
+            --out mercadona-table-column-diagnostic/report.json
+
+      - name: Validate diagnostic safety and provenance
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          report = json.loads(Path('mercadona-table-column-diagnostic/report.json').read_text(encoding='utf-8'))
+          fetched = json.loads(Path('mercadona-table-column-diagnostic/first-party-fetch.json').read_text(encoding='utf-8'))
+          if report.get('diagnostic_only') is not True or report.get('canonical_reconciliation_allowed') is not False:
+              raise SystemExit('diagnostic unexpectedly eligible for canonical reconciliation')
+          if report.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+              raise SystemExit('invalid OCR evidence level')
+          if report.get('source') != 'MERCADONA_FIRST_PARTY/label image' or report.get('redistribution_allowed') is not False:
+              raise SystemExit('invalid source/redistribution provenance')
+          if report.get('source_image_persisted') is not False or report.get('missing_values_inferred') is not False:
+              raise SystemExit('unsafe image persistence/inference flags')
+          if report.get('nutrition_values_selected') is not False or report.get('numeric_values_parsed') is not False:
+              raise SystemExit('diagnostic must not parse/select nutrition values')
+          if str(report.get('product_id')) != os.environ['TARGET_PRODUCT_ID'] or str(report.get('ean')) != os.environ['EXPECTED_EAN']:
+              raise SystemExit('diagnostic identity mismatch')
+          if report.get('image_url') != fetched.get('p9_image_url'):
+              raise SystemExit('diagnostic image URL mismatch')
+          if report.get('association_version') != '1.0.0':
+              raise SystemExit(f'unexpected association version: {report.get("association_version")}')
+          for attempt in report.get('attempts') or []:
+              if attempt.get('nutrition_values_selected') is not False or attempt.get('numeric_values_parsed') is not False:
+                  raise SystemExit('attempt unexpectedly selected/parsed nutrition values')
+              association = attempt.get('association')
+              if isinstance(association, dict):
+                  if association.get('diagnostic_only') is not True:
+                      raise SystemExit('association lost diagnostic-only flag')
+                  if association.get('nutrition_values_selected') is not False or association.get('numeric_values_parsed') is not False:
+                      raise SystemExit('association unexpectedly selected/parsed nutrition values')
+          forbidden = list(Path('mercadona-table-column-diagnostic').glob('*.jpg')) + list(Path('mercadona-table-column-diagnostic').glob('*.png'))
+          if forbidden:
+              raise SystemExit(f'image assets must not be persisted: {forbidden}')
+          print(json.dumps({
+              'product_id': report.get('product_id'),
+              'name': fetched.get('name'),
+              'association_status_counts': report.get('association_status_counts'),
+              'attempts': [
+                  {
+                      'variant': attempt.get('variant'),
+                      'psm': attempt.get('psm'),
+                      'status': (attempt.get('association') or {}).get('status'),
+                      'associated_core_field_count': (attempt.get('association') or {}).get('associated_core_field_count'),
+                      'associated_cells': {
+                          field: row.get('associated_cell', {}).get('text')
+                          for field, row in ((attempt.get('association') or {}).get('rows') or {}).items()
+                          if isinstance(row, dict) and isinstance(row.get('associated_cell'), dict)
+                      },
+                  }
+                  for attempt in report.get('attempts') or []
+              ],
+          }, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mercadona-table-column-diagnostic-${{ env.TARGET_PRODUCT_ID }}
+          path: |
+            tools/catalog/mercadona-table-column-diagnostic/first-party-fetch.json
+            tools/catalog/mercadona-table-column-diagnostic/report.json
+          retention-days: 30
+          if-no-files-found: warn
