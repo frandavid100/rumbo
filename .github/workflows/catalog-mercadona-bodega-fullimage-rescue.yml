@@ -1,0 +1,103 @@
+name: Catalog Mercadona Bodega full-image rescue
+
+on:
+  push:
+    branches: [agent/catalog-phase1]
+    paths:
+      - '.github/workflows/catalog-mercadona-bodega-fullimage-rescue.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: catalog-mercadona-bodega-fullimage-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PADDLE_PDX_MODEL_SOURCE: BOS
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve latest successful Bodega full cut
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api -H 'Accept: application/vnd.github+json' \
+            '/repos/frandavid100/rumbo/actions/runs?branch=agent%2Fcatalog-phase1&per_page=30' \
+            --jq '[.workflow_runs[] | select(.name == "Catalog Mercadona Bodega OCR full" and .conclusion == "success")][0].id')
+          test "$run_id" != "null"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download current Bodega revalidation
+        uses: actions/download-artifact@v4
+        with:
+          name: mercadona-bodega-ocr-full
+          path: tools/catalog/mercadona-bodega-fullimage-source
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.source.outputs.run_id }}
+
+      - name: Install OCR dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          python -m pip install --disable-pip-version-check paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          python -m pip install --disable-pip-version-check 'paddleocr>=3.7,<3.8' 'easyocr>=1.7,<1.8' opencv-python-headless Pillow
+
+      - name: Run rescue safety tests first
+        working-directory: tools/catalog
+        run: |
+          python -m unittest -v \
+            test_mercadona_bodega_fullimage_rescue.py \
+            test_mercadona_ocr_safety_regressions.py \
+            test_nutrition_label_reader.py \
+            test_nutrition_ocr_ensemble.py
+
+      - name: Run deterministic full-P9 all-family rescue over exact Bodega residual
+        working-directory: tools/catalog
+        run: |
+          python mercadona_bodega_fullimage_rescue.py \
+            --revalidation mercadona-bodega-fullimage-source/live-revalidation.json \
+            --out mercadona-bodega-fullimage-rescue
+
+      - name: Enforce bounded audit contract
+        working-directory: tools/catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path('mercadona-bodega-fullimage-rescue/summary.json')
+          s = json.loads(p.read_text(encoding='utf-8'))
+          if s.get('processed') != 11:
+              raise SystemExit(f"Expected exact 11-product Bodega cohort, got {s.get('processed')}")
+          if s.get('error_product_ids'):
+              raise SystemExit(f"OCR engine/product errors present: {s['error_product_ids']}")
+          if s.get('evidence_level') != 'OCR_DERIVED_FROM_MERCADONA_IMAGE':
+              raise SystemExit('Wrong evidence level')
+          if s.get('redistribution_allowed') is not False or s.get('image_bytes_persisted') is not False:
+              raise SystemExit('Image persistence/redistribution contract violated')
+          if s.get('prior_values_reused') is not False or s.get('missing_values_inferred') is not False:
+              raise SystemExit('Historical reuse or inference contract violated')
+          if s.get('CLASSIFIED') != 0 or s.get('MENU_ELIGIBLE') != 0:
+              raise SystemExit('Semantic classification leaked into extraction')
+          print(json.dumps(s, ensure_ascii=False, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mercadona-bodega-fullimage-rescue
+          path: tools/catalog/mercadona-bodega-fullimage-rescue/
+          if-no-files-found: error
+          retention-days: 30
