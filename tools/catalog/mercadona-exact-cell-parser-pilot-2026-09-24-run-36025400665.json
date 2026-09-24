@@ -1,0 +1,9 @@
+{
+  "workflow_run_id": 36025400665,
+  "parser_version": "1.0.0",
+  "tests_run": 28,
+  "tests_result": "OK",
+  "canonical_declared": 381,
+  "canonical_review": 2588,
+  "canonical_unchanged": true
+}
