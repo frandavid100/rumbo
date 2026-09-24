@@ -7,6 +7,8 @@ on:
       - '.github/workflows/catalog-mercadona-bodega-fullimage-rescue.yml'
       - 'tools/catalog/mercadona_bodega_fullimage_rescue.py'
       - 'tools/catalog/test_mercadona_bodega_fullimage_rescue.py'
+      - 'tools/catalog/mercadona_nutrition_label_manufacturer_interleave.py'
+      - 'tools/catalog/test_nutrition_label_reader_basis_precedence.py'
 
 permissions:
   actions: read
@@ -64,6 +66,7 @@ jobs:
             test_mercadona_bodega_fullimage_rescue.py \
             test_mercadona_ocr_safety_regressions.py \
             test_nutrition_label_reader.py \
+            test_nutrition_label_reader_basis_precedence.py \
             test_nutrition_ocr_ensemble.py
 
       - name: Run deterministic full-P9 all-family rescue over exact Bodega residual
