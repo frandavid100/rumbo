@@ -1,6 +1,7 @@
 import unittest
 
 from label_table_column_association import associate_explicit_basis_column
+from label_table_exact_cell_parser import parse_exact_nutrition_cell
 from label_table_geometry import parse_tesseract_tsv
 
 
@@ -56,6 +57,56 @@ class TableColumnAssociationRegressionTest(unittest.TestCase):
         self.assertEqual(association["rows"]["fat_g"]["associated_cell"]["text"], "12 g")
         self.assertEqual(association["rows"]["protein_g"]["associated_cell"]["text"], "7 g")
         self.assertNotEqual(association["status"], "AMBIGUOUS_ROW_LABEL")
+
+
+class ExactCellParserRegressionTest(unittest.TestCase):
+    def test_explicit_100g_energy_cell_parses_without_serving_column_leakage(self):
+        parsed = parse_exact_nutrition_cell("calories", "395 kcal")
+        self.assertEqual(parsed["status"], "EXACT_VALUE", parsed)
+        self.assertEqual(parsed["exact_value"], 395.0)
+        serving = parse_exact_nutrition_cell("calories", "52 kcal")
+        self.assertEqual(serving["status"], "EXACT_VALUE", serving)
+        self.assertEqual(serving["exact_value"], 52.0)
+
+    def test_missing_decimal_punctuation_is_never_repaired(self):
+        parsed = parse_exact_nutrition_cell("carbohydrate_g", "269")
+        self.assertEqual(parsed["status"], "REJECTED", parsed)
+        self.assertEqual(parsed["reason"], "MISSING_OR_UNSUPPORTED_GRAM_UNIT")
+        self.assertIsNone(parsed["exact_value"])
+        self.assertFalse(parsed["decimal_repaired"])
+
+    def test_observed_unit_bearing_cells_parse_exactly(self):
+        fat = parse_exact_nutrition_cell("fat_g", "12g")
+        protein = parse_exact_nutrition_cell("protein_g", "6,7 g")
+        self.assertEqual((fat["status"], fat["exact_value"]), ("EXACT_VALUE", 12.0))
+        self.assertEqual((protein["status"], protein["exact_value"]), ("EXACT_VALUE", 6.7))
+
+    def test_bounds_extra_numbers_and_leading_zero_fail_closed(self):
+        cases = (
+            ("fat_g", "<0,5 g"),
+            ("fat_g", "12 g 6 g"),
+            ("fat_g", "01 g"),
+            ("calories", "1653 kJ / 395 kcal 20%"),
+            ("calories", "02 kcal"),
+        )
+        for field, raw in cases:
+            with self.subTest(field=field, raw=raw):
+                parsed = parse_exact_nutrition_cell(field, raw)
+                self.assertEqual(parsed["status"], "REJECTED", parsed)
+                self.assertIsNone(parsed["exact_value"], parsed)
+
+    def test_coherent_kj_kcal_pair_is_exact_without_unit_conversion(self):
+        parsed = parse_exact_nutrition_cell("calories", "1653 kJ / 395 kcal")
+        self.assertEqual(parsed["status"], "EXACT_VALUE", parsed)
+        self.assertEqual(parsed["exact_value"], 395.0)
+        self.assertEqual(parsed["corroborating_kj"], 1653.0)
+        self.assertFalse(parsed["unit_converted"])
+
+    def test_incoherent_energy_pair_and_low_unpaired_kcal_fail_closed(self):
+        bad_pair = parse_exact_nutrition_cell("calories", "1653 kJ / 52 kcal")
+        low = parse_exact_nutrition_cell("calories", "2,9 kcal")
+        self.assertEqual(bad_pair["reason"], "INCOHERENT_KJ_KCAL_PAIR")
+        self.assertEqual(low["reason"], "LOW_KCAL_REQUIRES_COHERENT_KJ_PAIR")
 
 
 if __name__ == "__main__":
