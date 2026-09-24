@@ -30,7 +30,7 @@ def _visual_rows(tokens: list[TsvToken]) -> list[list[TsvToken]]:
         return []
     heights = sorted(max(1, token.height) for token in tokens)
     median_height = heights[len(heights) // 2]
-    tolerance = max(4.0, median_height * 0.65)
+    tolerance = max(4.0, median_height * 0.45)
     rows: list[list[TsvToken]] = []
     for token in sorted(tokens, key=lambda item: (item.center_y, item.left)):
         best_index = None
@@ -38,10 +38,9 @@ def _visual_rows(tokens: list[TsvToken]) -> list[list[TsvToken]]:
         for index, row in enumerate(rows):
             row_center = sum(item.center_y for item in row) / len(row)
             distance = abs(token.center_y - row_center)
-            row_top = min(item.top for item in row)
-            row_bottom = max(item.bottom for item in row)
-            vertical_overlap = min(token.bottom, row_bottom) - max(token.top, row_top)
-            if distance <= tolerance or vertical_overlap > 0:
+            # Use centers only. Very tall OCR boxes can overlap several real rows;
+            # overlap-based clustering would let one bad box bridge a whole table.
+            if distance <= tolerance:
                 if best_distance is None or distance < best_distance:
                     best_index = index
                     best_distance = distance
