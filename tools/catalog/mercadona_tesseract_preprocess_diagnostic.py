@@ -131,7 +131,7 @@ def diagnose(
                         "variant": variant.name,
                         "psm": geometry_psm,
                         "engine": "tesseract_tsv",
-                        "selection_policy": "predefined_variant_psm_and_explicit_100_basis_header_only",
+                        "selection_policy": "predefined_variant_and_explicit_100_basis_header_only",
                         "nutrition_values_selected": False,
                     }
                     try:
