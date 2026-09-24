@@ -2,6 +2,8 @@ import unittest
 
 from label_table_column_association import associate_explicit_basis_column
 from label_table_exact_cell_parser import parse_exact_nutrition_cell
+from label_table_exact_diagnostic import parse_associated_exact_cells
+from mercadona_exact_cell_postprocess_report import postprocess_report
 from label_table_geometry import parse_tesseract_tsv
 
 
@@ -107,6 +109,58 @@ class ExactCellParserRegressionTest(unittest.TestCase):
         low = parse_exact_nutrition_cell("calories", "2,9 kcal")
         self.assertEqual(bad_pair["reason"], "INCOHERENT_KJ_KCAL_PAIR")
         self.assertEqual(low["reason"], "LOW_KCAL_REQUIRES_COHERENT_KJ_PAIR")
+
+
+class ExactDiagnosticIntegrationRegressionTest(unittest.TestCase):
+    def test_geometry_postprocess_parses_only_isolated_explicit_column_cell(self):
+        association = {
+            "status": "PARTIAL_CORE_ROWS_DIAGNOSTIC",
+            "basis_header_status": "UNIQUE_EXPLICIT_100_BASIS_HEADER",
+            "rows": {
+                "calories": {
+                    "status": "ASSOCIATED_CELL_DIAGNOSTIC",
+                    "label_text": "Energético/Energia",
+                    "associated_cell": {"text": "395 kcal", "center_x": 2707.0},
+                },
+                "carbohydrate_g": {
+                    "status": "ASSOCIATED_CELL_DIAGNOSTIC",
+                    "label_text": "Hidratos de Carbono",
+                    "associated_cell": {"text": "269", "center_x": 2702.0},
+                },
+            },
+        }
+        exact = parse_associated_exact_cells(association)
+        self.assertEqual(exact["exact_cells"]["calories"]["parse"]["exact_value"], 395.0)
+        self.assertEqual(exact["exact_cells"]["carbohydrate_g"]["parse"]["status"], "REJECTED")
+        self.assertEqual(exact["exact_value_count"], 1)
+        self.assertFalse(exact["nutrition_usable"])
+        self.assertFalse(exact["canonical_reconciliation_allowed"])
+
+    def test_report_postprocess_never_fuses_or_promotes_attempts(self):
+        report = {
+            "product_id": "67660",
+            "ean": "8480000676603",
+            "attempts": [{
+                "variant": "full_autocontrast",
+                "psm": 11,
+                "association": {
+                    "status": "PARTIAL_CORE_ROWS_DIAGNOSTIC",
+                    "basis_header_status": "UNIQUE_EXPLICIT_100_BASIS_HEADER",
+                    "rows": {
+                        "calories": {
+                            "status": "ASSOCIATED_CELL_DIAGNOSTIC",
+                            "label_text": "Energético/Energia",
+                            "associated_cell": {"text": "395 kcal", "center_x": 2707.0},
+                        },
+                    },
+                },
+            }],
+        }
+        result = postprocess_report(report)
+        self.assertEqual(result["exact_value_observations"], 1)
+        self.assertFalse(result["nutrition_usable"])
+        self.assertFalse(result["canonical_reconciliation_allowed"])
+        self.assertFalse(result["missing_values_inferred"])
 
 
 if __name__ == "__main__":
