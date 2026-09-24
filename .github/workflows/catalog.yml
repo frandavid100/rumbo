@@ -58,7 +58,7 @@ jobs:
           python evaluate_pilot_300_observed_nutrition.py | tee pilot-300-observed-nutrition-report.json
       - name: Probar lector de etiquetas nutricionales
         working-directory: tools/catalog
-        run: python -m unittest -v test_nutrition_label_reader.py test_nutrition_label_reader_bare_multicolumn.py
+        run: python -m unittest -v test_nutrition_label_reader.py test_nutrition_label_reader_bare_multicolumn.py test_nutrition_label_reader_basis_precedence.py
       - name: Probar recuperación conservadora de macro invertida
         working-directory: tools/catalog
         run: python -m unittest -v test_nutrition_label_reader_single_reversed_candidate.py
