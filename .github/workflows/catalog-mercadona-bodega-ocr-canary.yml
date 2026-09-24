@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/catalog-phase1
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -202,6 +202,7 @@ jobs:
             test_nutrition_label_reader_ocr_typos.py \
             test_nutrition_label_reader_row_tokens.py \
             test_nutrition_ocr_ensemble.py \
+            test_mercadona_nutrition_label_manufacturer_interleave.py \
             test_mercadona_label_pipeline.py \
             test_mercadona_ocr_safety_regressions.py
 
