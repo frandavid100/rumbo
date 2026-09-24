@@ -10,11 +10,13 @@ on:
       - '.github/workflows/catalog-mercadona-tesseract-preprocess-diagnostic.yml'
       - 'tools/catalog/mercadona_tesseract_preprocess_diagnostic.py'
       - 'tools/catalog/label_image_preprocess.py'
+      - 'tools/catalog/label_table_geometry.py'
       - 'tools/catalog/label_text_extractor.py'
       - 'tools/catalog/nutrition_unit_glyph_repair.py'
       - 'tools/catalog/mercadona_nutrition_label_manufacturer_interleave.py'
       - 'tools/catalog/mercadona_nutrition_reader.py'
       - 'tools/catalog/test_label_image_preprocess.py'
+      - 'tools/catalog/test_label_table_geometry.py'
       - 'tools/catalog/test_label_text_extractor.py'
       - 'tools/catalog/test_nutrition_unit_glyph_repair.py'
       - 'tools/catalog/test_mercadona_nutrition_label_manufacturer_interleave.py'
@@ -39,8 +41,8 @@ jobs:
           # independently corroborate the profile. Probe deterministic variants.
           - target_product_id: '21366'
             expected_ean: '8480000213662'
-          # Two-column label. Diagnostic only: any result still needs an explicit
-          # safety regression before a production route may isolate one column.
+          # Two-column label. Diagnostic only: geometry may expose an explicit
+          # 100 g column, but this workflow never selects nutritional values from it.
           - target_product_id: '67660'
             expected_ean: '8480000676603'
           # Positive control for the already validated fixed crop_center rescue.
@@ -72,10 +74,11 @@ jobs:
         run: |
           python -m unittest -v \
             test_label_image_preprocess.py \
+            test_label_table_geometry.py \
             test_label_text_extractor.py \
             test_nutrition_unit_glyph_repair.py \
             test_mercadona_nutrition_label_manufacturer_interleave.py
-          python -m py_compile mercadona_tesseract_preprocess_diagnostic.py
+          python -m py_compile mercadona_tesseract_preprocess_diagnostic.py label_table_geometry.py
 
       - name: Fetch exact target identity and current P9 from official Mercadona API
         working-directory: tools/catalog
@@ -174,6 +177,11 @@ jobs:
               raise SystemExit(f'unexpected adapter version: {report.get("adapter_version")}')
           if any(int(profile.get('independent_engine_families') or 0) != 1 for profile in report.get('complete_declared_profiles') or []):
               raise SystemExit('preprocess variants incorrectly counted as independent OCR families')
+          for attempt in report.get('geometry_attempts') or []:
+              if attempt.get('nutrition_values_selected') is not False:
+                  raise SystemExit('geometry diagnostic must never select nutrition values')
+              if attempt.get('selection_policy') != 'predefined_variant_and_explicit_100_basis_header_only':
+                  raise SystemExit('unexpected geometry selection policy')
           forbidden = list(Path('mercadona-tesseract-preprocess-diagnostic').glob('*.jpg')) + list(Path('mercadona-tesseract-preprocess-diagnostic').glob('*.png'))
           if forbidden:
               raise SystemExit(f'image assets must not be persisted: {forbidden}')
@@ -182,6 +190,14 @@ jobs:
               'name': fetched.get('name'),
               'attempts': len(report.get('attempts') or []),
               'complete_declared_profiles': report.get('complete_declared_profiles') or [],
+              'geometry': [
+                  {
+                      'variant': attempt.get('variant'),
+                      'basis_header_status': attempt.get('basis_header_status'),
+                      'basis_headers': attempt.get('basis_headers'),
+                  }
+                  for attempt in report.get('geometry_attempts') or []
+              ],
           }, ensure_ascii=False, indent=2))
           PY
 
