@@ -23,14 +23,16 @@ class MercadonaBodegaFullImageRescueTest(unittest.TestCase):
 
     def test_matching_independent_declared_reads_are_usable(self):
         text = """Información nutricional por 100 ml
-Valor energético 252 kJ / 60 kcal
+Valor energético 176 kJ / 42 kcal
 Grasas 0 g
-Hidratos de carbono 4.5 g
+Hidratos de carbono 10 g
 Proteínas 0.5 g
 Sal 0.02 g
 """
         paddle = read_nutrition_label(text, extraction_confidence=.98)
         easy = read_nutrition_label(text, extraction_confidence=.95)
+        self.assertEqual(paddle.status, "DECLARED", paddle)
+        self.assertEqual(easy.status, "DECLARED", easy)
         fused = choose_ensemble((
             ("paddleocr", "paddleocr", observed(paddle, .98)),
             ("easyocr", "easyocr", observed(easy, .95)),
@@ -41,17 +43,19 @@ Sal 0.02 g
 
     def test_conflicting_declared_observation_forces_review(self):
         a = read_nutrition_label("""Información nutricional por 100 ml
-Valor energético 252 kJ / 60 kcal
+Valor energético 176 kJ / 42 kcal
 Grasas 0 g
-Hidratos de carbono 4.5 g
+Hidratos de carbono 10 g
 Proteínas 0.5 g
 """, extraction_confidence=.98)
         b = read_nutrition_label("""Información nutricional por 100 ml
-Valor energético 300 kJ / 72 kcal
+Valor energético 301 kJ / 72 kcal
 Grasas 0 g
-Hidratos de carbono 8 g
+Hidratos de carbono 17.5 g
 Proteínas 0.5 g
 """, extraction_confidence=.95)
+        self.assertEqual(a.status, "DECLARED", a)
+        self.assertEqual(b.status, "DECLARED", b)
         fused = choose_ensemble((
             ("paddleocr", "paddleocr", observed(a, .98)),
             ("easyocr", "easyocr", observed(b, .95)),
