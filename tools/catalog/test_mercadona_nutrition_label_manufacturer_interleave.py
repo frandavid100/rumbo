@@ -85,6 +85,60 @@ Sal 1.6 g
         self.assertEqual(result.status, "REVIEW", result)
         self.assertFalse(result.declared_usable)
 
+    def test_live_3680_shifted_saturated_fat_and_salt_cells_are_withheld(self):
+        # Fresh PP-OCRv6 evidence for product 3680 linearises table columns as
+        # `6 g / Grasas / 2.2 g / de las cuales saturadas` and
+        # `19 g / Proteínas / 0.20 g / Sal`. The 2.2 and 0.20 cells must not be
+        # exposed as total fat/protein evidence. This guard withholds them; it
+        # deliberately does not promote the explicit preceding values.
+        observed = """Información Nutricional por 100g.
+de producto:
+562 KJ
+Valor Energético:
+134 kcal
+6 g
+Grasas:
+2.2 g
+de las cuales saturadas:
+<0.1 g
+Hidratos de carbono:
+<0.1 g
+de los cuales azúcares:
+19 g
+Proteinas:
+0.20 g
+Sal:
+Fabricado por:
+HIJOS DE JUAN PUJANTE S.A.
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(result.status, "REVIEW", result)
+        self.assertEqual(result.basis, "100_g")
+        self.assertEqual((result.nutrition or {}).get("calories"), 134.0)
+        self.assertNotIn("fat_g", result.nutrition or {})
+        self.assertNotIn("protein_g", result.nutrition or {})
+        self.assertIn("MERCADONA_SHIFTED_SUBROW_VALUE_WITHHELD:fat_g", result.reasons)
+        self.assertIn("MERCADONA_SHIFTED_SUBROW_VALUE_WITHHELD:protein_g", result.reasons)
+
+    def test_conventional_forward_rows_are_not_changed_by_shift_guard(self):
+        observed = """Información nutricional por 100 g
+Valor energético 711 kJ / 170 kcal
+Grasas 10 g
+de las cuales saturadas 2 g
+Hidratos de carbono 0.8 g
+de los cuales azúcares 0.5 g
+Proteínas 19 g
+Sal 0.3 g
+"""
+        result = read_nutrition_label(observed, extraction_confidence=.98)
+        self.assertEqual(result.status, "DECLARED", result)
+        self.assertEqual(result.nutrition, {
+            "calories": 170.0,
+            "fat_g": 10.0,
+            "carbohydrate_g": 0.8,
+            "protein_g": 19.0,
+        })
+
 
 if __name__ == "__main__":
     unittest.main()
