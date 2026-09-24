@@ -1,0 +1,134 @@
+{
+  "source": "MERCADONA_FIRST_PARTY/label image",
+  "evidence_level": "OCR_DERIVED_FROM_MERCADONA_IMAGE",
+  "workflow_run_id": 36014212871,
+  "workflow_head_sha": "b45204dde442c5c7b23477a5b454c353b05c4b45",
+  "workflow_conclusion": "success",
+  "diagnostic_only": true,
+  "canonical_reconciliation_allowed": false,
+  "association_version": "1.0.0",
+  "nutrition_values_selected": false,
+  "numeric_values_parsed": false,
+  "missing_values_inferred": false,
+  "source_images_persisted": false,
+  "redistribution_allowed": false,
+  "CLASSIFIED": 0,
+  "MENU_ELIGIBLE": 0,
+  "artifacts": {
+    "21366": {
+      "artifact_id": 10813493610,
+      "artifact_sha256": "6bd47954df9fe704327480b5d9e87d6f8c8d4b41389233b4b887205508702d31"
+    },
+    "67660": {
+      "artifact_id": 10814605056,
+      "artifact_sha256": "7bf569d8b4310d1bb1f50795efe7b599106f2cc2143703cdf5810ee9bbbe3b57"
+    },
+    "21649": {
+      "artifact_id": 10814261171,
+      "artifact_sha256": "a0c5294b9859e5d9943024241460df349e3a3f382ce2354c855e0ce9388ff012"
+    }
+  },
+  "products": {
+    "21366": {
+      "ean": "8480000213662",
+      "name": "Tarta de queso Hacendado",
+      "api_observed_at": "2026-09-24T14:38:44.602627+00:00",
+      "perspective": 9,
+      "image_url": "https://prod-mercadona.imgix.net/images/20c9a6aba7c86ece8fc3e1323617a4b9.jpg?fit=crop&h=3600&w=3600",
+      "explicit_basis": "100_g",
+      "explicit_header_text": "Por100g",
+      "association_status_counts": {
+        "PARTIAL_CORE_ROWS_DIAGNOSTIC": 9
+      },
+      "max_associated_core_fields_in_one_attempt": 2,
+      "example_raw_associations": [
+        {
+          "variant": "crop_top",
+          "psm": 4,
+          "fat_g_raw_cell_text": "1900",
+          "carbohydrate_g_raw_cell_text": "1860"
+        },
+        {
+          "variant": "crop_center",
+          "psm": 11,
+          "carbohydrate_g_raw_cell_text": "10,0"
+        }
+      ],
+      "note": "Raw OCR cell text is diagnostic geometry evidence only. Punctuation-loss alternatives are intentionally not interpreted or promoted."
+    },
+    "67660": {
+      "ean": "8480000676603",
+      "name": "Café soluble cappuccino caramelo Hacendado",
+      "api_observed_at": "2026-09-24T14:38:44.951597+00:00",
+      "perspective": 9,
+      "image_url": "https://prod-mercadona.imgix.net/images/b006c66fc04c872c158827b16e961577.jpg?fit=crop&h=3600&w=3600",
+      "explicit_basis": "100_g",
+      "explicit_header_text": "100 g",
+      "association_status_counts": {
+        "MISSING_EXPLICIT_100_BASIS_HEADER": 8,
+        "PARTIAL_CORE_ROWS_DIAGNOSTIC": 1
+      },
+      "validated_attempt": {
+        "variant": "full_autocontrast",
+        "psm": 11,
+        "header_center_x": 2697.5,
+        "row_label": "Energético/Energia",
+        "associated_raw_cell_text": "395 kcal",
+        "associated_cell_center_x": 2707.0,
+        "serving_column_raw_cell_text": "52 kcal",
+        "serving_column_selected": false
+      },
+      "note": "The geometry-only association isolates the observed 100 g energy cell from the nearby serving column without using nutritional plausibility or parsing the numeric value."
+    },
+    "21649": {
+      "ean": "8402001054686",
+      "name": "Empanada de carne",
+      "api_observed_at": "2026-09-24T14:38:44.351671+00:00",
+      "perspective": 9,
+      "image_url": "https://prod-mercadona.imgix.net/images/1b085f5f14d821129d2d72b0d71138c3.jpg?fit=crop&h=3600&w=3600",
+      "explicit_basis": "100_g",
+      "explicit_header_text": "100 g",
+      "association_status_counts": {
+        "MISSING_EXPLICIT_100_BASIS_HEADER": 8,
+        "PARTIAL_CORE_ROWS_DIAGNOSTIC": 1
+      },
+      "validated_attempt": {
+        "variant": "crop_center",
+        "psm": 11,
+        "associated_core_field_count": 3,
+        "fat_g_raw_cell_text": "12g",
+        "carbohydrate_g_raw_cell_text": "269",
+        "protein_g_raw_cell_text": "6,7 g"
+      },
+      "note": "This is a geometry diagnostic only. The carbohydrate OCR text '269' is not interpreted as 26 g; the existing canonical nutrition for this product continues to come only from the independently corroborated production rescue."
+    }
+  },
+  "validated_safety_properties": [
+    "The explicit 100 g/100 ml basis header must be unique; missing or multiple headers fail closed.",
+    "Visual rows are associated by center geometry rather than bounding-box overlap so tall OCR boxes cannot bridge multiple table rows.",
+    "Core row labels are matched immediately to the left of a candidate cell with a narrow exact-label vocabulary; unrelated ingredient text is not used as a nutrition row label.",
+    "More than one geometrically plausible cell on a labeled row is rejected as AMBIGUOUS_NUMERIC_COLUMN.",
+    "No nutrition value is parsed, inferred, ranked, selected for usability, or submitted to canonical reconciliation by this pilot."
+  ],
+  "canonical_state_unchanged": {
+    "authoritative_audit_run_id": 35919999187,
+    "inventory_products": 4280,
+    "processed_canonical_products": 2969,
+    "processed_pct_inventory": 69.3692,
+    "status_counts": {
+      "DECLARED": 381,
+      "REVIEW": 2588,
+      "NO_VISUAL_REGION": 0,
+      "ERROR": 0
+    },
+    "usable_complete": 381,
+    "usable_complete_pct_inventory": 8.9019,
+    "usable_field_counts": {
+      "calories": 381,
+      "fat_g": 381,
+      "carbohydrate_g": 381,
+      "protein_g": 381
+    }
+  },
+  "next_safe_step": "Use the validated geometry only as an additional diagnostic gate on a bounded sample of ambiguous multi-column REVIEW products. Before any production use, add a separate exact numeric cell parser with tests for kJ/kcal pairs, decimal punctuation and unit adjacency, then require independent OCR-family corroboration and the existing energy/macro coherence barriers."
+}
